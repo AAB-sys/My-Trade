@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 app = FastAPI(title="Indices API")
 
@@ -66,4 +66,6 @@ def list_indices():
 @app.get("/indices/{name}")
 def get_index(name: str):
     key = name.upper()
+    if key not in INDICES:
+        raise HTTPException(status_code=404, detail=f"Unknown index '{name}'. See /indices for the list.")
     return fetch_quote(key, INDICES[key])
