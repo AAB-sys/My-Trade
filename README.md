@@ -26,6 +26,10 @@ python -m uvicorn main:app --reload
 Then open <http://127.0.0.1:8000/> for the dashboard, or
 <http://127.0.0.1:8000/docs> for the menu.
 
+On Windows, double-click `start.bat` instead: on first run it creates the virtual
+environment and installs dependencies; every run starts the server and opens the
+dashboard in your browser. Press Ctrl+C in its window to stop.
+
 ## Phase 1 - the API (done)
 
 1. Menu on paper
