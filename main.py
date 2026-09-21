@@ -1,13 +1,19 @@
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 
 app = FastAPI(title="Indices API")
 
 YAHOO_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 IST = timezone(timedelta(hours=5, minutes=30))
+DASHBOARD = Path(__file__).parent / "static" / "index.html"
+CACHE_SECONDS = 60
 
 # index name -> Yahoo Finance ticker
 INDICES = {
@@ -31,6 +37,9 @@ INDICES = {
     "BSE 200": "BSE-200.BO",
     "BSE 500": "BSE-500.BO",
 }
+
+# Yahoo's data is ~15 minutes delayed, so re-asking more often than this gains nothing
+_all_cache = {"fetched_at": 0.0, "quotes": []}
 
 
 def fetch_quote(name: str, ticker: str) -> dict:
@@ -58,9 +67,39 @@ def fetch_quote(name: str, ticker: str) -> dict:
     }
 
 
+def fetch_all() -> list:
+    age = time.monotonic() - _all_cache["fetched_at"]
+    if _all_cache["quotes"] and age < CACHE_SECONDS:
+        return _all_cache["quotes"]
+
+    def safe_fetch(item):
+        name, ticker = item
+        try:
+            return fetch_quote(name, ticker)
+        except Exception:
+            return None
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        results = pool.map(safe_fetch, INDICES.items())
+    quotes = [quote for quote in results if quote is not None]
+
+    _all_cache.update(fetched_at=time.monotonic(), quotes=quotes)
+    return quotes
+
+
+@app.get("/")
+def dashboard():
+    return FileResponse(DASHBOARD)
+
+
 @app.get("/indices")
 def list_indices():
     return sorted(INDICES)
+
+
+@app.get("/indices/all")
+def all_indices():
+    return fetch_all()
 
 
 @app.get("/indices/{name}")

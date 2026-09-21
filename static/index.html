@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My-Trade</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --border: rgba(11, 11, 11, 0.10);
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --up: #006300;
+    --down: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --border: rgba(255, 255, 255, 0.10);
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --up: #0ca30c;
+      --down: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --border: rgba(255, 255, 255, 0.10);
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --up: #0ca30c;
+    --down: #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 20px; }
+  h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  #status { color: var(--ink-2); font-size: 14px; }
+  #status.error { color: var(--down); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+  }
+  .grid + h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 28px 0 10px; }
+
+  .tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tile .label { font-size: 13px; color: var(--ink-2); }
+  .tile .value { font-size: 26px; font-weight: 600; line-height: 1.15; }
+  .tile.featured .value { font-size: 40px; }
+  .tile .delta { font-size: 14px; font-weight: 500; }
+  .tile .delta.up { color: var(--up); }
+  .tile .delta.down { color: var(--down); }
+  .tile .delta.flat { color: var(--muted); }
+  .tile .time { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  footer { margin-top: 32px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Indian market indices</h1>
+    <span id="status">Loading…</span>
+  </header>
+
+  <section class="grid" id="featured" aria-label="Headline indices"></section>
+  <h2>All indices, biggest move first</h2>
+  <section class="grid" id="others" aria-label="Other indices"></section>
+
+  <footer>Data from Yahoo Finance, about 15 minutes delayed. Refreshes every 60 seconds.</footer>
+</main>
+
+<script>
+  const PINNED = ["NIFTY 50", "SENSEX"];
+  const REFRESH_MS = 60_000;
+
+  const level = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
+
+  function tile(q, featured) {
+    const dir = q.change > 0 ? "up" : q.change < 0 ? "down" : "flat";
+    const glyph = { up: "▲", down: "▼", flat: "—" }[dir];
+    const at = new Date(q.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
+    const el = document.createElement("article");
+    el.className = "tile" + (featured ? " featured" : "");
+    el.innerHTML = `
+      <div class="label">${q.name}</div>
+      <div class="value">${level.format(q.level)}</div>
+      <div class="delta ${dir}">${glyph} ${signed.format(q.change)} (${signed.format(q.change_percent)}%)</div>
+      <div class="time">as of ${at} IST</div>`;
+    return el;
+  }
+
+  function render(quotes) {
+    const byName = Object.fromEntries(quotes.map(q => [q.name, q]));
+    const featured = PINNED.map(n => byName[n]).filter(Boolean);
+    const others = quotes
+      .filter(q => !PINNED.includes(q.name))
+      .sort((a, b) => Math.abs(b.change_percent) - Math.abs(a.change_percent));
+
+    document.getElementById("featured").replaceChildren(...featured.map(q => tile(q, true)));
+    document.getElementById("others").replaceChildren(...others.map(q => tile(q, false)));
+  }
+
+  async function load() {
+    const status = document.getElementById("status");
+    try {
+      const response = await fetch("/indices/all");
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const quotes = await response.json();
+      if (!quotes.length) throw new Error("no data returned");
+      render(quotes);
+      status.className = "";
+      status.textContent = "Updated " + new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    } catch (err) {
+      status.className = "error";
+      status.textContent = "Couldn't load prices (" + err.message + "). Retrying in 60 s.";
+    }
+  }
+
+  load();
+  setInterval(load, REFRESH_MS);
+</script>
+</body>
+</html>
