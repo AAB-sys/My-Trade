@@ -26,7 +26,7 @@ Then open <http://127.0.0.1:8000/indices> or <http://127.0.0.1:8000/docs>.
 
 1. Menu on paper - done (the table above)
 2. Skeleton: both endpoints answer, with made-up numbers - done
-3. Real data: fetch each index's value from Yahoo Finance
+3. Real data: fetch each index's value from Yahoo Finance - done
 4. Errors: an unknown index returns 404 instead of crashing
 5. Published on GitHub - done
 
