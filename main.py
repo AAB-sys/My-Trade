@@ -1,10 +1,15 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
+import httpx
 from fastapi import FastAPI
 
 app = FastAPI(title="Indices API")
 
-# index name -> Yahoo Finance ticker (used from step 3 onwards)
+YAHOO_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+HEADERS = {"User-Agent": "Mozilla/5.0"}
+IST = timezone(timedelta(hours=5, minutes=30))
+
+# index name -> Yahoo Finance ticker
 INDICES = {
     "NIFTY 50": "^NSEI",
     "NIFTY BANK": "^NSEBANK",
@@ -28,6 +33,31 @@ INDICES = {
 }
 
 
+def fetch_quote(name: str, ticker: str) -> dict:
+    response = httpx.get(
+        YAHOO_URL.format(ticker=ticker),
+        params={"range": "1d", "interval": "5m"},
+        headers=HEADERS,
+        timeout=15,
+    )
+    response.raise_for_status()
+    meta = response.json()["chart"]["result"][0]["meta"]
+
+    level = meta["regularMarketPrice"]
+    previous_close = meta.get("chartPreviousClose") or meta.get("previousClose")
+    change = round(level - previous_close, 2)
+    quoted_at = datetime.fromtimestamp(meta["regularMarketTime"], IST)
+
+    return {
+        "name": name,
+        "ticker": ticker,
+        "level": level,
+        "change": change,
+        "change_percent": round(change / previous_close * 100, 2),
+        "time": quoted_at.isoformat(timespec="seconds"),
+    }
+
+
 @app.get("/indices")
 def list_indices():
     return sorted(INDICES)
@@ -36,12 +66,4 @@ def list_indices():
 @app.get("/indices/{name}")
 def get_index(name: str):
     key = name.upper()
-    ticker = INDICES[key]
-    return {
-        "name": key,
-        "ticker": ticker,
-        "level": 24850.0,
-        "change": 63.5,
-        "change_percent": 0.26,
-        "time": datetime.now().isoformat(timespec="seconds"),
-    }
+    return fetch_quote(key, INDICES[key])
