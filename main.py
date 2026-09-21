@@ -14,6 +14,8 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 IST = timezone(timedelta(hours=5, minutes=30))
 DASHBOARD = Path(__file__).parent / "static" / "index.html"
 CACHE_SECONDS = 60
+MAX_WORKERS = 4
+RETRIES = 3
 
 # index name -> Yahoo Finance ticker
 INDICES = {
@@ -39,7 +41,7 @@ INDICES = {
 }
 
 # Yahoo's data is ~15 minutes delayed, so re-asking more often than this gains nothing
-_all_cache = {"fetched_at": 0.0, "quotes": []}
+_all_cache = {"fetched_at": 0.0, "payload": None}
 
 
 def fetch_quote(name: str, ticker: str) -> dict:
@@ -67,24 +69,31 @@ def fetch_quote(name: str, ticker: str) -> dict:
     }
 
 
-def fetch_all() -> list:
-    age = time.monotonic() - _all_cache["fetched_at"]
-    if _all_cache["quotes"] and age < CACHE_SECONDS:
-        return _all_cache["quotes"]
-
-    def safe_fetch(item):
-        name, ticker = item
+def fetch_quote_with_retries(name: str, ticker: str):
+    for attempt in range(RETRIES):
         try:
             return fetch_quote(name, ticker)
         except Exception:
-            return None
+            if attempt == RETRIES - 1:
+                return None
+            time.sleep(1 + attempt)  # Yahoo rate-limits bursts; give it a moment before asking again
 
-    with ThreadPoolExecutor(max_workers=8) as pool:
-        results = pool.map(safe_fetch, INDICES.items())
-    quotes = [quote for quote in results if quote is not None]
 
-    _all_cache.update(fetched_at=time.monotonic(), quotes=quotes)
-    return quotes
+def fetch_all() -> dict:
+    age = time.monotonic() - _all_cache["fetched_at"]
+    if _all_cache["payload"] and age < CACHE_SECONDS:
+        return _all_cache["payload"]
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        results = list(pool.map(lambda item: fetch_quote_with_retries(*item), INDICES.items()))
+
+    payload = {
+        "quotes": [quote for quote in results if quote is not None],
+        "failed": [name for name, quote in zip(INDICES, results) if quote is None],
+    }
+    if payload["quotes"]:
+        _all_cache.update(fetched_at=time.monotonic(), payload=payload)
+    return payload
 
 
 @app.get("/")
