@@ -55,6 +55,8 @@
   h1 { font-size: 20px; font-weight: 600; margin: 0; }
   #status { color: var(--ink-2); font-size: 14px; }
   #status.error { color: var(--down); }
+  #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
+  #mode.on { display: inline-block; }
   #missing { flex-basis: 100%; color: var(--down); font-size: 14px; }
 
   .grid {
@@ -89,7 +91,8 @@
 <main>
   <header>
     <h1>Indian market indices</h1>
-    <span id="status">Loading…</span>
+    <span id="mode">SIMULATED DATA</span>
+    <span id="status">Connecting…</span>
     <span id="missing"></span>
   </header>
 
@@ -97,20 +100,21 @@
   <h2>All indices, gainers to losers</h2>
   <section class="grid" id="others" aria-label="Other indices"></section>
 
-  <footer>Data from Yahoo Finance, about 15 minutes delayed. Refreshes every 60 seconds.</footer>
+  <footer id="footer"></footer>
 </main>
 
 <script>
   const PINNED = ["NIFTY 50", "SENSEX"];
-  const REFRESH_MS = 60_000;
+  const RECONNECT_MS = 3000;
 
   const level = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
+  const clock = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   function tile(q, featured) {
     const dir = q.change > 0 ? "up" : q.change < 0 ? "down" : "flat";
     const glyph = { up: "▲", down: "▼", flat: "—" }[dir];
-    const at = new Date(q.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" });
+    const at = new Date(q.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" });
     const el = document.createElement("article");
     el.className = "tile" + (featured ? " featured" : "");
     el.innerHTML = `
@@ -132,27 +136,40 @@
     document.getElementById("others").replaceChildren(...others.map(q => tile(q, false)));
   }
 
-  async function load() {
+  function apply(data) {
     const status = document.getElementById("status");
-    try {
-      const response = await fetch("/indices/all");
-      if (!response.ok) throw new Error("HTTP " + response.status);
-      const data = await response.json();
-      if (!data.quotes.length) throw new Error("no data returned");
-      render(data.quotes);
+    if (!data.quotes.length) {
       status.className = "";
-      status.textContent = "Updated " + new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      document.getElementById("missing").textContent = data.failed.length
-        ? "Not loaded this time: " + data.failed.join(", ") + " — will retry in 60 s."
-        : "";
-    } catch (err) {
-      status.className = "error";
-      status.textContent = "Couldn't load prices (" + err.message + "). Retrying in 60 s.";
+      status.textContent = "Waiting for the first prices from " + data.source + "…";
+      return;
     }
+    render(data.quotes);
+    status.className = "";
+    status.textContent = "Live · updated " + clock();
+    document.getElementById("mode").className = data.simulated ? "on" : "";
+    document.getElementById("missing").textContent = data.failed.length
+      ? "Not loaded this time: " + data.failed.join(", ") + " — will retry."
+      : "";
+    document.getElementById("footer").textContent = data.simulated
+      ? "Simulated random-walk prices for testing the plumbing; the server ticks every " + data.poll_seconds + " s. Not real market data."
+      : "Data from Yahoo Finance, about 15 minutes delayed; the server refreshes every " + data.poll_seconds + " s and pushes changes here instantly.";
   }
 
-  load();
-  setInterval(load, REFRESH_MS);
+  function connect() {
+    const scheme = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(scheme + "://" + location.host + "/ws");
+    ws.onmessage = event => apply(JSON.parse(event.data));
+    ws.onclose = () => {
+      const status = document.getElementById("status");
+      status.className = "error";
+      status.textContent = "Disconnected — reconnecting…";
+      setTimeout(connect, RECONNECT_MS);
+    };
+    ws.onerror = () => ws.close();
+  }
+
+  fetch("/indices/all").then(r => r.json()).then(apply).catch(() => {});
+  connect();
 </script>
 </body>
 </html>
