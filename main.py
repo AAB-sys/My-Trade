@@ -1,99 +1,84 @@
-import time
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timedelta, timezone
+import asyncio
+import contextlib
+import logging
+import os
 from pathlib import Path
 
-import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 
-app = FastAPI(title="Indices API")
+from providers import INDICES, DemoTicker, fetch_all_yahoo, now_ist
 
-YAHOO_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
-HEADERS = {"User-Agent": "Mozilla/5.0"}
-IST = timezone(timedelta(hours=5, minutes=30))
-DASHBOARD = Path(__file__).parent / "static" / "index.html"
-CACHE_SECONDS = 60
-MAX_WORKERS = 4
-RETRIES = 3
+BASE = Path(__file__).parent
+DASHBOARD = BASE / "static" / "index.html"
+log = logging.getLogger("my-trade")
 
-# index name -> Yahoo Finance ticker
-INDICES = {
-    "NIFTY 50": "^NSEI",
-    "NIFTY BANK": "^NSEBANK",
-    "NIFTY IT": "^CNXIT",
-    "NIFTY NEXT 50": "^NSMIDCP",
-    "NIFTY 100": "^CNX100",
-    "NIFTY 200": "^CNX200",
-    "NIFTY 500": "^CRSLDX",
-    "NIFTY FIN SERVICE": "NIFTY_FIN_SERVICE.NS",
-    "NIFTY AUTO": "^CNXAUTO",
-    "NIFTY PHARMA": "^CNXPHARMA",
-    "NIFTY FMCG": "^CNXFMCG",
-    "NIFTY METAL": "^CNXMETAL",
-    "NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS",
-    "NIFTY SMALLCAP 100": "^CNXSC",
-    "SENSEX": "^BSESN",
-    "BANKEX": "BSE-BANK.BO",
-    "BSE 100": "BSE-100.BO",
-    "BSE 200": "BSE-200.BO",
-    "BSE 500": "BSE-500.BO",
+
+def load_dotenv(path: Path = BASE / ".env") -> None:
+    if not path.exists():
+        return
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, value = line.split("=", 1)
+            os.environ.setdefault(key.strip(), value.strip())
+
+
+load_dotenv()
+PROVIDER = os.environ.get("DATA_PROVIDER", "yahoo").lower()
+POLL_SECONDS = float(os.environ.get("POLL_SECONDS", "1" if PROVIDER == "demo" else "60"))
+
+if PROVIDER == "yahoo":
+    fetch_all = fetch_all_yahoo
+elif PROVIDER == "demo":
+    fetch_all = DemoTicker().fetch_all
+else:
+    raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use yahoo or demo.")
+
+# The latest prices, kept in memory and refreshed by the background loop below.
+store = {
+    "source": PROVIDER,
+    "simulated": PROVIDER == "demo",
+    "poll_seconds": POLL_SECONDS,
+    "updated_at": None,
+    "quotes": [],
+    "failed": [],
 }
-
-# Yahoo's data is ~15 minutes delayed, so re-asking more often than this gains nothing
-_all_cache = {"fetched_at": 0.0, "payload": None}
+clients: set[WebSocket] = set()
 
 
-def fetch_quote(name: str, ticker: str) -> dict:
-    response = httpx.get(
-        YAHOO_URL.format(ticker=ticker),
-        params={"range": "1d", "interval": "5m"},
-        headers=HEADERS,
-        timeout=15,
-    )
-    response.raise_for_status()
-    meta = response.json()["chart"]["result"][0]["meta"]
-
-    level = meta["regularMarketPrice"]
-    previous_close = meta.get("chartPreviousClose") or meta.get("previousClose")
-    change = round(level - previous_close, 2)
-    quoted_at = datetime.fromtimestamp(meta["regularMarketTime"], IST)
-
-    return {
-        "name": name,
-        "ticker": ticker,
-        "level": level,
-        "change": change,
-        "change_percent": round(change / previous_close * 100, 2),
-        "time": quoted_at.isoformat(timespec="seconds"),
-    }
-
-
-def fetch_quote_with_retries(name: str, ticker: str):
-    for attempt in range(RETRIES):
+async def broadcast(payload: dict) -> None:
+    for ws in list(clients):
         try:
-            return fetch_quote(name, ticker)
+            await ws.send_json(payload)
         except Exception:
-            if attempt == RETRIES - 1:
-                return None
-            time.sleep(1 + attempt)  # Yahoo rate-limits bursts; give it a moment before asking again
+            clients.discard(ws)
 
 
-def fetch_all() -> dict:
-    age = time.monotonic() - _all_cache["fetched_at"]
-    if _all_cache["payload"] and age < CACHE_SECONDS:
-        return _all_cache["payload"]
+async def refresh_forever() -> None:
+    while True:
+        try:
+            result = await asyncio.to_thread(fetch_all)
+            if result["quotes"]:
+                store.update(quotes=result["quotes"], failed=result["failed"], updated_at=now_ist())
+                await broadcast(store)
+            else:
+                log.warning("refresh returned no quotes: failed=%s", result["failed"])
+        except Exception as exc:
+            log.warning("refresh failed: %s", exc)
+        await asyncio.sleep(POLL_SECONDS)
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        results = list(pool.map(lambda item: fetch_quote_with_retries(*item), INDICES.items()))
 
-    payload = {
-        "quotes": [quote for quote in results if quote is not None],
-        "failed": [name for name, quote in zip(INDICES, results) if quote is None],
-    }
-    if payload["quotes"]:
-        _all_cache.update(fetched_at=time.monotonic(), payload=payload)
-    return payload
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(refresh_forever())
+    yield
+    task.cancel()
+    with contextlib.suppress(asyncio.CancelledError):
+        await task
+
+
+app = FastAPI(title="Indices API", lifespan=lifespan)
 
 
 @app.get("/")
@@ -108,7 +93,7 @@ def list_indices():
 
 @app.get("/indices/all")
 def all_indices():
-    return fetch_all()
+    return store
 
 
 @app.get("/indices/{name}")
@@ -116,4 +101,21 @@ def get_index(name: str):
     key = name.upper()
     if key not in INDICES:
         raise HTTPException(status_code=404, detail=f"Unknown index '{name}'. See /indices for the list.")
-    return fetch_quote(key, INDICES[key])
+    for quote in store["quotes"]:
+        if quote["name"] == key:
+            return quote
+    raise HTTPException(status_code=503, detail="Prices not loaded yet. Try again in a few seconds.")
+
+
+@app.websocket("/ws")
+async def stream(ws: WebSocket):
+    await ws.accept()
+    clients.add(ws)
+    try:
+        await ws.send_json(store)
+        while True:
+            await ws.receive_text()  # keeps the connection open; the dashboard never sends anything useful
+    except WebSocketDisconnect:
+        pass
+    finally:
+        clients.discard(ws)
