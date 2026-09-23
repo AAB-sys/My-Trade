@@ -2,15 +2,18 @@ import asyncio
 import contextlib
 import logging
 import os
+import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
-from providers import INDICES, DemoTicker, fetch_all_yahoo, now_ist
+from providers import INDICES, RANGES, DemoTicker, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 
 BASE = Path(__file__).parent
-DASHBOARD = BASE / "static" / "index.html"
+STATIC = BASE / "static"
+NO_CACHE = {"Cache-Control": "no-cache"}
 log = logging.getLogger("my-trade")
 
 
@@ -30,8 +33,11 @@ POLL_SECONDS = float(os.environ.get("POLL_SECONDS", "1" if PROVIDER == "demo" el
 
 if PROVIDER == "yahoo":
     fetch_all = fetch_all_yahoo
+    fetch_detail = fetch_detail_yahoo
 elif PROVIDER == "demo":
-    fetch_all = DemoTicker().fetch_all
+    demo = DemoTicker()
+    fetch_all = demo.fetch_all
+    fetch_detail = lambda name, ticker, range_key: demo.fetch_detail(name, range_key)
 else:
     raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use yahoo or demo.")
 
@@ -45,6 +51,7 @@ store = {
     "failed": [],
 }
 clients: set[WebSocket] = set()
+detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 
 
 async def broadcast(payload: dict) -> None:
@@ -81,9 +88,22 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Indices API", lifespan=lifespan)
 
 
+def known_index(name: str) -> str:
+    key = name.upper()
+    if key not in INDICES:
+        raise HTTPException(status_code=404, detail=f"Unknown index '{name}'. See /indices for the list.")
+    return key
+
+
 @app.get("/")
 def dashboard():
-    return FileResponse(DASHBOARD, headers={"Cache-Control": "no-cache"})
+    return FileResponse(STATIC / "index.html", headers=NO_CACHE)
+
+
+@app.get("/index/{name}")
+def index_page(name: str):
+    known_index(name)
+    return FileResponse(STATIC / "detail.html", headers=NO_CACHE)
 
 
 @app.get("/indices")
@@ -96,11 +116,28 @@ def all_indices():
     return store
 
 
+@app.get("/indices/{name}/detail")
+async def index_detail(name: str, range_key: str = Query("today", alias="range")):
+    key = known_index(name)
+    if range_key not in RANGES:
+        raise HTTPException(status_code=400, detail=f"range must be one of: {', '.join(RANGES)}")
+
+    cached = detail_cache.get((key, range_key))
+    if cached and time.monotonic() - cached[0] < POLL_SECONDS:
+        return cached[1]
+    try:
+        payload = await asyncio.to_thread(fetch_detail, key, INDICES[key], range_key)
+    except Exception as exc:
+        log.warning("detail fetch failed for %s: %s", key, exc)
+        raise HTTPException(status_code=502, detail="Couldn't fetch the chart data from the source right now.")
+    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS)
+    detail_cache[(key, range_key)] = (time.monotonic(), payload)
+    return payload
+
+
 @app.get("/indices/{name}")
 def get_index(name: str):
-    key = name.upper()
-    if key not in INDICES:
-        raise HTTPException(status_code=404, detail=f"Unknown index '{name}'. See /indices for the list.")
+    key = known_index(name)
     for quote in store["quotes"]:
         if quote["name"] == key:
             return quote
@@ -119,3 +156,6 @@ async def stream(ws: WebSocket):
         pass
     finally:
         clients.discard(ws)
+
+
+app.mount("/static", StaticFiles(directory=STATIC), name="static")
