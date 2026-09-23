@@ -102,7 +102,22 @@
 
   .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
   #legend { font-size: 12px; color: var(--ink-2); padding: 4px 8px; min-height: 20px; font-variant-numeric: tabular-nums; }
+  .chart-area { position: relative; }
   #chart { height: 420px; }
+  #popup {
+    display: none; position: absolute; z-index: 5; min-width: 170px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; font-variant-numeric: tabular-nums;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+  #popup.on { display: block; }
+  #popup .t { color: var(--muted); margin-bottom: 4px; padding-right: 16px; }
+  #popup .row { display: flex; justify-content: space-between; gap: 14px; line-height: 1.6; }
+  #popup .row b { font-weight: 600; }
+  #popup .row.up b { color: var(--up); }
+  #popup .row.down b { color: var(--down); }
+  #popup .x { position: absolute; top: 2px; right: 7px; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; }
+  #popup .x:hover { color: var(--ink); }
   @media (max-width: 600px) { #chart { height: 300px; } #last { font-size: 32px; } }
 
   footer { margin-top: 24px; font-size: 12px; color: var(--muted); }
@@ -138,7 +153,10 @@
 
   <div class="chart-wrap">
     <div id="legend"></div>
-    <div id="chart"></div>
+    <div class="chart-area">
+      <div id="chart"></div>
+      <div id="popup"></div>
+    </div>
   </div>
 
   <footer id="footer"></footer>
@@ -147,7 +165,7 @@
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
-  const state = { kind: "line", range: "today", pollMs: 60000, timer: null, lastTimes: "" };
+  const state = { kind: "line", range: "today", interval: "", pollMs: 60000, timer: null, lastTimes: "" };
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
@@ -192,6 +210,7 @@
   }
 
   function makeSeries() {
+    hidePopup();
     if (series) chart.removeSeries(series);
     series = state.kind === "candles"
       ? chart.addSeries(LightweightCharts.CandlestickSeries, {
@@ -219,6 +238,53 @@
     if (bar) showLegend(bar);
   });
 
+  // ---- click pop-up: open and close of the bar you clicked
+  const popup = document.getElementById("popup");
+  let popupTime = null;
+
+  function fillPopup(bar) {
+    const move = Math.round((bar.close - bar.open) * 100) / 100;
+    const dir = move > 0 ? "up" : move < 0 ? "down" : "flat";
+    const glyph = { up: "▲", down: "▼", flat: "—" }[dir];
+    popup.innerHTML = `
+      <span class="x" title="Close">&times;</span>
+      <div class="t">${istTime(bar.time, state.range !== "today")} IST · ${state.interval} bar</div>
+      <div class="row"><span>Open</span><b>${fmt.format(bar.open)}</b></div>
+      <div class="row"><span>Close</span><b>${fmt.format(bar.close)}</b></div>
+      <div class="row ${dir}"><span>Open → Close</span><b>${glyph} ${signed.format(move)}</b></div>`;
+  }
+
+  function showPopup(bar, point) {
+    popupTime = bar.time;
+    fillPopup(bar);
+    popup.className = "on";
+    const area = popup.parentElement.getBoundingClientRect();
+    let left = point.x + 14, top = point.y - 12;
+    if (left + popup.offsetWidth > area.width - 6) left = point.x - popup.offsetWidth - 14;
+    if (top + popup.offsetHeight > area.height - 6) top = area.height - popup.offsetHeight - 6;
+    popup.style.left = Math.max(4, left) + "px";
+    popup.style.top = Math.max(4, top) + "px";
+  }
+
+  function hidePopup() {
+    popupTime = null;
+    popup.className = "";
+  }
+
+  function refreshPopup() {
+    if (popupTime === null) return;
+    const bar = bars.find(b => b.time === popupTime);
+    if (bar) fillPopup(bar); else hidePopup();
+  }
+
+  chart.subscribeClick(param => {
+    if (!param.time || !param.point) { hidePopup(); return; }
+    const bar = bars.find(b => b.time + IST_OFFSET === param.time);
+    if (bar) showPopup(bar, param.point); else hidePopup();
+  });
+  popup.addEventListener("click", e => { if (e.target.classList.contains("x")) hidePopup(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") hidePopup(); });
+
   // ---- data
   function setBars(list) {
     const times = list.map(b => b.time).join(",");
@@ -229,6 +295,7 @@
     else { series.setData(toPoints(list)); if (state.lastTimes === "") chart.timeScale().fitContent(); }
     state.lastTimes = times;
     showLegend(list[list.length - 1]);
+    refreshPopup();
   }
 
   function renderSummary(s) {
@@ -260,6 +327,7 @@
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
       renderSummary(data.summary);
+      state.interval = data.interval;
       setBars(data.candles);
       state.pollMs = Math.max(1000, data.poll_seconds * 1000);
       status.className = "";
