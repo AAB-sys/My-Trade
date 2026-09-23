@@ -5,9 +5,19 @@ their own logic. Read this before touching the code.
 
 ## How to work on it
 
-- The design decisions are the owner's. Do not point them at other brokers' apps,
-  APIs or dashboards as references or models, and do not compare this project to
-  them. Index-Trading (a separate repository) is not a template for this one.
+- Everything here runs on the owner's own logic. Build only what the owner
+  specifies, in the words they specify it. Do not propose or shape features after
+  how other products do them, do not point them at other brokers' apps, APIs or
+  dashboards as references or models, and do not compare this project to them.
+  Index-Trading (a separate repository) is not a template for this one.
+- When a behaviour is not specified, ask the owner rather than filling the gap
+  with a convention from elsewhere. A trivial gap (e.g. what a stray click does)
+  may be filled with the smallest reasonable choice, stated plainly so the owner
+  can overrule it.
+- Rules, thresholds, rankings, alert conditions and anything that decides an
+  order are written from what the owner says, never from a textbook or another
+  product. Tools (Python, FastAPI, Git, the chart library) and the raw price feed
+  are not "logic" and are the only things not authored by the owner.
 - Real-time ticks will need a licensed market-data supplier at some point. Treat
   that purely as a supply choice the owner makes: ask which one, once, then
   implement against it. No recommendations, no comparisons.
