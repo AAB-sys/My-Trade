@@ -250,6 +250,8 @@
       <span class="x" title="Close">&times;</span>
       <div class="t">${istTime(bar.time, state.range !== "today")} IST · ${state.interval} bar</div>
       <div class="row"><span>Open</span><b>${fmt.format(bar.open)}</b></div>
+      <div class="row"><span>High</span><b>${fmt.format(bar.high)}</b></div>
+      <div class="row"><span>Low</span><b>${fmt.format(bar.low)}</b></div>
       <div class="row"><span>Close</span><b>${fmt.format(bar.close)}</b></div>
       <div class="row ${dir}"><span>Open → Close</span><b>${glyph} ${signed.format(move)}</b></div>`;
   }
