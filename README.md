@@ -65,7 +65,7 @@ it is on.
 - `static/detail.html` is the detail page: previous-day and today's figures, the
   52-week range, and a chart with Line/Candles and Today/5-days switches, hover
   crosshair with the bar's values, light and dark. Click any bar (or point on the
-  line) for a small pop-up with that bar's time, open and close; click elsewhere,
+  line) for a small pop-up with that bar's time, open, high, low and close; click elsewhere,
   press Esc or its x to close it. It refreshes on the source's rhythm. The chart is drawn by Lightweight Charts (Apache-2.0), bundled in
   `static/vendor/` so nothing is fetched from anyone else's server at runtime.
 
