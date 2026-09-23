@@ -24,7 +24,11 @@ their own logic. Read this before touching the code.
   `demo` (simulated). A broker feed goes here as a third source.
 - `main.py` - the server: in-memory store, background refresh loop, REST menu,
   `/ws` WebSocket push, 5-line `.env` reader (`DATA_PROVIDER`, `POLL_SECONDS`).
-- `static/index.html` - the dashboard: opens `/ws`, redraws on each message.
+- `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
+  each tile links to `/index/{name}` in a new tab.
+- `static/detail.html` - the per-index page: summary figures and a Line/Candles,
+  Today/5-days chart fed by `/indices/{name}/detail`. Chart drawn with
+  Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
 - `start.bat` - one-click start on Windows. `.env` is git-ignored; `.env.example`
   documents the settings.
 

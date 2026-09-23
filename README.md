@@ -8,9 +8,11 @@ dashboard that shows them and updates the moment they change.
 | Method | Endpoint          | You send      | You get back                                                  |
 |--------|-------------------|---------------|---------------------------------------------------------------|
 | GET    | `/`               | nothing       | the dashboard page                                            |
+| GET    | `/index/{name}`   | an index name | the detail page for that index (summary + chart)              |
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
 | GET    | `/indices/all`    | nothing       | the latest snapshot: `quotes`, `failed`, `source`, `updated_at` |
 | GET    | `/indices/{name}` | an index name | that index's latest quote (503 until the first refresh lands) |
+| GET    | `/indices/{name}/detail` | an index name, `?range=today` (5-min bars) or `5d` (15-min bars) | `summary` (previous day OHLC, today's OHL, last, change, 52-week range) and `candles` |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |
 
 Try `/docs` for the interactive version of this table.
@@ -58,7 +60,13 @@ it is on.
 - `main.py` runs the loop, keeps the memory, serves the menu, and pushes
   snapshots to WebSocket clients.
 - `static/index.html` opens the WebSocket, redraws on every message, and
-  reconnects by itself if the connection drops.
+  reconnects by itself if the connection drops. Every tile is a link to that
+  index's detail page, opened in a new tab.
+- `static/detail.html` is the detail page: previous-day and today's figures, the
+  52-week range, and a chart with Line/Candles and Today/5-days switches, hover
+  crosshair with the bar's values, light and dark. It refreshes on the source's
+  rhythm. The chart is drawn by Lightweight Charts (Apache-2.0), bundled in
+  `static/vendor/` so nothing is fetched from anyone else's server at runtime.
 
 ## Phases
 
