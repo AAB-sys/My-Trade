@@ -83,7 +83,7 @@ app = FastAPI(title="Indices API", lifespan=lifespan)
 
 @app.get("/")
 def dashboard():
-    return FileResponse(DASHBOARD)
+    return FileResponse(DASHBOARD, headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/indices")
