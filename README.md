@@ -10,6 +10,7 @@ dashboard that shows them and updates the moment they change.
 | GET    | `/login`          | nothing       | the login page (only when a password is set)                  |
 | POST   | `/login`          | `{"password": "..."}` | sets the login cookie, or 401                          |
 | POST   | `/logout`         | nothing       | clears the login cookie                                       |
+| POST   | `/alive`          | the tab note and page id (headers) | "still here" from an open page: the latest snapshot plus the page's id |
 | GET    | `/health`         | nothing       | `{"status": "ok"}` - open, for the host's health checks       |
 | GET    | `/`               | nothing       | the dashboard page                                            |
 | GET    | `/index/{name}`   | an index name | the detail page for that index (summary + chart)              |
@@ -70,7 +71,7 @@ calls get 401. The cookie is signed with `SESSION_SECRET`, is HttpOnly, and is
 marked Secure when served over HTTPS.
 
 The rule for a login: **it lives only while a My-Trade page is open, and only a
-page handed over from another page of it may carry it on.** Two things make that
+page handed over from another page of it may carry it on.** Three things make that
 true:
 
 - Every data request and the `/ws` connection must carry the login's *tab note*
@@ -80,11 +81,17 @@ true:
   the address bar on arrival). A tab opened anew never has it, so opening the link
   again, even a second after closing, shows the password page, whatever cookie the
   browser kept, and whether or not another page is still open somewhere.
-- When no page is connected, a page may carry on only inside a *handover*: the
-  server opens one when it serves a page while another page of the login is still
-  connected (a reload, a tile click), and closes it as soon as the new page
-  connects. A tab the browser brings back by itself after a restart was not handed
-  over, so it is refused too. A login with no page connected for 30 seconds ends.
+- Every page has a *page id* (`X-Page` header, `?page=` on `/ws`), held in the
+  page's memory only. The server gives it when the page first connects or reports
+  in. A page keeps its login alive by holding `/ws` or by reporting in (`POST
+  /alive`) every 15 seconds, and a page whose connection drops comes back with the
+  same id, so a flaky connection (a phone, say) never logs you out while the page
+  is open. A tab the browser brings back by itself after a restart has no page id.
+- A page without an id is let in only inside a *handover*: the server opens one
+  when it serves a page while another page of the login is open (a reload, a tile
+  click), or at login for the first page, and closes it as soon as the new page
+  gets its id. A page that has not reported in for 60 seconds is gone; a login with
+  no page left and no handover open is over.
 
 So closing the browser, closing the last tab, a server restart, or leaving a page
 in the background on a phone until its connection drops, all mean logging in

@@ -340,8 +340,21 @@
     try { sessionStorage.setItem("tab", TAB); } catch (e) {}
     history.replaceState(null, "", location.pathname);
   }
-  const withTab = () => ({ headers: { "X-Tab": TAB } });
-  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws?tab=" + encodeURIComponent(TAB);
+  // This page's id: kept in memory only, so the page can come back after its connection drops.
+  let PAGE = "";
+  const BEAT_MS = 15000;
+  const withTab = () => ({ headers: { "X-Tab": TAB, "X-Page": PAGE } });
+  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host
+    + "/ws?tab=" + encodeURIComponent(TAB) + "&page=" + encodeURIComponent(PAGE);
+
+  // "Still here": keeps the login alive even while /ws is down.
+  async function beat() {
+    try {
+      const r = await fetch("/alive", { method: "POST", ...withTab() });
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (r.ok) { const data = await r.json(); if (data.page) PAGE = data.page; }
+    } catch (e) {}
+  }
 
   async function load() {
     const status = document.getElementById("status");
@@ -369,16 +382,19 @@
     state.timer = setTimeout(load, state.pollMs);
   }
 
-  // Holds a /ws connection while this page is open: the login ends once every page is closed.
+  // Holds a /ws connection while this page is open, and reports in every BEAT_MS: the login
+  // lives while some page does either.
   function keepAlive() {
     const ws = new WebSocket(wsUrl());
+    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; };
     ws.onclose = () => {
-      fetch("/indices/all", withTab()).then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
+      beat();  // says "still here" at once, and finds out if the login is over
       setTimeout(keepAlive, 3000);
     };
     ws.onerror = () => ws.close();
   }
-  keepAlive();
+  beat().then(keepAlive);  // report in first (a new page gets its id), then open the stream
+  setInterval(beat, BEAT_MS);
 
   // ---- controls
   document.getElementById("logout").addEventListener("click", () => {

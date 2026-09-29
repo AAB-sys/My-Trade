@@ -119,6 +119,7 @@
 <script>
   const PINNED = ["NIFTY 50", "SENSEX"];
   const RECONNECT_MS = 3000;
+  const BEAT_MS = 15000;  // how often this page reports in (the server allows twice that)
 
   const level = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
@@ -156,10 +157,26 @@
   // The login's "tab" note: kept in this tab only, so a freshly opened tab has none and is asked for the password.
   let TAB = "";
   try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
-  const withTab = () => ({ headers: { "X-Tab": TAB } });
-  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws?tab=" + encodeURIComponent(TAB);
+  // This page's id: kept in memory only, so the page can come back after its connection drops,
+  // while a tab the browser brings back after a restart cannot.
+  let PAGE = "";
+  let connected = false;
+  const withTab = () => ({ headers: { "X-Tab": TAB, "X-Page": PAGE } });
+  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host
+    + "/ws?tab=" + encodeURIComponent(TAB) + "&page=" + encodeURIComponent(PAGE);
+
+  // "Still here": keeps the login alive even while /ws is down, and brings the latest prices with it.
+  async function beat() {
+    try {
+      const r = await fetch("/alive", { method: "POST", ...withTab() });
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (!r.ok) return;
+      apply(await r.json());
+    } catch (e) {}
+  }
 
   function apply(data) {
+    if (data.page) PAGE = data.page;
     const status = document.getElementById("status");
     if (!data.quotes.length) {
       status.className = "";
@@ -167,8 +184,8 @@
       return;
     }
     render(data.quotes);
-    status.className = "";
-    status.textContent = "Live · updated " + clock();
+    status.className = connected ? "" : "error";
+    status.textContent = (connected ? "Live" : "Reconnecting, updating every " + BEAT_MS / 1000 + " s meanwhile") + " · updated " + clock();
     document.getElementById("mode").className = data.simulated ? "on" : "";
     document.getElementById("logout").hidden = !data.auth_enabled;
     document.getElementById("open-warning").hidden = data.auth_enabled;
@@ -182,12 +199,14 @@
 
   function connect() {
     const ws = new WebSocket(wsUrl());
+    ws.onopen = () => { connected = true; };
     ws.onmessage = event => apply(JSON.parse(event.data));
     ws.onclose = () => {
+      connected = false;
       const status = document.getElementById("status");
       status.className = "error";
       status.textContent = "Disconnected — reconnecting…";
-      fetch("/indices/all", withTab()).then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
+      beat();  // says "still here" at once, and finds out if the login is over
       setTimeout(connect, RECONNECT_MS);
     };
     ws.onerror = () => ws.close();
@@ -197,11 +216,8 @@
     fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
   });
 
-  fetch("/indices/all", withTab()).then(r => {
-    if (r.status === 401) { location.href = "/login"; return null; }
-    return r.json();
-  }).then(data => data && apply(data)).catch(() => {});
-  connect();
+  beat().then(connect);  // report in first (a new page gets its id), then open the stream
+  setInterval(beat, BEAT_MS);
 </script>
 </body>
 </html>
