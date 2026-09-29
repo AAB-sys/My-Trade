@@ -46,7 +46,7 @@ Copy `.env.example` to `.env` and edit it. The server reads it on startup.
 | `DATA_PROVIDER` | `yahoo` (default), `demo` | Real prices from Yahoo Finance, or a simulated random walk for testing |
 | `POLL_SECONDS`  | a number         | How often the server refreshes. Defaults: 60 for yahoo, 1 for demo |
 | `DASHBOARD_PASSWORD` | any text    | Turns the login on. Unset = open (the dashboard shows a warning). Required before hosting |
-| `SESSION_SECRET` | a long random string | Signs the login cookie. Unset = random at each start, so logins reset on restart |
+| `SESSION_SECRET` | a long random string | Signs the login cookie. Optional: a restart ends every login anyway |
 | `HOST`          | `127.0.0.1` (default), `0.0.0.0` | Read by `start.bat`. `0.0.0.0` lets other devices on the same network open the dashboard |
 | `PORT`          | a number, default `8000` | Read by `start.bat` |
 
@@ -67,12 +67,18 @@ it is on.
 With `DASHBOARD_PASSWORD` set, every page and every menu row (including `/ws`)
 requires the login cookie; without it, browsers are sent to `/login` and API
 calls get 401. The cookie is signed with `SESSION_SECRET`, is HttpOnly, and is
-marked Secure when served over HTTPS. It is a browser-session cookie: closing the
-browser (all its windows) throws it away, so the next visit asks for the password
-again; a browser that is never closed is logged out after 30 days anyway. A wrong
-password waits a second before answering, which makes guessing slow. `/health`
-and `/static/*` stay open. The **Log out** button in the page header ends the
-login at once.
+marked Secure when served over HTTPS.
+
+The rule for a login: **it lives only while a My-Trade page is open.** Every page
+holds a `/ws` connection; once the last page has been closed for 30 seconds (enough
+for a reload, or a tile opening a new tab) the server forgets the login, and the
+next visit asks for the password, whatever the browser kept. So closing the
+browser, closing the last tab, a server restart, or leaving a page in the
+background on a phone until the connection drops, all mean logging in again. A
+browser that is never closed is logged out after 30 days anyway. The **Log out**
+button in the page header ends the login at once, in every tab. A wrong password
+waits a second before answering, which makes guessing slow. `/health` and
+`/static/*` stay open.
 
 ## Hosting
 
