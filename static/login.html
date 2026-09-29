@@ -90,7 +90,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: document.getElementById("password").value }),
       });
-      if (response.ok) { location.href = "/"; return; }
+      if (response.ok) {
+        const data = await response.json();
+        try { if (data.tab) sessionStorage.setItem("tab", data.tab); } catch (e) {}
+        location.href = "/";
+        return;
+      }
       error.textContent = response.status === 401 ? "Wrong password." : "Couldn't log in (HTTP " + response.status + ").";
     } catch (err) {
       error.textContent = "Couldn't reach the server.";

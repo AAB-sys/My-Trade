@@ -37,7 +37,7 @@ PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 AUTH_ENABLED = bool(PASSWORD)
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
 SESSION_DAYS = 30  # hard ceiling on a login, for a browser that is never closed
-GRACE_SECONDS = 30  # a login outlives its last open page by this much (a reload, a tile opening a new tab)
+GRACE_SECONDS = 30  # how long a reload may take: a login with no page open ends after this
 COOKIE = "my_trade_session"
 OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
@@ -65,10 +65,14 @@ clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 
 # The rule for a login: it lives only while a My-Trade page is open on it. Every page holds
-# a /ws connection; once the last one has been gone for GRACE_SECONDS the login ends and
-# the next visit asks for the password. Kept in memory, so a server restart ends them all.
-logins: dict[str, dict] = {}  # token -> {"pages": open connections, "last_seen": time}
+# a /ws connection. When the last page goes, the login has GRACE_SECONDS to be carried on by
+# a page that belongs to it (a reload, "back to dashboard"), which it proves with the login's
+# "tab" note. Pages keep that note in the tab's sessionStorage, which a freshly opened tab
+# never has: so opening the link anew, even seconds after closing, ends the login and asks
+# for the password. Kept in memory, so a server restart ends every login.
+logins: dict[str, dict] = {}  # token -> {"pages": open connections, "last_seen": time, "tab": note}
 ws_tokens: dict[WebSocket, str] = {}
+PAGE_PATHS = ("/", "/index/")  # HTML pages: the browser fetches these itself, without the tab note
 
 
 # ---------------------------------------------------------------- login
@@ -89,23 +93,39 @@ def token_ok(token) -> bool:
     return time.time() - int(issued) < SESSION_DAYS * 86400
 
 
-def login_alive(token) -> bool:
+def find_login(token):
+    """The login behind this cookie, or None. One whose pages have all been gone for
+    longer than the grace is over."""
+    if not token_ok(token):
+        return None
     entry = logins.get(token)
-    if entry is None:
-        return False
-    now = time.time()
-    if entry["pages"] > 0 or now - entry["last_seen"] < GRACE_SECONDS:
-        entry["last_seen"] = now
-        return True
-    del logins[token]
-    return False
+    if entry and entry["pages"] == 0 and time.time() - entry["last_seen"] >= GRACE_SECONDS:
+        del logins[token]
+        entry = None
+    return entry
 
 
 def logged_in(connection) -> bool:
+    """For data requests and /ws, which carry the tab note (header X-Tab or ?tab=)."""
     if not AUTH_ENABLED:
         return True
     token = connection.cookies.get(COOKIE)
-    return token_ok(token) and login_alive(token)
+    entry = find_login(token)
+    if entry is None:
+        return False
+    if entry["pages"] == 0:
+        tab = connection.headers.get("x-tab") or connection.query_params.get("tab") or ""
+        if not hmac.compare_digest(tab, entry["tab"]):
+            del logins[token]  # not a page carrying on, but the link opened anew: the login is over
+            return False
+    entry["last_seen"] = time.time()
+    return True
+
+
+def page_allowed(request: Request) -> bool:
+    """For the HTML pages: let a page of a login that is alive or still in its grace
+    load; its first data request, with or without the note, settles it."""
+    return not AUTH_ENABLED or find_login(request.cookies.get(COOKIE)) is not None
 
 
 def is_https(request: Request) -> bool:
@@ -152,7 +172,9 @@ app = FastAPI(title="Indices API", lifespan=lifespan)
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
-    if logged_in(request) or request.url.path.startswith(OPEN_PATHS):
+    path = request.url.path
+    is_page = path == "/" or path.startswith(PAGE_PATHS[1])
+    if path.startswith(OPEN_PATHS) or (page_allowed(request) if is_page else logged_in(request)):
         return await call_next(request)
     if "text/html" in request.headers.get("accept", ""):
         return RedirectResponse("/login", status_code=302)
@@ -193,8 +215,8 @@ async def login(request: Request):
     for dead in [t for t, e in logins.items() if e["pages"] == 0 and now - e["last_seen"] >= GRACE_SECONDS]:
         del logins[dead]
     token = make_token()
-    logins[token] = {"pages": 0, "last_seen": now}
-    response = JSONResponse({"ok": True})
+    logins[token] = {"pages": 0, "last_seen": now, "tab": secrets.token_urlsafe(16)}
+    response = JSONResponse({"ok": True, "tab": logins[token]["tab"]})
     # No max_age/expires: a "session" cookie, which the browser drops when it is closed.
     # Browsers are not reliable about that (some keep running in the background), so the
     # server's own rule above is what really ends the login.
@@ -275,11 +297,12 @@ async def stream(ws: WebSocket):
     await ws.accept()
     clients.add(ws)
     token = ws.cookies.get(COOKIE)
-    if token in logins:
-        logins[token]["pages"] += 1
+    entry = logins.get(token)
+    if entry:
+        entry["pages"] += 1
         ws_tokens[ws] = token
     try:
-        await ws.send_json(store)
+        await ws.send_json({**store, "tab": entry["tab"]} if entry else store)  # the note rides the first message
         while True:
             await ws.receive_text()  # keeps the connection open; the pages never send anything useful
     except WebSocketDisconnect:

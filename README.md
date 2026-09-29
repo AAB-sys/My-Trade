@@ -70,15 +70,19 @@ calls get 401. The cookie is signed with `SESSION_SECRET`, is HttpOnly, and is
 marked Secure when served over HTTPS.
 
 The rule for a login: **it lives only while a My-Trade page is open.** Every page
-holds a `/ws` connection; once the last page has been closed for 30 seconds (enough
-for a reload, or a tile opening a new tab) the server forgets the login, and the
-next visit asks for the password, whatever the browser kept. So closing the
-browser, closing the last tab, a server restart, or leaving a page in the
-background on a phone until the connection drops, all mean logging in again. A
-browser that is never closed is logged out after 30 days anyway. The **Log out**
-button in the page header ends the login at once, in every tab. A wrong password
-waits a second before answering, which makes guessing slow. `/health` and
-`/static/*` stay open.
+holds a `/ws` connection. When the last page goes, the login has 30 seconds to be
+carried on by a page that belongs to it: a reload, or "back to dashboard". Such a
+page proves it with the login's *tab note*, which pages keep in the tab's
+`sessionStorage` (sent with data requests as `X-Tab`, and with `/ws` as `?tab=`).
+A freshly opened tab has no note, so opening the link anew, even seconds after
+closing, ends the login and shows the password page, whatever cookie the browser
+kept. A tab opened from a tile gets the note from its first `/ws` message while
+the dashboard is still open. So closing the browser, closing the last tab, a server
+restart, or leaving a page in the background on a phone until the connection
+drops, all mean logging in again. A browser that is never closed is logged out
+after 30 days anyway. The **Log out** button in the page header ends the login at
+once, in every tab. A wrong password waits a second before answering, which makes
+guessing slow. `/health` and `/static/*` stay open.
 
 ## Hosting
 
