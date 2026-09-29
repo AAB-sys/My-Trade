@@ -9,9 +9,16 @@ if not exist ".venv\Scripts\python.exe" (
     ".venv\Scripts\python.exe" -m pip install -r requirements.txt || goto :fail
 )
 
-netstat -ano | findstr ":8000 " | findstr LISTENING >nul
+set "HOST=127.0.0.1"
+set "PORT=8000"
+if exist ".env" for /f "usebackq eol=# tokens=1,* delims==" %%a in (".env") do (
+    if /i "%%a"=="HOST" set "HOST=%%b"
+    if /i "%%a"=="PORT" set "PORT=%%b"
+)
+
+netstat -ano | findstr ":%PORT% " | findstr LISTENING >nul
 if not errorlevel 1 (
-    echo Something is already running on port 8000 - probably another My-Trade window.
+    echo Something is already running on port %PORT% - probably another My-Trade window.
     echo Close that window first, then run start.bat again.
     pause
     exit /b 1
@@ -19,10 +26,17 @@ if not errorlevel 1 (
 
 call ".venv\Scripts\activate.bat"
 
-start "" /b cmd /c "timeout /t 3 /nobreak >nul & start "" http://127.0.0.1:8000/"
+start "" /b cmd /c "timeout /t 3 /nobreak >nul & start "" http://127.0.0.1:%PORT%/"
 
-echo Starting My-Trade on http://127.0.0.1:8000/  (press Ctrl+C to stop)
-python -m uvicorn main:app
+echo Starting My-Trade on http://127.0.0.1:%PORT%/  (press Ctrl+C to stop)
+if "%HOST%"=="0.0.0.0" (
+    echo.
+    echo Other devices on this network can open it at one of these addresses, followed by :%PORT%/
+    ipconfig | findstr /c:"IPv4"
+    echo If Windows asks whether to let Python through the firewall, allow it on private networks.
+    echo.
+)
+python -m uvicorn main:app --host %HOST% --port %PORT%
 goto :eof
 
 :fail

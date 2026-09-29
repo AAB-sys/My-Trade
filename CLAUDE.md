@@ -39,6 +39,9 @@ their own logic. Read this before touching the code.
   `/static/*` stay open). No password set = open, with a warning.
 - `static/login.html` - the login page. `Procfile` - the host's start command.
   Hosting: one instance, secrets in the host's environment, `/health` for checks.
+- `start.bat` reads `HOST`/`PORT` from `.env` (defaults `127.0.0.1`/`8000`);
+  `HOST=0.0.0.0` opens the dashboard to other devices on the owner's home network
+  and prints the addresses to use.
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
   each tile links to `/index/{name}` in a new tab.
 - `static/detail.html` - the per-index page: summary figures and a Line/Candles,
