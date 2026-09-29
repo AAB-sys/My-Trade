@@ -37,7 +37,7 @@ PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 AUTH_ENABLED = bool(PASSWORD)
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
 SESSION_DAYS = 30  # hard ceiling on a login, for a browser that is never closed
-GRACE_SECONDS = 30  # how long a reload may take: a login with no page open ends after this
+GRACE_SECONDS = 30  # how long a handover may take (a reload, a tile opening a new tab)
 COOKIE = "my_trade_session"
 OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
@@ -64,15 +64,18 @@ store = {
 clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 
-# The rule for a login: it lives only while a My-Trade page is open on it. Every page holds
-# a /ws connection. When the last page goes, the login has GRACE_SECONDS to be carried on by
-# a page that belongs to it (a reload, "back to dashboard"), which it proves with the login's
-# "tab" note. Pages keep that note in the tab's sessionStorage, which a freshly opened tab
-# never has: so opening the link anew, even seconds after closing, ends the login and asks
-# for the password. Kept in memory, so a server restart ends every login.
-logins: dict[str, dict] = {}  # token -> {"pages": open connections, "last_seen": time, "tab": note}
+# The rule for a login: it lives only while a My-Trade page is open on it, and only a page
+# handed over from another page of it may carry it on. Every page holds a /ws connection.
+# Every data request and /ws must carry the login's "tab" note (X-Tab header or ?tab=),
+# which the login page keeps in the tab's sessionStorage and a tile passes to the tab it
+# opens: a tab opened anew never has it, so it gets the password page, whatever the browser
+# kept. When no page is open, a page may carry on only within a handover: one is opened
+# when a page of the login is served while another page is still connected (a reload, a
+# tile click), and it closes when the new page connects. The login ends when no page has
+# been connected for GRACE_SECONDS. Kept in memory, so a server restart ends every login.
+logins: dict[str, dict] = {}  # token -> {"pages", "last_seen", "tab", "handover_until"}
 ws_tokens: dict[WebSocket, str] = {}
-PAGE_PATHS = ("/", "/index/")  # HTML pages: the browser fetches these itself, without the tab note
+PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
 
 
 # ---------------------------------------------------------------- login
@@ -106,26 +109,37 @@ def find_login(token):
 
 
 def logged_in(connection) -> bool:
-    """For data requests and /ws, which carry the tab note (header X-Tab or ?tab=)."""
+    """For data requests and /ws: the cookie, the tab note, and a page of the login
+    still connected or a handover still open."""
     if not AUTH_ENABLED:
         return True
-    token = connection.cookies.get(COOKIE)
-    entry = find_login(token)
+    entry = find_login(connection.cookies.get(COOKIE))
     if entry is None:
         return False
-    if entry["pages"] == 0:
-        tab = connection.headers.get("x-tab") or connection.query_params.get("tab") or ""
-        if not hmac.compare_digest(tab, entry["tab"]):
-            del logins[token]  # not a page carrying on, but the link opened anew: the login is over
-            return False
-    entry["last_seen"] = time.time()
+    tab = connection.headers.get("x-tab") or connection.query_params.get("tab") or ""
+    if not hmac.compare_digest(tab, entry["tab"]):
+        if entry["pages"] == 0:
+            logins.pop(connection.cookies.get(COOKIE), None)  # nothing open, and the link opened anew: over
+        return False  # a tab opened anew, not one handed over
+    now = time.time()
+    if entry["pages"] == 0 and now >= entry["handover_until"]:
+        return False  # nothing handed over to it (a tab the browser brought back, say)
+    entry["last_seen"] = now
     return True
 
 
 def page_allowed(request: Request) -> bool:
-    """For the HTML pages: let a page of a login that is alive or still in its grace
-    load; its first data request, with or without the note, settles it."""
-    return not AUTH_ENABLED or find_login(request.cookies.get(COOKIE)) is not None
+    """For the HTML pages, which the browser fetches without the note: let a page of a
+    live login load, and if a page is still connected, open a handover so the new page
+    can carry on once the old one has gone. Its first data request settles it."""
+    if not AUTH_ENABLED:
+        return True
+    entry = find_login(request.cookies.get(COOKIE))
+    if entry is None:
+        return False
+    if entry["pages"] > 0:
+        entry["handover_until"] = time.time() + GRACE_SECONDS
+    return True
 
 
 def is_https(request: Request) -> bool:
@@ -173,7 +187,7 @@ app = FastAPI(title="Indices API", lifespan=lifespan)
 @app.middleware("http")
 async def require_login(request: Request, call_next):
     path = request.url.path
-    is_page = path == "/" or path.startswith(PAGE_PATHS[1])
+    is_page = path == "/" or path.startswith(PAGE_PATHS[1:])
     if path.startswith(OPEN_PATHS) or (page_allowed(request) if is_page else logged_in(request)):
         return await call_next(request)
     if "text/html" in request.headers.get("accept", ""):
@@ -192,13 +206,11 @@ def known_index(name: str) -> str:
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7]}  # which version is running
 
 
 @app.get("/login")
-def login_page(request: Request):
-    if logged_in(request):
-        return RedirectResponse("/", status_code=302)
+def login_page():
     return FileResponse(STATIC / "login.html", headers=NO_CACHE)
 
 
@@ -215,7 +227,8 @@ async def login(request: Request):
     for dead in [t for t, e in logins.items() if e["pages"] == 0 and now - e["last_seen"] >= GRACE_SECONDS]:
         del logins[dead]
     token = make_token()
-    logins[token] = {"pages": 0, "last_seen": now, "tab": secrets.token_urlsafe(16)}
+    logins[token] = {"pages": 0, "last_seen": now, "tab": secrets.token_urlsafe(16),
+                     "handover_until": now + GRACE_SECONDS}  # the login itself hands over to the first page
     response = JSONResponse({"ok": True, "tab": logins[token]["tab"]})
     # No max_age/expires: a "session" cookie, which the browser drops when it is closed.
     # Browsers are not reliable about that (some keep running in the background), so the
@@ -300,9 +313,10 @@ async def stream(ws: WebSocket):
     entry = logins.get(token)
     if entry:
         entry["pages"] += 1
+        entry["handover_until"] = 0  # the handover is used up: this page is connected now
         ws_tokens[ws] = token
     try:
-        await ws.send_json({**store, "tab": entry["tab"]} if entry else store)  # the note rides the first message
+        await ws.send_json(store)
         while True:
             await ws.receive_text()  # keeps the connection open; the pages never send anything useful
     except WebSocketDisconnect:

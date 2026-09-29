@@ -69,20 +69,30 @@ requires the login cookie; without it, browsers are sent to `/login` and API
 calls get 401. The cookie is signed with `SESSION_SECRET`, is HttpOnly, and is
 marked Secure when served over HTTPS.
 
-The rule for a login: **it lives only while a My-Trade page is open.** Every page
-holds a `/ws` connection. When the last page goes, the login has 30 seconds to be
-carried on by a page that belongs to it: a reload, or "back to dashboard". Such a
-page proves it with the login's *tab note*, which pages keep in the tab's
-`sessionStorage` (sent with data requests as `X-Tab`, and with `/ws` as `?tab=`).
-A freshly opened tab has no note, so opening the link anew, even seconds after
-closing, ends the login and shows the password page, whatever cookie the browser
-kept. A tab opened from a tile gets the note from its first `/ws` message while
-the dashboard is still open. So closing the browser, closing the last tab, a server
-restart, or leaving a page in the background on a phone until the connection
-drops, all mean logging in again. A browser that is never closed is logged out
-after 30 days anyway. The **Log out** button in the page header ends the login at
-once, in every tab. A wrong password waits a second before answering, which makes
-guessing slow. `/health` and `/static/*` stay open.
+The rule for a login: **it lives only while a My-Trade page is open, and only a
+page handed over from another page of it may carry it on.** Two things make that
+true:
+
+- Every data request and the `/ws` connection must carry the login's *tab note*
+  (`X-Tab` header, `?tab=` on `/ws`). The login page keeps it in the tab's
+  `sessionStorage`, so a reload or "back to dashboard" in the same tab still has
+  it, and a tile passes it to the tab it opens (in the link's `#t=`, dropped from
+  the address bar on arrival). A tab opened anew never has it, so opening the link
+  again, even a second after closing, shows the password page, whatever cookie the
+  browser kept, and whether or not another page is still open somewhere.
+- When no page is connected, a page may carry on only inside a *handover*: the
+  server opens one when it serves a page while another page of the login is still
+  connected (a reload, a tile click), and closes it as soon as the new page
+  connects. A tab the browser brings back by itself after a restart was not handed
+  over, so it is refused too. A login with no page connected for 30 seconds ends.
+
+So closing the browser, closing the last tab, a server restart, or leaving a page
+in the background on a phone until its connection drops, all mean logging in
+again. A browser that is never closed is logged out after 30 days anyway. The
+**Log out** button in the page header ends the login at once, in every tab. A
+wrong password waits a second before answering, which makes guessing slow.
+`/health` (which also shows the running commit on the host) and `/static/*` stay
+open.
 
 ## Hosting
 
