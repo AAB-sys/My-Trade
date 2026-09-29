@@ -37,13 +37,15 @@ their own logic. Read this before touching the code.
   `DASHBOARD_PASSWORD`, `SESSION_SECRET`), single-password login with a signed
   session cookie that guards every route and `/ws` (`/login`, `/logout`,
   `/health` and `/static/*` stay open). The owner's rule: a login lives only
-  while a page is open on it (each page holds `/ws`). After the last page
-  closes, only a page carrying the login's "tab" note (sessionStorage, sent as
-  `X-Tab` / `?tab=`) may carry it on within 30 s, i.e. a reload; a freshly opened
-  tab has no note and ends the login, so opening the link anew always asks for
-  the password. 30-day ceiling; kept in memory, so a restart ends it. No
-  password set = open, with a warning. Pages show a **Log out** button whenever
-  the login is on.
+  while a page is open on it (each page holds `/ws`), and only a page handed
+  over from another page of it may carry it on. Every data request and `/ws`
+  must carry the login's "tab" note (sessionStorage; `X-Tab` / `?tab=`; a tile
+  passes it in `#t=`), so a tab opened anew always gets the password page. With
+  no page connected, a page may carry on only within a handover, opened when a
+  page is served while another is connected and used up when the new page
+  connects; a login with no page connected for 30 s ends. 30-day ceiling; kept
+  in memory, so a restart ends it. No password set = open, with a warning. Pages
+  show a **Log out** button whenever the login is on.
 - `static/login.html` - the login page. `Procfile` - the host's start command.
   Hosting: one instance, secrets in the host's environment, `/health` for checks.
 - `start.bat` reads `HOST`/`PORT` from `.env` (defaults `127.0.0.1`/`8000`);

@@ -331,12 +331,14 @@
   }
 
   // The login's "tab" note: kept in this tab only, so a freshly opened tab has none and is asked for the password.
+  // A tile hands it over in the link's #t=...; take it, keep it, and drop it from the address bar.
   let TAB = "";
   try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
-  function noteTab(tab) {
-    if (!tab || tab === TAB) return;
-    TAB = tab;
-    try { sessionStorage.setItem("tab", tab); } catch (e) {}
+  const handed = new URLSearchParams(location.hash.slice(1)).get("t");
+  if (handed) {
+    TAB = handed;
+    try { sessionStorage.setItem("tab", TAB); } catch (e) {}
+    history.replaceState(null, "", location.pathname);
   }
   const withTab = () => ({ headers: { "X-Tab": TAB } });
   const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws?tab=" + encodeURIComponent(TAB);
@@ -370,7 +372,6 @@
   // Holds a /ws connection while this page is open: the login ends once every page is closed.
   function keepAlive() {
     const ws = new WebSocket(wsUrl());
-    ws.onmessage = event => noteTab(JSON.parse(event.data).tab);
     ws.onclose = () => {
       fetch("/indices/all", withTab()).then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
       setTimeout(keepAlive, 3000);

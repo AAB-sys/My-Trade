@@ -130,7 +130,7 @@
     const at = new Date(q.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" });
     const el = document.createElement("a");
     el.className = "tile" + (featured ? " featured" : "");
-    el.href = "/index/" + encodeURIComponent(q.name);
+    el.href = "/index/" + encodeURIComponent(q.name) + "#t=" + encodeURIComponent(TAB);  // hands the note to the new tab
     el.target = "_blank";
     el.rel = "noopener";
     el.title = "Open " + q.name + " details in a new tab";
@@ -156,16 +156,10 @@
   // The login's "tab" note: kept in this tab only, so a freshly opened tab has none and is asked for the password.
   let TAB = "";
   try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
-  function noteTab(tab) {
-    if (!tab || tab === TAB) return;
-    TAB = tab;
-    try { sessionStorage.setItem("tab", tab); } catch (e) {}
-  }
   const withTab = () => ({ headers: { "X-Tab": TAB } });
   const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws?tab=" + encodeURIComponent(TAB);
 
   function apply(data) {
-    noteTab(data.tab);
     const status = document.getElementById("status");
     if (!data.quotes.length) {
       status.className = "";
