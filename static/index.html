@@ -58,8 +58,13 @@
   #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
   #mode.on { display: inline-block; }
   #missing { flex-basis: 100%; color: var(--down); font-size: 14px; }
-  #logout { margin-left: auto; color: var(--ink-2); font-size: 14px; text-decoration: none; }
-  #logout:hover { color: var(--ink); }
+  #logout {
+    margin-left: auto; align-self: center; font: inherit; font-size: 14px; font-weight: 500;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 14px; cursor: pointer;
+  }
+  #logout:hover { border-color: var(--ink-2); }
+  #logout[hidden] { display: none; }
   #open-warning { flex-basis: 100%; color: var(--down); font-size: 13px; }
 
   .grid {
@@ -99,7 +104,7 @@
     <h1>Indian market indices</h1>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Connecting…</span>
-    <a id="logout" href="/login" hidden>Log out</a>
+    <button id="logout" type="button" hidden>Log out</button>
     <span id="missing"></span>
     <span id="open-warning" hidden>No password is set, so anyone who can reach this address can see this page. Fine on your own laptop; set DASHBOARD_PASSWORD before putting it online.</span>
   </header>
@@ -183,8 +188,7 @@
     ws.onerror = () => ws.close();
   }
 
-  document.getElementById("logout").addEventListener("click", (event) => {
-    event.preventDefault();
+  document.getElementById("logout").addEventListener("click", () => {
     fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
   });
 

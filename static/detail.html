@@ -68,8 +68,13 @@
   .top a { color: var(--ink-2); font-size: 14px; text-decoration: none; }
   .top a:hover { color: var(--ink); }
   #status { color: var(--ink-2); font-size: 14px; margin-left: auto; }
-  #logout { color: var(--ink-2); font-size: 14px; text-decoration: none; }
-  #logout:hover { color: var(--ink); }
+  #logout {
+    align-self: center; font: inherit; font-size: 14px; font-weight: 500;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 14px; cursor: pointer;
+  }
+  #logout:hover { border-color: var(--ink-2); }
+  #logout[hidden] { display: none; }
   #status.error { color: var(--down); }
   #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
   #mode.on { display: inline-block; }
@@ -131,7 +136,7 @@
     <a href="/">&larr; Dashboard</a>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Loading…</span>
-    <a id="logout" href="/login" hidden>Log out</a>
+    <button id="logout" type="button" hidden>Log out</button>
   </div>
 
   <div class="hero">
@@ -352,8 +357,7 @@
   }
 
   // ---- controls
-  document.getElementById("logout").addEventListener("click", (event) => {
-    event.preventDefault();
+  document.getElementById("logout").addEventListener("click", () => {
     fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
   });
   document.getElementById("kind").addEventListener("click", e => {
