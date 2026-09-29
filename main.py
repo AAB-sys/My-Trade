@@ -1,12 +1,15 @@
 import asyncio
 import contextlib
+import hashlib
+import hmac
 import logging
 import os
+import secrets
 import time
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from providers import INDICES, RANGES, DemoTicker, fetch_all_yahoo, fetch_detail_yahoo, now_ist
@@ -30,6 +33,12 @@ def load_dotenv(path: Path = BASE / ".env") -> None:
 load_dotenv()
 PROVIDER = os.environ.get("DATA_PROVIDER", "yahoo").lower()
 POLL_SECONDS = float(os.environ.get("POLL_SECONDS", "1" if PROVIDER == "demo" else "60"))
+PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
+AUTH_ENABLED = bool(PASSWORD)
+SESSION_SECRET = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
+SESSION_DAYS = 30
+COOKIE = "my_trade_session"
+OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
 if PROVIDER == "yahoo":
     fetch_all = fetch_all_yahoo
@@ -46,6 +55,7 @@ store = {
     "source": PROVIDER,
     "simulated": PROVIDER == "demo",
     "poll_seconds": POLL_SECONDS,
+    "auth_enabled": AUTH_ENABLED,
     "updated_at": None,
     "quotes": [],
     "failed": [],
@@ -53,6 +63,34 @@ store = {
 clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 
+
+# ---------------------------------------------------------------- login
+
+def make_token() -> str:
+    issued = str(int(time.time()))
+    signature = hmac.new(SESSION_SECRET.encode(), issued.encode(), hashlib.sha256).hexdigest()
+    return f"{issued}.{signature}"
+
+
+def token_ok(token) -> bool:
+    if not token or "." not in token:
+        return False
+    issued, signature = token.split(".", 1)
+    expected = hmac.new(SESSION_SECRET.encode(), issued.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected) or not issued.isdigit():
+        return False
+    return time.time() - int(issued) < SESSION_DAYS * 86400
+
+
+def logged_in(connection) -> bool:
+    return not AUTH_ENABLED or token_ok(connection.cookies.get(COOKIE))
+
+
+def is_https(request: Request) -> bool:
+    return request.headers.get("x-forwarded-proto", request.url.scheme) == "https"
+
+
+# ---------------------------------------------------------------- refresh loop
 
 async def broadcast(payload: dict) -> None:
     for ws in list(clients):
@@ -78,6 +116,8 @@ async def refresh_forever() -> None:
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
+    if not AUTH_ENABLED:
+        log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
     task = asyncio.create_task(refresh_forever())
     yield
     task.cancel()
@@ -88,11 +128,58 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Indices API", lifespan=lifespan)
 
 
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    if logged_in(request) or request.url.path.startswith(OPEN_PATHS):
+        return await call_next(request)
+    if "text/html" in request.headers.get("accept", ""):
+        return RedirectResponse("/login", status_code=302)
+    return JSONResponse({"detail": "Login required."}, status_code=401)
+
+
 def known_index(name: str) -> str:
     key = name.upper()
     if key not in INDICES:
         raise HTTPException(status_code=404, detail=f"Unknown index '{name}'. See /indices for the list.")
     return key
+
+
+# ---------------------------------------------------------------- menu
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/login")
+def login_page(request: Request):
+    if logged_in(request):
+        return RedirectResponse("/", status_code=302)
+    return FileResponse(STATIC / "login.html", headers=NO_CACHE)
+
+
+@app.post("/login")
+async def login(request: Request):
+    if not AUTH_ENABLED:
+        return {"ok": True}
+    body = await request.json()
+    password = str(body.get("password", ""))
+    if not secrets.compare_digest(password.encode(), PASSWORD.encode()):
+        await asyncio.sleep(1)  # makes guessing slow
+        return JSONResponse({"detail": "Wrong password."}, status_code=401)
+    response = JSONResponse({"ok": True})
+    response.set_cookie(
+        COOKIE, make_token(), max_age=SESSION_DAYS * 86400,
+        httponly=True, samesite="lax", secure=is_https(request),
+    )
+    return response
+
+
+@app.post("/logout")
+def logout():
+    response = JSONResponse({"ok": True})
+    response.delete_cookie(COOKIE)
+    return response
 
 
 @app.get("/")
@@ -130,7 +217,7 @@ async def index_detail(name: str, range_key: str = Query("today", alias="range")
     except Exception as exc:
         log.warning("detail fetch failed for %s: %s", key, exc)
         raise HTTPException(status_code=502, detail="Couldn't fetch the chart data from the source right now.")
-    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS)
+    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED)
     detail_cache[(key, range_key)] = (time.monotonic(), payload)
     return payload
 
@@ -146,6 +233,9 @@ def get_index(name: str):
 
 @app.websocket("/ws")
 async def stream(ws: WebSocket):
+    if not logged_in(ws):
+        await ws.close(code=1008)
+        return
     await ws.accept()
     clients.add(ws)
     try:

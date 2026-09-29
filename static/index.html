@@ -58,6 +58,9 @@
   #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
   #mode.on { display: inline-block; }
   #missing { flex-basis: 100%; color: var(--down); font-size: 14px; }
+  #logout { margin-left: auto; color: var(--ink-2); font-size: 14px; text-decoration: none; }
+  #logout:hover { color: var(--ink); }
+  #open-warning { flex-basis: 100%; color: var(--down); font-size: 13px; }
 
   .grid {
     display: grid;
@@ -96,7 +99,9 @@
     <h1>Indian market indices</h1>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Connecting…</span>
+    <a id="logout" href="/login" hidden>Log out</a>
     <span id="missing"></span>
+    <span id="open-warning" hidden>No password is set, so anyone who can reach this address can see this page. Fine on your own laptop; set DASHBOARD_PASSWORD before putting it online.</span>
   </header>
 
   <section class="grid" id="featured" aria-label="Headline indices"></section>
@@ -154,6 +159,8 @@
     status.className = "";
     status.textContent = "Live · updated " + clock();
     document.getElementById("mode").className = data.simulated ? "on" : "";
+    document.getElementById("logout").hidden = !data.auth_enabled;
+    document.getElementById("open-warning").hidden = data.auth_enabled;
     document.getElementById("missing").textContent = data.failed.length
       ? "Not loaded this time: " + data.failed.join(", ") + " — will retry."
       : "";
@@ -170,12 +177,21 @@
       const status = document.getElementById("status");
       status.className = "error";
       status.textContent = "Disconnected — reconnecting…";
+      fetch("/indices/all").then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
       setTimeout(connect, RECONNECT_MS);
     };
     ws.onerror = () => ws.close();
   }
 
-  fetch("/indices/all").then(r => r.json()).then(apply).catch(() => {});
+  document.getElementById("logout").addEventListener("click", (event) => {
+    event.preventDefault();
+    fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
+  });
+
+  fetch("/indices/all").then(r => {
+    if (r.status === 401) { location.href = "/login"; return null; }
+    return r.json();
+  }).then(data => data && apply(data)).catch(() => {});
   connect();
 </script>
 </body>

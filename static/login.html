@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My-Trade</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --border: rgba(11, 11, 11, 0.10);
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --down: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --border: rgba(255, 255, 255, 0.10);
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --down: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --border: rgba(255, 255, 255, 0.10);
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --down: #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased; padding: 16px;
+  }
+  form {
+    width: 100%; max-width: 340px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 12px; padding: 24px;
+  }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; }
+  p { margin: 0 0 18px; color: var(--ink-2); font-size: 14px; }
+  label { display: block; font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  input {
+    width: 100%; font: inherit; font-size: 16px; padding: 10px 12px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--page); color: var(--ink);
+  }
+  input:focus { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+  button {
+    width: 100%; margin-top: 14px; font: inherit; font-size: 15px; font-weight: 600;
+    padding: 10px; border: 0; border-radius: 8px; background: var(--ink); color: var(--page); cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  #error { min-height: 20px; margin-top: 10px; font-size: 13px; color: var(--down); }
+</style>
+</head>
+<body>
+<form id="form">
+  <h1>My-Trade</h1>
+  <p>Enter the password to open the dashboard.</p>
+  <label for="password">Password</label>
+  <input id="password" type="password" autocomplete="current-password" autofocus required>
+  <button id="go" type="submit">Open dashboard</button>
+  <div id="error"></div>
+</form>
+
+<script>
+  const form = document.getElementById("form");
+  const error = document.getElementById("error");
+  const go = document.getElementById("go");
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    error.textContent = "";
+    go.disabled = true;
+    try {
+      const response = await fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: document.getElementById("password").value }),
+      });
+      if (response.ok) { location.href = "/"; return; }
+      error.textContent = response.status === 401 ? "Wrong password." : "Couldn't log in (HTTP " + response.status + ").";
+    } catch (err) {
+      error.textContent = "Couldn't reach the server.";
+    }
+    go.disabled = false;
+  });
+</script>
+</body>
+</html>
