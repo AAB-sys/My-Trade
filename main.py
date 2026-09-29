@@ -37,6 +37,7 @@ PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 AUTH_ENABLED = bool(PASSWORD)
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
 SESSION_DAYS = 30  # hard ceiling on a login, for a browser that is never closed
+GRACE_SECONDS = 30  # a login outlives its last open page by this much (a reload, a tile opening a new tab)
 COOKIE = "my_trade_session"
 OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
@@ -63,6 +64,12 @@ store = {
 clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 
+# The rule for a login: it lives only while a My-Trade page is open on it. Every page holds
+# a /ws connection; once the last one has been gone for GRACE_SECONDS the login ends and
+# the next visit asks for the password. Kept in memory, so a server restart ends them all.
+logins: dict[str, dict] = {}  # token -> {"pages": open connections, "last_seen": time}
+ws_tokens: dict[WebSocket, str] = {}
+
 
 # ---------------------------------------------------------------- login
 
@@ -82,8 +89,23 @@ def token_ok(token) -> bool:
     return time.time() - int(issued) < SESSION_DAYS * 86400
 
 
+def login_alive(token) -> bool:
+    entry = logins.get(token)
+    if entry is None:
+        return False
+    now = time.time()
+    if entry["pages"] > 0 or now - entry["last_seen"] < GRACE_SECONDS:
+        entry["last_seen"] = now
+        return True
+    del logins[token]
+    return False
+
+
 def logged_in(connection) -> bool:
-    return not AUTH_ENABLED or token_ok(connection.cookies.get(COOKIE))
+    if not AUTH_ENABLED:
+        return True
+    token = connection.cookies.get(COOKIE)
+    return token_ok(token) and login_alive(token)
 
 
 def is_https(request: Request) -> bool:
@@ -167,19 +189,30 @@ async def login(request: Request):
     if not secrets.compare_digest(password.encode(), PASSWORD.encode()):
         await asyncio.sleep(1)  # makes guessing slow
         return JSONResponse({"detail": "Wrong password."}, status_code=401)
+    now = time.time()
+    for dead in [t for t, e in logins.items() if e["pages"] == 0 and now - e["last_seen"] >= GRACE_SECONDS]:
+        del logins[dead]
+    token = make_token()
+    logins[token] = {"pages": 0, "last_seen": now}
     response = JSONResponse({"ok": True})
-    # No max_age/expires: a "session" cookie, which the browser throws away when it
-    # is closed, so the next visit asks for the password again. The token inside
-    # still stops working after SESSION_DAYS even if the browser is never closed.
+    # No max_age/expires: a "session" cookie, which the browser drops when it is closed.
+    # Browsers are not reliable about that (some keep running in the background), so the
+    # server's own rule above is what really ends the login.
     response.set_cookie(
-        COOKIE, make_token(),
+        COOKIE, token,
         httponly=True, samesite="lax", secure=is_https(request),
     )
     return response
 
 
 @app.post("/logout")
-def logout():
+async def logout(request: Request):
+    token = request.cookies.get(COOKIE)
+    logins.pop(token, None)
+    for ws, ws_token in list(ws_tokens.items()):  # every open page on this login, in any tab
+        if ws_token == token:
+            with contextlib.suppress(Exception):
+                await ws.close(code=1008)
     response = JSONResponse({"ok": True})
     response.delete_cookie(COOKIE)
     return response
@@ -241,14 +274,22 @@ async def stream(ws: WebSocket):
         return
     await ws.accept()
     clients.add(ws)
+    token = ws.cookies.get(COOKIE)
+    if token in logins:
+        logins[token]["pages"] += 1
+        ws_tokens[ws] = token
     try:
         await ws.send_json(store)
         while True:
-            await ws.receive_text()  # keeps the connection open; the dashboard never sends anything useful
+            await ws.receive_text()  # keeps the connection open; the pages never send anything useful
     except WebSocketDisconnect:
         pass
     finally:
         clients.discard(ws)
+        entry = logins.get(ws_tokens.pop(ws, None))
+        if entry:
+            entry["pages"] -= 1
+            entry["last_seen"] = time.time()
 
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")

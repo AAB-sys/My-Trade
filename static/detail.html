@@ -356,6 +356,18 @@
     state.timer = setTimeout(load, state.pollMs);
   }
 
+  // Holds a /ws connection while this page is open: the login ends once every page is closed.
+  function keepAlive() {
+    const scheme = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(scheme + "://" + location.host + "/ws");
+    ws.onclose = () => {
+      fetch("/indices/all").then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
+      setTimeout(keepAlive, 3000);
+    };
+    ws.onerror = () => ws.close();
+  }
+  keepAlive();
+
   // ---- controls
   document.getElementById("logout").addEventListener("click", () => {
     fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
