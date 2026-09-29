@@ -47,6 +47,16 @@ Copy `.env.example` to `.env` and edit it. The server reads it on startup.
 | `POLL_SECONDS`  | a number         | How often the server refreshes. Defaults: 60 for yahoo, 1 for demo |
 | `DASHBOARD_PASSWORD` | any text    | Turns the login on. Unset = open (the dashboard shows a warning). Required before hosting |
 | `SESSION_SECRET` | a long random string | Signs the login cookie. Unset = random at each start, so logins reset on restart |
+| `HOST`          | `127.0.0.1` (default), `0.0.0.0` | Read by `start.bat`. `0.0.0.0` lets other devices on the same network open the dashboard |
+| `PORT`          | a number, default `8000` | Read by `start.bat` |
+
+## From other devices at home
+
+Set `HOST=0.0.0.0` (and a `DASHBOARD_PASSWORD`) in `.env`, run `start.bat`, and it
+prints this computer's network addresses. On your phone or another laptop on the
+same Wi-Fi, open `http://<one of those addresses>:8000/` and log in. The first time,
+Windows asks whether to let Python through the firewall: allow it on private
+networks. It works only while this computer is on and `start.bat` is running.
 
 `demo` needs no internet and ticks every second, so you can watch the dashboard
 move with the market closed. The page shows a red **SIMULATED DATA** badge whenever
