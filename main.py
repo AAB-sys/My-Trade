@@ -36,7 +36,7 @@ POLL_SECONDS = float(os.environ.get("POLL_SECONDS", "1" if PROVIDER == "demo" el
 PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 AUTH_ENABLED = bool(PASSWORD)
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
-SESSION_DAYS = 30
+SESSION_DAYS = 30  # hard ceiling on a login, for a browser that is never closed
 COOKIE = "my_trade_session"
 OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
@@ -168,8 +168,11 @@ async def login(request: Request):
         await asyncio.sleep(1)  # makes guessing slow
         return JSONResponse({"detail": "Wrong password."}, status_code=401)
     response = JSONResponse({"ok": True})
+    # No max_age/expires: a "session" cookie, which the browser throws away when it
+    # is closed, so the next visit asks for the password again. The token inside
+    # still stops working after SESSION_DAYS even if the browser is never closed.
     response.set_cookie(
-        COOKIE, make_token(), max_age=SESSION_DAYS * 86400,
+        COOKIE, make_token(),
         httponly=True, samesite="lax", secure=is_https(request),
     )
     return response

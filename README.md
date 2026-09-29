@@ -66,10 +66,13 @@ it is on.
 
 With `DASHBOARD_PASSWORD` set, every page and every menu row (including `/ws`)
 requires the login cookie; without it, browsers are sent to `/login` and API
-calls get 401. The cookie is signed with `SESSION_SECRET`, lasts 30 days, is
-HttpOnly, and is marked Secure when served over HTTPS. A wrong password waits a
-second before answering, which makes guessing slow. `/health` and `/static/*`
-stay open. Log out from the link in the page header.
+calls get 401. The cookie is signed with `SESSION_SECRET`, is HttpOnly, and is
+marked Secure when served over HTTPS. It is a browser-session cookie: closing the
+browser (all its windows) throws it away, so the next visit asks for the password
+again; a browser that is never closed is logged out after 30 days anyway. A wrong
+password waits a second before answering, which makes guessing slow. `/health`
+and `/static/*` stay open. The **Log out** button in the page header ends the
+login at once.
 
 ## Hosting
 

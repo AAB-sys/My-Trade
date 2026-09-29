@@ -35,8 +35,10 @@ their own logic. Read this before touching the code.
 - `main.py` - the server: in-memory store, background refresh loop, REST menu,
   `/ws` WebSocket push, 5-line `.env` reader (`DATA_PROVIDER`, `POLL_SECONDS`,
   `DASHBOARD_PASSWORD`, `SESSION_SECRET`), single-password login with a signed
-  cookie that guards every route and `/ws` (`/login`, `/logout`, `/health` and
-  `/static/*` stay open). No password set = open, with a warning.
+  browser-session cookie (gone when the browser closes; 30-day ceiling) that
+  guards every route and `/ws` (`/login`, `/logout`, `/health` and `/static/*`
+  stay open). No password set = open, with a warning. Pages show a **Log out**
+  button whenever the login is on.
 - `static/login.html` - the login page. `Procfile` - the host's start command.
   Hosting: one instance, secrets in the host's environment, `/health` for checks.
 - `start.bat` reads `HOST`/`PORT` from `.env` (defaults `127.0.0.1`/`8000`);
