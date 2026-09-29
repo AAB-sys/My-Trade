@@ -68,6 +68,8 @@
   .top a { color: var(--ink-2); font-size: 14px; text-decoration: none; }
   .top a:hover { color: var(--ink); }
   #status { color: var(--ink-2); font-size: 14px; margin-left: auto; }
+  #logout { color: var(--ink-2); font-size: 14px; text-decoration: none; }
+  #logout:hover { color: var(--ink); }
   #status.error { color: var(--down); }
   #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
   #mode.on { display: inline-block; }
@@ -129,6 +131,7 @@
     <a href="/">&larr; Dashboard</a>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Loading…</span>
+    <a id="logout" href="/login" hidden>Log out</a>
   </div>
 
   <div class="hero">
@@ -326,8 +329,10 @@
     const status = document.getElementById("status");
     try {
       const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${state.range}`);
+      if (response.status === 401) { location.href = "/login"; return; }
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
+      document.getElementById("logout").hidden = !data.auth_enabled;
       renderSummary(data.summary);
       state.interval = data.interval;
       setBars(data.candles);
@@ -347,6 +352,10 @@
   }
 
   // ---- controls
+  document.getElementById("logout").addEventListener("click", (event) => {
+    event.preventDefault();
+    fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
+  });
   document.getElementById("kind").addEventListener("click", e => {
     const kind = e.target.dataset.kind;
     if (!kind || kind === state.kind) return;
