@@ -7,6 +7,10 @@ dashboard that shows them and updates the moment they change.
 
 | Method | Endpoint          | You send      | You get back                                                  |
 |--------|-------------------|---------------|---------------------------------------------------------------|
+| GET    | `/login`          | nothing       | the login page (only when a password is set)                  |
+| POST   | `/login`          | `{"password": "..."}` | sets the login cookie, or 401                          |
+| POST   | `/logout`         | nothing       | clears the login cookie                                       |
+| GET    | `/health`         | nothing       | `{"status": "ok"}` - open, for the host's health checks       |
 | GET    | `/`               | nothing       | the dashboard page                                            |
 | GET    | `/index/{name}`   | an index name | the detail page for that index (summary + chart)              |
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
@@ -41,10 +45,33 @@ Copy `.env.example` to `.env` and edit it. The server reads it on startup.
 |-----------------|------------------|---------------------------------------------------------------|
 | `DATA_PROVIDER` | `yahoo` (default), `demo` | Real prices from Yahoo Finance, or a simulated random walk for testing |
 | `POLL_SECONDS`  | a number         | How often the server refreshes. Defaults: 60 for yahoo, 1 for demo |
+| `DASHBOARD_PASSWORD` | any text    | Turns the login on. Unset = open (the dashboard shows a warning). Required before hosting |
+| `SESSION_SECRET` | a long random string | Signs the login cookie. Unset = random at each start, so logins reset on restart |
 
 `demo` needs no internet and ticks every second, so you can watch the dashboard
 move with the market closed. The page shows a red **SIMULATED DATA** badge whenever
 it is on.
+
+## Login
+
+With `DASHBOARD_PASSWORD` set, every page and every menu row (including `/ws`)
+requires the login cookie; without it, browsers are sent to `/login` and API
+calls get 401. The cookie is signed with `SESSION_SECRET`, lasts 30 days, is
+HttpOnly, and is marked Secure when served over HTTPS. A wrong password waits a
+second before answering, which makes guessing slow. `/health` and `/static/*`
+stay open. Log out from the link in the page header.
+
+## Hosting
+
+The app is ready to run on a platform that deploys from GitHub:
+
+- `Procfile` gives the start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
+- Set these in the host's environment (never in the repo): `DASHBOARD_PASSWORD`,
+  `SESSION_SECRET`, `DATA_PROVIDER=yahoo`. The host provides `PORT` and HTTPS.
+- Run exactly **one** instance: prices live in the server's memory.
+- Use the host's health check on `/health`.
+- Keep it private (your login only): the free Yahoo feed, and any licensed feed
+  later, are for personal use.
 
 ## How it works
 
