@@ -37,7 +37,9 @@ PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 AUTH_ENABLED = bool(PASSWORD)
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
 SESSION_DAYS = 30  # hard ceiling on a login, for a browser that is never closed
-GRACE_SECONDS = 30  # how long a handover may take (a reload, a tile opening a new tab)
+GRACE_SECONDS = 30  # a handover (a reload, a tile opening a new tab, a fresh login) must be taken up within this
+BEAT_SECONDS = 15   # pages report in this often; one silent for twice that has stopped
+DROP_SECONDS = 60   # a page with no connection and no report for this long is gone for good
 COOKIE = "my_trade_session"
 OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
@@ -64,17 +66,22 @@ store = {
 clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 
-# The rule for a login: it lives only while a My-Trade page is open on it, and only a page
-# handed over from another page of it may carry it on. Every page holds a /ws connection.
-# Every data request and /ws must carry the login's "tab" note (X-Tab header or ?tab=),
-# which the login page keeps in the tab's sessionStorage and a tile passes to the tab it
-# opens: a tab opened anew never has it, so it gets the password page, whatever the browser
-# kept. When no page is open, a page may carry on only within a handover: one is opened
-# when a page of the login is served while another page is still connected (a reload, a
-# tile click), and it closes when the new page connects. The login ends when no page has
-# been connected for GRACE_SECONDS. Kept in memory, so a server restart ends every login.
-logins: dict[str, dict] = {}  # token -> {"pages", "last_seen", "tab", "handover_until"}
-ws_tokens: dict[WebSocket, str] = {}
+# The rule for a login: it lives only while a My-Trade page is open on it, and only a
+# page handed over from another page of it may carry it on.
+# - Every data request and /ws must carry the login's "tab" note (X-Tab / ?tab=), which
+#   the login page keeps in the tab's sessionStorage and a tile passes to the tab it
+#   opens. A tab opened anew never has it, so it gets the password page whatever the
+#   browser kept.
+# - Each page also has a "page" id (X-Page / ?page=), held in the page's memory only,
+#   given when it first connects or reports in. A page keeps its login alive by holding
+#   /ws or by reporting in every BEAT_SECONDS, and may come back after its connection
+#   drops. A page the browser brings back after a restart has no page id.
+# - A page without an id is let in only during a handover: opened when a page is served
+#   while another page of the login is open (a reload, a tile click), or by the login
+#   itself for its first page; used up when the new page gets its id.
+# Kept in memory, so a server restart ends every login.
+logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "dropped_at", "last_beat"}}, "handover_until"}
+ws_pages: dict[WebSocket, tuple[str, str]] = {}  # socket -> (token, page id)
 PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
 
 
@@ -96,49 +103,79 @@ def token_ok(token) -> bool:
     return time.time() - int(issued) < SESSION_DAYS * 86400
 
 
+def page_open(page: dict, now: float) -> bool:
+    """Heard from recently, and since its latest connection dropped (if it did). A
+    connection the server has not yet noticed is dead does not keep a page open."""
+    return now - page["last_beat"] < 2 * BEAT_SECONDS and page["last_beat"] > page["dropped_at"]
+
+
 def find_login(token):
-    """The login behind this cookie, or None. One whose pages have all been gone for
-    longer than the grace is over."""
+    """The login behind this cookie, or None. Pages gone for DROP_SECONDS are forgotten;
+    a login with no page left and no handover open is over."""
     if not token_ok(token):
         return None
     entry = logins.get(token)
-    if entry and entry["pages"] == 0 and time.time() - entry["last_seen"] >= GRACE_SECONDS:
+    if entry is None:
+        return None
+    now = time.time()
+    for page_id, page in list(entry["pages"].items()):
+        if now - page["last_beat"] >= DROP_SECONDS:
+            del entry["pages"][page_id]
+    if not entry["pages"] and now >= entry["handover_until"]:
         del logins[token]
-        entry = None
+        return None
     return entry
 
 
+def page_of(connection, entry) -> str:
+    """The known page this request comes from, or ""."""
+    page_id = connection.headers.get("x-page") or connection.query_params.get("page") or ""
+    return page_id if page_id in entry["pages"] else ""
+
+
+def new_page(entry) -> str:
+    page_id = secrets.token_urlsafe(12)
+    entry["pages"][page_id] = {"socket": None, "dropped_at": 0.0, "last_beat": time.time()}
+    entry["handover_until"] = 0  # taken up
+    return page_id
+
+
 def logged_in(connection) -> bool:
-    """For data requests and /ws: the cookie, the tab note, and a page of the login
-    still connected or a handover still open."""
+    """For data requests and /ws: the cookie, the tab note, and then either a page we
+    know (it may have dropped; it is still there), another page of the login open, or a
+    handover still open."""
     if not AUTH_ENABLED:
         return True
-    entry = find_login(connection.cookies.get(COOKIE))
+    token = connection.cookies.get(COOKIE)
+    entry = find_login(token)
     if entry is None:
         return False
+    now = time.time()
     tab = connection.headers.get("x-tab") or connection.query_params.get("tab") or ""
     if not hmac.compare_digest(tab, entry["tab"]):
-        if entry["pages"] == 0:
-            logins.pop(connection.cookies.get(COOKIE), None)  # nothing open, and the link opened anew: over
+        entry["handover_until"] = 0  # the page just served was this tab, opened anew, not a reload
+        if not any(page_open(p, now) for p in entry["pages"].values()):
+            logins.pop(token, None)  # nothing open, and the link opened anew: over
         return False  # a tab opened anew, not one handed over
-    now = time.time()
-    if entry["pages"] == 0 and now >= entry["handover_until"]:
-        return False  # nothing handed over to it (a tab the browser brought back, say)
-    entry["last_seen"] = now
-    return True
+    page_id = page_of(connection, entry)
+    if page_id:
+        entry["pages"][page_id]["last_beat"] = now
+        return True
+    return any(page_open(p, now) for p in entry["pages"].values()) or now < entry["handover_until"]
 
 
 def page_allowed(request: Request) -> bool:
-    """For the HTML pages, which the browser fetches without the note: let a page of a
-    live login load, and if a page is still connected, open a handover so the new page
-    can carry on once the old one has gone. Its first data request settles it."""
+    """For the HTML pages, which the browser fetches without note or page id: let a page
+    of a live login load, and if a page of it is open, open a handover so the new page can
+    carry on once the old one has gone. Its first report settles it."""
     if not AUTH_ENABLED:
         return True
     entry = find_login(request.cookies.get(COOKIE))
     if entry is None:
         return False
-    if entry["pages"] > 0:
-        entry["handover_until"] = time.time() + GRACE_SECONDS
+    now = time.time()
+    if any(page_open(p, now) for p in entry["pages"].values()):
+        entry["handover_until"] = now + GRACE_SECONDS
     return True
 
 
@@ -223,12 +260,11 @@ async def login(request: Request):
     if not secrets.compare_digest(password.encode(), PASSWORD.encode()):
         await asyncio.sleep(1)  # makes guessing slow
         return JSONResponse({"detail": "Wrong password."}, status_code=401)
-    now = time.time()
-    for dead in [t for t, e in logins.items() if e["pages"] == 0 and now - e["last_seen"] >= GRACE_SECONDS]:
-        del logins[dead]
+    for stale in list(logins):
+        find_login(stale)  # forgets logins that are over
     token = make_token()
-    logins[token] = {"pages": 0, "last_seen": now, "tab": secrets.token_urlsafe(16),
-                     "handover_until": now + GRACE_SECONDS}  # the login itself hands over to the first page
+    logins[token] = {"tab": secrets.token_urlsafe(16), "pages": {},
+                     "handover_until": time.time() + GRACE_SECONDS}  # the login itself hands over to its first page
     response = JSONResponse({"ok": True, "tab": logins[token]["tab"]})
     # No max_age/expires: a "session" cookie, which the browser drops when it is closed.
     # Browsers are not reliable about that (some keep running in the background), so the
@@ -244,13 +280,24 @@ async def login(request: Request):
 async def logout(request: Request):
     token = request.cookies.get(COOKIE)
     logins.pop(token, None)
-    for ws, ws_token in list(ws_tokens.items()):  # every open page on this login, in any tab
+    for ws, (ws_token, _) in list(ws_pages.items()):  # every open page on this login, in any tab
         if ws_token == token:
             with contextlib.suppress(Exception):
                 await ws.close(code=1008)
     response = JSONResponse({"ok": True})
     response.delete_cookie(COOKIE)
     return response
+
+
+@app.post("/alive")
+def alive(request: Request):
+    """Pages report in here every BEAT_SECONDS: it keeps their login alive, gives a new
+    page its id, and hands back the latest prices for a page whose /ws is down."""
+    page_id = None
+    entry = logins.get(request.cookies.get(COOKIE)) if AUTH_ENABLED else None
+    if entry is not None:
+        page_id = page_of(request, entry) or new_page(entry)
+    return {**store, "page": page_id, "beat_seconds": BEAT_SECONDS}
 
 
 @app.get("/")
@@ -309,24 +356,26 @@ async def stream(ws: WebSocket):
         return
     await ws.accept()
     clients.add(ws)
+    page_id = None
     token = ws.cookies.get(COOKIE)
-    entry = logins.get(token)
-    if entry:
-        entry["pages"] += 1
-        entry["handover_until"] = 0  # the handover is used up: this page is connected now
-        ws_tokens[ws] = token
+    entry = logins.get(token) if AUTH_ENABLED else None
+    if entry is not None:
+        page_id = page_of(ws, entry) or new_page(entry)  # a page coming back keeps its id
+        entry["pages"][page_id]["socket"] = ws  # its latest connection
+        ws_pages[ws] = (token, page_id)
     try:
-        await ws.send_json(store)
+        await ws.send_json({**store, "page": page_id})
         while True:
             await ws.receive_text()  # keeps the connection open; the pages never send anything useful
     except WebSocketDisconnect:
         pass
     finally:
         clients.discard(ws)
-        entry = logins.get(ws_tokens.pop(ws, None))
-        if entry:
-            entry["pages"] -= 1
-            entry["last_seen"] = time.time()
+        token, page_id = ws_pages.pop(ws, (None, None))
+        page = logins.get(token, {}).get("pages", {}).get(page_id)
+        if page and page["socket"] is ws:  # an older connection of the page going at last says nothing
+            page["socket"] = None
+            page["dropped_at"] = time.time()  # the page may come back, or report in, for a while
 
 
 app.mount("/static", StaticFiles(directory=STATIC), name="static")
