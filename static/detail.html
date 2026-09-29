@@ -330,10 +330,21 @@
     }));
   }
 
+  // The login's "tab" note: kept in this tab only, so a freshly opened tab has none and is asked for the password.
+  let TAB = "";
+  try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
+  function noteTab(tab) {
+    if (!tab || tab === TAB) return;
+    TAB = tab;
+    try { sessionStorage.setItem("tab", tab); } catch (e) {}
+  }
+  const withTab = () => ({ headers: { "X-Tab": TAB } });
+  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws?tab=" + encodeURIComponent(TAB);
+
   async function load() {
     const status = document.getElementById("status");
     try {
-      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${state.range}`);
+      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${state.range}`, withTab());
       if (response.status === 401) { location.href = "/login"; return; }
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
@@ -358,10 +369,10 @@
 
   // Holds a /ws connection while this page is open: the login ends once every page is closed.
   function keepAlive() {
-    const scheme = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(scheme + "://" + location.host + "/ws");
+    const ws = new WebSocket(wsUrl());
+    ws.onmessage = event => noteTab(JSON.parse(event.data).tab);
     ws.onclose = () => {
-      fetch("/indices/all").then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
+      fetch("/indices/all", withTab()).then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
       setTimeout(keepAlive, 3000);
     };
     ws.onerror = () => ws.close();

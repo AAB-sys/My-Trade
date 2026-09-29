@@ -153,7 +153,19 @@
     document.getElementById("others").replaceChildren(...others.map(q => tile(q, false)));
   }
 
+  // The login's "tab" note: kept in this tab only, so a freshly opened tab has none and is asked for the password.
+  let TAB = "";
+  try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
+  function noteTab(tab) {
+    if (!tab || tab === TAB) return;
+    TAB = tab;
+    try { sessionStorage.setItem("tab", tab); } catch (e) {}
+  }
+  const withTab = () => ({ headers: { "X-Tab": TAB } });
+  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws?tab=" + encodeURIComponent(TAB);
+
   function apply(data) {
+    noteTab(data.tab);
     const status = document.getElementById("status");
     if (!data.quotes.length) {
       status.className = "";
@@ -175,14 +187,13 @@
   }
 
   function connect() {
-    const scheme = location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(scheme + "://" + location.host + "/ws");
+    const ws = new WebSocket(wsUrl());
     ws.onmessage = event => apply(JSON.parse(event.data));
     ws.onclose = () => {
       const status = document.getElementById("status");
       status.className = "error";
       status.textContent = "Disconnected — reconnecting…";
-      fetch("/indices/all").then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
+      fetch("/indices/all", withTab()).then(r => { if (r.status === 401) location.href = "/login"; }).catch(() => {});
       setTimeout(connect, RECONNECT_MS);
     };
     ws.onerror = () => ws.close();
@@ -192,7 +203,7 @@
     fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
   });
 
-  fetch("/indices/all").then(r => {
+  fetch("/indices/all", withTab()).then(r => {
     if (r.status === 401) { location.href = "/login"; return null; }
     return r.json();
   }).then(data => data && apply(data)).catch(() => {});
