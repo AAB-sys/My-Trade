@@ -261,8 +261,8 @@
     timeScale: { borderColor: cssVar("--grid"), timeVisible: true, secondsVisible: false },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     localization: { locale: "en-IN", priceFormatter: (p) => fmt.format(p) },
-    // the mouse wheel scrolls the page, not the chart, so the table below stays reachable;
-    // zoom and move with the buttons, by dragging, or by pinching on a phone
+    // the wheel is handled below (price up/down, shift for time, ctrl or pinch for zoom);
+    // dragging moves in time; on a phone a one-finger vertical swipe still scrolls the page
     handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
   });
@@ -278,23 +278,51 @@
     }
     return info;
   };
+  const refit = () => { if (series) series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o) }); };  // a fresh function makes the chart refit
+  function zoomBy(factor) {  // < 1 zooms in, > 1 zooms out, around the middle of the view
+    const ts = chart.timeScale(), r = ts.getVisibleLogicalRange();
+    if (!r) return;
+    const w = r.to - r.from, mid = (r.from + r.to) / 2;
+    ts.setVisibleLogicalRange({ from: mid - w * factor / 2, to: mid + w * factor / 2 });
+  }
+  function moveTime(share) {  // + later, - earlier, as a share of the view's width
+    const ts = chart.timeScale(), r = ts.getVisibleLogicalRange();
+    if (!r) return;
+    const w = r.to - r.from;
+    ts.setVisibleLogicalRange({ from: r.from + w * share, to: r.to + w * share });
+  }
+  function movePrice(share) {  // + up, - down, as a share of the view's height
+    priceShift += priceHeight * share;
+    refit();
+  }
   function nav(action) {
-    const ts = chart.timeScale();
-    const r = ts.getVisibleLogicalRange();
-    if (action === "fit") { priceShift = 0; ts.fitContent(); }
-    else if (!r) return;
-    else {
-      const w = r.to - r.from, mid = (r.from + r.to) / 2;
-      if (action === "in") ts.setVisibleLogicalRange({ from: mid - w * 0.35, to: mid + w * 0.35 });
-      if (action === "out") ts.setVisibleLogicalRange({ from: mid - w * 0.75, to: mid + w * 0.75 });
-      if (action === "left") ts.setVisibleLogicalRange({ from: r.from - w * 0.25, to: r.to - w * 0.25 });
-      if (action === "right") ts.setVisibleLogicalRange({ from: r.from + w * 0.25, to: r.to + w * 0.25 });
-      if (action === "up") priceShift += priceHeight * 0.2;
-      if (action === "down") priceShift -= priceHeight * 0.2;
-    }
-    if (series) series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o) });  // a fresh function makes the chart refit
+    if (action === "fit") { priceShift = 0; chart.timeScale().fitContent(); refit(); }
+    if (action === "in") zoomBy(0.7);
+    if (action === "out") zoomBy(1.5);
+    if (action === "left") moveTime(-0.25);
+    if (action === "right") moveTime(0.25);
+    if (action === "up") movePrice(0.2);
+    if (action === "down") movePrice(-0.2);
   }
   document.getElementById("nav").addEventListener("click", e => { const a = e.target.dataset.nav; if (a) nav(a); });
+
+  // The wheel and the touchpad drive the chart while the pointer is over it:
+  //   wheel / two-finger swipe up-down      -> price view up or down
+  //   shift + wheel / two-finger swipe left-right -> earlier or later
+  //   ctrl + wheel / touchpad pinch         -> zoom (browsers send a pinch as ctrl + wheel)
+  // Move the pointer off the chart to scroll the page.
+  document.getElementById("chart").addEventListener("wheel", e => {
+    e.preventDefault();
+    const box = e.currentTarget.getBoundingClientRect();
+    if (e.ctrlKey || e.metaKey) {
+      zoomBy(Math.exp(Math.max(-100, Math.min(100, e.deltaY)) / 250));   // a wheel notch of 100 -> x1.5; a pinch step is gentler
+    } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      const px = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+      moveTime(px / box.width);                                            // one pixel of wheel = one pixel of chart
+    } else {
+      movePrice(-e.deltaY / box.height);                                   // wheel down shows lower prices
+    }
+  }, { passive: false });
   let series = null;
   let bars = [];
 
