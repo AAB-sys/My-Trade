@@ -102,6 +102,13 @@
   .controls .group { display: flex; flex-wrap: wrap; gap: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  #score-box { margin-top: 16px; }
+  #score-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
+  #score-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  #score { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #score th, #score td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); }
+  #score th:first-child, #score td:first-child { text-align: left; }
+  #score th { font-weight: 500; color: var(--muted); font-size: 12px; }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer;
@@ -192,6 +199,15 @@
       <div id="popup"></div>
     </div>
   </div>
+
+  <section id="score-box" aria-label="How each level behaved" hidden>
+    <h2>How each level behaved</h2>
+    <div id="score-note"></div>
+    <table id="score">
+      <thead><tr><th>Level</th><th>Price</th><th>Held</th><th>Crossed</th><th>Held share</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
 
   <footer id="footer"></footer>
 </main>
@@ -292,10 +308,48 @@
     return RATIOS.map(r => ({ ratio: r, price: Math.round((m.up ? m.high - r * span : m.low + r * span) * 100) / 100 }));
   }
 
+  // ---- Layer 2 of the owner's logic: the evidence, one row per level (see LOGIC.md)
+  // For every closed candle (the one still forming is judged once it closes), judged against
+  // where the previous candle closed: a candle that reaches a level and closes back on the side
+  // it came from HELD it; one that closes on the other side CROSSED it. Nothing is drawn on the chart.
+  const SECONDS = { "1m": 60, "5m": 300, "15m": 900 };
+
+  function scoreLevels(levels) {
+    const now = Date.now() / 1000;
+    const closed = bars.filter(b => b.time + SECONDS[state.interval] <= now);
+    const rows = levels.map(l => ({ ...l, held: 0, crossed: 0 }));
+    for (let i = 1; i < closed.length; i++) {
+      const bar = closed[i], prev = closed[i - 1].close;
+      for (const row of rows) {
+        const L = row.price;
+        if ((prev < L && bar.close > L) || (prev > L && bar.close < L)) row.crossed++;
+        else if ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L)) row.held++;
+      }
+    }
+    return { rows, closed: closed.length };
+  }
+
+  function drawScore(levels) {
+    const box = document.getElementById("score-box");
+    if (!levels.length) { box.hidden = true; return; }
+    const { rows, closed } = scoreLevels(levels);
+    box.hidden = false;
+    document.getElementById("score-note").textContent =
+      `In the ${closed} closed candles shown. Held: a candle reached the level and closed back on the side it came from. Crossed: it closed on the other side.`;
+    document.getElementById("score").querySelector("tbody").replaceChildren(...rows.slice().reverse().map(r => {
+      const tr = document.createElement("tr");
+      const total = r.held + r.crossed;
+      tr.innerHTML = `<td>${(r.ratio * 100).toFixed(1)}%</td><td>${fmt.format(r.price)}</td><td>${r.held}</td><td>${r.crossed}</td>`
+        + `<td>${total ? Math.round(r.held / total * 100) + "%" : "—"}</td>`;
+      return tr;
+    }));
+  }
+
   function drawLevels() {
     const note = document.getElementById("levels-note");
     const m = theMove();
     const levels = m ? levelsOf(m) : [];
+    drawScore(levels);
     const key = JSON.stringify([state.move, levels]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
