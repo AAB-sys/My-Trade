@@ -102,13 +102,24 @@
   .controls .group { display: flex; flex-wrap: wrap; gap: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  #score-box { margin-top: 16px; }
-  #score-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
-  #score-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
-  #score { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-  #score th, #score td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); }
-  #score th:first-child, #score td:first-child { text-align: left; }
-  #score th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #score-box, #paper-box { margin-top: 16px; }
+  #score-box h2, #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
+  #score-note, #paper-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  #score, #paper { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #score th, #score td, #paper th, #paper td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #score th:first-child, #score td:first-child, #paper th:first-child, #paper td:first-child { text-align: left; }
+  #score th, #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #paper td.up { color: var(--up); }
+  #paper td.down { color: var(--down); }
+  #paper[hidden] { display: none; }
+  #paper-box .controls { margin: 0 0 8px; }
+  #paper-score { font-size: 13px; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  #csv {
+    font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer; margin-left: auto;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  #csv:hover { border-color: var(--ink-2); }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer;
@@ -230,6 +241,26 @@
     </table>
   </section>
 
+  <section id="paper-box" aria-label="Paper trades" hidden>
+    <h2>Paper trades</h2>
+    <div class="controls levels">
+      <div class="seg" id="signal" aria-label="Signal">
+        <button data-signal="off">Off</button>
+        <button data-signal="held" class="on">Held: trade the bounce</button>
+        <button data-signal="crossed">Crossed: trade the break</button>
+      </div>
+      <button id="csv" type="button" title="Save the list below as a spreadsheet file">Download CSV</button>
+    </div>
+    <div id="paper-note"></div>
+    <div id="paper-score"></div>
+    <div class="scroll">
+      <table id="paper">
+        <thead><tr><th>Signal</th><th>Level</th><th>Side</th><th>Entry</th><th>Stop</th><th>Target</th><th>Exit</th><th>Points</th><th>Ended by</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
   <footer id="footer"></footer>
 </main>
 
@@ -238,6 +269,8 @@
   const name = decodeURIComponent(location.pathname.split("/").pop());
   const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null };
   try { state.move = localStorage.getItem("move") || state.move; } catch (e) {}
+  state.signal = "held";  // layer 3's switch: off, held or crossed
+  try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed"].includes(s)) state.signal = s; } catch (e) {}
   const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute" };
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -428,11 +461,111 @@
     }));
   }
 
+  // ---- Layer 3 of the owner's logic: paper trades (see LOGIC.md)
+  // The rule, run over the closed candles shown with the levels on the chart:
+  //   signal  - a closed candle that HELD a level ("trade the bounce") or CROSSED one ("trade the
+  //             break"), as the switch says; when one candle signals at several levels, the one
+  //             nearest its close counts
+  //   side    - the side of the level the candle closed on: above -> buy, below -> sell
+  //   entry   - the open of the next candle (one can only act once the candle has closed)
+  //   target  - the next level in the trade's direction; stop - the next level the other way;
+  //             whichever a later candle reaches first ends the trade (both in one candle: the stop)
+  //   day end - a trade still open at the day's last candle ends at its close; nothing carries overnight
+  //   one trade at a time; the 0% and 100% levels have nothing beyond them, so they give no trade
+  const SESSION_END = 15 * 3600 + 30 * 60;  // 3:30 pm IST, in seconds since midnight
+  const dayOf = (t) => Math.floor((t + IST_OFFSET) / 86400);
+  const dayOver = (day, now) => { const n = now + IST_OFFSET; return day < Math.floor(n / 86400) || n % 86400 >= SESSION_END; };
+  const HOW = { target: "Target", stop: "Stop", "day end": "Day end", open: "Still open", pending: "Enters at the next open" };
+  let lastPaper = { trades: [], levels: [] };
+
+  function signalAt(bar, prev, prices) {
+    const hits = prices.filter(L => {
+      const crossed = (prev < L && bar.close > L) || (prev > L && bar.close < L);
+      if (state.signal === "crossed") return crossed;
+      return !crossed && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
+    });
+    if (!hits.length) return null;
+    const level = hits.reduce((a, b) => Math.abs(b - bar.close) < Math.abs(a - bar.close) ? b : a);
+    const side = bar.close > level ? "buy" : "sell";
+    const above = prices.find(p => p > level), below = prices.slice().reverse().find(p => p < level);
+    const target = side === "buy" ? above : below, stop = side === "buy" ? below : above;
+    if (target == null || stop == null) return null;
+    return { signalTime: bar.time, level, side, target, stop, entry: null, exit: null, points: null, how: "pending" };
+  }
+
+  function paperTrades(levels) {
+    const now = Date.now() / 1000;
+    const closed = bars.filter(b => b.time + SECONDS[state.interval] <= now);
+    const prices = levels.map(l => l.price).sort((a, b) => a - b);
+    const gain = (t, price) => Math.round((t.side === "buy" ? price - t.entry : t.entry - price) * 100) / 100;
+    const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
+    const trades = [];
+    let pending = null, open = null;
+    for (let i = 1; i < closed.length; i++) {
+      const bar = closed[i], prevBar = closed[i - 1];
+      if (dayOf(bar.time) !== dayOf(prevBar.time)) {  // a new day: yesterday's trade ended with yesterday
+        if (open) { end(open, prevBar.close, prevBar, "day end"); open = null; }
+        pending = null;  // a signal on a day's last candle has no next candle to enter on
+      }
+      if (pending) { open = { ...pending, entry: bar.open, entryTime: bar.time, how: "open" }; trades.push(open); pending = null; }
+      if (open) {
+        const buy = open.side === "buy";
+        if (buy ? bar.low <= open.stop : bar.high >= open.stop) { end(open, open.stop, bar, "stop"); open = null; }
+        else if (buy ? bar.high >= open.target : bar.low <= open.target) { end(open, open.target, bar, "target"); open = null; }
+      }
+      if (!open) pending = signalAt(bar, prevBar.close, prices);
+    }
+    const last = closed[closed.length - 1];
+    const over = last ? dayOver(dayOf(last.time), now) : true;
+    if (open) { if (over) end(open, last.close, last, "day end"); else open.points = gain(open, last.close); }
+    if (pending && !over) trades.push(pending);
+    return { trades, closed: closed.length };
+  }
+
+  function drawPaper(levels) {
+    const box = document.getElementById("paper-box");
+    if (!levels.length) { box.hidden = true; lastPaper = { trades: [], levels: [] }; return; }
+    box.hidden = false;
+    const table = document.getElementById("paper"), note = document.getElementById("paper-note"), score = document.getElementById("paper-score");
+    if (state.signal === "off") {
+      table.hidden = true; lastPaper = { trades: [], levels };
+      score.textContent = "";
+      note.textContent = "Off. Pick a signal to see the paper trades it would have given on the candles shown.";
+      return;
+    }
+    const { trades, closed } = paperTrades(levels);
+    lastPaper = { trades, levels };
+    const done = trades.filter(t => t.exit != null);
+    const won = done.filter(t => t.points > 0).length, lost = done.filter(t => t.points < 0).length;
+    const net = Math.round(done.reduce((s, t) => s + t.points, 0) * 100) / 100;
+    const running = trades.some(t => t.how === "open"), waiting = trades.some(t => t.how === "pending");
+    note.textContent = (state.signal === "held"
+      ? "Signal: a closed candle touched a level and closed back on its own side. Trade that way, away from the level. "
+      : "Signal: a closed candle closed on the other side of a level. Trade that way, through the level. ")
+      + "Entry at the next candle's open. Target: the next level that way. Stop: the next level the other way. Whichever comes first ends the trade, or the day's end. One trade at a time.";
+    score.textContent = (done.length
+      ? `${done.length} finished paper trade${done.length === 1 ? "" : "s"} in the ${closed} closed candles shown: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
+      : `No finished paper trade in the ${closed} closed candles shown.`)
+      + (running ? " One is still open." : "") + (waiting ? " One is waiting to enter." : "");
+    const pct = Object.fromEntries(levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
+    table.hidden = !trades.length;
+    table.querySelector("tbody").replaceChildren(...trades.slice().reverse().map(t => {
+      const tr = document.createElement("tr");
+      const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
+      tr.innerHTML = `<td>${istTime(t.signalTime, state.range !== "today")}</td><td>${pct[t.level]} (${fmt.format(t.level)})</td>`
+        + `<td>${t.side === "buy" ? "Buy" : "Sell"}</td><td>${t.entry == null ? "next open" : fmt.format(t.entry)}</td>`
+        + `<td>${fmt.format(t.stop)}</td><td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
+        + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`;
+      return tr;
+    }));
+  }
+
   function drawLevels() {
     const note = document.getElementById("levels-note");
     const m = theMove();
     const levels = m ? levelsOf(m) : [];
     drawScore(levels);
+    drawPaper(levels);
     const key = JSON.stringify([state.move, levels]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
@@ -665,6 +798,26 @@
     [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.move === move));
     drawLevels();
   });
+  document.getElementById("signal").addEventListener("click", e => {
+    const signal = e.target.dataset.signal;
+    if (!signal || signal === state.signal) return;
+    state.signal = signal;
+    try { localStorage.setItem("signal", signal); } catch (err) {}
+    [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.signal === signal));
+    drawLevels();
+  });
+  document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
+    const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    const pct = Object.fromEntries(lastPaper.levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
+    const head = ["signal_time_ist", "level", "level_price", "side", "entry", "stop", "target", "exit", "points", "ended_by"];
+    const rows = lastPaper.trades.map(t => [stamp(t.signalTime), pct[t.level], t.level, t.side, t.entry ?? "", t.stop, t.target, t.exit ?? "", t.points ?? "", t.how]);
+    const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `paper-trades ${name} ${state.range} ${state.interval} ${state.signal}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
   document.getElementById("interval").addEventListener("click", e => {
     const interval = e.target.dataset.interval;
     if (!interval || interval === state.interval) return;
@@ -675,6 +828,7 @@
   });
 
   [...document.getElementById("move").children].forEach(b => b.classList.toggle("on", b.dataset.move === state.move));
+  [...document.getElementById("signal").children].forEach(b => b.classList.toggle("on", b.dataset.signal === state.signal));
   load();
 </script>
 </body>
