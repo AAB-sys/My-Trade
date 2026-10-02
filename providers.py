@@ -1,5 +1,6 @@
 import random
 import time
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
@@ -62,7 +63,7 @@ def quote_fields(name: str, ticker: str, level: float, previous_close: float, qu
         "ticker": ticker,
         "level": level,
         "change": change,
-        "change_percent": round(change / reference_close * 100, 2),
+        "change_percent": round(change / previous_close * 100, 2),
         "time": quoted_at.isoformat(timespec="seconds"),
     }
 
@@ -100,22 +101,29 @@ def fetch_quote(name: str, ticker: str) -> dict:
     return quote_fields(name, ticker, meta["regularMarketPrice"], previous_close, quoted_at)
 
 
-def fetch_quote_with_retries(name: str, ticker: str):
+def fetch_quote_with_retries(name: str, ticker: str) -> tuple:
+    """(quote, None) on success, (None, why) after the last retry fails."""
+    why = None
     for attempt in range(RETRIES):
         try:
-            return fetch_quote(name, ticker)
-        except Exception:
-            if attempt == RETRIES - 1:
-                return None
+            return fetch_quote(name, ticker), None
+        except httpx.HTTPStatusError as exc:
+            why = f"HTTP {exc.response.status_code} {exc.response.reason_phrase}".strip()
+        except Exception as exc:
+            why = f"{type(exc).__name__}: {exc}"[:120]
+        if attempt < RETRIES - 1:
             time.sleep(1 + attempt)  # Yahoo rate-limits bursts; give it a moment before asking again
+    return None, why
 
 
 def fetch_all_yahoo() -> dict:
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         results = list(pool.map(lambda item: fetch_quote_with_retries(*item), INDICES.items()))
+    reasons = Counter(why for _, why in results if why)
     return {
-        "quotes": [quote for quote in results if quote is not None],
-        "failed": [name for name, quote in zip(INDICES, results) if quote is None],
+        "quotes": [quote for quote, _ in results if quote is not None],
+        "failed": [name for name, (quote, _) in zip(INDICES, results) if quote is None],
+        "reason": "; ".join(f"{why} for {n}" for why, n in reasons.most_common(2)),  # what Yahoo said, most common first
     }
 
 
@@ -262,7 +270,7 @@ class DemoTicker:
             "today_low": min(bar["low"] for bar in session),
             "last": level,
             "change": change,
-            "change_percent": round(change / reference_close * 100, 2),
+            "change_percent": round(change / previous_close * 100, 2),
             "week52_high": round(base * 1.15, 2),
             "week52_low": round(base * 0.82, 2),
             "time": now_ist(),
