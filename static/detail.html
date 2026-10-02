@@ -119,6 +119,14 @@
 
   .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
   #legend { font-size: 12px; color: var(--ink-2); padding: 4px 8px; min-height: 20px; font-variant-numeric: tabular-nums; }
+  .legend-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .nav { display: inline-flex; gap: 4px; padding: 4px 8px; }
+  .nav button {
+    font: inherit; font-size: 13px; line-height: 1; min-width: 32px; height: 28px; padding: 0 8px; cursor: pointer;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+  }
+  .nav button:hover { border-color: var(--ink-2); }
+  .nav .gap { width: 6px; }
   .chart-area { position: relative; }
   #empty {
     position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
@@ -192,7 +200,20 @@
   </div>
 
   <div class="chart-wrap">
-    <div id="legend"></div>
+    <div class="legend-row">
+      <div id="legend"></div>
+      <div class="nav" id="nav" aria-label="Zoom and move the chart">
+        <button data-nav="out" title="Zoom out (more candles)">−</button>
+        <button data-nav="in" title="Zoom in (fewer candles)">+</button>
+        <span class="gap"></span>
+        <button data-nav="left" title="Earlier">◀</button>
+        <button data-nav="right" title="Later">▶</button>
+        <button data-nav="up" title="Move the price view up">▲</button>
+        <button data-nav="down" title="Move the price view down">▼</button>
+        <span class="gap"></span>
+        <button data-nav="fit" title="Show everything again">Fit</button>
+      </div>
+    </div>
     <div class="chart-area">
       <div id="empty" hidden></div>
       <div id="chart"></div>
@@ -240,7 +261,40 @@
     timeScale: { borderColor: cssVar("--grid"), timeVisible: true, secondsVisible: false },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     localization: { locale: "en-IN", priceFormatter: (p) => fmt.format(p) },
+    // the mouse wheel scrolls the page, not the chart, so the table below stays reachable;
+    // zoom and move with the buttons, by dragging, or by pinching on a phone
+    handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
   });
+
+  // ---- zoom and move
+  let priceShift = 0;   // how far the price view has been moved up (+) or down (-), in price units
+  let priceHeight = 0;  // the height of the auto-fitted price view, learnt from the chart
+  const autoscale = (original) => {  // the chart's own fit, shifted by the buttons
+    const info = original();
+    if (info && info.priceRange) {
+      priceHeight = info.priceRange.maxValue - info.priceRange.minValue;
+      if (priceShift) info.priceRange = { minValue: info.priceRange.minValue + priceShift, maxValue: info.priceRange.maxValue + priceShift };
+    }
+    return info;
+  };
+  function nav(action) {
+    const ts = chart.timeScale();
+    const r = ts.getVisibleLogicalRange();
+    if (action === "fit") { priceShift = 0; ts.fitContent(); }
+    else if (!r) return;
+    else {
+      const w = r.to - r.from, mid = (r.from + r.to) / 2;
+      if (action === "in") ts.setVisibleLogicalRange({ from: mid - w * 0.35, to: mid + w * 0.35 });
+      if (action === "out") ts.setVisibleLogicalRange({ from: mid - w * 0.75, to: mid + w * 0.75 });
+      if (action === "left") ts.setVisibleLogicalRange({ from: r.from - w * 0.25, to: r.to - w * 0.25 });
+      if (action === "right") ts.setVisibleLogicalRange({ from: r.from + w * 0.25, to: r.to + w * 0.25 });
+      if (action === "up") priceShift += priceHeight * 0.2;
+      if (action === "down") priceShift -= priceHeight * 0.2;
+    }
+    if (series) series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o) });  // a fresh function makes the chart refit
+  }
+  document.getElementById("nav").addEventListener("click", e => { const a = e.target.dataset.nav; if (a) nav(a); });
   let series = null;
   let bars = [];
 
@@ -270,6 +324,7 @@
           wickUpColor: cssVar("--candle-up"), wickDownColor: cssVar("--candle-down"),
         })
       : chart.addSeries(LightweightCharts.LineSeries, { color: cssVar("--line"), lineWidth: 2, crosshairMarkerRadius: 4 });
+    series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o) });
     series.setData(toPoints(bars));
     chart.timeScale().fitContent();
     showLegend(bars[bars.length - 1]);
