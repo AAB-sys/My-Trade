@@ -41,7 +41,7 @@ its percentage on the price axis (the two ends solid, the rest dashed), and show
 one line of text: the move, its direction, and how far the last price is from the
 nearest level. Nothing else yet.
 
-## Layer 2: The evidence - built; the signal rule is still open
+## Layer 2: The evidence - built
 
 Under the chart, one row per level: how many closed candles **held** it and how
 many **crossed** it, in the candles shown, and the held share. Nothing is drawn
@@ -63,13 +63,49 @@ the candle: not its colour, size or wicks.
 that holds most of the time is one to lean on; one that is crossed most of the
 time is not a wall. This is the owner's own evidence for the signal rule.
 
-**Owner to decide** (the signal rule itself): which levels count, which event
-(a hold, a cross, or both) is the signal and in which direction of trade, whether
-a near miss counts (today "reaches" means touching the level exactly), whether the
-candle's colour or size matters, and whether the next candle must confirm.
+**Owner decided** (2 October): all seven levels count; the signal is a hold or a
+cross, chosen by a switch on the page; the trade goes the way the candle closed.
+Still open **(owner to decide)**: whether a near miss counts (today "reaches" means
+touching the level exactly), whether the candle's colour or size matters, and
+whether the next candle must confirm.
 
-## Layer 3: Paper orders - not built
+## Layer 3: Paper trades - built
 
-Which way to trade on a signal, where the stop and the target go, and when to get
-out if neither is hit **(owner to decide)**. Paper only, with a log that keeps the
-score, before anything real.
+The rule above, run over the closed candles shown, with the levels on the chart.
+Each paper trade is listed under the evidence table with its entry, stop, target,
+exit and points, and one line keeps the score. Paper only: nothing is sent
+anywhere, and the list is worked out afresh from the candles every minute, so it
+is as long as the chart (today, or five days). **Download CSV** saves it as a
+file for the owner's own record.
+
+The rule, in the order it is applied:
+
+1. **Signal** - a closed candle that **held** a level ("Held: trade the bounce")
+   or **crossed** one ("Crossed: trade the break"), as the switch says. The switch
+   is remembered per browser; *Off* hides the list. When one candle signals at
+   several levels, the one nearest its close counts **(owner to decide)**.
+2. **Side** - the side of the level the candle closed on: above it, buy; below
+   it, sell. For a hold that is the bounce away from the level; for a cross, the
+   break through it.
+3. **Entry** - the open of the next candle, since one can only act once the
+   signal candle has closed **(owner to decide)**. Until that candle has closed
+   the trade is listed as "Enters at the next open".
+4. **Target** - the next level in the trade's direction. **Stop** - the next level
+   the other way. Whichever a later candle reaches first ends the trade at that
+   level's price. If one candle reaches both, the stop is taken **(owner to
+   decide)**. The 0% and 100% levels have nothing beyond them on one side, so a
+   signal there gives no trade **(owner to decide)**.
+5. **Day end** - a trade still open at the day's last closed candle ends at its
+   close; nothing carries overnight. A signal on a day's last candle has no next
+   candle to enter on, so it gives nothing. While today is still running the
+   trade shows as "Still open" with its points at the last closed candle.
+6. **One trade at a time** - signals are ignored while a trade is open. The
+   candle that ends a trade can itself be the next signal **(owner to decide)**.
+
+As in layer 2, a candle is judged against the previous closed candle, and the
+first candle of a day against the last candle of the day before. Points are exit
+minus entry for a buy, entry minus exit for a sell; won means more than zero.
+
+**Not decided yet (owner to decide)**: whether to trade real money on any of
+this, at what size, and with what daily limit. The score line over many days is
+the evidence for that choice.
