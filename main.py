@@ -198,11 +198,15 @@ async def refresh_forever() -> None:
     while True:
         try:
             result = await asyncio.to_thread(fetch_all)
+            reason = result.get("reason") or ""
             if result["quotes"]:
+                if result["failed"]:
+                    log.warning("refresh missed %s: %s", result["failed"], reason)
                 store.update(quotes=result["quotes"], failed=result["failed"], updated_at=now_ist(), last_error=None)
             else:
-                log.warning("refresh returned no quotes: failed=%s", result["failed"])
-                store["last_error"] = f"{PROVIDER} answered nothing for all {len(result['failed'])} indices at {now_ist()[11:19]} IST"
+                log.warning("refresh returned no quotes: %s; failed=%s", reason, result["failed"])
+                store["last_error"] = (f"{PROVIDER} answered nothing for all {len(result['failed'])} indices at {now_ist()[11:19]} IST"
+                                       + (f" ({reason})" if reason else ""))
             await broadcast(store)
         except Exception as exc:
             log.warning("refresh failed: %s", exc)
