@@ -62,6 +62,7 @@ store = {
     "updated_at": None,
     "quotes": [],
     "failed": [],
+    "last_error": None,  # why the latest refresh brought nothing, for the page to show while it waits
 }
 clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
@@ -198,12 +199,15 @@ async def refresh_forever() -> None:
         try:
             result = await asyncio.to_thread(fetch_all)
             if result["quotes"]:
-                store.update(quotes=result["quotes"], failed=result["failed"], updated_at=now_ist())
-                await broadcast(store)
+                store.update(quotes=result["quotes"], failed=result["failed"], updated_at=now_ist(), last_error=None)
             else:
                 log.warning("refresh returned no quotes: failed=%s", result["failed"])
+                store["last_error"] = f"{PROVIDER} answered nothing for all {len(result['failed'])} indices at {now_ist()[11:19]} IST"
+            await broadcast(store)
         except Exception as exc:
             log.warning("refresh failed: %s", exc)
+            store["last_error"] = f"{type(exc).__name__}: {exc} at {now_ist()[11:19]} IST"
+            await broadcast(store)
         await asyncio.sleep(POLL_SECONDS)
 
 

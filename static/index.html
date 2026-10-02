@@ -178,9 +178,12 @@
   function apply(data) {
     if (data.page) PAGE = data.page;
     const status = document.getElementById("status");
+    document.getElementById("logout").hidden = !data.auth_enabled;
     if (!data.quotes.length) {
-      status.className = "";
-      status.textContent = "Waiting for the first prices from " + data.source + "…";
+      status.className = data.last_error ? "error" : "";
+      status.textContent = "Waiting for the first prices from " + data.source + "… "
+        + (data.last_error ? "Last try failed: " + data.last_error + ". Trying again every " + data.poll_seconds + " s."
+                           : "The server asks every " + data.poll_seconds + " s.");
       return;
     }
     render(data.quotes);
