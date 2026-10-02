@@ -84,16 +84,16 @@ The rule, in the order it is applied:
    or **crossed** one ("Crossed: trade the break"), as the switch says. The switch
    is remembered per browser; *Off* hides the list. When one candle signals at
    several levels, the one nearest its close counts **(owner to decide)**.
-2. **Side** - the side of the level the candle closed on: above it, buy; below
-   it, sell. For a hold that is the bounce away from the level; for a cross, the
-   break through it.
+2. **Option** - always bought, never sold. The candle closed above the level:
+   buy a CE, the index should rise. Below it: buy a PE, it should fall. For a
+   hold that is the bounce away from the level; for a cross, the break through it.
 3. **Entry** - the open of the next candle, since one can only act once the
    signal candle has closed **(owner to decide)**. Until that candle has closed
    the trade is listed as "Enters at the next open".
 4. **Target** - the next level in the trade's direction. **Stop** - the next level
-   the other way. Whichever a later candle reaches first ends the trade at that
-   level's price. If one candle reaches both, the stop is taken **(owner to
-   decide)**. The 0% and 100% levels have nothing beyond them on one side, so a
+   the other way. Exit the option when the index reaches either: whichever a
+   later candle reaches first ends the trade at that level's price. If one candle
+   reaches both, the stop is taken **(owner to decide)**. The 0% and 100% levels have nothing beyond them on one side, so a
    signal there gives no trade **(owner to decide)**.
 5. **Day end** - a trade still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal on a day's last candle has no next
@@ -103,8 +103,11 @@ The rule, in the order it is applied:
    candle that ends a trade can itself be the next signal **(owner to decide)**.
 
 As in layer 2, a candle is judged against the previous closed candle, and the
-first candle of a day against the last candle of the day before. Points are exit
-minus entry for a buy, entry minus exit for a sell; won means more than zero.
+first candle of a day against the last candle of the day before. Points are
+**index points**: exit minus entry for a CE, entry minus exit for a PE; won means
+more than zero. The option's premium moves less than the index and the page has
+no option prices, so which strike to buy and what its premium did are the
+owner's to track **(owner to decide)**.
 
 **Not decided yet (owner to decide)**: whether to trade real money on any of
 this, at what size, and with what daily limit. The score line over many days is
