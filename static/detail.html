@@ -100,6 +100,8 @@
 
   .controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
   .controls .group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .controls.levels { justify-content: flex-start; align-items: center; }
+  #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer;
@@ -172,6 +174,16 @@
     </div>
   </div>
 
+  <div class="controls levels">
+    <div class="seg" id="move" aria-label="Levels measured from">
+      <button data-move="off">No levels</button>
+      <button data-move="prev" class="on">Previous day</button>
+      <button data-move="today">Today so far</button>
+      <button data-move="shown">Bars shown</button>
+    </div>
+    <span id="levels-note"></span>
+  </div>
+
   <div class="chart-wrap">
     <div id="legend"></div>
     <div class="chart-area">
@@ -187,7 +199,8 @@
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
-  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "" };
+  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null };
+  try { state.move = localStorage.getItem("move") || state.move; } catch (e) {}
   const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute" };
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -244,6 +257,67 @@
     series.setData(toPoints(bars));
     chart.timeScale().fitContent();
     showLegend(bars[bars.length - 1]);
+    priceLines = [];  // they went with the old series
+    drawLevels();
+  }
+
+  // ---- Layer 1 of the owner's logic: Fibonacci levels of one move (see LOGIC.md)
+  // A move runs between a low and a high. The levels sit part-way back along it at
+  // fixed fractions. For a move that went up (low first, then high) the fractions are
+  // measured down from the high; for a move that went down, up from the low.
+  const RATIOS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+  let priceLines = [];
+  let lastLevelsKey = "";
+
+  function theMove() {
+    const s = state.summary;
+    if (!s || state.move === "off") return null;
+    if (state.move === "prev") {
+      if (s.previous_high == null || s.previous_low == null) return null;
+      // only the day's four figures are known, so: a day that closed above its open is taken as an up move
+      return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
+    }
+    if (state.move === "today") {
+      if (s.today_high == null || s.today_low == null || s.today_open == null) return null;
+      return { high: s.today_high, low: s.today_low, up: s.last >= s.today_open, what: "today so far" };
+    }
+    if (!bars.length) return null;
+    let hi = 0, lo = 0;
+    bars.forEach((b, i) => { if (b.high > bars[hi].high) hi = i; if (b.low < bars[lo].low) lo = i; });
+    return { high: bars[hi].high, low: bars[lo].low, up: lo < hi, what: "bars shown" };  // whichever end came first
+  }
+
+  function levelsOf(m) {
+    const span = m.high - m.low;
+    return RATIOS.map(r => ({ ratio: r, price: Math.round((m.up ? m.high - r * span : m.low + r * span) * 100) / 100 }));
+  }
+
+  function drawLevels() {
+    const note = document.getElementById("levels-note");
+    const m = theMove();
+    const levels = m ? levelsOf(m) : [];
+    const key = JSON.stringify([state.move, levels]);
+    if (series && key !== lastLevelsKey) {
+      priceLines.forEach(l => series.removePriceLine(l));
+      priceLines = levels.map(l => series.createPriceLine({
+        price: l.price, title: (l.ratio * 100).toFixed(1) + "%",
+        color: cssVar(l.ratio === 0 || l.ratio === 1 ? "--ink-2" : "--muted"), lineWidth: 1,
+        lineStyle: l.ratio === 0 || l.ratio === 1 ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dashed,
+        axisLabelVisible: true,
+      }));
+      lastLevelsKey = key;
+    }
+    note.dataset.count = levels.length;
+    if (state.move === "off") { note.textContent = ""; return; }
+    if (!m) {
+      note.textContent = state.move === "today" ? "No levels yet: the market has not traded today." : "No levels: nothing to measure yet.";
+      return;
+    }
+    const last = state.summary.last;
+    const nearest = levels.reduce((a, b) => Math.abs(b.price - last) < Math.abs(a.price - last) ? b : a);
+    const gap = Math.round((last - nearest.price) * 100) / 100;
+    note.textContent = `${m.what[0].toUpperCase() + m.what.slice(1)}: ${m.up ? "up" : "down"} move ${fmt.format(m.low)} → ${fmt.format(m.high)}. `
+      + `Last ${fmt.format(last)} is ${fmt.format(Math.abs(gap))} ${gap >= 0 ? "above" : "below"} the ${(nearest.ratio * 100).toFixed(1)}% level (${fmt.format(nearest.price)}).`;
   }
 
   function showLegend(bar) {
@@ -393,9 +467,11 @@
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
       document.getElementById("logout").hidden = !data.auth_enabled;
+      state.summary = data.summary;
       renderSummary(data.summary);
       if (data.range !== state.range || data.interval !== state.interval) return;  // an older request finishing late
       setBars(data.candles);
+      drawLevels();
       state.pollMs = Math.max(1000, data.poll_seconds * 1000);
       status.className = "";
       status.textContent = "Live · updated " + clock();
@@ -444,6 +520,14 @@
     [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.range === range));
     load();
   });
+  document.getElementById("move").addEventListener("click", e => {
+    const move = e.target.dataset.move;
+    if (!move || move === state.move) return;
+    state.move = move;
+    try { localStorage.setItem("move", move); } catch (err) {}
+    [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.move === move));
+    drawLevels();
+  });
   document.getElementById("interval").addEventListener("click", e => {
     const interval = e.target.dataset.interval;
     if (!interval || interval === state.interval) return;
@@ -453,6 +537,7 @@
     load();
   });
 
+  [...document.getElementById("move").children].forEach(b => b.classList.toggle("on", b.dataset.move === state.move));
   load();
 </script>
 </body>
