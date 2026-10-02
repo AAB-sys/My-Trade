@@ -132,9 +132,11 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today") -> dict
         "previous_high": previous["high"] if previous else None,
         "previous_low": previous["low"] if previous else None,
         "previous_close": previous_close,
+        # today's figures only when the market has traded today; on a holiday or before the
+        # open there are none (Yahoo's "day" figures would be the last session's)
         "today_open": current["open"] if current else None,
-        "today_high": meta.get("regularMarketDayHigh") or (current["high"] if current else None),
-        "today_low": meta.get("regularMarketDayLow") or (current["low"] if current else None),
+        "today_high": (meta.get("regularMarketDayHigh") or current["high"]) if current else None,
+        "today_low": (meta.get("regularMarketDayLow") or current["low"]) if current else None,
         "last": level,
         "change": change,
         "change_percent": round(change / previous_close * 100, 2),
@@ -142,13 +144,16 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today") -> dict
         "week52_low": meta.get("fiftyTwoWeekLow"),
         "time": datetime.fromtimestamp(meta["regularMarketTime"], IST).isoformat(timespec="seconds"),
     }
+    candles = parse_bars(intraday)
+    if range_key == "today":
+        candles = [bar for bar in candles if bar_date(bar) == today]  # never pass off the last session as today
     return {
         "name": name,
         "ticker": ticker,
         "range": range_key,
         "interval": spec["interval"],
         "summary": summary,
-        "candles": parse_bars(intraday),
+        "candles": candles,
     }
 
 

@@ -110,6 +110,11 @@
   .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
   #legend { font-size: 12px; color: var(--ink-2); padding: 4px 8px; min-height: 20px; font-variant-numeric: tabular-nums; }
   .chart-area { position: relative; }
+  #empty {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+    padding: 24px; color: var(--ink-2); font-size: 14px; line-height: 1.5; pointer-events: none;
+  }
+  #empty[hidden] { display: none; }
   #chart { height: 420px; }
   #popup {
     display: none; position: absolute; z-index: 5; min-width: 170px;
@@ -162,6 +167,7 @@
   <div class="chart-wrap">
     <div id="legend"></div>
     <div class="chart-area">
+      <div id="empty" hidden></div>
       <div id="chart"></div>
       <div id="popup"></div>
     </div>
@@ -297,6 +303,20 @@
 
   // ---- data
   function setBars(list) {
+    const empty = document.getElementById("empty");
+    if (!list.length) {  // a holiday, a weekend, or before the open: nothing to draw yet
+      bars = [];
+      if (series) series.setData([]);
+      state.lastTimes = "";
+      showLegend(null);
+      hidePopup();
+      empty.textContent = state.range === "today"
+        ? "No candles for today yet. The market has not traded today: a holiday, a weekend, or it is before 9:15 am. Switch to 5 days to see the last sessions."
+        : "No candles to show for this range.";
+      empty.hidden = false;
+      return;
+    }
+    empty.hidden = true;
     const times = list.map(b => b.time).join(",");
     const sameShape = times === state.lastTimes && bars.length === list.length;
     bars = list;
