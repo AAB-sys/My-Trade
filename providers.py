@@ -62,7 +62,7 @@ def quote_fields(name: str, ticker: str, level: float, previous_close: float, qu
         "ticker": ticker,
         "level": level,
         "change": change,
-        "change_percent": round(change / previous_close * 100, 2),
+        "change_percent": round(change / reference_close * 100, 2),
         "time": quoted_at.isoformat(timespec="seconds"),
     }
 
@@ -133,14 +133,18 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interva
     current = today_bars[-1] if today_bars else None
 
     level = meta["regularMarketPrice"]
-    previous_close = meta.get("chartPreviousClose") or meta.get("previousClose") or (previous["close"] if previous else None)
-    change = round(level - previous_close, 2)
+    # The change is against the close before the last session, as Yahoo reports it (and as
+    # the dashboard tiles show it). The "previous day" boxes are the last session before
+    # today, as one day: on a holiday that is the last session itself, whose close is the
+    # last price, not the close Yahoo compares against.
+    reference_close = meta.get("chartPreviousClose") or meta.get("previousClose") or (previous["close"] if previous else None)
+    change = round(level - reference_close, 2)
 
     summary = {
         "previous_open": previous["open"] if previous else None,
         "previous_high": previous["high"] if previous else None,
         "previous_low": previous["low"] if previous else None,
-        "previous_close": previous_close,
+        "previous_close": previous["close"] if previous else reference_close,
         # today's figures only when the market has traded today; on a holiday or before the
         # open there are none (Yahoo's "day" figures would be the last session's)
         "today_open": current["open"] if current else None,
@@ -148,7 +152,7 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interva
         "today_low": (meta.get("regularMarketDayLow") or current["low"]) if current else None,
         "last": level,
         "change": change,
-        "change_percent": round(change / previous_close * 100, 2),
+        "change_percent": round(change / reference_close * 100, 2),
         "week52_high": meta.get("fiftyTwoWeekHigh"),
         "week52_low": meta.get("fiftyTwoWeekLow"),
         "time": datetime.fromtimestamp(meta["regularMarketTime"], IST).isoformat(timespec="seconds"),
@@ -258,7 +262,7 @@ class DemoTicker:
             "today_low": min(bar["low"] for bar in session),
             "last": level,
             "change": change,
-            "change_percent": round(change / previous_close * 100, 2),
+            "change_percent": round(change / reference_close * 100, 2),
             "week52_high": round(base * 1.15, 2),
             "week52_low": round(base * 0.82, 2),
             "time": now_ist(),
