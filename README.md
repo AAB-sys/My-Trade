@@ -17,7 +17,7 @@ dashboard that shows them and updates the moment they change.
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
 | GET    | `/indices/all`    | nothing       | the latest snapshot: `quotes`, `failed`, `source`, `updated_at` |
 | GET    | `/indices/{name}` | an index name | that index's latest quote (503 until the first refresh lands) |
-| GET    | `/indices/{name}/detail` | an index name, `?range=today` (5-min bars) or `5d` (15-min bars) | `summary` (previous day OHLC, today's OHL, last, change, 52-week range) and `candles` |
+| GET    | `/indices/{name}/detail` | an index name, `?range=today` or `5d`, `&interval=1m`, `5m` (default) or `15m` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range) and `candles` of that size |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |
 
 Try `/docs` for the interactive version of this table.
@@ -130,7 +130,8 @@ The app is ready to run on a platform that deploys from GitHub:
   reconnects by itself if the connection drops. Every tile is a link to that
   index's detail page, opened in a new tab.
 - `static/detail.html` is the detail page: previous-day and today's figures, the
-  52-week range, and a chart with Line/Candles and Today/5-days switches, hover
+  52-week range, and a chart with Line/Candles, 1/5/15-minute candle size and
+  Today/5-days switches, hover
   crosshair with the bar's values, light and dark. Click any bar (or point on the
   line) for a small pop-up with that bar's time, open, high, low and close; click elsewhere,
   press Esc or its x to close it. It refreshes on the source's rhythm. The chart is drawn by Lightweight Charts (Apache-2.0), bundled in

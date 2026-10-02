@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocket
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from providers import INDICES, RANGES, DemoTicker, fetch_all_yahoo, fetch_detail_yahoo, now_ist
+from providers import INDICES, INTERVALS, RANGES, DemoTicker, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 
 BASE = Path(__file__).parent
 STATIC = BASE / "static"
@@ -49,7 +49,7 @@ if PROVIDER == "yahoo":
 elif PROVIDER == "demo":
     demo = DemoTicker()
     fetch_all = demo.fetch_all
-    fetch_detail = lambda name, ticker, range_key: demo.fetch_detail(name, range_key)
+    fetch_detail = lambda name, ticker, range_key, interval_key: demo.fetch_detail(name, range_key, interval_key)
 else:
     raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use yahoo or demo.")
 
@@ -322,21 +322,27 @@ def all_indices():
 
 
 @app.get("/indices/{name}/detail")
-async def index_detail(name: str, range_key: str = Query("today", alias="range")):
+async def index_detail(
+    name: str,
+    range_key: str = Query("today", alias="range"),
+    interval_key: str = Query("5m", alias="interval"),
+):
     key = known_index(name)
     if range_key not in RANGES:
         raise HTTPException(status_code=400, detail=f"range must be one of: {', '.join(RANGES)}")
+    if interval_key not in INTERVALS:
+        raise HTTPException(status_code=400, detail=f"interval must be one of: {', '.join(INTERVALS)}")
 
-    cached = detail_cache.get((key, range_key))
+    cached = detail_cache.get((key, range_key, interval_key))
     if cached and time.monotonic() - cached[0] < POLL_SECONDS:
         return cached[1]
     try:
-        payload = await asyncio.to_thread(fetch_detail, key, INDICES[key], range_key)
+        payload = await asyncio.to_thread(fetch_detail, key, INDICES[key], range_key, interval_key)
     except Exception as exc:
         log.warning("detail fetch failed for %s: %s", key, exc)
         raise HTTPException(status_code=502, detail="Couldn't fetch the chart data from the source right now.")
     payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED)
-    detail_cache[(key, range_key)] = (time.monotonic(), payload)
+    detail_cache[(key, range_key, interval_key)] = (time.monotonic(), payload)
     return payload
 
 

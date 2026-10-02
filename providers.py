@@ -11,11 +11,21 @@ HEADERS = {"User-Agent": "Mozilla/5.0"}
 MAX_WORKERS = 4
 RETRIES = 3
 
-# chart ranges the detail page can ask for
+# chart ranges and candle sizes the detail page can ask for, in any combination
 RANGES = {
-    "today": {"range": "1d", "interval": "5m", "bar_seconds": 300, "demo_bars": 75},
-    "5d": {"range": "5d", "interval": "15m", "bar_seconds": 900, "demo_bars": 125},
+    "today": {"range": "1d", "days": 1},
+    "5d": {"range": "5d", "days": 5},
 }
+INTERVALS = {
+    "1m": {"interval": "1m", "bar_seconds": 60},
+    "5m": {"interval": "5m", "bar_seconds": 300},
+    "15m": {"interval": "15m", "bar_seconds": 900},
+}
+SESSION_MINUTES = 375  # 9:15 am to 3:30 pm
+
+
+def bars_per_day(interval_key: str) -> int:
+    return SESSION_MINUTES * 60 // INTERVALS[interval_key]["bar_seconds"]
 
 # index name -> Yahoo Finance ticker
 INDICES = {
@@ -109,10 +119,9 @@ def fetch_all_yahoo() -> dict:
     }
 
 
-def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today") -> dict:
-    spec = RANGES[range_key]
+def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interval_key: str = "5m") -> dict:
     daily = yahoo_chart(ticker, "5d", "1d")
-    intraday = yahoo_chart(ticker, spec["range"], spec["interval"])
+    intraday = yahoo_chart(ticker, RANGES[range_key]["range"], INTERVALS[interval_key]["interval"])
     meta = intraday["meta"]
 
     today = datetime.now(IST).date()
@@ -151,7 +160,7 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today") -> dict
         "name": name,
         "ticker": ticker,
         "range": range_key,
-        "interval": spec["interval"],
+        "interval": interval_key,
         "summary": summary,
         "candles": candles,
     }
@@ -171,7 +180,7 @@ DEMO_LEVELS = {
 class DemoTicker:
     """Random walk around fixed starting levels. No network; for watching the plumbing work.
 
-    Every tick is also recorded into 5-minute and 15-minute candles, the way a real
+    Every tick is also recorded into 1-, 5- and 15-minute candles, the way a real
     tick feed would build them, so the detail chart moves as the ticker runs.
     """
 
@@ -181,7 +190,7 @@ class DemoTicker:
         self._level = {name: level * (1 + self._rng.uniform(-0.015, 0.015)) for name, level in DEMO_LEVELS.items()}
         self._start_level = dict(self._level)
         self._started = time.time()
-        self._live = {key: {} for key in RANGES}  # range key -> index name -> {bucket start: bar}
+        self._live = {key: {} for key in INTERVALS}  # interval key -> index name -> {bucket start: bar}
 
     def fetch_all(self) -> dict:
         now = time.time()
@@ -194,7 +203,7 @@ class DemoTicker:
         return {"quotes": quotes, "failed": []}
 
     def _record(self, name: str, level: float, now: float) -> None:
-        for key, spec in RANGES.items():
+        for key, spec in INTERVALS.items():
             size = spec["bar_seconds"]
             bucket = int(now // size) * size
             bars = self._live[key].setdefault(name, {})
@@ -206,13 +215,13 @@ class DemoTicker:
                 bar["low"] = min(bar["low"], level)
                 bar["close"] = level
 
-    def _history(self, name: str, key: str, last_bucket: int) -> list:
+    def _history(self, name: str, key: str, last_bucket: int, count: int) -> list:
         """Deterministic bars that walk backwards from the level the ticker started at."""
-        spec = RANGES[key]
+        spec = INTERVALS[key]
         rng = random.Random(f"{name}:{key}")
         level = self._start_level[name]
         bars = []
-        for i in range(spec["demo_bars"]):
+        for i in range(count):
             close = level
             open_ = close / (1 + rng.gauss(0, 0.0015))
             high = max(open_, close) * (1 + abs(rng.gauss(0, 0.0006)))
@@ -224,12 +233,13 @@ class DemoTicker:
             level = open_
         return list(reversed(bars))
 
-    def fetch_detail(self, name: str, range_key: str = "today") -> dict:
-        spec = RANGES[range_key]
-        size = spec["bar_seconds"]
+    def fetch_detail(self, name: str, range_key: str = "today", interval_key: str = "5m") -> dict:
+        size = INTERVALS[interval_key]["bar_seconds"]
+        per_day = bars_per_day(interval_key)
         first_live_bucket = int(self._started // size) * size
-        live = self._live[range_key].get(name, {})
-        candles = self._history(name, range_key, first_live_bucket - size) + [live[b] for b in sorted(live)]
+        live = self._live[interval_key].get(name, {})
+        history = self._history(name, interval_key, first_live_bucket - size, RANGES[range_key]["days"] * per_day)
+        candles = history + [live[b] for b in sorted(live)]
 
         rng = random.Random(f"{name}:summary")
         base = DEMO_LEVELS[name]
@@ -237,7 +247,7 @@ class DemoTicker:
         previous_open = round(previous_close * (1 + rng.uniform(-0.006, 0.006)), 2)
         level = round(self._level[name], 2)
         change = round(level - previous_close, 2)
-        session = candles[-RANGES["today"]["demo_bars"]:]
+        session = candles[-per_day:]
         summary = {
             "previous_open": previous_open,
             "previous_high": round(max(previous_open, previous_close) * 1.004, 2),
@@ -257,7 +267,7 @@ class DemoTicker:
             "name": name,
             "ticker": INDICES[name],
             "range": range_key,
-            "interval": spec["interval"],
+            "interval": interval_key,
             "summary": summary,
             "candles": candles,
         }
