@@ -57,7 +57,8 @@ their own logic. Read this before touching the code.
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
   each tile links to `/index/{name}` in a new tab.
 - `static/detail.html` - the per-index page: summary figures and a Line/Candles,
-  Today/5-days chart fed by `/indices/{name}/detail`. Chart drawn with
+  1/5/15-minute, Today/5-days chart fed by `/indices/{name}/detail`
+  (`?range=&interval=`). Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
 - `start.bat` - one-click start on Windows. `.env` is git-ignored; `.env.example`
   documents the settings.

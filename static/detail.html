@@ -99,6 +99,7 @@
   .stat .v { font-size: 16px; font-weight: 600; margin-top: 2px; }
 
   .controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .controls .group { display: flex; flex-wrap: wrap; gap: 8px; }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer;
@@ -158,9 +159,16 @@
       <button data-kind="line" class="on">Line</button>
       <button data-kind="candles">Candles</button>
     </div>
-    <div class="seg" id="range">
-      <button data-range="today" class="on">Today</button>
-      <button data-range="5d">5 days</button>
+    <div class="group">
+      <div class="seg" id="interval" aria-label="Candle size">
+        <button data-interval="1m">1 min</button>
+        <button data-interval="5m" class="on">5 min</button>
+        <button data-interval="15m">15 min</button>
+      </div>
+      <div class="seg" id="range" aria-label="Range">
+        <button data-range="today" class="on">Today</button>
+        <button data-range="5d">5 days</button>
+      </div>
     </div>
   </div>
 
@@ -179,7 +187,8 @@
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
-  const state = { kind: "line", range: "today", interval: "", pollMs: 60000, timer: null, lastTimes: "" };
+  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "" };
+  const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute" };
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
@@ -262,7 +271,7 @@
     const glyph = { up: "▲", down: "▼", flat: "—" }[dir];
     popup.innerHTML = `
       <span class="x" title="Close">&times;</span>
-      <div class="t">${istTime(bar.time, state.range !== "today")} IST · ${state.interval} bar</div>
+      <div class="t">${istTime(bar.time, state.range !== "today")} IST · ${INTERVAL_NAMES[state.interval]} bar</div>
       <div class="row"><span>Open</span><b>${fmt.format(bar.open)}</b></div>
       <div class="row"><span>High</span><b>${fmt.format(bar.high)}</b></div>
       <div class="row"><span>Low</span><b>${fmt.format(bar.low)}</b></div>
@@ -379,21 +388,21 @@
   async function load() {
     const status = document.getElementById("status");
     try {
-      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${state.range}`, withTab());
+      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${state.range}&interval=${state.interval}`, withTab());
       if (response.status === 401) { location.href = "/login"; return; }
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
       document.getElementById("logout").hidden = !data.auth_enabled;
       renderSummary(data.summary);
-      state.interval = data.interval;
+      if (data.range !== state.range || data.interval !== state.interval) return;  // an older request finishing late
       setBars(data.candles);
       state.pollMs = Math.max(1000, data.poll_seconds * 1000);
       status.className = "";
       status.textContent = "Live · updated " + clock();
       document.getElementById("mode").className = data.simulated ? "on" : "";
       document.getElementById("footer").textContent = data.simulated
-        ? `Simulated prices, ${data.interval} bars built from the simulator's ticks. Not real market data.`
-        : `Data from Yahoo Finance, about 15 minutes delayed, ${data.interval} bars. Refreshes every ${data.poll_seconds} s.`;
+        ? `Simulated prices, ${INTERVAL_NAMES[data.interval]} bars built from the simulator's ticks. Not real market data.`
+        : `Data from Yahoo Finance, about 15 minutes delayed, ${INTERVAL_NAMES[data.interval]} bars. Refreshes every ${data.poll_seconds} s.`;
     } catch (err) {
       status.className = "error";
       status.textContent = "Couldn't load (" + err.message + "). Retrying…";
@@ -433,6 +442,14 @@
     state.range = range;
     state.lastTimes = "";
     [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.range === range));
+    load();
+  });
+  document.getElementById("interval").addEventListener("click", e => {
+    const interval = e.target.dataset.interval;
+    if (!interval || interval === state.interval) return;
+    state.interval = interval;
+    state.lastTimes = "";
+    [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.interval === interval));
     load();
   });
 
