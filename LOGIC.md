@@ -41,39 +41,11 @@ its percentage on the price axis (the two ends solid, the rest dashed), and show
 one line of text: the move, its direction, and how far the last price is from the
 nearest level. Nothing else yet.
 
-## Layer 2: What candles do at the levels - built; the signal rule is still open
+## Layer 2: Signals - not built
 
-For every **closed** candle on the chart (the one still forming is judged once it
-closes) and every level from layer 1, the page checks four plain things, judged
-against where the previous candle closed:
-
-| It did | Meaning |
-|---|---|
-| **crossed up through** | closed below the level before, closed above it now |
-| **crossed down through** | closed above the level before, closed below it now |
-| **held above it (floor)** | was above, dipped to or through the level, closed back above it |
-| **held below it (ceiling)** | was below, rose to or through the level, closed back below it |
-
-A candle whose range never reaches a level does nothing at it. A candle that
-reaches a level and closes on the same side it came from is a *hold*; one that
-closes on the other side is a *cross*. Nothing else is read into the candle yet:
-not its colour, size, or wicks.
-
-**What the page does with them**: marks each candle that did something, with an
-arrow for a cross (up or down) or a dot for a hold, labelled with the level, and
-lists them under the chart newest first with the candle's time, the level, what it
-did, and the close. Two switches, *Crosses* and *Holds*, choose what is shown;
-both on by default, remembered per browser.
-
-**Owner to decide** (this is the signal rule itself):
-
-- Which of the four count as a signal, and in which direction of trade.
-- Whether only some levels count (say 38.2%, 50%, 61.8%) or all seven.
-- Whether a near miss counts: a candle that stops a few points short of a level.
-  Today "reaches" means the candle's high or low touches the level exactly.
-- Whether the candle's colour (close above or below its own open), its size, or
-  the candles before it matter.
-- Whether one candle is enough or it must be confirmed by the next one.
+What a candle must do at a level before it counts **(owner to decide)**: touch it,
+close beyond it, close back after poking through, its colour, its size, anything
+else the owner looks for.
 
 ## Layer 3: Paper orders - not built
 

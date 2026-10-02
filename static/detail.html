@@ -102,14 +102,6 @@
   .controls .group { display: flex; flex-wrap: wrap; gap: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .seg.toggles button.on { background: var(--ink); color: var(--page); }
-  #events-box { margin-top: 16px; }
-  #events-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
-  #events-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
-  #events { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-  #events th, #events td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
-  #events th { font-weight: 500; color: var(--muted); font-size: 12px; }
-  #events td.up { color: var(--up); } #events td.down { color: var(--down); }
   .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer;
@@ -189,10 +181,6 @@
       <button data-move="today">Today so far</button>
       <button data-move="shown">Bars shown</button>
     </div>
-    <div class="seg toggles" id="events-pick" aria-label="Mark on the chart">
-      <button data-event="cross" class="on">Crosses</button>
-      <button data-event="hold" class="on">Holds</button>
-    </div>
     <span id="levels-note"></span>
   </div>
 
@@ -205,26 +193,14 @@
     </div>
   </div>
 
-  <section id="events-box" aria-label="Candles at the levels">
-    <h2>At the levels</h2>
-    <div id="events-note"></div>
-    <table id="events" hidden>
-      <thead><tr><th>Candle</th><th>Level</th><th>What it did</th><th>Close</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
   <footer id="footer"></footer>
 </main>
 
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
-  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null,
-                  events: { cross: true, hold: true } };
+  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null };
   try { state.move = localStorage.getItem("move") || state.move; } catch (e) {}
-  try { const saved = JSON.parse(localStorage.getItem("events") || "null"); if (saved) state.events = saved; } catch (e) {}
-  const SECONDS = { "1m": 60, "5m": 300, "15m": 900 };
   const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute" };
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -282,7 +258,6 @@
     chart.timeScale().fitContent();
     showLegend(bars[bars.length - 1]);
     priceLines = []; lastLevelsKey = "";  // they went with the old series: draw them again
-    markers = LightweightCharts.createSeriesMarkers(series, []);
     drawLevels();
   }
 
@@ -321,7 +296,6 @@
     const note = document.getElementById("levels-note");
     const m = theMove();
     const levels = m ? levelsOf(m) : [];
-    drawEvents(levels);
     const key = JSON.stringify([state.move, levels]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
@@ -344,65 +318,6 @@
     const gap = Math.round((last - nearest.price) * 100) / 100;
     note.textContent = `${m.what[0].toUpperCase() + m.what.slice(1)}: ${m.up ? "up" : "down"} move ${fmt.format(m.low)} → ${fmt.format(m.high)}. `
       + `Last ${fmt.format(last)} is ${fmt.format(Math.abs(gap))} ${gap >= 0 ? "above" : "below"} the ${(nearest.ratio * 100).toFixed(1)}% level (${fmt.format(nearest.price)}).`;
-  }
-
-  // ---- Layer 2 of the owner's logic: what each closed candle did at each level (see LOGIC.md)
-  // Judged against where the previous candle closed:
-  //   crossed up    - closed below the level before, closed above it now
-  //   crossed down  - closed above the level before, closed below it now
-  //   held above    - was above, dipped to or through the level, closed back above (the level held as a floor)
-  //   held below    - was below, rose to or through the level, closed back below (the level held as a ceiling)
-  let markers = null;
-  const EVENT_WORDS = { crossUp: "crossed up through", crossDown: "crossed down through", holdAbove: "held above it (floor)", holdBelow: "held below it (ceiling)" };
-
-  function eventsAt(levels) {
-    const out = [];
-    const now = Date.now() / 1000;
-    for (let i = 1; i < bars.length; i++) {
-      const bar = bars[i], prev = bars[i - 1].close;
-      if (bar.time + SECONDS[state.interval] > now) continue;  // still forming: judged once it closes
-      for (const l of levels) {
-        const L = l.price;
-        let kind = null;
-        if (prev < L && bar.close > L) kind = "crossUp";
-        else if (prev > L && bar.close < L) kind = "crossDown";
-        else if (prev > L && bar.low <= L && bar.close > L) kind = "holdAbove";
-        else if (prev < L && bar.high >= L && bar.close < L) kind = "holdBelow";
-        if (kind) out.push({ bar, level: l, kind });
-      }
-    }
-    return out;
-  }
-
-  function drawEvents(levels) {
-    const table = document.getElementById("events"), note = document.getElementById("events-note");
-    const wanted = eventsAt(levels).filter(e => (e.kind.startsWith("cross") ? state.events.cross : state.events.hold));
-    note.dataset.count = wanted.length;
-    if (markers) {
-      const byBar = new Map();  // one marker per candle, naming every level it acted on
-      wanted.forEach(e => { if (!byBar.has(e.bar.time)) byBar.set(e.bar.time, []); byBar.get(e.bar.time).push(e); });
-      markers.setMarkers([...byBar.entries()].sort((a, b) => a[0] - b[0]).map(([time, list]) => {
-        const first = list[0], up = first.kind === "crossUp" || first.kind === "holdAbove";
-        return {
-          time: time + IST_OFFSET, position: up ? "belowBar" : "aboveBar",
-          shape: first.kind.startsWith("cross") ? (up ? "arrowUp" : "arrowDown") : "circle",
-          color: cssVar(up ? "--up" : "--down"), size: 1,
-          text: list.map(e => (e.kind.startsWith("cross") ? (up ? "↑ " : "↓ ") : "held ") + (e.level.ratio * 100).toFixed(1) + "%").join(" · "),
-        };
-      }));
-    }
-    if (!levels.length) { note.textContent = "No levels, so nothing to judge."; table.hidden = true; return; }
-    const closed = bars.filter(b => b.time + SECONDS[state.interval] <= Date.now() / 1000).length;
-    const crosses = wanted.filter(e => e.kind.startsWith("cross")).length;
-    note.textContent = `${wanted.length} in the ${closed} closed candles shown: ${crosses} crosses, ${wanted.length - crosses} holds. Newest first.`;
-    table.hidden = wanted.length === 0;
-    table.querySelector("tbody").replaceChildren(...wanted.slice().reverse().slice(0, 30).map(e => {
-      const tr = document.createElement("tr");
-      const up = e.kind === "crossUp" || e.kind === "holdAbove";
-      tr.innerHTML = `<td>${istTime(e.bar.time, state.range !== "today")}</td><td>${(e.level.ratio * 100).toFixed(1)}% · ${fmt.format(e.level.price)}</td>`
-        + `<td class="${up ? "up" : "down"}">${EVENT_WORDS[e.kind]}</td><td>${fmt.format(e.bar.close)}</td>`;
-      return tr;
-    }));
   }
 
   function showLegend(bar) {
@@ -613,14 +528,6 @@
     [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.move === move));
     drawLevels();
   });
-  document.getElementById("events-pick").addEventListener("click", e => {
-    const which = e.target.dataset.event;
-    if (!which) return;
-    state.events[which] = !state.events[which];
-    e.target.classList.toggle("on", state.events[which]);
-    try { localStorage.setItem("events", JSON.stringify(state.events)); } catch (err) {}
-    drawLevels();
-  });
   document.getElementById("interval").addEventListener("click", e => {
     const interval = e.target.dataset.interval;
     if (!interval || interval === state.interval) return;
@@ -631,7 +538,6 @@
   });
 
   [...document.getElementById("move").children].forEach(b => b.classList.toggle("on", b.dataset.move === state.move));
-  [...document.getElementById("events-pick").children].forEach(b => b.classList.toggle("on", !!state.events[b.dataset.event]));
   load();
 </script>
 </body>
