@@ -131,7 +131,9 @@ The app is ready to run on a platform that deploys from GitHub:
   index's detail page, opened in a new tab.
 - `LOGIC.md` is the owner's own trading logic in plain words: what is built, what
   is still the owner's to decide. The index page draws its first layer, Fibonacci
-  levels of a chosen move, as lines on the chart with a one-line readout.
+  levels of a chosen move, as lines on the chart with a one-line readout, and its
+  second, a table under the chart of how often each level held or was crossed by
+  the closed candles shown. Nothing else is drawn on the chart.
 - `static/detail.html` is the detail page: previous-day and today's figures, the
   52-week range, and a chart with Line/Candles, 1/5/15-minute candle size and
   Today/5-days switches, hover

@@ -41,11 +41,32 @@ its percentage on the price axis (the two ends solid, the rest dashed), and show
 one line of text: the move, its direction, and how far the last price is from the
 nearest level. Nothing else yet.
 
-## Layer 2: Signals - not built
+## Layer 2: The evidence - built; the signal rule is still open
 
-What a candle must do at a level before it counts **(owner to decide)**: touch it,
-close beyond it, close back after poking through, its colour, its size, anything
-else the owner looks for.
+Under the chart, one row per level: how many closed candles **held** it and how
+many **crossed** it, in the candles shown, and the held share. Nothing is drawn
+on the chart.
+
+Judged for every closed candle (the one still forming is judged once it closes)
+against where the previous candle closed:
+
+- **Held**: the candle reached the level (its high or low touched it or went
+  through) and closed back on the side it came from. The level acted as a floor
+  or a ceiling.
+- **Crossed**: the candle closed on the other side of the level from the previous
+  close.
+
+A candle that never reaches a level does nothing at it. Nothing else is read into
+the candle: not its colour, size or wicks.
+
+**How to use it**: look at the held share over many days and many moves. A level
+that holds most of the time is one to lean on; one that is crossed most of the
+time is not a wall. This is the owner's own evidence for the signal rule.
+
+**Owner to decide** (the signal rule itself): which levels count, which event
+(a hold, a cross, or both) is the signal and in which direction of trade, whether
+a near miss counts (today "reaches" means touching the level exactly), whether the
+candle's colour or size matters, and whether the next candle must confirm.
 
 ## Layer 3: Paper orders - not built
 
