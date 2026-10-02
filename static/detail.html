@@ -257,7 +257,7 @@
     series.setData(toPoints(bars));
     chart.timeScale().fitContent();
     showLegend(bars[bars.length - 1]);
-    priceLines = [];  // they went with the old series
+    priceLines = []; lastLevelsKey = "";  // they went with the old series: draw them again
     drawLevels();
   }
 
@@ -307,7 +307,7 @@
       }));
       lastLevelsKey = key;
     }
-    note.dataset.count = levels.length;
+    note.dataset.count = priceLines.length;  // lines actually on the chart
     if (state.move === "off") { note.textContent = ""; return; }
     if (!m) {
       note.textContent = state.move === "today" ? "No levels yet: the market has not traded today." : "No levels: nothing to measure yet.";
