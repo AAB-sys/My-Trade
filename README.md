@@ -17,7 +17,7 @@ dashboard that shows them and updates the moment they change.
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
 | GET    | `/indices/all`    | nothing       | the latest snapshot: `quotes`, `failed`, `source`, `updated_at` |
 | GET    | `/indices/{name}` | an index name | that index's latest quote (503 until the first refresh lands) |
-| GET    | `/indices/{name}/detail` | an index name, `?range=today` or `5d`, `&interval=1m`, `5m` (default) or `15m` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range) and `candles` of that size |
+| GET    | `/indices/{name}/detail` | an index name, `?range=today` or `5d`, `&interval=1m`, `5m` (default) or `15m` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range), `candles` of that size and `days` (a month of daily OHLC, for each session's own previous-day levels) |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |
 
 Try `/docs` for the interactive version of this table.

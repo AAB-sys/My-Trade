@@ -102,6 +102,8 @@
   .controls .group { display: flex; flex-wrap: wrap; gap: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  #session-row[hidden] { display: none; }
+  #session-label { font-size: 13px; color: var(--muted); }
   #score-box, #paper-box { margin-top: 16px; }
   #score-box h2, #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
   #score-note, #paper-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
@@ -210,6 +212,11 @@
     <span id="levels-note"></span>
   </div>
 
+  <div class="controls levels" id="session-row" hidden>
+    <span id="session-label">Session</span>
+    <div class="seg" id="session" aria-label="Session"></div>
+  </div>
+
   <div class="chart-wrap">
     <div class="legend-row">
       <div id="legend"></div>
@@ -268,7 +275,7 @@
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
-  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null };
+  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null, days: [], session: null };
   try { state.move = localStorage.getItem("move") || state.move; } catch (e) {}
   state.signal = "held";  // layer 3's switch: off, held or crossed
   try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
@@ -402,17 +409,44 @@
   let priceLines = [];
   let lastLevelsKey = "";
 
+  // ---- sessions: the trading days among the candles shown. The levels, the evidence table and
+  // the calls are for one session at a time (the latest unless another is picked), and that
+  // session's "previous day" is the trading day before it, not the day before today.
+  const dateKey = (t) => new Date((t + IST_OFFSET) * 1000).toISOString().slice(0, 10);  // the IST date
+  const sessions = () => [...new Set(bars.map(b => dateKey(b.time)))];
+  const currentSession = () => { const list = sessions(); return list.includes(state.session) ? state.session : list[list.length - 1] || null; };
+  const sessionBars = () => { const key = currentSession(); return key ? bars.filter(b => dateKey(b.time) === key) : []; };
+  const isToday = (key) => key === dateKey(Date.now() / 1000);
+  const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+  const sessionName = (key) => key ? (isToday(key) ? "today" : dayLabel(key)) : "today";
+  const dayBefore = (key) => { const earlier = state.days.filter(d => d.date < key); return earlier[earlier.length - 1] || null; };
+  function drawSessions() {
+    const list = sessions(), key = currentSession();
+    document.getElementById("session-row").hidden = list.length < 2;
+    document.getElementById("session").replaceChildren(...list.map(d => {
+      const b = document.createElement("button");
+      b.dataset.session = d; b.textContent = dayLabel(d); b.classList.toggle("on", d === key);
+      return b;
+    }));
+  }
+
   function theMove() {
     const s = state.summary;
     if (!s || state.move === "off") return null;
+    const key = currentSession();
     if (state.move === "prev") {
-      if (s.previous_high == null || s.previous_low == null) return null;
-      // only the day's four figures are known, so: a day that closed above its open is taken as an up move
+      const day = key ? dayBefore(key) : null;
+      if (day) return { high: day.high, low: day.low, up: day.close >= day.open, what: `previous day (${dayLabel(day.date)})` };
+      if (key || s.previous_high == null || s.previous_low == null) return null;
+      // no candles at all (a holiday, before the open): the last session's figures, as the tiles show them.
+      // Only the day's four figures are known, so a day that closed above its open is taken as an up move
       return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
     }
     if (state.move === "today") {
-      if (s.today_high == null || s.today_low == null || s.today_open == null) return null;
-      return { high: s.today_high, low: s.today_low, up: s.last >= s.today_open, what: "today so far" };
+      const sb = sessionBars();
+      if (!sb.length) return null;
+      return { high: Math.max(...sb.map(b => b.high)), low: Math.min(...sb.map(b => b.low)), up: sb[sb.length - 1].close >= sb[0].open,
+               what: isToday(key) ? "today so far" : dayLabel(key) };
     }
     if (!bars.length) return null;
     let hi = 0, lo = 0;
@@ -433,7 +467,7 @@
 
   function scoreLevels(levels) {
     const now = Date.now() / 1000;
-    const closed = bars.filter(b => b.time + SECONDS[state.interval] <= now);
+    const closed = sessionBars().filter(b => b.time + SECONDS[state.interval] <= now);
     const rows = levels.map(l => ({ ...l, held: 0, crossed: 0 }));
     for (let i = 1; i < closed.length; i++) {
       const bar = closed[i], prev = closed[i - 1].close;
@@ -452,7 +486,7 @@
     const { rows, closed } = scoreLevels(levels);
     box.hidden = false;
     document.getElementById("score-note").textContent =
-      `In the ${closed} closed candles shown. Held: a candle reached the level and closed back on the side it came from. Crossed: it closed on the other side.`;
+      `In the ${closed} closed candles of ${sessionName(currentSession())}. Held: a candle reached the level and closed back on the side it came from. Crossed: it closed on the other side.`;
     document.getElementById("score").querySelector("tbody").replaceChildren(...rows.slice().reverse().map(r => {
       const tr = document.createElement("tr");
       const total = r.held + r.crossed;
@@ -506,7 +540,7 @@
 
   function paperTrades(levels) {
     const now = Date.now() / 1000;
-    const closed = bars.filter(b => b.time + SECONDS[state.interval] <= now);
+    const closed = sessionBars().filter(b => b.time + SECONDS[state.interval] <= now);
     const prices = levels.map(l => l.price).sort((a, b) => a - b);
     const gain = (t, price) => Math.round((t.side === "CE" ? price - t.entry : t.entry - price) * 100) / 100;  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
@@ -549,7 +583,7 @@
     if (state.signal === "off") {
       table.hidden = true; lastPaper = { trades: [], levels };
       score.textContent = "";
-      note.textContent = "Off. Pick a signal to see the calls it would have given on the candles shown.";
+      note.textContent = "Off. Pick a signal to see the calls it would have given in this session.";
       return;
     }
     const { trades, closed } = paperTrades(levels);
@@ -566,8 +600,8 @@
       + "Exit the option when the index reaches the target (the next level that way) or the stop (the next level the other way), whichever comes first, or at the day's end. "
       + "Points are index points, not the option's premium.";
     score.textContent = (done.length
-      ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles shown: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
-      : `No finished call in the ${closed} closed candles shown.`)
+      ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
+      : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
       + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "") + (unsure ? " One needs the next candle to confirm." : "");
     const pct = Object.fromEntries(levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
     table.hidden = !trades.length;
@@ -584,11 +618,12 @@
 
   function drawLevels() {
     const note = document.getElementById("levels-note");
+    drawSessions();
     const m = theMove();
     const levels = m ? levelsOf(m) : [];
     drawScore(levels);
     drawPaper(levels);
-    const key = JSON.stringify([state.move, levels]);
+    const key = JSON.stringify([state.move, currentSession(), levels]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
       priceLines = levels.map(l => series.createPriceLine({
@@ -760,6 +795,7 @@
       const data = await response.json();
       document.getElementById("logout").hidden = !data.auth_enabled;
       state.summary = data.summary;
+      state.days = data.days || [];
       renderSummary(data.summary);
       if (data.range !== state.range || data.interval !== state.interval) return;  // an older request finishing late
       setBars(data.candles);
@@ -818,6 +854,12 @@
     state.move = move;
     try { localStorage.setItem("move", move); } catch (err) {}
     [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.move === move));
+    drawLevels();
+  });
+  document.getElementById("session").addEventListener("click", e => {
+    const session = e.target.dataset.session;
+    if (!session || session === currentSession()) return;
+    state.session = session;
     drawLevels();
   });
   document.getElementById("signal").addEventListener("click", e => {
