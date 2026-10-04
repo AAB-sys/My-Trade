@@ -134,9 +134,10 @@ The app is ready to run on a platform that deploys from GitHub:
   levels of a chosen move, as lines on the chart with a one-line readout, and its
   second, a table under the chart of how often each level held or was crossed by
   the closed candles shown, and its third, the paper trades that rule would have
-  given on those candles (a Held/Crossed switch, entry at the next open, the next
-  level as target and the one behind as stop, one trade at a time, closed at the
-  day's end), listed with their points, scored, and downloadable as a CSV file.
+  given on those candles (a Held/Crossed/Both switch, buy a CE or a PE, entry at
+  the next open, the next level as target and the one behind as stop, every
+  signal a call, closed at the day's end), listed with their points, scored, and
+  downloadable as a CSV file.
   Nothing else is drawn on the chart, and nothing is sent anywhere.
 - `static/detail.html` is the detail page: previous-day and today's figures, the
   52-week range, and a chart with Line/Candles, 1/5/15-minute candle size and
