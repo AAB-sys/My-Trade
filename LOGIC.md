@@ -25,16 +25,23 @@ turn after a move. Whether that holds is for the owner's own record to show.
 
 **Which move** - a switch on the index page, remembered per browser:
 
-- *Previous day* (default): yesterday's low to yesterday's high. Only the day's
-  open, high, low and close are known, so the day is taken as an up move when it
-  closed above its open, else a down move **(owner to decide)**.
-- *Today so far*: today's low to today's high, an up move when the last price is
-  above today's open **(owner to decide)**. Blank until the market has traded today.
+- *Previous day* (default): the low to the high of the trading day before the
+  session being looked at. Only the day's open, high, low and close are known, so
+  the day is taken as an up move when it closed above its open, else a down move
+  **(owner to decide)**.
+- *Today so far*: the session's own low to high so far, an up move when its last
+  price is above its open **(owner to decide)**. Blank until it has traded.
 - *Bars shown*: the lowest low and highest high among the candles on the chart;
   whichever came first says which way the move went.
 - *No levels*: hides them.
 
 **Ratios**: the seven above **(owner to decide: add or remove)**.
+
+**Which session**: the latest trading day among the candles shown. On the 5-day
+chart a row of day buttons picks another, and the levels, the evidence table and
+the calls all switch to that day, with that day's own previous day (owner's
+decision, 4 October: a past day must be judged with the levels it had then, not
+with today's).
 
 **What the page does with them**: draws each level as a line across the chart with
 its percentage on the price axis (the two ends solid, the rest dashed), and shows
@@ -44,7 +51,7 @@ nearest level. Nothing else yet.
 ## Layer 2: The evidence - built
 
 Under the chart, one row per level: how many closed candles **held** it and how
-many **crossed** it, in the candles shown, and the held share. Nothing is drawn
+many **crossed** it, in the session picked, and the held share. Nothing is drawn
 on the chart.
 
 Judged for every closed candle (the one still forming is judged once it closes)
@@ -71,13 +78,12 @@ whether the next candle must confirm.
 
 ## Layer 3: Paper calls - built
 
-The rule above, run over the closed candles shown, with the levels on the chart.
-Each call (buy a CE, or buy a PE) is listed under the evidence table with the
-index at entry, its stop, its target, the index at exit and the points, and one
-line keeps the score. Paper only: nothing is sent anywhere, and the list is
-worked out afresh from the candles every minute, so it is as long as the chart
-(today, or five days). **Download CSV** saves it as a file for the owner's own
-record.
+The rule above, run over the closed candles of the session picked, with that
+session's levels. Each call (buy a CE, or buy a PE) is listed under the evidence
+table with the index at entry, its stop, its target, the index at exit and the
+points, and one line keeps the score. Paper only: nothing is sent anywhere, and
+the list is worked out afresh from the candles every minute. **Download CSV**
+saves it as a file for the owner's own record, one session at a time.
 
 The rule, in the order it is applied:
 

@@ -128,7 +128,7 @@ def fetch_all_yahoo() -> dict:
 
 
 def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interval_key: str = "5m") -> dict:
-    daily = yahoo_chart(ticker, "5d", "1d")
+    daily = yahoo_chart(ticker, "1mo", "1d")  # a month of days, so every session shown has a previous day
     intraday = yahoo_chart(ticker, RANGES[range_key]["range"], INTERVALS[interval_key]["interval"])
     meta = intraday["meta"]
 
@@ -175,6 +175,8 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interva
         "interval": interval_key,
         "summary": summary,
         "candles": candles,
+        # one row per trading day, oldest first: the page builds each session's levels from the day before it
+        "days": [{"date": bar_date(bar).isoformat(), "open": bar["open"], "high": bar["high"], "low": bar["low"], "close": bar["close"]} for bar in day_bars],
     }
 
 
@@ -275,6 +277,16 @@ class DemoTicker:
             "week52_low": round(base * 0.82, 2),
             "time": now_ist(),
         }
+        days = []  # the candles' calendar days, plus a made-up day before the first
+        for bar in candles:
+            date = datetime.fromtimestamp(bar["time"], IST).date().isoformat()
+            if days and days[-1]["date"] == date:
+                day = days[-1]
+                day["high"], day["low"], day["close"] = max(day["high"], bar["high"]), min(day["low"], bar["low"]), bar["close"]
+            else:
+                days.append({"date": date, "open": bar["open"], "high": bar["high"], "low": bar["low"], "close": bar["close"]})
+        before = datetime.fromisoformat(days[0]["date"]).date() - timedelta(days=1)
+        days.insert(0, {"date": before.isoformat(), "open": previous_open, "high": summary["previous_high"], "low": summary["previous_low"], "close": previous_close})
         return {
             "name": name,
             "ticker": INDICES[name],
@@ -282,4 +294,5 @@ class DemoTicker:
             "interval": interval_key,
             "summary": summary,
             "candles": candles,
+            "days": days,
         }
