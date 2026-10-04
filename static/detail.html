@@ -466,10 +466,13 @@
   // The rule, run over the closed candles shown with the levels on the chart:
   //   signal  - a closed candle that HELD a level ("trade the bounce") or CROSSED one ("trade the
   //             break"), or either, as the switch says; when one candle signals at several levels,
-  //             the one nearest its close counts: one candle, one call
+  //             the one nearest its close counts: one candle, one call. A level that has given a
+  //             call in a direction gives no more that way until the index closes back across it
+  //   confirm - the next candle must agree: after a cross it closes on the new side too; after a
+  //             hold it closes further from the level than the signal candle did. Else no call
   //   option  - always bought, never sold: a CE when the candle closed above the level (the index
   //             should rise), a PE when it closed below (it should fall)
-  //   entry   - the open of the next candle (one can only act once the candle has closed)
+  //   entry   - the open of the candle after the confirming one
   //   target  - the next level in the trade's direction; stop - the next level the other way;
   //             whichever a later candle reaches first ends the trade (both in one candle: the stop)
   //   day end - a call still open at the day's last candle ends at its close; nothing carries overnight
@@ -478,13 +481,16 @@
   const SESSION_END = 15 * 3600 + 30 * 60;  // 3:30 pm IST, in seconds since midnight
   const dayOf = (t) => Math.floor((t + IST_OFFSET) / 86400);
   const dayOver = (day, now) => { const n = now + IST_OFFSET; return day < Math.floor(n / 86400) || n % 86400 >= SESSION_END; };
-  const HOW = { target: "Target", stop: "Stop", "day end": "Day end", open: "Still open", pending: "Enters at the next open" };
+  const HOW = { target: "Target", stop: "Stop", "day end": "Day end", open: "Still open", pending: "Enters at the next open", unconfirmed: "Needs the next candle to confirm" };
   let lastPaper = { trades: [], levels: [] };
 
-  function signalAt(bar, prev, prices) {
+  function signalAt(bar, prev, prices, used) {
     const crossed = L => (prev < L && bar.close > L) || (prev > L && bar.close < L);
     const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
-    const hits = prices.filter(L => state.signal === "crossed" ? crossed(L) : state.signal === "held" ? held(L) : crossed(L) || held(L));
+    const hits = prices.filter(L => {
+      const kind = crossed(L) ? "crossed" : held(L) ? "held" : null;
+      return kind && (state.signal === "both" || state.signal === kind) && !used[L + (bar.close > L ? "CE" : "PE")];
+    });
     if (!hits.length) return null;
     const level = hits.reduce((a, b) => Math.abs(b - bar.close) < Math.abs(a - bar.close) ? b : a);
     const kind = crossed(level) ? "crossed" : "held";
@@ -492,8 +498,11 @@
     const above = prices.find(p => p > level), below = prices.slice().reverse().find(p => p < level);
     const target = side === "CE" ? above : below, stop = side === "CE" ? below : above;
     if (target == null || stop == null) return null;
-    return { signalTime: bar.time, level, kind, side, target, stop, entry: null, exit: null, points: null, how: "pending" };
+    return { signalTime: bar.time, level, kind, side, target, stop, close: bar.close, entry: null, exit: null, points: null, how: "unconfirmed" };
   }
+  const confirms = (sig, bar) => sig.kind === "crossed"
+    ? (sig.side === "CE" ? bar.close > sig.level : bar.close < sig.level)   // still on the new side
+    : (sig.side === "CE" ? bar.close > sig.close : bar.close < sig.close);  // moved further from the level
 
   function paperTrades(levels) {
     const now = Date.now() / 1000;
@@ -502,26 +511,33 @@
     const gain = (t, price) => Math.round((t.side === "CE" ? price - t.entry : t.entry - price) * 100) / 100;  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
     const trades = [];
-    let pending = null, open = [];
+    const used = {};  // level price + side -> true while that level has given a call that way
+    let waiting = null, ready = null, open = [];
     for (let i = 1; i < closed.length; i++) {
       const bar = closed[i], prevBar = closed[i - 1];
       if (dayOf(bar.time) !== dayOf(prevBar.time)) {  // a new day: yesterday's calls ended with yesterday
         open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = [];
-        pending = null;  // a signal on a day's last candle has no next candle to enter on
+        waiting = null; ready = null;  // a signal late on a day has no candles left to confirm and enter on
       }
-      if (pending) { const t = { ...pending, entry: bar.open, entryTime: bar.time, how: "open" }; trades.push(t); open.push(t); pending = null; }
+      if (ready) { const t = { ...ready, entry: bar.open, entryTime: bar.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
+      if (waiting) {  // the signal candle's next candle: does it agree?
+        if (confirms(waiting, bar)) { ready = { ...waiting, how: "pending" }; used[waiting.level + waiting.side] = true; }
+        waiting = null;
+      }
       open = open.filter(t => {
         const ce = t.side === "CE";
         if (ce ? bar.low <= t.stop : bar.high >= t.stop) { end(t, t.stop, bar, "stop"); return false; }
         if (ce ? bar.high >= t.target : bar.low <= t.target) { end(t, t.target, bar, "target"); return false; }
         return true;
       });
-      pending = signalAt(bar, prevBar.close, prices);  // every signal candle gives a call, open calls or not
+      prices.forEach(L => { if (bar.close < L) used[L + "CE"] = false; if (bar.close > L) used[L + "PE"] = false; });  // closed back across: the level may call again
+      waiting = signalAt(bar, prevBar.close, prices, used);  // every confirmed signal gives a call, open calls or not
     }
     const last = closed[closed.length - 1];
     const over = last ? dayOver(dayOf(last.time), now) : true;
     open.forEach(t => { if (over) end(t, last.close, last, "day end"); else t.points = gain(t, last.close); });
-    if (pending && !over) trades.push(pending);
+    if (ready && !over) trades.push(ready);
+    if (waiting && !over) trades.push(waiting);
     return { trades, closed: closed.length };
   }
 
@@ -541,24 +557,25 @@
     const done = trades.filter(t => t.exit != null);
     const won = done.filter(t => t.points > 0).length, lost = done.filter(t => t.points < 0).length;
     const net = Math.round(done.reduce((s, t) => s + t.points, 0) * 100) / 100;
-    const running = trades.filter(t => t.how === "open").length, waiting = trades.some(t => t.how === "pending");
+    const running = trades.filter(t => t.how === "open").length, waiting = trades.some(t => t.how === "pending"), unsure = trades.some(t => t.how === "unconfirmed");
     note.textContent = { held: "Signal: a closed candle touched a level and closed back on its own side. ",
                          crossed: "Signal: a closed candle closed on the other side of a level. ",
                          both: "Signal: a closed candle touched a level and closed back on its own side, or closed on the other side of it. " }[state.signal]
-      + "Closed above the level: buy a CE. Below it: buy a PE. Every signal candle gives a call, even while earlier calls are still open. "
-      + "Entry when the next candle opens. Exit the option when the index reaches the target (the next level that way) or the stop (the next level the other way), "
-      + "whichever comes first, or at the day's end. Points are index points, not the option's premium.";
+      + "The next candle must agree: after a cross it closes on the new side too, after a turn back it closes further from the level. "
+      + "Closed above the level: buy a CE. Below it: buy a PE. Entry when the candle after that opens. A level gives one call in a direction until the index closes back across it. "
+      + "Exit the option when the index reaches the target (the next level that way) or the stop (the next level the other way), whichever comes first, or at the day's end. "
+      + "Points are index points, not the option's premium.";
     score.textContent = (done.length
       ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles shown: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
       : `No finished call in the ${closed} closed candles shown.`)
-      + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
+      + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "") + (unsure ? " One needs the next candle to confirm." : "");
     const pct = Object.fromEntries(levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
     table.hidden = !trades.length;
     table.querySelector("tbody").replaceChildren(...trades.slice().reverse().map(t => {
       const tr = document.createElement("tr");
       const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
       tr.innerHTML = `<td>${istTime(t.signalTime, state.range !== "today")}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
-        + `<td>Buy ${t.side}</td><td>${t.entry == null ? "next open" : fmt.format(t.entry)}</td>`
+        + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
         + `<td>${fmt.format(t.stop)}</td><td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
         + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`;
       return tr;

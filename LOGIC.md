@@ -85,26 +85,36 @@ The rule, in the order it is applied:
    or **crossed** one ("Crossed: trade the break"), or either ("Both"), as the
    switch says. The switch is remembered per browser; *Off* hides the list. When
    one candle signals at several levels, the one nearest its close counts: one
-   candle, one call **(owner to decide)**.
-2. **Option** - always bought, never sold. The candle closed above the level:
-   buy a CE, the index should rise. Below it: buy a PE, it should fall. For a
-   hold that is the bounce away from the level; for a cross, the break through it.
-3. **Entry** - the open of the next candle, since one can only act once the
-   signal candle has closed **(owner to decide)**. Until that candle has closed
-   the call is listed as "Enters at the next open".
-4. **Target** - the next level in the call's direction. **Stop** - the next level
+   candle, one call **(owner to decide)**. A level that has given a call in a
+   direction gives no more that way until the index has closed back across it
+   (owner's decision, 4 October: no repeat calls while the index hovers at one
+   level).
+2. **Confirmation** - the next candle must agree, or there is no call (owner's
+   decision, 4 October). After a cross, it closes on the new side of the level
+   too. After a hold, it closes further from the level than the signal candle
+   did. While it is still forming, the list shows the signal as "Needs the next
+   candle to confirm".
+3. **Option** - always bought, never sold. The signal candle closed above the
+   level: buy a CE, the index should rise. Below it: buy a PE, it should fall.
+   For a hold that is the bounce away from the level; for a cross, the break
+   through it.
+4. **Entry** - the open of the candle after the confirming one, since one can
+   only act once that candle has closed **(owner to decide)**. Until then the
+   call is listed as "Enters at the next open".
+5. **Target** - the next level in the call's direction. **Stop** - the next level
    the other way. Exit the option when the index reaches either: whichever a
    later candle reaches first ends the call at that level's price. If one candle
    reaches both, the stop is taken **(owner to decide)**. The 0% and 100% levels
    have nothing beyond them on one side, so a signal there gives no call **(owner
    to decide)**.
-5. **Day end** - a call still open at the day's last closed candle ends at its
-   close; nothing carries overnight. A signal on a day's last candle has no next
-   candle to enter on, so it gives nothing. While today is still running the
-   call shows as "Still open" with its points at the last closed candle.
-6. **Every signal gives a call** - whether or not earlier calls are still open
-   (owner's decision, 4 October: the table must give a call whenever there is
-   one). Several calls can run at once, each to its own exit.
+6. **Day end** - a call still open at the day's last closed candle ends at its
+   close; nothing carries overnight. A signal in the day's last two candles has
+   no candles left to confirm and enter on, so it gives nothing. While today is
+   still running the call shows as "Still open" with its points at the last
+   closed candle.
+7. **Every confirmed signal gives a call** - whether or not earlier calls are
+   still open (owner's decision, 4 October). Several calls can run at once, each
+   to its own exit.
 
 As in layer 2, a candle is judged against the previous closed candle, and the
 first candle of a day against the last candle of the day before. Points are
