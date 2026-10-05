@@ -653,7 +653,7 @@
       return;
     }
     el.textContent = (state.feed === "dhan" ? "Dhan: real-time candles and quotes from your account. " : (d.status || "") + " ")
-      + (state.optionStatus || "");
+      + (state.optionStatus || "") + (d.stream ? " " + d.stream : "");
   }
 
   async function syncOptions(trades) {
@@ -839,7 +839,12 @@
       s.change_percent = Math.round(s.change / s.previous_close * 10000) / 100;
     }
     renderHero(s);
-    document.getElementById("status").textContent = "Live · tick " + clock();
+    document.getElementById("status").textContent = (t.via === "stream" ? "Live · stream " : "Live · tick ") + clock();
+    if (state.dhan) {  // the stream's state, from the ticks themselves; the server's fuller reason comes with the next refresh
+      if (t.via === "stream") state.dhan.stream = "Stream: tick-by-tick from Dhan, connected.";
+      else if ((state.dhan.stream || "").startsWith("Stream: tick-by-tick")) state.dhan.stream = "Stream: quiet, prices once a second meanwhile.";
+      drawFeedNote();
+    }
     const bar = t.bars && t.bars[state.interval];
     if (!bar || !series || !bars.length) { refreshLevelsNote(); return; }
     const last = bars[bars.length - 1];

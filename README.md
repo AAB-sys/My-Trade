@@ -74,9 +74,11 @@ Real-time candles, quotes and option premiums for NIFTY 50 and NIFTY BANK come
 from the owner's Dhan account through DhanHQ's API, under its Data API
 subscription; every other index, and every Dhan failure, falls back to Yahoo.
 The index page says which feed it is on; while it is open during market hours
-the price and the candle forming now tick every second (one price request a
-second to Dhan, for all watched indices together, pushed to the page over its
-`/ws` connection), and its paper calls gain the option
+the price and the candle forming now move tick by tick: the server holds one
+connection to Dhan's market feed (`wss://api-feed.dhan.co`, ticker packets for
+the indices it covers) and pushes every tick to the page over its `/ws`
+connection; whenever that stream is quiet it falls back to one price request a
+second, and its paper calls gain the option
 behind each call (one strike in the money, nearest expiry), the premium paid at
 entry, the premium now and the red Sell mark at half the premium paid
 (`LOGIC.md`, "Exit by premium"). Records live in `paper_calls.json` (git-ignored).
@@ -94,7 +96,7 @@ price, the candles and the option chain, and says in plain words what to fix.
 Only data is read; nothing here can place an order. `DHAN_POLL_SECONDS` (default
 15) is how often the index page refreshes its candles and calls on Dhan;
 `DHAN_TICK_SECONDS` (default 1) how often the live price is read while an index
-page is open in market hours; `SELL_SHARE` (default 0.5) is the sell point as a
+page is open in market hours and the stream is quiet; `SELL_SHARE` (default 0.5) is the sell point as a
 share of the premium paid.
 
 ## Login
