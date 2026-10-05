@@ -40,8 +40,13 @@ AUTH_ENABLED = bool(PASSWORD)
 SESSION_SECRET = os.environ.get("SESSION_SECRET") or secrets.token_hex(32)
 SESSION_DAYS = 30  # hard ceiling on a login, for a browser that is never closed
 GRACE_SECONDS = 30  # a handover (a reload, a tile opening a new tab, a fresh login) must be taken up within this
-BEAT_SECONDS = 15   # pages report in this often; one silent for twice that has stopped
-DROP_SECONDS = 60   # a page with no connection and no report for this long is gone for good
+BEAT_SECONDS = 15   # pages report in this often when they are in front
+# A page in a background tab reports in only about once a minute (browsers slow it down), and a
+# phone's browser stops it altogether while another app is in front. So a page counts as open
+# while its connection is up, or for OPEN_SECONDS after its last report; and it is forgotten
+# only after DROP_SECONDS of silence. A fresh tab still needs the password (the tab note).
+OPEN_SECONDS = float(os.environ.get("DASHBOARD_OPEN_SECONDS", "600"))      # 10 minutes
+DROP_SECONDS = float(os.environ.get("DASHBOARD_DROP_SECONDS", str(4 * 3600)))  # 4 hours
 COOKIE = "my_trade_session"
 OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
@@ -143,9 +148,11 @@ def token_ok(token) -> bool:
 
 
 def page_open(page: dict, now: float) -> bool:
-    """Heard from recently, and since its latest connection dropped (if it did). A
-    connection the server has not yet noticed is dead does not keep a page open."""
-    return now - page["last_beat"] < 2 * BEAT_SECONDS and page["last_beat"] > page["dropped_at"]
+    """Its connection is up, or it was heard from within OPEN_SECONDS and since its latest
+    connection dropped (if it did)."""
+    if page["socket"] is not None:
+        return True
+    return now - page["last_beat"] < OPEN_SECONDS and page["last_beat"] > page["dropped_at"]
 
 
 def find_login(token):

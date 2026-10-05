@@ -46,11 +46,14 @@ their own logic. Read this before touching the code.
   note (sessionStorage; `X-Tab` / `?tab=`; a tile passes it in `#t=`), so a tab
   opened anew always gets the password page. Every page has a page id (memory
   only; `X-Page` / `?page=`), given on first connect or report; it keeps the
-  login alive by holding `/ws` or reporting in (`POST /alive`) every 15 s, and
-  may come back after a drop. A page without an id is let in only within a
-  handover (opened when a page is served while another is open, or at login;
-  used up when the new page gets its id). A page silent for 60 s is gone; a
-  login with no page and no handover is over. 30-day ceiling; kept in memory,
+  login alive by holding `/ws` or reporting in (`POST /alive`) every 15 s when
+  in front (a background tab reports about once a minute, a phone not at all),
+  so a page counts as open while its connection is up or for
+  `DASHBOARD_OPEN_SECONDS` (10 min) after its last report, and may come back
+  after a drop. A page without an id is let in only within a handover (opened
+  when a page is served while another is open, or at login; used up when the
+  new page gets its id). A page silent for `DASHBOARD_DROP_SECONDS` (4 h) is
+  gone; a login with no page and no handover is over. 30-day ceiling; kept in memory,
   so a restart ends it. No password set = open, with a warning. Pages show a
   **Log out** button whenever the login is on.
 - `dhan.py` - the owner's broker API (DhanHQ v2) as a data source: settings from
