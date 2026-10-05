@@ -113,6 +113,10 @@
   #score th, #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
   #paper td.up { color: var(--up); }
   #paper td.down { color: var(--down); }
+  #paper td.sell { color: #fff; background: var(--down); font-weight: 600; text-align: center; padding-left: 10px; }
+  #paper td.hold { color: var(--muted); }
+  #paper.no-options .opt { display: none; }
+  #feed-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
   #paper[hidden] { display: none; }
   #paper-box .controls { margin: 0 0 8px; }
   #paper-score { font-size: 13px; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
@@ -260,10 +264,11 @@
       <button id="csv" type="button" title="Save the list below as a spreadsheet file">Download CSV</button>
     </div>
     <div id="paper-note"></div>
+    <div id="feed-note" hidden></div>
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Signal</th><th>Level</th><th>Option</th><th>Index at entry</th><th>Target</th><th>Index at exit</th><th>Points</th><th>Ended by</th></tr></thead>
+        <thead><tr><th>Signal</th><th>Level</th><th>Option</th><th>Index at entry</th><th>Target</th><th>Index at exit</th><th>Points</th><th>Ended by</th><th class="opt">Contract</th><th class="opt">Paid</th><th class="opt">Now</th><th class="opt">Sell</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -275,7 +280,8 @@
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
-  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null, days: [], session: null };
+  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null, days: [], session: null,
+                  feed: "", dhan: null, optionStatus: "" };
   try { state.move = localStorage.getItem("move") || state.move; } catch (e) {}
   state.signal = "held";  // layer 3's switch: off, held or crossed
   try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
@@ -602,15 +608,79 @@
       + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "") + (unsure ? " One needs the next candle to confirm." : "");
     const pct = Object.fromEntries(levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
     table.hidden = !trades.length;
+    table.classList.toggle("no-options", !(state.dhan && state.dhan.configured));
+    drawFeedNote();
     table.querySelector("tbody").replaceChildren(...trades.slice().reverse().map(t => {
       const tr = document.createElement("tr");
       const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
       tr.innerHTML = `<td>${istTime(t.signalTime, state.range !== "today")}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
         + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
         + `<td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
-        + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`;
+        + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`
+        + optionCells(optionRecords[callKey(t)]);
       return tr;
     }));
+    syncOptions(trades);
+  }
+
+  // ---- the option behind each call: recorded by the server from Dhan (see LOGIC.md, "Exit by premium")
+  // The page tells the server when a call enters (the contract and the premium paid are recorded then)
+  // and when it ends; the server reads the premium now and keeps the Sell mark.
+  let optionRecords = {};          // call key -> the server's record
+  let lastRecordsJson = "";
+  const registered = new Set(), endedSent = new Set();
+  let syncing = false;
+  const callKey = (t) => `${state.interval}|${t.signalTime}|${t.level}|${t.side}`;
+  const expiryLabel = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+
+  function optionCells(r) {
+    if (!r) return `<td class="opt">—</td><td class="opt">—</td><td class="opt">—</td><td class="opt">—</td>`;
+    const sell = r.sold ? `<td class="opt sell">SOLD at ${fmt.format(r.sold.premium)}</td>`
+      : r.premium_now <= r.sell_below ? `<td class="opt sell">SELL</td>`
+      : `<td class="opt hold">hold, sell below ${fmt.format(r.sell_below)}</td>`;
+    return `<td class="opt">${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}</td><td class="opt">${fmt.format(r.premium_paid)}</td><td class="opt">${fmt.format(r.premium_now)}</td>${sell}`;
+  }
+
+  function drawFeedNote() {
+    const el = document.getElementById("feed-note");
+    const d = state.dhan;
+    el.hidden = !(d && d.configured);
+    if (el.hidden) return;
+    el.textContent = (state.feed === "dhan" ? "Dhan: real-time candles and quotes from your account. " : (d.status || "") + " ")
+      + (state.optionStatus || "");
+  }
+
+  async function syncOptions(trades) {
+    if (syncing || state.feed !== "dhan") return;
+    syncing = true;
+    try {
+      const post = (path, body) => fetch(path, { method: "POST", headers: { "Content-Type": "application/json", ...withTab().headers }, body: JSON.stringify(body) });
+      for (const t of trades) {
+        const key = callKey(t);
+        if (t.how === "open" && !registered.has(key) && !optionRecords[key]) {
+          registered.add(key);
+          const r = await post(`/options/${encodeURIComponent(name)}/calls`, { key, side: t.side, index_at_entry: t.entry });
+          if (r.status === 401) { location.href = "/login"; return; }
+          if (!r.ok) registered.delete(key);  // try again next time
+        }
+        if (t.exit != null && optionRecords[key] && !optionRecords[key].ended && !endedSent.has(key)) {
+          endedSent.add(key);
+          await post(`/options/${encodeURIComponent(name)}/calls/ended`, { key, how: t.how });
+        }
+      }
+      const r = await fetch(`/options/${encodeURIComponent(name)}`, withTab());
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (!r.ok) return;
+      const data = await r.json();
+      const json = JSON.stringify(data);
+      state.optionStatus = data.status || "";
+      optionRecords = Object.fromEntries((data.records || []).map(rec => [rec.key, rec]));
+      if (json !== lastRecordsJson) { lastRecordsJson = json; drawLevels(); }  // the rows show the premiums
+    } catch (err) {
+      // the next refresh tries again
+    } finally {
+      syncing = false;
+    }
   }
 
   function drawLevels() {
@@ -793,6 +863,8 @@
       document.getElementById("logout").hidden = !data.auth_enabled;
       state.summary = data.summary;
       state.days = data.days || [];
+      state.feed = data.source || "";
+      state.dhan = data.dhan || null;
       renderSummary(data.summary);
       if (data.range !== state.range || data.interval !== state.interval) return;  // an older request finishing late
       setBars(data.candles);
@@ -803,6 +875,8 @@
       document.getElementById("mode").className = data.simulated ? "on" : "";
       document.getElementById("footer").textContent = data.simulated
         ? `Simulated prices, ${INTERVAL_NAMES[data.interval]} bars built from the simulator's ticks. Not real market data.`
+        : data.source === "dhan"
+        ? `Data from Dhan, your own account, in real time, ${INTERVAL_NAMES[data.interval]} bars. Refreshes every ${data.poll_seconds} s.`
         : `Data from Yahoo Finance, about 15 minutes delayed, ${INTERVAL_NAMES[data.interval]} bars. Refreshes every ${data.poll_seconds} s.`;
     } catch (err) {
       status.className = "error";
@@ -870,8 +944,13 @@
   document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
     const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
     const pct = Object.fromEntries(lastPaper.levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
-    const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by"];
-    const rows = lastPaper.trades.map(t => [stamp(t.signalTime), pct[t.level], t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how]);
+    const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by",
+                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium"];
+    const rows = lastPaper.trades.map(t => {
+      const r = optionRecords[callKey(t)];
+      return [stamp(t.signalTime), pct[t.level], t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how,
+              r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : ""];
+    });
     const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

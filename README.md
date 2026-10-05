@@ -18,6 +18,8 @@ dashboard that shows them and updates the moment they change.
 | GET    | `/indices/all`    | nothing       | the latest snapshot: `quotes`, `failed`, `source`, `updated_at` |
 | GET    | `/indices/{name}` | an index name | that index's latest quote (503 until the first refresh lands) |
 | GET    | `/indices/{name}/detail` | an index name, `?range=today` or `5d`, `&interval=1m`, `5m` (default) or `15m` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range), `candles` of that size and `days` (a month of daily OHLC, for each session's own previous-day levels) |
+| GET    | `/options/{name}` | an index name | the Dhan feed's state and today's option records of the index's paper calls (Dhan only) |
+| POST   | `/options/{name}/calls`, `/options/{name}/calls/ended` | JSON `{key, side, index_at_entry}` / `{key, how}` | the index page reports a call entering or ending; the server records the contract and premiums |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |
 
 Try `/docs` for the interactive version of this table.
@@ -66,11 +68,17 @@ networks. It works only while this computer is on and `start.bat` is running.
 move with the market closed. The page shows a red **SIMULATED DATA** badge whenever
 it is on.
 
-## Dhan: the owner's broker feed (step 1, the connection)
+## Dhan: the owner's broker feed
 
-Real-time prices and option premiums will come from the owner's Dhan account
-through DhanHQ's API, under its Data API subscription. Two settings, in `.env`
-on the laptop and in Render's Environment, never in the repo:
+Real-time candles, quotes and option premiums for NIFTY 50 and NIFTY BANK come
+from the owner's Dhan account through DhanHQ's API, under its Data API
+subscription; every other index, and every Dhan failure, falls back to Yahoo.
+The index page says which feed it is on, and its paper calls gain the option
+behind each call (one strike in the money, nearest expiry), the premium paid at
+entry, the premium now and the red Sell mark at half the premium paid
+(`LOGIC.md`, "Exit by premium"). Records live in `paper_calls.json` (git-ignored).
+Two settings, in `.env` on the laptop and in Render's Environment, never in the
+repo:
 
     DHAN_CLIENT_ID=...        the account's client id
     DHAN_ACCESS_TOKEN=...     from the Dhan website, Profile > DhanHQ Trading APIs
@@ -78,9 +86,11 @@ on the laptop and in Render's Environment, never in the repo:
 The token lasts 24 hours, so each trading morning: generate a new one on the
 Dhan website, paste it into Render's Environment (Render restarts the dashboard;
 log in again) and into `.env` if the laptop runs it. `check_dhan.bat` (or
-`python check_dhan.py`) checks the settings, the token, the subscription and a
-price, and says in plain words what to fix. Only data is read; nothing here can
-place an order.
+`python check_dhan.py`) checks the settings, the token, the subscription, a
+price, the candles and the option chain, and says in plain words what to fix.
+Only data is read; nothing here can place an order. `DHAN_POLL_SECONDS` (default
+15) is how often the index page refreshes on Dhan; `SELL_SHARE` (default 0.5)
+is the sell point as a share of the premium paid.
 
 ## Login
 

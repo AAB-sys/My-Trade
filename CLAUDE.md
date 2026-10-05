@@ -54,8 +54,14 @@ their own logic. Read this before touching the code.
   so a restart ends it. No password set = open, with a warning. Pages show a
   **Log out** button whenever the login is on.
 - `dhan.py` - the owner's broker API (DhanHQ v2) as a data source: settings from
-  `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only, `status()` in plain
-  words; `check_dhan.py`/`check_dhan.bat` run it from the laptop.
+  `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. Real-time candles,
+  quotes and the option chain for `INDEX_IDS` (NIFTY 50, NIFTY BANK), with small
+  caches for Dhan's rate limits; the record of each paper call's option (strike
+  one in the money, nearest expiry, premium paid, premium now, the Sell mark) in
+  `paper_calls.json`; `status()`/`deep_checks()` in plain words for
+  `check_dhan.py`/`check_dhan.bat`. `main.py` serves NIFTY 50/NIFTY BANK details
+  from Dhan when configured (fallback to the usual source, reason in
+  `store["dhan"]`) and the `/options/{name}` routes the page uses.
 - `static/login.html` - the login page. `Procfile` - the host's start command.
   Hosting: one instance, secrets in the host's environment, `/health` for checks.
 - `start.bat` reads `HOST`/`PORT` from `.env` (defaults `127.0.0.1`/`8000`);

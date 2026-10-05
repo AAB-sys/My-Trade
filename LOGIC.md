@@ -129,25 +129,27 @@ more than zero. The option's premium moves less than the index and the page has
 no option prices, so which strike to buy and what its premium did are the
 owner's to track **(owner to decide)**.
 
-**Exit by premium - decided, waiting on an option-price feed** (owner's decision,
-5 October). Each call has the premium paid for the CE or PE at entry. The sell
-point is half of it (50%, a setting). While the call is open, when the current
-premium is at or below the sell point, a separate **Sell** column lights red,
-stays lit, and the call ends as "Sell" at that premium. The page has no option
-prices: Yahoo's free index feed carries none, and NIFTY option prices need a
-licensed source. So this is built only once the broker or data feed of phase 3b
-is connected, and nothing is estimated from the index meanwhile (owner's choice:
-no guessed premiums).
+**Exit by premium - built, on Dhan** (owner's decision, 5 October). Each call has
+the premium paid for the CE or PE at entry. The sell point is half of it (50%,
+the `SELL_SHARE` setting). While the call is open, when the current premium is
+at or below the sell point, the **Sell** column lights red ("SELL", then "SOLD at
+<premium>") and stays lit. The premiums are real prices from the owner's broker
+account; nothing is estimated from the index (owner's choice: no guessed
+premiums). Where Dhan is not connected the column shows a dash.
 
 **The option behind a call** (owner's decisions, 5 October): the prices come
-from the owner's **broker API**, with the key kept in `.env` and in the host's
-environment, never in the repo. A Buy CE call refers to the CE **one strike in
-the money**: the first strike below the index at entry; a Buy PE to the first
-strike above it. Both on the **nearest weekly expiry**. The premium paid is that
-option's price at the moment the call enters, recorded then and kept, because a
-live feed cannot give it back later; the current premium is read every refresh
-while the call is open. Still to settle once the broker is named: the exact
-symbols and strike step, how the daily login works, and what the feed costs.
+from the owner's **Dhan account** through DhanHQ's API, with the client id and
+the 24-hour token kept in `.env` and in the host's environment, never in the
+repo. A Buy CE call refers to the CE **one strike in the money**: the first
+strike below the index at entry; a Buy PE to the first strike above it. Both on
+the **nearest expiry** Dhan lists (weekly for NIFTY 50, monthly where that is
+all there is). The premium paid is that option's price when the page first sees
+the call entered, within one refresh (15 s) of the candle's open; it is recorded
+by the server and kept in `paper_calls.json`, because a live feed cannot give it
+back later. The premium now is read on every refresh while the call is open.
+The page must be open for a call to be recorded: a call that enters while no
+page is open gets no premium, and shows a dash. Only NIFTY 50 and NIFTY BANK
+are on Dhan so far; the other indices stay on Yahoo and have no options.
 
 **Not decided yet (owner to decide)**: whether to trade real money on any of
 this, at what size, and with what daily limit. The score line over many days is
