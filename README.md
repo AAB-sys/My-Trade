@@ -63,6 +63,22 @@ networks. It works only while this computer is on and `start.bat` is running.
 move with the market closed. The page shows a red **SIMULATED DATA** badge whenever
 it is on.
 
+## Dhan: the owner's broker feed (step 1, the connection)
+
+Real-time prices and option premiums will come from the owner's Dhan account
+through DhanHQ's API, under its Data API subscription. Two settings, in `.env`
+on the laptop and in Render's Environment, never in the repo:
+
+    DHAN_CLIENT_ID=...        the account's client id
+    DHAN_ACCESS_TOKEN=...     from the Dhan website, Profile > DhanHQ Trading APIs
+
+The token lasts 24 hours, so each trading morning: generate a new one on the
+Dhan website, paste it into Render's Environment (Render restarts the dashboard;
+log in again) and into `.env` if the laptop runs it. `check_dhan.bat` (or
+`python check_dhan.py`) checks the settings, the token, the subscription and a
+price, and says in plain words what to fix. Only data is read; nothing here can
+place an order.
+
 ## Login
 
 With `DASHBOARD_PASSWORD` set, every page and every menu row (including `/ws`)
