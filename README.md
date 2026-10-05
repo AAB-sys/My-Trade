@@ -38,6 +38,9 @@ On Windows, double-click `start.bat` instead: on first run it creates the virtua
 environment and installs dependencies; every run starts the server and opens the
 dashboard in your browser. Press Ctrl+C in its window to stop.
 
+To bring the folder up to date with GitHub later, double-click `update.bat`: it
+runs `git pull origin main` for you and says whether it worked.
+
 ## Settings (`.env`)
 
 Copy `.env.example` to `.env` and edit it. The server reads it on startup.
