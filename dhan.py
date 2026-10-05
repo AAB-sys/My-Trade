@@ -56,10 +56,13 @@ def call(method: str, path: str, payload: dict | None = None) -> dict:
         body = {"data": body}
     code = str(body.get("errorCode", ""))
     said = str(body.get("errorMessage") or body.get("remarks") or body.get("message") or response.text[:200])
+    # Dhan's data endpoints answer an unsubscribed account with {"data": {"806": "Data APIs not Subscribed"}}
+    # and a refused status, so that is checked before the token rule
+    inner = body.get("data") if isinstance(body.get("data"), dict) else {}
+    if code == "DH-902" or "806" in inner or "subscri" in (said + " ".join(map(str, inner.values()))).lower():
+        raise DhanError("subscription", f"Dhan says the Data API is not subscribed ({said})")
     if response.status_code == 401 or code == "DH-901":
         raise DhanError("token", f"Dhan refused the token ({said})")
-    if code == "DH-902" or "subscri" in said.lower():
-        raise DhanError("subscription", f"Dhan says the Data API is not subscribed ({said})")
     if response.status_code == 429 or code == "DH-904":
         raise DhanError("rate", f"Dhan's rate limit was hit ({said})")
     if response.status_code >= 400 or code or body.get("status") == "failure":
