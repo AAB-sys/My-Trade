@@ -99,6 +99,15 @@ Only data is read; nothing here can place an order. `DHAN_POLL_SECONDS` (default
 page is open in market hours and the stream is quiet; `SELL_SHARE` (default 0.5) is the sell point as a
 share of the premium paid.
 
+## Android app
+
+`android/` is the dashboard as a phone app: one full-screen view of the owner's
+server, the screen kept awake while it is open, the login's tab note carried
+from page to page, Download CSV saved to the phone's Downloads. GitHub builds it
+(`.github/workflows/android.yml`) and publishes **My-Trade.apk** on the
+repository's Releases page under `app-latest`; install it from there on the
+phone. Details in `android/README.md`.
+
 ## Login
 
 With `DASHBOARD_PASSWORD` set, every page and every menu row (including `/ws`)
