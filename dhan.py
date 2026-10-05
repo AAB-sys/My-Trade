@@ -184,9 +184,20 @@ def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
         return _bars(call("POST", path, {**base, "toDate": today_ist().isoformat()}))
 
 
+SESSION_OPEN, SESSION_CLOSE = (9, 15), (15, 30)   # NSE hours, IST: an index has no candle outside them
+
+
+def in_session(bar: dict) -> bool:
+    """Dhan has been seen to add a bar stamped after the close (18:45) carrying the latest value;
+    it is not a candle, so only bars inside market hours are kept."""
+    t = datetime.fromtimestamp(bar["time"], IST)
+    return SESSION_OPEN <= (t.hour, t.minute) < SESSION_CLOSE
+
+
 def intraday(name: str, minutes: int, days_back: int = 8) -> list:
-    """Minute candles of an index, oldest first, refreshed at most every 10 s."""
-    return cached(("intraday", name, minutes), 10, lambda: _chart("/charts/intraday", name, {"interval": str(minutes)}, days_back))
+    """Minute candles of an index inside market hours, oldest first, refreshed at most every 10 s."""
+    return cached(("intraday", name, minutes), 10,
+                  lambda: [b for b in _chart("/charts/intraday", name, {"interval": str(minutes)}, days_back) if in_session(b)])
 
 
 def daily(name: str, days_back: int = 45) -> list:
@@ -218,9 +229,19 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     else:
         keep = set(sessions[-ranges[range_key]["days"]:])
         candles = [b for b in candles if bar_date(b) in keep]
+    # Dhan's daily list can lag a session (today's bar arrives after the close, sometimes later), so any
+    # session the candles know and the daily list lacks is built from its candles
+    all_candles = intraday(name, minutes)
+    known = {bar_date(d) for d in days}
+    for day in sessions:
+        if day not in known:
+            bars = [b for b in all_candles if bar_date(b) == day]
+            days.append({"time": bars[0]["time"], "open": bars[0]["open"], "high": max(b["high"] for b in bars),
+                         "low": min(b["low"] for b in bars), "close": bars[-1]["close"]})
+    days.sort(key=lambda d: d["time"])
     previous_days = [d for d in days if bar_date(d) < today]
     previous = previous_days[-1] if previous_days else None
-    todays = [b for b in intraday(name, minutes) if bar_date(b) == today]
+    todays = [b for b in all_candles if bar_date(b) == today]
     q = quote(name)
     last = float(q.get("last_price") or (todays[-1]["close"] if todays else (previous["close"] if previous else 0)))
     previous_close = previous["close"] if previous else last
@@ -390,11 +411,15 @@ def deep_checks() -> list:
     steps = []
     name = "NIFTY 50"
     try:
-        bars = intraday(name, 5)
+        raw = _chart("/charts/intraday", name, {"interval": "5"}, 8)
+        bars = [b for b in raw if in_session(b)]
         todays = [b for b in bars if datetime.fromtimestamp(b["time"], IST).date() == today_ist()]
-        when = lambda b: datetime.fromtimestamp(b["time"], IST).strftime("%H:%M")
+        when = lambda b: datetime.fromtimestamp(b["time"], IST).strftime("%d %b %H:%M")
+        dropped = [b for b in raw if not in_session(b)]
         steps.append({"ok": True, "text": f"Candles: {len(bars)} five-minute candles over the last days"
-                      + (f", {len(todays)} today from {when(todays[0])} to {when(todays[-1])} IST (the first should read 09:15)" if todays else ", none today yet (market closed or not open)")})
+                      + (f", {len(todays)} today from {when(todays[0])[-5:]} to {when(todays[-1])[-5:]} IST (the first should read 09:15)" if todays else ", none today yet (market closed or not open)")
+                      + f". Last three: " + ", ".join(f"{when(b)} close {b['close']:,.2f}" for b in bars[-3:])
+                      + (f". Dropped {len(dropped)} outside market hours, e.g. {when(dropped[-1])} close {dropped[-1]['close']:,.2f}" if dropped else "")})
     except (DhanError, KeyError, ValueError) as exc:
         steps.append({"ok": False, "text": f"Candles: failed. {getattr(exc, 'message', exc)}"})
     try:
