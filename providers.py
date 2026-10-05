@@ -132,7 +132,8 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interva
     intraday = yahoo_chart(ticker, RANGES[range_key]["range"], INTERVALS[interval_key]["interval"])
     meta = intraday["meta"]
 
-    today = datetime.now(IST).date()
+    now = datetime.now(IST)
+    today = now.date()
     day_bars = parse_bars(daily)
     bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
     previous_days = [bar for bar in day_bars if bar_date(bar) < today]
@@ -164,6 +165,9 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interva
         "week52_high": meta.get("fiftyTwoWeekHigh"),
         "week52_low": meta.get("fiftyTwoWeekLow"),
         "time": datetime.fromtimestamp(meta["regularMarketTime"], IST).isoformat(timespec="seconds"),
+        # the market trades now (NSE hours, and it has traded today): the page shows the price as of its
+        # time, else "closed" and when the price is from
+        "open": current is not None and now.weekday() < 5 and (9, 15) <= (now.hour, now.minute) < (15, 30),
     }
     candles = parse_bars(intraday)
     if range_key == "today":
@@ -276,6 +280,7 @@ class DemoTicker:
             "week52_high": round(base * 1.15, 2),
             "week52_low": round(base * 0.82, 2),
             "time": now_ist(),
+            "open": True,  # the simulator always trades
         }
         days = []  # the candles' calendar days, plus a made-up day before the first
         for bar in candles:
