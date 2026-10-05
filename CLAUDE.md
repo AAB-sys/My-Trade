@@ -91,6 +91,10 @@ their own logic. Read this before touching the code.
   CSV download; nothing drawn on the chart), computed in the page from the
   summary and the bars. Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
+- `static/breakout.html` - the owner's separate breakout rule (`LOGIC.md`,
+  "Breakout calls") on its own page at `/breakout/{name}`, linked from the top
+  of the index page. Same detail endpoint, its own code: nothing of it is in
+  `detail.html`, and nothing of the three layers is in it.
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
   interface; `target=_blank` links kept in the same view so the login's tab

@@ -183,6 +183,7 @@
 <main>
   <div class="top">
     <a href="/">&larr; Dashboard</a>
+    <a id="breakout-link" title="The breakout rule, on its own page">Breakout calls &rarr;</a>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Loading…</span>
     <button id="logout" type="button" hidden>Log out</button>
@@ -307,6 +308,7 @@
 
   document.title = name + " · My-Trade";
   document.getElementById("name").textContent = name;
+  document.getElementById("breakout-link").href = "/breakout/" + encodeURIComponent(name);  // same tab: the login's tab note stays
 
   // ---- chart
   const chart = LightweightCharts.createChart(document.getElementById("chart"), {
