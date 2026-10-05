@@ -27,6 +27,10 @@ def main() -> int:
     result = dhan.status()
     for step in result["steps"]:
         print(("OK   " if step["ok"] else "FIX  ") + step["text"])
+    if result["ok"]:
+        for step in dhan.deep_checks():
+            print(("OK   " if step["ok"] else "FIX  ") + step["text"])
+            result["ok"] = result["ok"] and step["ok"]
     print()
     print("Everything works. The dashboard can use Dhan." if result["ok"]
           else "Fix the FIX line above, then run this again.")

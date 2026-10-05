@@ -1,21 +1,31 @@
 """Dhan (DhanHQ v2), the owner's broker API, as a licensed data source.
 
-Step 1, this file: the connection and a plain-language status check that the
-dashboard and check_dhan.py share. The two settings live in .env on the laptop
-and in the host's environment only, never in the repo:
+The connection and a plain-language status check (check_dhan.py), real-time index
+candles and quotes, the option chain, and the record of each paper call's option:
+its strike, the premium paid at entry, the premium now and the Sell mark. The two
+settings live in .env on the laptop and in the host's environment only, never in
+the repo:
 
     DHAN_CLIENT_ID      the account's client id (a number)
     DHAN_ACCESS_TOKEN   the access token from the Dhan website; it lasts 24 hours
 
 Only data endpoints are called here. Nothing in this file can place an order.
 """
+import json
 import os
+import threading
+import time
+from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 
 import httpx
 
 BASE = os.environ.get("DHAN_API_BASE", "https://api.dhan.co/v2")  # overridden only by tests
 SEGMENT = "IDX_I"                                  # Dhan's segment for an index itself
 INDEX_IDS = {"NIFTY 50": 13, "NIFTY BANK": 25}     # Dhan's security ids of the indices with options
+IST = timezone(timedelta(hours=5, minutes=30))
+SELL_SHARE = float(os.environ.get("SELL_SHARE", "0.5"))  # the owner's rule: sell when the premium is at or below this share of what was paid
+RECORDS_FILE = Path(os.environ.get("CALL_RECORDS_FILE", Path(__file__).resolve().parent / "paper_calls.json"))
 
 
 class DhanError(Exception):
@@ -119,3 +129,286 @@ def status() -> dict:
         step(False, f"Price: the NIFTY 50 price failed. {getattr(exc, 'message', exc)}")
         return {"ok": False, "steps": steps}
     return {"ok": True, "steps": steps}
+
+
+# ---------------------------------------------------------------- small cache, so Dhan's rate limits are respected
+
+_cache: dict = {}
+_cache_lock = threading.Lock()
+
+
+def cached(key: tuple, ttl: float, make):
+    """The value for key, remade at most once per ttl seconds."""
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit and hit[0] > time.monotonic():
+            return hit[1]
+    value = make()
+    with _cache_lock:
+        _cache[key] = (time.monotonic() + ttl, value)
+    return value
+
+
+def today_ist() -> date:
+    return datetime.now(IST).date()
+
+
+# ---------------------------------------------------------------- index candles and quotes
+
+def _bars(body: dict) -> list:
+    """Dhan answers a chart request as columns: open[], high[], low[], close[], timestamp[] (epoch seconds)."""
+    cols = body.get("data") if isinstance(body.get("data"), dict) and "open" in body["data"] else body
+    try:
+        times, opens, highs, lows, closes = (cols[k] for k in ("timestamp", "open", "high", "low", "close"))
+    except (KeyError, TypeError) as exc:
+        raise DhanError("other", f"unexpected chart answer from Dhan: {str(body)[:160]}") from exc
+    bars = []
+    for t, o, h, l, c in zip(times, opens, highs, lows, closes):
+        if None in (t, o, h, l, c):
+            continue
+        bars.append({"time": int(t), "open": round(float(o), 2), "high": round(float(h), 2), "low": round(float(l), 2), "close": round(float(c), 2)})
+    bars.sort(key=lambda b: b["time"])
+    return bars
+
+
+def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
+    """A chart request for the last days_back days. Dhan's toDate has been exclusive in some versions,
+    so tomorrow is asked for first; if Dhan refuses the date, today is tried."""
+    start = (today_ist() - timedelta(days=days_back)).isoformat()
+    base = {"securityId": str(INDEX_IDS[name]), "exchangeSegment": SEGMENT, "instrument": "INDEX", "oi": False, "fromDate": start, **extra}
+    try:
+        return _bars(call("POST", path, {**base, "toDate": (today_ist() + timedelta(days=1)).isoformat()}))
+    except DhanError as exc:
+        if exc.kind != "other" or "date" not in exc.message.lower():
+            raise
+        return _bars(call("POST", path, {**base, "toDate": today_ist().isoformat()}))
+
+
+def intraday(name: str, minutes: int, days_back: int = 8) -> list:
+    """Minute candles of an index, oldest first, refreshed at most every 10 s."""
+    return cached(("intraday", name, minutes), 10, lambda: _chart("/charts/intraday", name, {"interval": str(minutes)}, days_back))
+
+
+def daily(name: str, days_back: int = 45) -> list:
+    """Daily candles of an index, oldest first, refreshed at most every 5 min."""
+    return cached(("daily", name, days_back), 300, lambda: _chart("/charts/historical", name, {"expiryCode": 0}, days_back))
+
+
+def quote(name: str) -> dict:
+    """{"last_price": ..., "ohlc": {...}} for an index, refreshed at most every 3 s."""
+    def make():
+        body = call("POST", "/marketfeed/ohlc", {SEGMENT: [INDEX_IDS[name]]})
+        try:
+            return body["data"][SEGMENT][str(INDEX_IDS[name])]
+        except (KeyError, TypeError) as exc:
+            raise DhanError("other", f"unexpected quote answer from Dhan: {str(body)[:160]}") from exc
+    return cached(("quote", name), 3, make)
+
+
+def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, ranges: dict) -> dict:
+    """The index page's detail, in the same shape as the Yahoo one, from Dhan in real time."""
+    minutes = intervals[interval_key]["bar_seconds"] // 60
+    candles = intraday(name, minutes)
+    days = daily(name)
+    today = today_ist()
+    bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
+    sessions = sorted({bar_date(b) for b in candles})
+    if range_key == "today":
+        candles = [b for b in candles if bar_date(b) == today]
+    else:
+        keep = set(sessions[-ranges[range_key]["days"]:])
+        candles = [b for b in candles if bar_date(b) in keep]
+    previous_days = [d for d in days if bar_date(d) < today]
+    previous = previous_days[-1] if previous_days else None
+    todays = [b for b in intraday(name, minutes) if bar_date(b) == today]
+    q = quote(name)
+    last = float(q.get("last_price") or (todays[-1]["close"] if todays else (previous["close"] if previous else 0)))
+    previous_close = previous["close"] if previous else last
+    change = round(last - previous_close, 2)
+    year = cached(("year", name), 3600, lambda: daily(name, 370))
+    summary = {
+        "previous_open": previous["open"] if previous else None,
+        "previous_high": previous["high"] if previous else None,
+        "previous_low": previous["low"] if previous else None,
+        "previous_close": previous_close,
+        "today_open": todays[0]["open"] if todays else None,
+        "today_high": max(b["high"] for b in todays) if todays else None,
+        "today_low": min(b["low"] for b in todays) if todays else None,
+        "last": round(last, 2),
+        "change": change,
+        "change_percent": round(change / previous_close * 100, 2) if previous_close else 0.0,
+        "week52_high": max((d["high"] for d in year), default=None),
+        "week52_low": min((d["low"] for d in year), default=None),
+        "time": datetime.now(IST).isoformat(timespec="seconds"),
+    }
+    return {
+        "name": name,
+        "ticker": f"dhan:{INDEX_IDS[name]}",
+        "range": range_key,
+        "interval": interval_key,
+        "summary": summary,
+        "candles": candles,
+        "days": [{"date": bar_date(d).isoformat(), "open": d["open"], "high": d["high"], "low": d["low"], "close": d["close"]} for d in days],
+    }
+
+
+# ---------------------------------------------------------------- the option chain
+
+def nearest_expiry(name: str) -> str:
+    """The soonest expiry on or after today, as YYYY-MM-DD (weekly for NIFTY 50, monthly where that is all there is)."""
+    def make():
+        dates = [d for d in expiries(name) if d >= today_ist().isoformat()]
+        if not dates:
+            raise DhanError("other", f"Dhan listed no coming expiry for {name}")
+        return dates[0]
+    return cached(("expiry", name), 1800, make)
+
+
+def chain(name: str, expiry: str) -> dict:
+    """{"underlying": index level, "strikes": {strike: {"CE": premium, "PE": premium}}}, refreshed at most every 5 s
+    (Dhan allows one option-chain request per 3 s)."""
+    def make():
+        body = call("POST", "/optionchain", {"UnderlyingScrip": INDEX_IDS[name], "UnderlyingSeg": SEGMENT, "Expiry": expiry})
+        data = body.get("data") or {}
+        strikes = {}
+        for strike, sides in (data.get("oc") or {}).items():
+            try:
+                row = {}
+                for side in ("CE", "PE"):
+                    leg = sides.get(side.lower()) or {}
+                    if leg.get("last_price") is not None:
+                        row[side] = round(float(leg["last_price"]), 2)
+                if row:
+                    strikes[round(float(strike), 2)] = row
+            except (TypeError, ValueError):
+                continue
+        if not strikes:
+            raise DhanError("other", f"unexpected option chain answer from Dhan: {str(body)[:160]}")
+        return {"underlying": float(data.get("last_price") or 0), "strikes": strikes, "expiry": expiry, "time": datetime.now(IST).isoformat(timespec="seconds")}
+    return cached(("chain", name, expiry), 5, make)
+
+
+def itm_strike(strikes: dict, side: str, level: float) -> float | None:
+    """The owner's choice: one strike in the money. CE: the first strike below the index; PE: the first above."""
+    have = [k for k, row in strikes.items() if side in row]
+    below = [k for k in have if k < level]
+    above = [k for k in have if k > level]
+    if side == "CE":
+        return max(below) if below else None
+    return min(above) if above else None
+
+
+# ---------------------------------------------------------------- the record of each paper call's option
+
+_records: dict = {}   # key -> record
+_records_lock = threading.Lock()
+
+
+def _load_records() -> None:
+    try:
+        data = json.loads(RECORDS_FILE.read_text())
+        _records.update({r["key"]: r for r in data if isinstance(r, dict) and "key" in r})
+    except (OSError, ValueError):
+        pass
+
+
+def _save_records() -> None:
+    try:
+        RECORDS_FILE.write_text(json.dumps(list(_records.values()), indent=1))
+    except OSError:
+        pass
+
+
+_load_records()
+
+
+def records_for(name: str) -> list:
+    """Today's records of an index, as the page shows them."""
+    today = today_ist().isoformat()
+    with _records_lock:
+        return [dict(r) for r in _records.values() if r["index"] == name and r["paid_at"][:10] == today]
+
+
+def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict:
+    """Records the option behind a call the page has seen enter: the one-strike-in-the-money contract on the
+    nearest expiry, and its premium now, which is the premium paid. Asked again for the same key, returns
+    the record as it is."""
+    with _records_lock:
+        if key in _records:
+            return dict(_records[key])
+    expiry = nearest_expiry(name)
+    ch = chain(name, expiry)
+    strike = itm_strike(ch["strikes"], side, float(index_at_entry))
+    if strike is None:
+        raise DhanError("other", f"no {side} strike one step in the money of {index_at_entry} in Dhan's chain")
+    premium = ch["strikes"][strike][side]
+    now = datetime.now(IST).isoformat(timespec="seconds")
+    record = {"key": key, "index": name, "side": side, "expiry": expiry, "strike": strike, "index_at_entry": float(index_at_entry),
+              "premium_paid": premium, "paid_at": now, "premium_now": premium, "now_at": now, "sell_below": round(premium * SELL_SHARE, 2),
+              "sold": None, "ended": None}
+    with _records_lock:
+        _records[key] = record
+        _save_records()
+    return dict(record)
+
+
+def refresh_records(name: str) -> None:
+    """Reads the premium now for every open record of the index and marks Sell the first time it is at or
+    below the sell point. The mark stays."""
+    todays = [r for r in records_for(name) if not r["ended"]]
+    if not todays:
+        return
+    now = datetime.now(IST).isoformat(timespec="seconds")
+    for r in todays:
+        try:
+            premium = chain(name, r["expiry"])["strikes"][r["strike"]][r["side"]]
+        except (DhanError, KeyError):
+            continue
+        with _records_lock:
+            rec = _records.get(r["key"])
+            if not rec:
+                continue
+            rec["premium_now"], rec["now_at"] = premium, now
+            if rec["sold"] is None and premium <= rec["sell_below"]:
+                rec["sold"] = {"premium": premium, "at": now}
+    with _records_lock:
+        _save_records()
+
+
+def end_call(key: str, how: str) -> dict | None:
+    """The page says the call ended (target or day end); the record keeps its last premium."""
+    with _records_lock:
+        rec = _records.get(key)
+        if rec and not rec["ended"]:
+            rec["ended"] = {"how": how, "at": datetime.now(IST).isoformat(timespec="seconds")}
+            _save_records()
+        return dict(rec) if rec else None
+
+
+def deep_checks() -> list:
+    """After status() passes: the candles, the daily bars and the option chain, each as one plain sentence."""
+    steps = []
+    name = "NIFTY 50"
+    try:
+        bars = intraday(name, 5)
+        todays = [b for b in bars if datetime.fromtimestamp(b["time"], IST).date() == today_ist()]
+        when = lambda b: datetime.fromtimestamp(b["time"], IST).strftime("%H:%M")
+        steps.append({"ok": True, "text": f"Candles: {len(bars)} five-minute candles over the last days"
+                      + (f", {len(todays)} today from {when(todays[0])} to {when(todays[-1])} IST (the first should read 09:15)" if todays else ", none today yet (market closed or not open)")})
+    except (DhanError, KeyError, ValueError) as exc:
+        steps.append({"ok": False, "text": f"Candles: failed. {getattr(exc, 'message', exc)}"})
+    try:
+        days = daily(name)
+        steps.append({"ok": True, "text": f"Daily bars: {len(days)} days, the last {datetime.fromtimestamp(days[-1]['time'], IST).date()} close {days[-1]['close']:,.2f}"})
+    except (DhanError, KeyError, ValueError, IndexError) as exc:
+        steps.append({"ok": False, "text": f"Daily bars: failed. {getattr(exc, 'message', exc)}"})
+    try:
+        expiry = nearest_expiry(name)
+        ch = chain(name, expiry)
+        level = ch["underlying"] or last_price(name)
+        ce, pe = itm_strike(ch["strikes"], "CE", level), itm_strike(ch["strikes"], "PE", level)
+        steps.append({"ok": True, "text": f"Option chain: expiry {expiry}, {len(ch['strikes'])} strikes, index {level:,.2f}; one strike in the money: "
+                      f"{ce:,.0f} CE at {ch['strikes'][ce]['CE']:,.2f}, {pe:,.0f} PE at {ch['strikes'][pe]['PE']:,.2f}"})
+    except (DhanError, KeyError, ValueError, TypeError) as exc:
+        steps.append({"ok": False, "text": f"Option chain: failed. {getattr(exc, 'message', exc)}"})
+    return steps

@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocket
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+import dhan
 from providers import INDICES, INTERVALS, RANGES, DemoTicker, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 
 BASE = Path(__file__).parent
@@ -53,6 +54,12 @@ elif PROVIDER == "demo":
 else:
     raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use yahoo or demo.")
 
+# Dhan, the owner's broker API: real-time candles, quotes and option premiums for the indices it
+# covers (dhan.INDEX_IDS), when its two settings are present and the source is the real one.
+# Everything else, and every Dhan failure, falls back to the source above.
+DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
+DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
+
 # The latest prices, kept in memory and refreshed by the background loop below.
 store = {
     "source": PROVIDER,
@@ -63,7 +70,33 @@ store = {
     "quotes": [],
     "failed": [],
     "last_error": None,  # why the latest refresh brought nothing, for the page to show while it waits
+    "dhan": {  # the broker feed's state, in plain words, for the index page
+        "configured": dhan.configured(),
+        "active": False,
+        "status": ("Dhan: not tried yet" if DHAN_ON else
+                   "Dhan: off in demo mode" if PROVIDER == "demo" else
+                   "Dhan: not set up. Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to .env or the host's environment."),
+        "at": None,
+    },
 }
+
+
+def dhan_status(active: bool, text: str) -> None:
+    store["dhan"].update(active=active, status=text, at=now_ist())
+
+
+def dhan_reason(exc: Exception) -> str:
+    kind = getattr(exc, "kind", "other")
+    said = getattr(exc, "message", str(exc))
+    if kind == "token":
+        return "Dhan: the token was refused, it has probably expired. Generate a fresh one on the Dhan website and paste it into .env and the host's environment."
+    if kind == "subscription":
+        return "Dhan: the Data API is not subscribed on the account (Dhan website: Profile > DhanHQ Trading APIs > Data APIs)."
+    if kind == "network":
+        return f"Dhan: could not be reached ({said})."
+    if kind == "rate":
+        return "Dhan: its rate limit was hit; trying again shortly."
+    return f"Dhan: answered something unexpected ({said[:160]})."
 clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 
@@ -341,6 +374,20 @@ async def index_detail(
     if interval_key not in INTERVALS:
         raise HTTPException(status_code=400, detail=f"interval must be one of: {', '.join(INTERVALS)}")
 
+    if DHAN_ON and key in dhan.INDEX_IDS:  # the broker feed first, real time
+        cached = detail_cache.get(("dhan", key, range_key, interval_key))
+        if cached and time.monotonic() - cached[0] < DHAN_POLL_SECONDS * 0.7:
+            return cached[1]
+        try:
+            payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES)
+            dhan_status(True, "Dhan: real-time candles and quotes from your account")
+            payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
+            detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload)
+            return payload
+        except Exception as exc:
+            dhan_status(False, dhan_reason(exc) + f" Prices from {PROVIDER}, about 15 minutes delayed, meanwhile.")
+            log.warning("Dhan detail failed for %s, falling back to %s: %s", key, PROVIDER, exc)
+
     cached = detail_cache.get((key, range_key, interval_key))
     if cached and time.monotonic() - cached[0] < POLL_SECONDS:
         return cached[1]
@@ -349,9 +396,58 @@ async def index_detail(
     except Exception as exc:
         log.warning("detail fetch failed for %s: %s", key, exc)
         raise HTTPException(status_code=502, detail="Couldn't fetch the chart data from the source right now.")
-    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED)
+    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
     detail_cache[(key, range_key, interval_key)] = (time.monotonic(), payload)
     return payload
+
+
+# ---------------------------------------------------------------- the option behind each paper call (Dhan)
+# The page runs the owner's rule and tells the server when a call enters and when it ends; the server
+# records the contract and the premium paid, reads the premium now, and keeps the Sell mark (LOGIC.md).
+
+@app.get("/options/{name}")
+async def options_state(name: str):
+    key = known_index(name)
+    if not (DHAN_ON and key in dhan.INDEX_IDS):
+        return {"active": False, "status": store["dhan"]["status"], "records": []}
+    try:
+        await asyncio.to_thread(dhan.refresh_records, key)
+        expiry = await asyncio.to_thread(dhan.nearest_expiry, key)
+    except Exception as exc:
+        dhan_status(False, dhan_reason(exc))
+        return {"active": False, "status": store["dhan"]["status"], "records": dhan.records_for(key)}
+    return {"active": True, "status": "Dhan: option premiums live from your account", "expiry": expiry,
+            "sell_share": dhan.SELL_SHARE, "records": dhan.records_for(key)}
+
+
+@app.post("/options/{name}/calls")
+async def options_register(name: str, request: Request):
+    key = known_index(name)
+    if not (DHAN_ON and key in dhan.INDEX_IDS):
+        raise HTTPException(status_code=409, detail=store["dhan"]["status"])
+    body = await request.json()
+    call_key, side = str(body.get("key", ""))[:160], str(body.get("side", "")).upper()
+    try:
+        level = float(body.get("index_at_entry"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="index_at_entry must be a number")
+    if not call_key or side not in ("CE", "PE"):
+        raise HTTPException(status_code=400, detail="key and side (CE or PE) are required")
+    try:
+        return await asyncio.to_thread(dhan.register_call, key, call_key, side, level)
+    except Exception as exc:
+        dhan_status(False, dhan_reason(exc))
+        raise HTTPException(status_code=502, detail=store["dhan"]["status"])
+
+
+@app.post("/options/{name}/calls/ended")
+async def options_ended(name: str, request: Request):
+    known_index(name)
+    body = await request.json()
+    record = dhan.end_call(str(body.get("key", ""))[:160], str(body.get("how", ""))[:40])
+    if record is None:
+        raise HTTPException(status_code=404, detail="no such call recorded")
+    return record
 
 
 @app.get("/indices/{name}")
