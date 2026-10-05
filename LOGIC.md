@@ -129,6 +129,16 @@ more than zero. The option's premium moves less than the index and the page has
 no option prices, so which strike to buy and what its premium did are the
 owner's to track **(owner to decide)**.
 
+**Exit by premium - decided, waiting on an option-price feed** (owner's decision,
+5 October). Each call has the premium paid for the CE or PE at entry. The sell
+point is half of it (50%, a setting). While the call is open, when the current
+premium is at or below the sell point, a separate **Sell** column lights red,
+stays lit, and the call ends as "Sell" at that premium. The page has no option
+prices: Yahoo's free index feed carries none, and NIFTY option prices need a
+licensed source. So this is built only once the broker or data feed of phase 3b
+is connected, and nothing is estimated from the index meanwhile (owner's choice:
+no guessed premiums).
+
 **Not decided yet (owner to decide)**: whether to trade real money on any of
 this, at what size, and with what daily limit. The score line over many days is
 the evidence for that choice.
