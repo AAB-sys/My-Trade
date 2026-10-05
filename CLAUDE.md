@@ -85,13 +85,16 @@ their own logic. Read this before touching the code.
   candles), the levels and the session (today, one of the last five days, or all
   five; day candles show three months), fed by `/indices/{name}/detail`
   (`?range=&interval=`; the page always asks for `5d`, or `3mo` on day candles),
-  plus layers 1, 2 and 3 of `LOGIC.md` and, in its own box, the separate
-  breakout-calls rule (level price lines
+  plus layers 1, 2 and 3 of `LOGIC.md` (level price lines
   with a readout; a held/crossed table per level under the chart; the paper
   trades the owner's rule gives on the closed candles, with a score line and a
   CSV download; nothing drawn on the chart), computed in the page from the
   summary and the bars. Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
+- `static/breakout.html` - the owner's separate breakout rule (`LOGIC.md`,
+  "Breakout calls") on its own page at `/breakout/{name}`, linked from the top
+  of the index page. Same detail endpoint, its own code: nothing of it is in
+  `detail.html`, and nothing of the three layers is in it.
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
   interface; `target=_blank` links kept in the same view so the login's tab

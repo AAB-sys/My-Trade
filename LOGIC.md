@@ -169,8 +169,9 @@ the evidence for that choice.
 ## Breakout calls - built (a separate logic)
 
 The owner's own rule of 6 October, kept apart from the three layers above: it uses
-no levels, no signal switch, no confirmation and no target. It has its own box on
-the index page, under the paper calls.
+no levels, no signal switch, no confirmation and no target. It lives on a page of
+its own, `/breakout/{name}` (the "Breakout calls" link at the top of the index
+page), so nothing of it is mixed into the index page and its three layers.
 
 - The **previous session's high** is the breakout point and its **low** the
   breakdown point (the session picked, with that session's own previous day).
@@ -180,9 +181,9 @@ the index page, under the paper calls.
 - After a call, that direction calls again only once the index has closed back
   inside the previous session's range; otherwise every later candle would repeat
   the same call **(owner to decide)**.
-- Minute candles only: on day candles the box stays hidden.
+- Minute candles only (1, 5, 15 or 30), for today or one of the last five days.
 
-The box lists each call with its time, the level crossed, the candle's close and
+The page lists each call with its time, the level crossed, the candle's close and
 the option to buy, and one line names the two points and the count. **Not decided
 yet (owner to decide)**: the target, the exit, whether to record the option's
 premium as the paper calls do, and whether to use the previous session's close

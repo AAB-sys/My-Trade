@@ -134,7 +134,7 @@ live_subs: dict = {}     # websocket -> the index name whose ticks it wants (an 
 # Kept in memory, so a server restart ends every login.
 logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "dropped_at", "last_beat"}}, "handover_until"}
 ws_pages: dict[WebSocket, tuple[str, str]] = {}  # socket -> (token, page id)
-PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
+PAGE_PATHS = ("/", "/index/", "/breakout/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
 
 
 # ---------------------------------------------------------------- login
@@ -492,6 +492,13 @@ def dashboard():
 def index_page(name: str):
     known_index(name)
     return FileResponse(STATIC / "detail.html", headers=NO_CACHE)
+
+
+@app.get("/breakout/{name}")
+def breakout_page(name: str):
+    """The owner's breakout rule, on a page of its own (LOGIC.md, "Breakout calls"); same data as the index page."""
+    known_index(name)
+    return FileResponse(STATIC / "breakout.html", headers=NO_CACHE)
 
 
 @app.get("/indices")

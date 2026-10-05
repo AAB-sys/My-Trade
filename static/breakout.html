@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My-Trade</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --border: rgba(11, 11, 11, 0.10);
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --up: #006300; --down: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255, 255, 255, 0.10);
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --up: #0ca30c; --down: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255, 255, 255, 0.10);
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --up: #0ca30c; --down: #e66767;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+
+  .top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+  .top a { color: var(--ink-2); font-size: 14px; text-decoration: none; }
+  .top a:hover { color: var(--ink); }
+  #status { color: var(--ink-2); font-size: 14px; margin-left: auto; }
+  #status.error { color: var(--down); }
+  #logout {
+    align-self: center; font: inherit; font-size: 14px; font-weight: 500;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; cursor: pointer;
+  }
+  #logout:hover { border-color: var(--ink-2); }
+  #logout[hidden] { display: none; }
+  #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
+  #mode.on { display: inline-block; }
+
+  .hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 12px 0 18px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  h1 small { font-weight: 500; color: var(--muted); }
+  #last { font-size: 40px; font-weight: 600; line-height: 1.1; }
+  #delta { font-size: 16px; font-weight: 500; }
+  #delta.up { color: var(--up); }
+  #delta.down { color: var(--down); }
+  #delta.flat { color: var(--muted); }
+  #asof { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+  #asof.closed { color: var(--ink-2); }
+
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 18px; max-width: 560px; }
+  .stat .gk { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat .figs { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; }
+  .fig { flex: 1 1 110px; min-width: 0; }
+  .fig .k { font-size: 12px; color: var(--ink-2); }
+  .fig .v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; min-width: 54px; }
+  select.pick {
+    font: inherit; font-size: 13px; padding: 6px 30px 6px 12px; cursor: pointer; max-width: 100%;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23898781' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center;
+  }
+  select.pick:hover { border-color: var(--ink-2); }
+  #session-row[hidden] { display: none; }
+
+  h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 16px 0 6px; }
+  #breakout-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  .scroll { overflow-x: auto; }
+  #breakout { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #breakout th, #breakout td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #breakout th:first-child, #breakout td:first-child { text-align: left; }
+  #breakout th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #breakout td.ce { color: var(--up); font-weight: 600; }
+  #breakout td.pe { color: var(--down); font-weight: 600; }
+  #breakout[hidden] { display: none; }
+  @media (max-width: 600px) { #last { font-size: 32px; } }
+  footer { margin-top: 24px; font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <a href="/">&larr; Dashboard</a>
+    <a id="back">&larr; Index page</a>
+    <span id="mode">SIMULATED DATA</span>
+    <span id="status">Loading…</span>
+    <button id="logout" type="button" hidden>Log out</button>
+  </div>
+
+  <div class="hero">
+    <h1><span id="name"></span> <small>· Breakout calls</small></h1>
+    <span id="last"></span>
+    <span id="delta"></span>
+    <span id="asof"></span>
+  </div>
+
+  <div class="stat" id="points"></div>
+
+  <div class="controls">
+    <span class="lbl">Time frame</span>
+    <select class="pick" id="interval" aria-label="Time frame: the size of one candle">
+      <option value="1m">1 min</option>
+      <option value="5m" selected>5 min</option>
+      <option value="15m">15 min</option>
+      <option value="30m">30 min</option>
+    </select>
+  </div>
+  <div class="controls" id="session-row" hidden>
+    <span class="lbl">Session</span>
+    <select class="pick" id="session" aria-label="Session: the trading day shown"></select>
+  </div>
+
+  <h2>Calls</h2>
+  <div id="breakout-note"></div>
+  <div class="scroll">
+    <table id="breakout" hidden>
+      <thead><tr><th>Time</th><th>Signal</th><th>Level</th><th>Candle close</th><th>Call</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <footer id="footer"></footer>
+</main>
+
+<script>
+  // ---- The owner's breakout rule (LOGIC.md, "Breakout calls"), on its own page. Nothing here is shared
+  // with the index page's three layers: no levels, no signal switch, no confirmation, no target.
+  //   The previous session's high is the breakout point and its low the breakdown point. Every candle
+  //   of the session is checked when it closes: a close above the breakout point gives Buy CE, a close
+  //   below the breakdown point gives Buy PE. After a call, that direction calls again only once the
+  //   index has closed back inside the range (owner to decide). Minute candles only.
+  const IST_OFFSET = 19800;
+  const name = decodeURIComponent(location.pathname.split("/").pop());
+  const state = { interval: "5m", session: null, candles: [], days: [], summary: null, feed: "", simulated: false, pollMs: 60000, timer: null };
+  const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 };
+  const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute" };
+  const SESSION_END = 15 * 3600 + 30 * 60;  // 3:30 pm IST, in seconds since midnight
+
+  const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
+  const clock = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const istTime = (epoch) => new Date(epoch * 1000).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
+  const money = (v) => v == null ? "—" : fmt.format(v);
+
+  document.title = name + " · Breakout calls · My-Trade";
+  document.getElementById("name").textContent = name;
+  document.getElementById("back").href = "/index/" + encodeURIComponent(name);
+
+  // ---- sessions: the trading days among the candles loaded (the last five); today unless another is picked
+  const dateKey = (t) => new Date((t + IST_OFFSET) * 1000).toISOString().slice(0, 10);  // the IST date
+  const sessions = () => [...new Set(state.candles.map(b => dateKey(b.time)))];
+  const currentSession = () => { const list = sessions(); return list.includes(state.session) ? state.session : list[list.length - 1] || null; };
+  const sessionBars = () => { const key = currentSession(); return key ? state.candles.filter(b => dateKey(b.time) === key) : []; };
+  const isToday = (key) => key === dateKey(Date.now() / 1000);
+  const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+  const sessionName = (key) => key ? (isToday(key) ? "today" : dayLabel(key)) : "today";
+  const dayBefore = (key) => { const earlier = state.days.filter(d => d.date < key); return earlier[earlier.length - 1] || null; };
+  const dayOf = (t) => Math.floor((t + IST_OFFSET) / 86400);
+  // when a candle closes: its size on, but never past 3:30 pm of its day (the day's last 30-minute candle is a half one)
+  const endOf = (b) => Math.min(b.time + SECONDS[state.interval], dayOf(b.time) * 86400 - IST_OFFSET + SESSION_END);
+
+  function drawSessions() {
+    const list = sessions(), key = currentSession(), pick = document.getElementById("session");
+    document.getElementById("session-row").hidden = !list.length;
+    const options = list.slice().reverse().map(d => [d, isToday(d) ? `Today (${dayLabel(d)})` : dayLabel(d)]);
+    const shape = options.map(o => o.join("=")).join("|");
+    if (pick.dataset.shape !== shape) {
+      pick.replaceChildren(...options.map(([value, label]) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; }));
+      pick.dataset.shape = shape;
+    }
+    pick.value = key;
+  }
+
+  // ---- the rule
+  function breakoutCalls() {
+    const key = currentSession(), day = key ? dayBefore(key) : null;
+    if (!day) return null;
+    const now = Date.now() / 1000;
+    const closed = sessionBars().filter(b => endOf(b) <= now);
+    const calls = [];
+    let above = false, below = false;  // a call given, and the index still outside on that side
+    for (const bar of closed) {
+      if (bar.close > day.high) { if (!above) calls.push({ time: bar.time, kind: "Breakout", level: day.high, close: bar.close, side: "CE" }); above = true; }
+      else above = false;
+      if (bar.close < day.low) { if (!below) calls.push({ time: bar.time, kind: "Breakdown", level: day.low, close: bar.close, side: "PE" }); below = true; }
+      else below = false;
+    }
+    return { day, calls, closed: closed.length, name: sessionName(key) };
+  }
+
+  function draw() {
+    drawSessions();
+    const r = breakoutCalls(), note = document.getElementById("breakout-note"), table = document.getElementById("breakout"), box = document.getElementById("points");
+    if (!r) {
+      box.innerHTML = `<div class="gk">Previous session</div><div class="figs"><div class="fig"><div class="k">Breakout point</div><div class="v">—</div></div><div class="fig"><div class="k">Breakdown point</div><div class="v">—</div></div></div>`;
+      note.textContent = "Nothing to judge yet: no session with a previous day among the candles loaded.";
+      table.hidden = true;
+      return;
+    }
+    box.innerHTML = `<div class="gk">Previous session · ${dayLabel(r.day.date)}</div><div class="figs">`
+      + `<div class="fig"><div class="k">Breakout point (its high)</div><div class="v">${fmt.format(r.day.high)}</div></div>`
+      + `<div class="fig"><div class="k">Breakdown point (its low)</div><div class="v">${fmt.format(r.day.low)}</div></div>`
+      + `<div class="fig"><div class="k">Its open</div><div class="v">${fmt.format(r.day.open)}</div></div>`
+      + `<div class="fig"><div class="k">Its close</div><div class="v">${fmt.format(r.day.close)}</div></div></div>`;
+    note.textContent = (r.calls.length ? `${r.calls.length} call${r.calls.length === 1 ? "" : "s"}` : "No close outside the range")
+      + ` in the ${r.closed} closed ${INTERVAL_NAMES[state.interval]} candles of ${r.name}.`;
+    table.hidden = !r.calls.length;
+    table.querySelector("tbody").replaceChildren(...r.calls.slice().reverse().map(c => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${istTime(c.time)}</td><td>${c.kind}</td><td>${fmt.format(c.level)}</td><td>${fmt.format(c.close)}</td><td class="${c.side.toLowerCase()}">Buy ${c.side}</td>`;
+      return tr;
+    }));
+  }
+
+  // ---- the price line, as on the index page
+  function renderHero(s) {
+    const dir = s.change > 0 ? "up" : s.change < 0 ? "down" : "flat";
+    const glyph = { up: "▲", down: "▼", flat: "—" }[dir];
+    document.getElementById("last").textContent = money(s.last);
+    const delta = document.getElementById("delta");
+    delta.className = dir;
+    delta.textContent = `${glyph} ${signed.format(s.change)} (${signed.format(s.change_percent)}%)`;
+    const asof = document.getElementById("asof"), at = new Date(s.time);
+    if (s.open) {
+      asof.className = "";
+      asof.textContent = "as of " + at.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
+    } else {
+      const day = dateKey(at.getTime() / 1000);
+      asof.className = "closed";
+      asof.textContent = `Market closed · last price from ${isToday(day) ? "today" : dayLabel(day)} at ${istTime(at.getTime() / 1000)} IST`;
+    }
+  }
+
+  // ---- the login's tab note and this page's id, as on the index page (see main.py)
+  let TAB = "";
+  try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
+  const handed = new URLSearchParams(location.hash.slice(1)).get("t");
+  if (handed) {
+    TAB = handed;
+    try { sessionStorage.setItem("tab", TAB); } catch (e) {}
+    history.replaceState(null, "", location.pathname);
+  }
+  let PAGE = "";
+  const BEAT_MS = 15000;
+  const withTab = () => ({ headers: { "X-Tab": TAB, "X-Page": PAGE } });
+  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host
+    + "/ws?tab=" + encodeURIComponent(TAB) + "&page=" + encodeURIComponent(PAGE) + "&live=" + encodeURIComponent(name);
+
+  async function beat() {
+    try {
+      const r = await fetch("/alive", { method: "POST", ...withTab() });
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (r.ok) { const data = await r.json(); if (data.page) PAGE = data.page; }
+    } catch (e) {}
+  }
+
+  // a live tick moves the price line; when a new candle begins, the one before it just closed: fetch and judge it
+  function applyTick(t) {
+    if (t.name !== name || state.feed !== "dhan" || !state.summary) return;
+    const s = state.summary;
+    s.last = t.last; s.time = t.time; s.open = true;
+    if (s.previous_close) {
+      s.change = Math.round((t.last - s.previous_close) * 100) / 100;
+      s.change_percent = Math.round(s.change / s.previous_close * 10000) / 100;
+    }
+    renderHero(s);
+    document.getElementById("status").textContent = (t.via === "stream" ? "Live · stream " : "Live · tick ") + clock();
+    const bar = t.bars && t.bars[state.interval], last = state.candles[state.candles.length - 1];
+    if (bar && last && bar.time > last.time) { clearTimeout(state.timer); state.timer = setTimeout(load, 1500); }
+  }
+
+  async function load() {
+    const status = document.getElementById("status");
+    try {
+      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=5d&interval=${state.interval}`, withTab());
+      if (response.status === 401) { location.href = "/login"; return; }
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const data = await response.json();
+      if (data.interval !== state.interval) return;  // an older request finishing late
+      document.getElementById("logout").hidden = !data.auth_enabled;
+      state.summary = data.summary; state.days = data.days || []; state.candles = data.candles || [];
+      state.feed = data.source || ""; state.simulated = !!data.simulated;
+      renderHero(data.summary);
+      draw();
+      state.pollMs = Math.max(1000, data.poll_seconds * 1000);
+      status.className = "";
+      status.textContent = "Live · updated " + clock();
+      document.getElementById("mode").className = data.simulated ? "on" : "";
+      document.getElementById("footer").textContent = data.simulated
+        ? `Simulated prices, ${INTERVAL_NAMES[data.interval]} candles built from the simulator's ticks. Not real market data.`
+        : data.source === "dhan"
+        ? `Data from Dhan, your own account, in real time. A candle is judged when the next one begins; the price moves tick by tick.`
+        : `Data from Yahoo Finance, about 15 minutes delayed. Refreshes every ${data.poll_seconds} s.`;
+    } catch (err) {
+      status.className = "error";
+      status.textContent = "Couldn't load (" + err.message + "). Retrying…";
+    }
+    clearTimeout(state.timer);
+    state.timer = setTimeout(load, state.pollMs);
+  }
+
+  function keepAlive() {
+    const ws = new WebSocket(wsUrl());
+    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); };
+    ws.onclose = () => { beat(); setTimeout(keepAlive, 3000); };
+    ws.onerror = () => ws.close();
+  }
+  beat().then(keepAlive);
+  setInterval(beat, BEAT_MS);
+
+  // ---- controls
+  document.getElementById("logout").addEventListener("click", () => {
+    fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
+  });
+  document.getElementById("interval").addEventListener("change", e => { state.interval = e.target.value; load(); });
+  document.getElementById("session").addEventListener("change", e => {
+    const list = sessions(), picked = e.target.value;
+    state.session = picked === list[list.length - 1] ? null : picked;  // the latest day is followed
+    draw();
+  });
+  document.getElementById("interval").value = state.interval;
+  load();
+</script>
+</body>
+</html>
