@@ -263,7 +263,7 @@
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Signal</th><th>Level</th><th>Option</th><th>Index at entry</th><th>Stop</th><th>Target</th><th>Index at exit</th><th>Points</th><th>Ended by</th></tr></thead>
+        <thead><tr><th>Signal</th><th>Level</th><th>Option</th><th>Index at entry</th><th>Target</th><th>Index at exit</th><th>Points</th><th>Ended by</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -507,15 +507,15 @@
   //   option  - always bought, never sold: a CE when the candle closed above the level (the index
   //             should rise), a PE when it closed below (it should fall)
   //   entry   - the open of the candle after the confirming one
-  //   target  - the next level in the trade's direction; stop - the next level the other way;
-  //             whichever a later candle reaches first ends the trade (both in one candle: the stop)
+  //   target  - the next level in the call's direction; the call ends when a later candle reaches it.
+  //             No stop (owner's decision, 5 October): a call going the wrong way is held
   //   day end - a call still open at the day's last candle ends at its close; nothing carries overnight
-  //   every signal candle gives a call, whether or not earlier calls are still open;
-  //   the 0% and 100% levels have nothing beyond them, so they give no call
+  //   every confirmed signal gives a call, whether or not earlier calls are still open;
+  //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
   const SESSION_END = 15 * 3600 + 30 * 60;  // 3:30 pm IST, in seconds since midnight
   const dayOf = (t) => Math.floor((t + IST_OFFSET) / 86400);
   const dayOver = (day, now) => { const n = now + IST_OFFSET; return day < Math.floor(n / 86400) || n % 86400 >= SESSION_END; };
-  const HOW = { target: "Target", stop: "Stop", "day end": "Day end", open: "Still open", pending: "Enters at the next open", unconfirmed: "Needs the next candle to confirm" };
+  const HOW = { target: "Target", "day end": "Day end", open: "Still open", pending: "Enters at the next open", unconfirmed: "Needs the next candle to confirm" };
   let lastPaper = { trades: [], levels: [] };
 
   function signalAt(bar, prev, prices, used) {
@@ -529,10 +529,9 @@
     const level = hits.reduce((a, b) => Math.abs(b - bar.close) < Math.abs(a - bar.close) ? b : a);
     const kind = crossed(level) ? "crossed" : "held";
     const side = bar.close > level ? "CE" : "PE";
-    const above = prices.find(p => p > level), below = prices.slice().reverse().find(p => p < level);
-    const target = side === "CE" ? above : below, stop = side === "CE" ? below : above;
-    if (target == null || stop == null) return null;
-    return { signalTime: bar.time, level, kind, side, target, stop, close: bar.close, entry: null, exit: null, points: null, how: "unconfirmed" };
+    const target = side === "CE" ? prices.find(p => p > level) : prices.slice().reverse().find(p => p < level);
+    if (target == null) return null;
+    return { signalTime: bar.time, level, kind, side, target, close: bar.close, entry: null, exit: null, points: null, how: "unconfirmed" };
   }
   const confirms = (sig, bar) => sig.kind === "crossed"
     ? (sig.side === "CE" ? bar.close > sig.level : bar.close < sig.level)   // still on the new side
@@ -559,9 +558,7 @@
         waiting = null;
       }
       open = open.filter(t => {
-        const ce = t.side === "CE";
-        if (ce ? bar.low <= t.stop : bar.high >= t.stop) { end(t, t.stop, bar, "stop"); return false; }
-        if (ce ? bar.high >= t.target : bar.low <= t.target) { end(t, t.target, bar, "target"); return false; }
+        if (t.side === "CE" ? bar.high >= t.target : bar.low <= t.target) { end(t, t.target, bar, "target"); return false; }
         return true;
       });
       prices.forEach(L => { if (bar.close < L) used[L + "CE"] = false; if (bar.close > L) used[L + "PE"] = false; });  // closed back across: the level may call again
@@ -597,7 +594,7 @@
                          both: "Signal: a closed candle touched a level and closed back on its own side, or closed on the other side of it. " }[state.signal]
       + "The next candle must agree: after a cross it closes on the new side too, after a turn back it closes further from the level. "
       + "Closed above the level: buy a CE. Below it: buy a PE. Entry when the candle after that opens. A level gives one call in a direction until the index closes back across it. "
-      + "Exit the option when the index reaches the target (the next level that way) or the stop (the next level the other way), whichever comes first, or at the day's end. "
+      + "Exit the option when the index reaches the target (the next level that way), or at the day's end. No stop. "
       + "Points are index points, not the option's premium.";
     score.textContent = (done.length
       ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
@@ -610,7 +607,7 @@
       const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
       tr.innerHTML = `<td>${istTime(t.signalTime, state.range !== "today")}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
         + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
-        + `<td>${fmt.format(t.stop)}</td><td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
+        + `<td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
         + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`;
       return tr;
     }));
@@ -873,8 +870,8 @@
   document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
     const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
     const pct = Object.fromEntries(lastPaper.levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
-    const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "stop", "target", "index_at_exit", "points", "ended_by"];
-    const rows = lastPaper.trades.map(t => [stamp(t.signalTime), pct[t.level], t.level, t.kind, t.side, t.entry ?? "", t.stop, t.target, t.exit ?? "", t.points ?? "", t.how]);
+    const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by"];
+    const rows = lastPaper.trades.map(t => [stamp(t.signalTime), pct[t.level], t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how]);
     const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
