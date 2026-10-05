@@ -118,18 +118,21 @@ true:
 - Every page has a *page id* (`X-Page` header, `?page=` on `/ws`), held in the
   page's memory only. The server gives it when the page first connects or reports
   in. A page keeps its login alive by holding `/ws` or by reporting in (`POST
-  /alive`) every 15 seconds, and a page whose connection drops comes back with the
-  same id, so a flaky connection (a phone, say) never logs you out while the page
-  is open. A tab the browser brings back by itself after a restart has no page id.
+  /alive`) every 15 seconds while it is in front; a background tab reports in only
+  about once a minute and a phone stops altogether, so a page counts as open while
+  its connection is up or for 10 minutes after its last report
+  (`DASHBOARD_OPEN_SECONDS`), and a page whose connection drops comes back with
+  the same id. A tab the browser brings back by itself after a restart has no page id.
 - A page without an id is let in only inside a *handover*: the server opens one
   when it serves a page while another page of the login is open (a reload, a tile
   click), or at login for the first page, and closes it as soon as the new page
-  gets its id. A page that has not reported in for 60 seconds is gone; a login with
-  no page left and no handover open is over.
+  gets its id. A page that has not reported in for 4 hours
+  (`DASHBOARD_DROP_SECONDS`) is gone; a login with no page left and no handover
+  open is over.
 
-So closing the browser, closing the last tab, a server restart, or leaving a page
-in the background on a phone until its connection drops, all mean logging in
-again. A browser that is never closed is logged out after 30 days anyway. The
+So closing the browser, closing the last tab, or a server restart all mean
+logging in again. A page left in the background, on the laptop or the phone, is
+still logged in when you come back to it within 4 hours. A browser that is never closed is logged out after 30 days anyway. The
 **Log out** button in the page header ends the login at once, in every tab. A
 wrong password waits a second before answering, which makes guessing slow.
 `/health` (which also shows the running commit on the host) and `/static/*` stay
