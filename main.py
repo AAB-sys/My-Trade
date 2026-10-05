@@ -1,4 +1,6 @@
 import asyncio
+import json
+import struct
 from datetime import datetime
 import contextlib
 import hashlib
@@ -12,6 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+import websockets
 
 import dhan
 from providers import INDICES, INTERVALS, RANGES, DemoTicker, fetch_all_yahoo, fetch_detail_yahoo, now_ist
@@ -65,8 +68,11 @@ else:
 # Everything else, and every Dhan failure, falls back to the source above.
 DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
 DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
-TICK_SECONDS = float(os.environ.get("DHAN_TICK_SECONDS", "1"))   # the live price, while an index page is open on Dhan
+TICK_SECONDS = float(os.environ.get("DHAN_TICK_SECONDS", "1"))   # the fallback: the last price once a second
 TICK_ALWAYS = os.environ.get("DHAN_TICK_ALWAYS") == "1"           # for tests: tick outside market hours too
+DHAN_FEED_URL = os.environ.get("DHAN_FEED_URL", "wss://api-feed.dhan.co")  # Dhan's tick-by-tick stream; overridden only by tests
+FEED_CODES = {805: "too many connections to Dhan's feed", 806: "the Data API is not subscribed", 807: "the token has expired",
+              808: "the client id is wrong", 809: "Dhan refused the login"}
 
 # The latest prices, kept in memory and refreshed by the background loop below.
 store = {
@@ -85,8 +91,10 @@ store = {
                    "Dhan: off in demo mode" if PROVIDER == "demo" else
                    "Dhan: not set up. Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to .env or the host's environment."),
         "at": None,
+        "stream": "",  # the tick-by-tick stream's state, in plain words
     },
 }
+stream_at = 0.0  # when the last tick came over the stream; the one-a-second polling steps in while it is quiet
 
 
 def dhan_status(active: bool, text: str) -> None:
@@ -268,13 +276,38 @@ def in_tick_hours() -> bool:
     return now.weekday() < 5 and (9, 0) <= (now.hour, now.minute) < (15, 45)
 
 
+def fold_tick(name: str, last: float, now: float, via: str) -> None:
+    """One last price into the index's live entry and the 1, 5 and 15-minute candles forming now."""
+    entry = live.setdefault(name, {"bars": {}})
+    entry.update(last=last, time=now_ist(), via=via)
+    for key, spec in INTERVALS.items():
+        secs = spec["bar_seconds"]
+        bucket = int(now // secs) * secs
+        bar = entry["bars"].get(key)
+        if bar and bar["time"] == bucket:
+            bar["high"], bar["low"], bar["close"] = max(bar["high"], last), min(bar["low"], last), last
+        else:
+            entry["bars"][key] = {"time": bucket, "open": last, "high": last, "low": last, "close": last}
+
+
+async def push_tick(name: str) -> None:
+    """The index's live entry to every page watching it."""
+    for ws, wanted in list(live_subs.items()):
+        if wanted == name:
+            try:
+                await ws.send_json({"tick": {"name": name, **live[name]}})
+            except Exception:
+                live_subs.pop(ws, None)
+
+
 async def tick_forever() -> None:
-    """While an index page is open on Dhan during market hours: the last price every TICK_SECONDS,
-    one request for all watched indices, folded into the candle forming now and pushed to those pages."""
+    """The fallback behind the stream: while an index page is open on Dhan during market hours and the
+    stream has been quiet for a few seconds, the last price every TICK_SECONDS, one request for all
+    watched indices, folded into the candle forming now and pushed to those pages."""
     while True:
         names = sorted(set(live_subs.values()))
-        if not (DHAN_ON and names and in_tick_hours()):
-            await asyncio.sleep(2)
+        if not (DHAN_ON and names and in_tick_hours()) or time.time() - stream_at < 5:
+            await asyncio.sleep(1)
             continue
         try:
             prices = await asyncio.to_thread(dhan.last_prices, names)
@@ -283,32 +316,85 @@ async def tick_forever() -> None:
             await asyncio.sleep(10)
             continue
         now = time.time()
-        stamp = now_ist()
         for name, last in prices.items():
-            entry = live.setdefault(name, {"bars": {}})
-            entry.update(last=last, time=stamp)
-            for key, spec in INTERVALS.items():
-                secs = spec["bar_seconds"]
-                bucket = int(now // secs) * secs
-                bar = entry["bars"].get(key)
-                if bar and bar["time"] == bucket:
-                    bar["high"], bar["low"], bar["close"] = max(bar["high"], last), min(bar["low"], last), last
-                else:
-                    entry["bars"][key] = {"time": bucket, "open": last, "high": last, "low": last, "close": last}
-        for ws, name in list(live_subs.items()):
-            if name in prices:
-                try:
-                    await ws.send_json({"tick": {"name": name, **live[name]}})
-                except Exception:
-                    live_subs.pop(ws, None)
+            fold_tick(name, last, now, "poll")
+            await push_tick(name)
         await asyncio.sleep(TICK_SECONDS)
+
+
+class FeedClosed(Exception):
+    """Dhan hung up on purpose (packet type 50), with a reason."""
+
+
+def feed_packets(raw: bytes, by_id: dict):
+    """(index name, last price) for each price packet in one message from Dhan's feed. Packets start
+    with a type byte and a 2-byte length; types 2 (ticker), 4 (quote) and 8 (full) carry the last price
+    as a float after the 1-byte segment and 4-byte security id; type 50 is Dhan hanging up, with a reason."""
+    offset, found = 0, []
+    while offset + 8 <= len(raw):
+        code, length, _segment, security_id = struct.unpack_from("<BHBI", raw, offset)
+        if code == 50:
+            reason = struct.unpack_from("<H", raw, offset + 8)[0] if offset + 10 <= len(raw) else 0
+            raise FeedClosed(FEED_CODES.get(reason, f"Dhan closed the feed (code {reason})"))
+        if code in (2, 4, 8) and offset + 12 <= len(raw):
+            last = struct.unpack_from("<f", raw, offset + 8)[0]
+            name = by_id.get(security_id)
+            if name and last > 0:
+                found.append((name, round(last, 2)))
+        if length < 8 or offset + length > len(raw):
+            break  # one packet per message, or a length we do not trust: stop here
+        offset += length
+    return found
+
+
+async def stream_forever() -> None:
+    """Dhan's tick-by-tick stream: while an index page on Dhan is open in market hours, one connection
+    to the feed, subscribed to every index the broker feed covers. Each ticker packet is folded into
+    the candle forming now and pushed to the pages at once, so the price moves as Dhan's own screen
+    does. Whenever the stream is quiet, tick_forever's polling steps in."""
+    global stream_at
+    wait = 2
+    by_id = {sid: name for name, sid in dhan.INDEX_IDS.items()}
+    while True:
+        if not (DHAN_ON and live_subs and in_tick_hours()):
+            await asyncio.sleep(2)
+            continue
+        client_id, token = dhan.settings()
+        url = f"{DHAN_FEED_URL}?version=2&token={token}&clientId={client_id}&authType=2"
+        try:
+            async with websockets.connect(url, ping_interval=20, ping_timeout=20, max_size=1 << 20) as ws:
+                await ws.send(json.dumps({"RequestCode": 15, "InstrumentCount": len(by_id),
+                                          "InstrumentList": [{"ExchangeSegment": dhan.SEGMENT, "SecurityId": str(sid)} for sid in by_id]}))
+                store["dhan"]["stream"] = f"Stream: tick-by-tick from Dhan, connected at {now_ist()[11:19]}"
+                wait = 2
+                async for raw in ws:
+                    if not (live_subs and in_tick_hours()):
+                        break  # nobody watching, or the market closed: hang up
+                    if not isinstance(raw, (bytes, bytearray)):
+                        continue  # Dhan's text acknowledgements
+                    now = time.time()
+                    for name, last in feed_packets(bytes(raw), by_id):
+                        fold_tick(name, last, now, "stream")
+                        stream_at = now
+                        await push_tick(name)
+            store["dhan"]["stream"] = "Stream: off (nobody watching, or the market is closed)"
+            continue
+        except FeedClosed as exc:  # Dhan hung up on purpose, with a reason: no point hammering it
+            store["dhan"]["stream"] = f"Stream: off, {exc}. Prices once a second meanwhile."
+            log.warning("Dhan feed closed: %s", exc)
+            wait = 60
+        except Exception as exc:
+            store["dhan"]["stream"] = f"Stream: off ({type(exc).__name__}: {str(exc)[:100]}). Prices once a second meanwhile, trying again in {wait} s."
+            log.warning("Dhan feed failed: %s", exc)
+        await asyncio.sleep(wait)
+        wait = min(wait * 2, 30)
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
-    tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever())]
+    tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever())]
     yield
     for task in tasks:
         task.cancel()
