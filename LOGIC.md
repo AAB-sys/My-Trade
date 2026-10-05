@@ -25,12 +25,14 @@ turn after a move. Whether that holds is for the owner's own record to show.
 
 **Which move** - a switch on the index page, remembered per browser:
 
-- *Previous day* (default): the low to the high of the trading day before the
+- *Previous day*: the low to the high of the trading day before the
   session being looked at. Only the day's open, high, low and close are known, so
   the day is taken as an up move when it closed above its open, else a down move
   **(owner to decide)**.
-- *Today so far*: the session's own low to high so far, an up move when its last
-  price is above its open **(owner to decide)**. Blank until it has traded.
+- *Today so far* (default, owner's choice of 6 October): the session's own low to
+  high so far, an up move when its last price is above its open **(owner to
+  decide)**. Blank until it has traded. Built from the live candles: a tick that
+  makes a new high or low, or turns the move, redraws the lines at once.
 - *Bars shown*: the lowest low and highest high among the candles on the chart;
   whichever came first says which way the move went.
 - *No levels*: hides them.
