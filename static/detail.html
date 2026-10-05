@@ -104,13 +104,14 @@
   .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; min-width: 54px; }
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   #session-row[hidden] { display: none; }
-  #score-box, #paper-box { margin-top: 16px; }
-  #score-box h2, #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
-  #score-note, #paper-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
-  #score, #paper { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-  #score th, #score td, #paper th, #paper td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  #score th:first-child, #score td:first-child, #paper th:first-child, #paper td:first-child { text-align: left; }
-  #score th, #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #score-box, #paper-box, #breakout-box { margin-top: 16px; }
+  #score-box h2, #paper-box h2, #breakout-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
+  #score-note, #paper-note, #breakout-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  #score, #paper, #breakout { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #score th, #score td, #paper th, #paper td, #breakout th, #breakout td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #score th:first-child, #score td:first-child, #paper th:first-child, #paper td:first-child, #breakout th:first-child, #breakout td:first-child { text-align: left; }
+  #score th, #paper th, #breakout th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #breakout[hidden] { display: none; }
   #paper td.up { color: var(--up); }
   #paper td.down { color: var(--down); }
   #paper td.sell { color: #fff; background: var(--down); font-weight: 600; text-align: center; padding-left: 10px; }
@@ -268,6 +269,17 @@
     <div class="scroll">
       <table id="paper">
         <thead><tr><th>Signal</th><th>Level</th><th>Option</th><th>Index at entry</th><th>Target</th><th>Index at exit</th><th>Points</th><th>Ended by</th><th class="opt">Contract</th><th class="opt">Paid</th><th class="opt">Now</th><th class="opt">Sell</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="breakout-box" aria-label="Breakout calls" hidden>
+    <h2>Breakout calls</h2>
+    <div id="breakout-note"></div>
+    <div class="scroll">
+      <table id="breakout" hidden>
+        <thead><tr><th>Time</th><th>Signal</th><th>Level</th><th>Candle close</th><th>Call</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -711,6 +723,45 @@
     }
   }
 
+  // ---- Breakout calls: the owner's separate logic (see LOGIC.md, "Breakout calls"). Kept apart from
+  // the paper calls above: no levels, no signal switch, no confirmation, no target.
+  //   The previous session's high is the breakout point and its low the breakdown point. Every candle
+  //   of the session is checked when it closes: a close above the breakout point gives Buy CE, a close
+  //   below the breakdown point gives Buy PE. After a call, that direction calls again only once the
+  //   index has closed back inside the range (owner to decide). Minute candles only.
+  function breakoutCalls() {
+    const key = currentSession(), day = key && state.interval !== "1d" ? dayBefore(key) : null;
+    if (!day) return null;
+    const now = Date.now() / 1000;
+    const closed = sessionBars().filter(b => endOf(b) <= now);
+    const calls = [];
+    let above = false, below = false;  // a call given, and the index still outside on that side
+    for (const bar of closed) {
+      if (bar.close > day.high) { if (!above) calls.push({ time: bar.time, kind: "Breakout", level: day.high, close: bar.close, side: "CE" }); above = true; }
+      else above = false;
+      if (bar.close < day.low) { if (!below) calls.push({ time: bar.time, kind: "Breakdown", level: day.low, close: bar.close, side: "PE" }); below = true; }
+      else below = false;
+    }
+    return { day, calls, closed: closed.length, name: sessionName(key) };
+  }
+
+  function drawBreakout() {
+    const box = document.getElementById("breakout-box"), table = document.getElementById("breakout");
+    const r = breakoutCalls();
+    if (!r) { box.hidden = true; return; }
+    box.hidden = false;
+    document.getElementById("breakout-note").textContent =
+      `Breakout above ${fmt.format(r.day.high)}, breakdown below ${fmt.format(r.day.low)} (${dayLabel(r.day.date)} high and low). `
+      + (r.calls.length ? `${r.calls.length} call${r.calls.length === 1 ? "" : "s"} in the ${r.closed} closed candles of ${r.name}.`
+                        : `No close outside that range in the ${r.closed} closed candles of ${r.name}.`);
+    table.hidden = !r.calls.length;
+    table.querySelector("tbody").replaceChildren(...r.calls.slice().reverse().map(c => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${istTime(c.time, withDate())}</td><td>${c.kind}</td><td>${fmt.format(c.level)}</td><td>${fmt.format(c.close)}</td><td>Buy ${c.side}</td>`;
+      return tr;
+    }));
+  }
+
   function drawLevels() {
     const note = document.getElementById("levels-note");
     drawSessions();
@@ -718,6 +769,7 @@
     const levels = m ? levelsOf(m) : [];
     drawScore(levels);
     drawPaper(levels);
+    drawBreakout();  // its own box; it ignores the levels
     const key = JSON.stringify([state.move, currentSession(), levels]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));

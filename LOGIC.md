@@ -165,3 +165,25 @@ are on Dhan so far; the other indices stay on Yahoo and have no options.
 **Not decided yet (owner to decide)**: whether to trade real money on any of
 this, at what size, and with what daily limit. The score line over many days is
 the evidence for that choice.
+
+## Breakout calls - built (a separate logic)
+
+The owner's own rule of 6 October, kept apart from the three layers above: it uses
+no levels, no signal switch, no confirmation and no target. It has its own box on
+the index page, under the paper calls.
+
+- The **previous session's high** is the breakout point and its **low** the
+  breakdown point (the session picked, with that session's own previous day).
+- Every candle of the session is checked **when it closes**. A candle that closes
+  **above the breakout point** gives a call to **buy CE**. A candle that closes
+  **below the breakdown point** gives a call to **buy PE**.
+- After a call, that direction calls again only once the index has closed back
+  inside the previous session's range; otherwise every later candle would repeat
+  the same call **(owner to decide)**.
+- Minute candles only: on day candles the box stays hidden.
+
+The box lists each call with its time, the level crossed, the candle's close and
+the option to buy, and one line names the two points and the count. **Not decided
+yet (owner to decide)**: the target, the exit, whether to record the option's
+premium as the paper calls do, and whether to use the previous session's close
+instead of its high and low.
