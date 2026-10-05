@@ -641,11 +641,17 @@
     return `<td class="opt">${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}</td><td class="opt">${fmt.format(r.premium_paid)}</td><td class="opt">${fmt.format(r.premium_now)}</td>${sell}`;
   }
 
+  const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK"];  // the indices the broker feed covers (dhan.INDEX_IDS)
   function drawFeedNote() {
     const el = document.getElementById("feed-note");
     const d = state.dhan;
-    el.hidden = !(d && d.configured);
+    el.hidden = !(d && (d.configured || DHAN_INDICES.includes(name))) || state.simulated;
     if (el.hidden) return;
+    if (d && !d.configured) {  // say so on every server, so a copy without the values is not mistaken for a broken one
+      el.textContent = "Dhan: not set up on this server, so prices are from Yahoo, about 15 minutes delayed. "
+        + "Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to Render's Environment page (or to .env on the laptop) and it switches to Dhan by itself.";
+      return;
+    }
     el.textContent = (state.feed === "dhan" ? "Dhan: real-time candles and quotes from your account. " : (d.status || "") + " ")
       + (state.optionStatus || "");
   }
@@ -909,6 +915,7 @@
       state.days = data.days || [];
       state.feed = data.source || "";
       state.dhan = data.dhan || null;
+      state.simulated = !!data.simulated;
       renderSummary(data.summary);
       if (data.range !== state.range || data.interval !== state.interval) return;  // an older request finishing late
       setBars(data.candles);
