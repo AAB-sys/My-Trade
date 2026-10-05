@@ -51,7 +51,7 @@
   #asof { flex-basis: 100%; font-size: 12px; color: var(--muted); }
   #asof.closed { color: var(--ink-2); }
 
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 18px; max-width: 560px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 18px; max-width: 640px; }
   .stat .gk { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
   .stat .figs { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; }
   .fig { flex: 1 1 110px; min-width: 0; }
@@ -204,11 +204,11 @@
       table.hidden = true;
       return;
     }
-    box.innerHTML = `<div class="gk">Previous session · ${dayLabel(r.day.date)}</div><div class="figs">`
-      + `<div class="fig"><div class="k">Breakout point (its high)</div><div class="v">${fmt.format(r.day.high)}</div></div>`
-      + `<div class="fig"><div class="k">Breakdown point (its low)</div><div class="v">${fmt.format(r.day.low)}</div></div>`
-      + `<div class="fig"><div class="k">Its open</div><div class="v">${fmt.format(r.day.open)}</div></div>`
-      + `<div class="fig"><div class="k">Its close</div><div class="v">${fmt.format(r.day.close)}</div></div></div>`;
+    box.innerHTML = `<div class="gk">Previous session · ${dayLabel(r.day.date)} · its high is the breakout point, its low the breakdown point</div><div class="figs">`
+      + `<div class="fig"><div class="k">Breakout point</div><div class="v">${fmt.format(r.day.high)}</div></div>`
+      + `<div class="fig"><div class="k">Breakdown point</div><div class="v">${fmt.format(r.day.low)}</div></div>`
+      + `<div class="fig"><div class="k">Open</div><div class="v">${fmt.format(r.day.open)}</div></div>`
+      + `<div class="fig"><div class="k">Close</div><div class="v">${fmt.format(r.day.close)}</div></div></div>`;
     note.textContent = (r.calls.length ? `${r.calls.length} call${r.calls.length === 1 ? "" : "s"}` : "No close outside the range")
       + ` in the ${r.closed} closed ${INTERVAL_NAMES[state.interval]} candles of ${r.name}.`;
     table.hidden = !r.calls.length;
