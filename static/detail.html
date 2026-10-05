@@ -702,6 +702,14 @@
       lastLevelsKey = key;
     }
     note.dataset.count = priceLines.length;  // lines actually on the chart
+    lastLevels = { m, levels };
+    refreshLevelsNote();
+  }
+
+  let lastLevels = { m: null, levels: [] };
+  function refreshLevelsNote() {
+    const note = document.getElementById("levels-note");
+    const { m, levels } = lastLevels;
     if (state.move === "off") { note.textContent = ""; return; }
     if (!m) {
       note.textContent = state.move === "today" ? "No levels yet: the market has not traded today." : "No levels: nothing to measure yet.";
@@ -805,7 +813,7 @@
     refreshPopup();
   }
 
-  function renderSummary(s) {
+  function renderHero(s) {
     const dir = s.change > 0 ? "up" : s.change < 0 ? "down" : "flat";
     const glyph = { up: "▲", down: "▼", flat: "—" }[dir];
     document.getElementById("last").textContent = money(s.last);
@@ -813,6 +821,42 @@
     delta.className = dir;
     delta.textContent = `${glyph} ${signed.format(s.change)} (${signed.format(s.change_percent)}%)`;
     document.getElementById("asof").textContent = "as of " + new Date(s.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
+  }
+
+  // ---- live ticks from Dhan: the price and the candle forming now move every second (see main.py tick_forever)
+  function applyTick(t) {
+    if (t.name !== name || state.feed !== "dhan" || !state.summary) return;
+    const s = state.summary;
+    s.last = t.last; s.time = t.time;
+    if (s.previous_close) {
+      s.change = Math.round((t.last - s.previous_close) * 100) / 100;
+      s.change_percent = Math.round(s.change / s.previous_close * 10000) / 100;
+    }
+    renderHero(s);
+    document.getElementById("status").textContent = "Live · tick " + clock();
+    const bar = t.bars && t.bars[state.interval];
+    if (!bar || !series || !bars.length) { refreshLevelsNote(); return; }
+    const last = bars[bars.length - 1];
+    if (last.time === bar.time) {  // the candle forming now: Dhan's open stays, the tick moves the rest
+      last.high = Math.max(last.high, bar.high); last.low = Math.min(last.low, bar.low); last.close = bar.close;
+      series.update(toPoints([last])[0]);
+    } else if (bar.time > last.time && bar.time - last.time <= SECONDS[state.interval] * 3) {  // a new candle began
+      bars.push({ ...bar });
+      state.lastTimes = bars.map(b => b.time).join(",");
+      series.update(toPoints([bar])[0]);
+      clearTimeout(state.timer);
+      state.timer = setTimeout(load, 1500);  // the candle before it just closed: fetch and judge it
+    } else {
+      refreshLevelsNote();
+      return;  // this page is on another day or far behind: the next load sorts the candles out
+    }
+    showLegend(bars[bars.length - 1]);
+    refreshPopup();
+    refreshLevelsNote();
+  }
+
+  function renderSummary(s) {
+    renderHero(s);
 
     const items = [
       ["Prev open", s.previous_open], ["Prev high", s.previous_high], ["Prev low", s.previous_low], ["Prev close", s.previous_close],
@@ -842,7 +886,7 @@
   const BEAT_MS = 15000;
   const withTab = () => ({ headers: { "X-Tab": TAB, "X-Page": PAGE } });
   const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host
-    + "/ws?tab=" + encodeURIComponent(TAB) + "&page=" + encodeURIComponent(PAGE);
+    + "/ws?tab=" + encodeURIComponent(TAB) + "&page=" + encodeURIComponent(PAGE) + "&live=" + encodeURIComponent(name);
 
   // "Still here": keeps the login alive even while /ws is down.
   async function beat() {
@@ -876,7 +920,7 @@
       document.getElementById("footer").textContent = data.simulated
         ? `Simulated prices, ${INTERVAL_NAMES[data.interval]} bars built from the simulator's ticks. Not real market data.`
         : data.source === "dhan"
-        ? `Data from Dhan, your own account, in real time, ${INTERVAL_NAMES[data.interval]} bars. Refreshes every ${data.poll_seconds} s.`
+        ? `Data from Dhan, your own account, in real time, ${INTERVAL_NAMES[data.interval]} bars: the price and the candle forming now tick every second, the rest refreshes every ${data.poll_seconds} s.`
         : `Data from Yahoo Finance, about 15 minutes delayed, ${INTERVAL_NAMES[data.interval]} bars. Refreshes every ${data.poll_seconds} s.`;
     } catch (err) {
       status.className = "error";
@@ -890,7 +934,7 @@
   // lives while some page does either.
   function keepAlive() {
     const ws = new WebSocket(wsUrl());
-    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; };
+    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); };
     ws.onclose = () => {
       beat();  // says "still here" at once, and finds out if the login is over
       setTimeout(keepAlive, 3000);

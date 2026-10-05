@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 import contextlib
 import hashlib
 import hmac
@@ -59,6 +60,8 @@ else:
 # Everything else, and every Dhan failure, falls back to the source above.
 DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
 DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
+TICK_SECONDS = float(os.environ.get("DHAN_TICK_SECONDS", "1"))   # the live price, while an index page is open on Dhan
+TICK_ALWAYS = os.environ.get("DHAN_TICK_ALWAYS") == "1"           # for tests: tick outside market hours too
 
 # The latest prices, kept in memory and refreshed by the background loop below.
 store = {
@@ -99,6 +102,8 @@ def dhan_reason(exc: Exception) -> str:
     return f"Dhan: answered something unexpected ({said[:160]})."
 clients: set[WebSocket] = set()
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
+live: dict = {}          # index name -> {"last", "time", "bars": {interval key: the candle forming now, built from ticks}}
+live_subs: dict = {}     # websocket -> the index name whose ticks it wants (an index page on Dhan)
 
 # The rule for a login: it lives only while a My-Trade page is open on it, and only a
 # page handed over from another page of it may carry it on.
@@ -248,15 +253,60 @@ async def refresh_forever() -> None:
         await asyncio.sleep(POLL_SECONDS)
 
 
+def in_tick_hours() -> bool:
+    """NSE hours with a little slack, Monday to Friday, IST."""
+    if TICK_ALWAYS:
+        return True
+    now = datetime.now(dhan.IST)
+    return now.weekday() < 5 and (9, 0) <= (now.hour, now.minute) < (15, 45)
+
+
+async def tick_forever() -> None:
+    """While an index page is open on Dhan during market hours: the last price every TICK_SECONDS,
+    one request for all watched indices, folded into the candle forming now and pushed to those pages."""
+    while True:
+        names = sorted(set(live_subs.values()))
+        if not (DHAN_ON and names and in_tick_hours()):
+            await asyncio.sleep(2)
+            continue
+        try:
+            prices = await asyncio.to_thread(dhan.last_prices, names)
+        except Exception as exc:
+            dhan_status(False, dhan_reason(exc))
+            await asyncio.sleep(10)
+            continue
+        now = time.time()
+        stamp = now_ist()
+        for name, last in prices.items():
+            entry = live.setdefault(name, {"bars": {}})
+            entry.update(last=last, time=stamp)
+            for key, spec in INTERVALS.items():
+                secs = spec["bar_seconds"]
+                bucket = int(now // secs) * secs
+                bar = entry["bars"].get(key)
+                if bar and bar["time"] == bucket:
+                    bar["high"], bar["low"], bar["close"] = max(bar["high"], last), min(bar["low"], last), last
+                else:
+                    entry["bars"][key] = {"time": bucket, "open": last, "high": last, "low": last, "close": last}
+        for ws, name in list(live_subs.items()):
+            if name in prices:
+                try:
+                    await ws.send_json({"tick": {"name": name, **live[name]}})
+                except Exception:
+                    live_subs.pop(ws, None)
+        await asyncio.sleep(TICK_SECONDS)
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
-    task = asyncio.create_task(refresh_forever())
+    tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever())]
     yield
-    task.cancel()
-    with contextlib.suppress(asyncio.CancelledError):
-        await task
+    for task in tasks:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
 
 
 app = FastAPI(title="Indices API", lifespan=lifespan)
@@ -473,14 +523,20 @@ async def stream(ws: WebSocket):
         page_id = page_of(ws, entry) or new_page(entry)  # a page coming back keeps its id
         entry["pages"][page_id]["socket"] = ws  # its latest connection
         ws_pages[ws] = (token, page_id)
+    wanted = ws.query_params.get("live", "").upper()
+    if DHAN_ON and wanted in dhan.INDEX_IDS:  # an index page on Dhan: it gets the live ticks of its index
+        live_subs[ws] = wanted
     try:
         await ws.send_json({**store, "page": page_id})
+        if wanted in live:
+            await ws.send_json({"tick": {"name": wanted, **live[wanted]}})
         while True:
             await ws.receive_text()  # keeps the connection open; the pages never send anything useful
     except WebSocketDisconnect:
         pass
     finally:
         clients.discard(ws)
+        live_subs.pop(ws, None)
         token, page_id = ws_pages.pop(ws, (None, None))
         page = logins.get(token, {}).get("pages", {}).get(page_id)
         if page and page["socket"] is ws:  # an older connection of the page going at last says nothing
