@@ -97,6 +97,14 @@ their own logic. Read this before touching the code.
 - `start.bat` - one-click start on Windows. `.env` is git-ignored; `.env.example`
   documents the settings.
 
+## Pull requests: website and app apart
+
+The owner's rule (6 October): every pull request is one of two kinds, never
+both. A **website** pull request touches the dashboard the Render link and the
+laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, the docs. An
+**Android app** pull request touches `android/` and `.github/workflows/android.yml`
+only. Say in the title which kind it is when it is not obvious.
+
 ## Phases
 
 1. API - done. 2. Dashboard - done. 3a. Streaming plumbing - done.
