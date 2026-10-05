@@ -17,7 +17,7 @@ dashboard that shows them and updates the moment they change.
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
 | GET    | `/indices/all`    | nothing       | the latest snapshot: `quotes`, `failed`, `source`, `updated_at` |
 | GET    | `/indices/{name}` | an index name | that index's latest quote (503 until the first refresh lands) |
-| GET    | `/indices/{name}/detail` | an index name, `?range=today` or `5d`, `&interval=1m`, `5m` (default) or `15m` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range), `candles` of that size and `days` (a month of daily OHLC, for each session's own previous-day levels) |
+| GET    | `/indices/{name}/detail` | an index name, `?range=today`, `5d` or `3mo`, `&interval=1m`, `5m` (default), `15m`, `30m` or `1d` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range), `candles` of that size and `days` (a month of daily OHLC, for each session's own previous-day levels) |
 | GET    | `/options/{name}` | an index name | the Dhan feed's state and today's option records of the index's paper calls (Dhan only) |
 | POST   | `/options/{name}/calls`, `/options/{name}/calls/ended` | JSON `{key, side, index_at_entry}` / `{key, how}` | the index page reports a call entering or ending; the server records the contract and premiums |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |
@@ -188,9 +188,11 @@ The app is ready to run on a platform that deploys from GitHub:
   back across it, closed at the day's end), listed with their points, scored,
   and downloadable as a CSV file.
   Nothing else is drawn on the chart, and nothing is sent anywhere.
-- `static/detail.html` is the detail page: previous-day and today's figures, the
-  52-week range, and a chart with Line/Candles, 1/5/15-minute candle size and
-  Today/5-days switches, zoom and move buttons (the wheel and the touchpad do the
+- `static/detail.html` is the detail page: the previous session's and today's figures,
+  the 52-week range, and a chart with a Line/Candles switch and three drop-downs:
+  the time frame (1, 5, 15 or 30-minute candles, or one candle a day), the levels,
+  and the session (today by default, any of the last five days, or all five together;
+  on day candles, the last three months), zoom and move buttons (the wheel and the touchpad do the
   same over the chart: wheel for price up/down, shift+wheel or a sideways swipe for
   time, ctrl+wheel or a pinch for zoom), hover
   crosshair with the bar's values, light and dark. Click any bar (or point on the
