@@ -87,23 +87,23 @@
   #delta.down { color: var(--down); }
   #delta.flat { color: var(--muted); }
   #asof { flex-basis: 100%; font-size: 12px; color: var(--muted); }
+  #asof.closed { color: var(--ink-2); }
 
-  .summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-    margin-bottom: 18px;
-  }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
-  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .stat .v { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  /* the figures, in three groups: the previous session, today, the year */
+  .summary { display: grid; grid-template-columns: 4fr 3fr 2fr; gap: 8px; margin-bottom: 18px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+  .stat .gk { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stat .figs { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; }
+  .fig { flex: 1 1 72px; min-width: 0; }
+  .fig .k { font-size: 12px; color: var(--ink-2); }
+  .fig .v { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  @media (max-width: 760px) { .summary { grid-template-columns: 1fr; } }
 
   .controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-  .controls .group { display: flex; flex-wrap: wrap; gap: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
+  .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; min-width: 54px; }
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   #session-row[hidden] { display: none; }
-  #session-label { font-size: 13px; color: var(--muted); }
   #score-box, #paper-box { margin-top: 16px; }
   #score-box h2, #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
   #score-note, #paper-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
@@ -126,11 +126,12 @@
     color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
   }
   #csv:hover { border-color: var(--ink-2); }
-  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg { display: inline-flex; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
-    font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer;
+    font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer; white-space: nowrap;
     background: var(--surface); color: var(--ink-2);
   }
+  @media (max-width: 600px) { .seg { overflow-x: auto; } .seg button { padding: 6px 9px; } }  /* a phone: a row too wide slides, its words never break */
   .seg button + button { border-left: 1px solid var(--border); }
   .seg button.on { background: var(--ink); color: var(--page); }
 
@@ -188,25 +189,25 @@
 
   <section class="summary" id="summary" aria-label="Summary"></section>
 
-  <div class="controls">
-    <div class="seg" id="kind">
+  <div class="controls levels">
+    <span class="lbl">Chart</span>
+    <div class="seg" id="kind" aria-label="Chart kind">
       <button data-kind="line" class="on">Line</button>
       <button data-kind="candles">Candles</button>
     </div>
-    <div class="group">
-      <div class="seg" id="interval" aria-label="Candle size">
-        <button data-interval="1m">1 min</button>
-        <button data-interval="5m" class="on">5 min</button>
-        <button data-interval="15m">15 min</button>
-      </div>
-      <div class="seg" id="range" aria-label="Range">
-        <button data-range="today" class="on">Today</button>
-        <button data-range="5d">5 days</button>
-      </div>
+    <div class="seg" id="interval" aria-label="Candle size">
+      <button data-interval="1m">1 min</button>
+      <button data-interval="5m" class="on">5 min</button>
+      <button data-interval="15m">15 min</button>
+    </div>
+    <div class="seg" id="range" aria-label="Range">
+      <button data-range="today" class="on">Today</button>
+      <button data-range="5d">5 days</button>
     </div>
   </div>
 
   <div class="controls levels">
+    <span class="lbl">Levels</span>
     <div class="seg" id="move" aria-label="Levels measured from">
       <button data-move="off">No levels</button>
       <button data-move="prev" class="on">Previous day</button>
@@ -217,7 +218,7 @@
   </div>
 
   <div class="controls levels" id="session-row" hidden>
-    <span id="session-label">Session</span>
+    <span class="lbl">Session</span>
     <div class="seg" id="session" aria-label="Session"></div>
   </div>
 
@@ -826,14 +827,24 @@
     const delta = document.getElementById("delta");
     delta.className = dir;
     delta.textContent = `${glyph} ${signed.format(s.change)} (${signed.format(s.change_percent)}%)`;
-    document.getElementById("asof").textContent = "as of " + new Date(s.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
+    // the server says whether the market trades now (summary.open; a tick means it does): the price's time
+    // then, else "closed" and when the last price is from, so a quiet page never shows the clock
+    const asof = document.getElementById("asof"), at = new Date(s.time);
+    if (s.open) {
+      asof.className = "";
+      asof.textContent = "as of " + at.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
+    } else {
+      const day = dateKey(at.getTime() / 1000);
+      asof.className = "closed";
+      asof.textContent = `Market closed · last price from ${isToday(day) ? "today" : dayLabel(day)} at ${istTime(at.getTime() / 1000, false)} IST`;
+    }
   }
 
   // ---- live ticks from Dhan: the price and the candle forming now move every second (see main.py tick_forever)
   function applyTick(t) {
     if (t.name !== name || state.feed !== "dhan" || !state.summary) return;
     const s = state.summary;
-    s.last = t.last; s.time = t.time;
+    s.last = t.last; s.time = t.time; s.open = true;
     if (s.previous_close) {
       s.change = Math.round((t.last - s.previous_close) * 100) / 100;
       s.change_percent = Math.round(s.change / s.previous_close * 10000) / 100;
@@ -868,18 +879,22 @@
 
   function renderSummary(s) {
     renderHero(s);
-
-    const items = [
-      ["Prev open", s.previous_open], ["Prev high", s.previous_high], ["Prev low", s.previous_low], ["Prev close", s.previous_close],
-      ["Today open", s.today_open], ["Today high", s.today_high], ["Today low", s.today_low],
-      ["52w high", s.week52_high], ["52w low", s.week52_low],
-    ];
-    document.getElementById("summary").replaceChildren(...items.map(([k, v]) => {
+    const today = dateKey(Date.now() / 1000);
+    const prev = [...state.days].reverse().find(d => d.date < today);  // the last session before today, as the tiles are
+    const group = (title, figs) => {
       const el = document.createElement("div");
       el.className = "stat";
-      el.innerHTML = `<div class="k">${k}</div><div class="v">${money(v)}</div>`;
+      el.innerHTML = `<div class="gk">${title}</div><div class="figs">`
+        + figs.map(([k, v]) => `<div class="fig"><div class="k">${k}</div><div class="v">${money(v)}</div></div>`).join("") + "</div>";
       return el;
-    }));
+    };
+    document.getElementById("summary").replaceChildren(
+      group("Previous session" + (prev ? " · " + dayLabel(prev.date) : ""),
+            [["Open", s.previous_open], ["High", s.previous_high], ["Low", s.previous_low], ["Close", s.previous_close]]),
+      group(s.today_open == null ? "Today · not traded yet" : "Today · " + dayLabel(today),
+            [["Open", s.today_open], ["High", s.today_high], ["Low", s.today_low]]),
+      group("52 weeks", [["High", s.week52_high], ["Low", s.week52_low]]),
+    );
   }
 
   // The login's "tab" note: kept in this tab only, so a freshly opened tab has none and is asked for the password.

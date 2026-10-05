@@ -203,6 +203,20 @@ def in_session(bar: dict) -> bool:
     return SESSION_OPEN <= (t.hour, t.minute) < SESSION_CLOSE
 
 
+def last_trade_time(candles: list, minutes: int) -> tuple:
+    """(when the last price is from, whether the market trades now). While it trades (a candle of today
+    exists and it is market hours) the price is as of now; otherwise it is from the end of the last candle,
+    so a closed market is not stamped with the clock."""
+    now = datetime.now(IST)
+    if candles:
+        last = datetime.fromtimestamp(candles[-1]["time"], IST)
+        if last.date() == now.date() and now.weekday() < 5 and SESSION_OPEN <= (now.hour, now.minute) < SESSION_CLOSE:
+            return now.isoformat(timespec="seconds"), True
+        close = last.replace(hour=SESSION_CLOSE[0], minute=SESSION_CLOSE[1], second=0, microsecond=0)
+        return min(last + timedelta(minutes=minutes), close).isoformat(timespec="seconds"), False
+    return now.isoformat(timespec="seconds"), False
+
+
 def intraday(name: str, minutes: int, days_back: int = 8) -> list:
     """Minute candles of an index inside market hours, oldest first, refreshed at most every 10 s."""
     return cached(("intraday", name, minutes), 10,
@@ -254,8 +268,14 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     q = quote(name)
     last = float(q.get("last_price") or (todays[-1]["close"] if todays else (previous["close"] if previous else 0)))
     previous_close = previous["close"] if previous else last
-    change = round(last - previous_close, 2)
+    # The change is the day's: against the previous session's close while today trades. Before the open,
+    # on a holiday or at the weekend the last price is that close itself, so the change shown is the last
+    # session's, against the close before it (as the dashboard tiles show it)
+    reference = previous_days[-2] if not todays and len(previous_days) >= 2 else previous
+    reference_close = reference["close"] if reference else last
+    change = round(last - reference_close, 2)
     year = cached(("year", name), 3600, lambda: daily(name, 370))
+    stamp, open_now = last_trade_time(all_candles, minutes)
     summary = {
         "previous_open": previous["open"] if previous else None,
         "previous_high": previous["high"] if previous else None,
@@ -266,10 +286,11 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
         "today_low": min(b["low"] for b in todays) if todays else None,
         "last": round(last, 2),
         "change": change,
-        "change_percent": round(change / previous_close * 100, 2) if previous_close else 0.0,
+        "change_percent": round(change / reference_close * 100, 2) if reference_close else 0.0,
         "week52_high": max((d["high"] for d in year), default=None),
         "week52_low": min((d["low"] for d in year), default=None),
-        "time": datetime.now(IST).isoformat(timespec="seconds"),
+        "time": stamp,
+        "open": open_now,  # the market trades now: the page shows the price as of its time, else "closed" and when it is from
     }
     return {
         "name": name,
