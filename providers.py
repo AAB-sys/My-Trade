@@ -16,17 +16,31 @@ RETRIES = 3
 RANGES = {
     "today": {"range": "1d", "days": 1},
     "5d": {"range": "5d", "days": 5},
+    "3mo": {"range": "3mo", "days": 66},  # for day candles: about three months of sessions
 }
 INTERVALS = {
     "1m": {"interval": "1m", "bar_seconds": 60},
     "5m": {"interval": "5m", "bar_seconds": 300},
     "15m": {"interval": "15m", "bar_seconds": 900},
+    "30m": {"interval": "30m", "bar_seconds": 1800},
+    "1d": {"interval": "1d", "bar_seconds": 86400},
 }
 SESSION_MINUTES = 375  # 9:15 am to 3:30 pm
+SESSION_START = 9 * 3600 + 15 * 60  # 9:15 am IST, in seconds since midnight
+IST_SECONDS = 5 * 3600 + 30 * 60
 
 
 def bars_per_day(interval_key: str) -> int:
-    return SESSION_MINUTES * 60 // INTERVALS[interval_key]["bar_seconds"]
+    return max(1, SESSION_MINUTES * 60 // INTERVALS[interval_key]["bar_seconds"])
+
+
+def bucket_start(t: float, bar_seconds: int) -> int:
+    """The start of the candle holding time t. Minute candles run from 9:15 (NSE's open), so 30-minute
+    ones start at 9:15, 9:45, ...; a day candle is stamped at its day's 9:15."""
+    if bar_seconds >= 86400:
+        return int((t + IST_SECONDS) // 86400) * 86400 - IST_SECONDS + SESSION_START
+    anchor = (SESSION_START - IST_SECONDS) % bar_seconds
+    return int((t - anchor) // bar_seconds) * bar_seconds + anchor
 
 # index name -> Yahoo Finance ticker
 INDICES = {
@@ -170,6 +184,9 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interva
         "open": current is not None and now.weekday() < 5 and (9, 15) <= (now.hour, now.minute) < (15, 30),
     }
     candles = parse_bars(intraday)
+    if interval_key == "1d":
+        for bar in candles:
+            bar["time"] = bucket_start(bar["time"], 86400)  # a day candle is stamped at its 9:15, whatever Yahoo stamps it with
     if range_key == "today":
         candles = [bar for bar in candles if bar_date(bar) == today]  # never pass off the last session as today
     return {
@@ -222,8 +239,7 @@ class DemoTicker:
 
     def _record(self, name: str, level: float, now: float) -> None:
         for key, spec in INTERVALS.items():
-            size = spec["bar_seconds"]
-            bucket = int(now // size) * size
+            bucket = bucket_start(now, spec["bar_seconds"])
             bars = self._live[key].setdefault(name, {})
             bar = bars.get(bucket)
             if bar is None:
@@ -254,7 +270,7 @@ class DemoTicker:
     def fetch_detail(self, name: str, range_key: str = "today", interval_key: str = "5m") -> dict:
         size = INTERVALS[interval_key]["bar_seconds"]
         per_day = bars_per_day(interval_key)
-        first_live_bucket = int(self._started // size) * size
+        first_live_bucket = bucket_start(self._started, size)
         live = self._live[interval_key].get(name, {})
         history = self._history(name, interval_key, first_live_bucket - size, RANGES[range_key]["days"] * per_day)
         candles = history + [live[b] for b in sorted(live)]

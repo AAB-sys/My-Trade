@@ -20,6 +20,8 @@ from pathlib import Path
 
 import httpx
 
+from providers import bucket_start
+
 BASE = os.environ.get("DHAN_API_BASE", "https://api.dhan.co/v2")  # overridden only by tests
 SEGMENT = "IDX_I"                                  # Dhan's segment for an index itself
 INDEX_IDS = {"NIFTY 50": 13, "NIFTY BANK": 25}     # Dhan's security ids of the indices with options
@@ -217,15 +219,32 @@ def last_trade_time(candles: list, minutes: int) -> tuple:
     return now.isoformat(timespec="seconds"), False
 
 
+def fold(bars: list, seconds: int) -> list:
+    """Smaller candles folded into candles of `seconds`, each starting where bucket_start says."""
+    out = []
+    for b in bars:
+        start = bucket_start(b["time"], seconds)
+        if out and out[-1]["time"] == start:
+            last = out[-1]
+            last["high"], last["low"], last["close"] = max(last["high"], b["high"]), min(last["low"], b["low"]), b["close"]
+        else:
+            out.append({**b, "time": start})
+    return out
+
+
 def intraday(name: str, minutes: int, days_back: int = 8) -> list:
-    """Minute candles of an index inside market hours, oldest first, refreshed at most every 10 s."""
+    """Minute candles of an index inside market hours, oldest first, refreshed at most every 10 s.
+    Dhan has no 30-minute candles: two 15-minute ones make one, from 9:15."""
+    if minutes == 30:
+        return cached(("intraday", name, 30), 10, lambda: fold(intraday(name, 15, days_back), 1800))
     return cached(("intraday", name, minutes), 10,
                   lambda: [b for b in _chart("/charts/intraday", name, {"interval": str(minutes)}, days_back) if in_session(b)])
 
 
 def daily(name: str, days_back: int = 45) -> list:
-    """Daily candles of an index, oldest first, refreshed at most every 5 min."""
-    return cached(("daily", name, days_back), 300, lambda: _chart("/charts/historical", name, {"expiryCode": 0}, days_back))
+    """Daily candles of an index, oldest first, each stamped at its day's 9:15, refreshed at most every 5 min."""
+    return cached(("daily", name, days_back), 300,
+                  lambda: [{**b, "time": bucket_start(b["time"], 86400)} for b in _chart("/charts/historical", name, {"expiryCode": 0}, days_back)])
 
 
 def quote(name: str) -> dict:
@@ -241,27 +260,35 @@ def quote(name: str) -> dict:
 
 def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, ranges: dict) -> dict:
     """The index page's detail, in the same shape as the Yahoo one, from Dhan in real time."""
-    minutes = intervals[interval_key]["bar_seconds"] // 60
-    candles = intraday(name, minutes)
-    days = daily(name)
+    seconds = intervals[interval_key]["bar_seconds"]
+    minutes = 5 if seconds >= 86400 else seconds // 60  # day candles come from the daily list; 5-minute candles fill in today
+    all_candles = intraday(name, minutes)
     today = today_ist()
     bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
-    sessions = sorted({bar_date(b) for b in candles})
-    if range_key == "today":
-        candles = [b for b in candles if bar_date(b) == today]
+    sessions = sorted({bar_date(b) for b in all_candles})
+
+    def with_recent(day_list: list) -> list:
+        """Dhan's daily list can lag a session (today's bar arrives after the close, sometimes later), so any
+        session the candles know and the list lacks is built from its candles."""
+        known = {bar_date(d) for d in day_list}
+        out = list(day_list)
+        for day in sessions:
+            if day not in known:
+                bars = [b for b in all_candles if bar_date(b) == day]
+                out.append({"time": bars[0]["time"], "open": bars[0]["open"], "high": max(b["high"] for b in bars),
+                            "low": min(b["low"] for b in bars), "close": bars[-1]["close"]})
+        out.sort(key=lambda d: d["time"])
+        return out
+
+    days = with_recent(daily(name))
+    year = with_recent(cached(("year", name), 3600, lambda: daily(name, 370)))
+    if seconds >= 86400:
+        candles = year[-ranges[range_key]["days"]:]
+    elif range_key == "today":
+        candles = [b for b in all_candles if bar_date(b) == today]
     else:
         keep = set(sessions[-ranges[range_key]["days"]:])
-        candles = [b for b in candles if bar_date(b) in keep]
-    # Dhan's daily list can lag a session (today's bar arrives after the close, sometimes later), so any
-    # session the candles know and the daily list lacks is built from its candles
-    all_candles = intraday(name, minutes)
-    known = {bar_date(d) for d in days}
-    for day in sessions:
-        if day not in known:
-            bars = [b for b in all_candles if bar_date(b) == day]
-            days.append({"time": bars[0]["time"], "open": bars[0]["open"], "high": max(b["high"] for b in bars),
-                         "low": min(b["low"] for b in bars), "close": bars[-1]["close"]})
-    days.sort(key=lambda d: d["time"])
+        candles = [b for b in all_candles if bar_date(b) in keep]
     previous_days = [d for d in days if bar_date(d) < today]
     previous = previous_days[-1] if previous_days else None
     todays = [b for b in all_candles if bar_date(b) == today]
@@ -274,7 +301,6 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     reference = previous_days[-2] if not todays and len(previous_days) >= 2 else previous
     reference_close = reference["close"] if reference else last
     change = round(last - reference_close, 2)
-    year = cached(("year", name), 3600, lambda: daily(name, 370))
     stamp, open_now = last_trade_time(all_candles, minutes)
     summary = {
         "previous_open": previous["open"] if previous else None,

@@ -37,11 +37,19 @@ turn after a move. Whether that holds is for the owner's own record to show.
 
 **Ratios**: the seven above **(owner to decide: add or remove)**.
 
-**Which session**: the latest trading day among the candles shown. On the 5-day
-chart a row of day buttons picks another, and the levels, the evidence table and
-the calls all switch to that day, with that day's own previous day (owner's
-decision, 4 October: a past day must be judged with the levels it had then, not
-with today's).
+**Which session**: today by default (the latest trading day among the candles
+loaded, which are the last five days). The *Session* drop-down picks another of
+those days, or all five on one chart, and the levels, the evidence table and the
+calls all switch to that day, with that day's own previous day (owner's decision,
+4 October: a past day must be judged with the levels it had then, not with
+today's). With all five days on the chart the levels and the calls are the latest
+day's.
+
+**Which time frame**: the *Time frame* drop-down sets the size of one candle: 1, 5,
+15 or 30 minutes, or 1 day. Everything below is judged on the candles of that size.
+On day candles the chart holds the last three months, those days are one session
+together (the "previous day" is the day before the last candle), and a call has no
+day end: there a day is one candle, so a call runs on until its target.
 
 **What the page does with them**: draws each level as a line across the chart with
 its percentage on the price axis (the two ends solid, the rest dashed), and shows
