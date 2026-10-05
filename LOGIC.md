@@ -107,12 +107,12 @@ The rule, in the order it is applied:
 4. **Entry** - the open of the candle after the confirming one, since one can
    only act once that candle has closed **(owner to decide)**. Until then the
    call is listed as "Enters at the next open".
-5. **Target** - the next level in the call's direction. **Stop** - the next level
-   the other way. Exit the option when the index reaches either: whichever a
-   later candle reaches first ends the call at that level's price. If one candle
-   reaches both, the stop is taken **(owner to decide)**. The 0% and 100% levels
-   have nothing beyond them on one side, so a signal there gives no call **(owner
-   to decide)**.
+5. **Target** - the next level in the call's direction. The call ends when a
+   later candle reaches it, at that level's price. **No stop** (owner's decision,
+   5 October): a call that goes the wrong way is held, to the target or to the
+   day's last candle, and its loss is whatever the day does. A signal pointing
+   outward from the 0% or 100% level has no next level, so it gives no call
+   **(owner to decide)**.
 6. **Day end** - a call still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal in the day's last two candles has
    no candles left to confirm and enter on, so it gives nothing. While today is
