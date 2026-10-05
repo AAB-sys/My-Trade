@@ -134,6 +134,14 @@
   @media (max-width: 600px) { .seg { overflow-x: auto; } .seg button { padding: 6px 9px; } }  /* a phone: a row too wide slides, its words never break */
   .seg button + button { border-left: 1px solid var(--border); }
   .seg button.on { background: var(--ink); color: var(--page); }
+  select.pick {
+    font: inherit; font-size: 13px; padding: 6px 30px 6px 12px; cursor: pointer; max-width: 100%;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23898781' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center;
+  }
+  select.pick:hover { border-color: var(--ink-2); }
 
   .chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
   #legend { font-size: 12px; color: var(--ink-2); padding: 4px 8px; min-height: 20px; font-variant-numeric: tabular-nums; }
@@ -195,31 +203,30 @@
       <button data-kind="line" class="on">Line</button>
       <button data-kind="candles">Candles</button>
     </div>
-    <div class="seg" id="interval" aria-label="Candle size">
-      <button data-interval="1m">1 min</button>
-      <button data-interval="5m" class="on">5 min</button>
-      <button data-interval="15m">15 min</button>
-    </div>
-    <div class="seg" id="range" aria-label="Range">
-      <button data-range="today" class="on">Today</button>
-      <button data-range="5d">5 days</button>
-    </div>
+    <span class="lbl">Time frame</span>
+    <select class="pick" id="interval" aria-label="Time frame: the size of one candle">
+      <option value="1m">1 min</option>
+      <option value="5m" selected>5 min</option>
+      <option value="15m">15 min</option>
+      <option value="30m">30 min</option>
+      <option value="1d">1 day</option>
+    </select>
   </div>
 
   <div class="controls levels">
     <span class="lbl">Levels</span>
-    <div class="seg" id="move" aria-label="Levels measured from">
-      <button data-move="off">No levels</button>
-      <button data-move="prev" class="on">Previous day</button>
-      <button data-move="today">Today so far</button>
-      <button data-move="shown">Bars shown</button>
-    </div>
+    <select class="pick" id="move" aria-label="Levels measured from">
+      <option value="off">No levels</option>
+      <option value="prev" selected>Previous day</option>
+      <option value="today">Today so far</option>
+      <option value="shown">Bars shown</option>
+    </select>
     <span id="levels-note"></span>
   </div>
 
   <div class="controls levels" id="session-row" hidden>
     <span class="lbl">Session</span>
-    <div class="seg" id="session" aria-label="Session"></div>
+    <select class="pick" id="session" aria-label="Session: the trading day shown"></select>
   </div>
 
   <div class="chart-wrap">
@@ -281,12 +288,13 @@
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
-  const state = { kind: "line", range: "today", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null, days: [], session: null,
-                  feed: "", dhan: null, optionStatus: "" };
+  const state = { kind: "line", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "prev", summary: null, days: [], candles: [], session: null,
+                  feed: "", dhan: null, optionStatus: "" };  // candles: the last five days loaded (three months on day candles); session: null = the latest day, a date, or "all"
   try { state.move = localStorage.getItem("move") || state.move; } catch (e) {}
   state.signal = "held";  // layer 3's switch: off, held or crossed
   try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
-  const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute" };
+  const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute", "1d": "1-day" };
+  const rangeFor = () => state.interval === "1d" ? "3mo" : "5d";  // what the server is asked for: the last five days, or three months of day candles
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
@@ -416,25 +424,34 @@
   let priceLines = [];
   let lastLevelsKey = "";
 
-  // ---- sessions: the trading days among the candles shown. The levels, the evidence table and
-  // the calls are for one session at a time (the latest unless another is picked), and that
-  // session's "previous day" is the trading day before it, not the day before today.
+  // ---- sessions: the trading days among the candles loaded (the last five). The chart shows one
+  // session (the latest unless another is picked, or all of them together), and the levels, the
+  // evidence table and the calls are for that session, whose "previous day" is the trading day
+  // before it, not the day before today. On day candles the days shown are one session together.
   const dateKey = (t) => new Date((t + IST_OFFSET) * 1000).toISOString().slice(0, 10);  // the IST date
-  const sessions = () => [...new Set(bars.map(b => dateKey(b.time)))];
+  const sessionOf = (b) => state.interval === "1d" ? "all" : dateKey(b.time);
+  const sessions = () => [...new Set(state.candles.map(sessionOf))];
   const currentSession = () => { const list = sessions(); return list.includes(state.session) ? state.session : list[list.length - 1] || null; };
-  const sessionBars = () => { const key = currentSession(); return key ? bars.filter(b => dateKey(b.time) === key) : []; };
+  const sessionBars = () => { const key = currentSession(); return key ? state.candles.filter(b => sessionOf(b) === key) : []; };
+  const shownBars = () => state.interval === "1d" || state.session === "all" ? state.candles.slice() : sessionBars();  // what the chart draws
+  const withDate = () => state.interval === "1d" || state.session === "all";  // times on the page carry the day when several days show
+  const sessionDate = (key) => key === "all" && state.candles.length ? dateKey(state.candles[state.candles.length - 1].time) : key;  // day candles: the last day
   const isToday = (key) => key === dateKey(Date.now() / 1000);
   const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
-  const sessionName = (key) => key ? (isToday(key) ? "today" : dayLabel(key)) : "today";
-  const dayBefore = (key) => { const earlier = state.days.filter(d => d.date < key); return earlier[earlier.length - 1] || null; };
+  const sessionName = (key) => key === "all" ? "the days shown" : key ? (isToday(key) ? "today" : dayLabel(key)) : "today";
+  const dayBefore = (key) => { const earlier = state.days.filter(d => d.date < sessionDate(key)); return earlier[earlier.length - 1] || null; };
   function drawSessions() {
-    const list = sessions(), key = currentSession();
-    document.getElementById("session-row").hidden = list.length < 2;
-    document.getElementById("session").replaceChildren(...list.map(d => {
-      const b = document.createElement("button");
-      b.dataset.session = d; b.textContent = dayLabel(d); b.classList.toggle("on", d === key);
-      return b;
-    }));
+    const list = sessions(), key = currentSession(), pick = document.getElementById("session");
+    document.getElementById("session-row").hidden = !list.length;
+    const options = state.interval === "1d"
+      ? [["all", "Last 3 months, a candle a day"]]
+      : [...list.slice().reverse().map(d => [d, isToday(d) ? `Today (${dayLabel(d)})` : dayLabel(d)]), ...(list.length > 1 ? [["all", `All ${list.length} days`]] : [])];
+    const shape = options.map(o => o.join("=")).join("|");
+    if (pick.dataset.shape !== shape) {  // rebuilt only when the days change, so an open drop-down is left alone
+      pick.replaceChildren(...options.map(([value, label]) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; }));
+      pick.dataset.shape = shape;
+    }
+    pick.value = state.session === "all" || state.interval === "1d" ? "all" : key;
   }
 
   function theMove() {
@@ -453,7 +470,7 @@
       const sb = sessionBars();
       if (!sb.length) return null;
       return { high: Math.max(...sb.map(b => b.high)), low: Math.min(...sb.map(b => b.low)), up: sb[sb.length - 1].close >= sb[0].open,
-               what: isToday(key) ? "today so far" : dayLabel(key) };
+               what: key === "all" ? "days shown" : isToday(key) ? "today so far" : dayLabel(key) };
     }
     if (!bars.length) return null;
     let hi = 0, lo = 0;
@@ -470,11 +487,14 @@
   // For every closed candle (the one still forming is judged once it closes), judged against
   // where the previous candle closed: a candle that reaches a level and closes back on the side
   // it came from HELD it; one that closes on the other side CROSSED it. Nothing is drawn on the chart.
-  const SECONDS = { "1m": 60, "5m": 300, "15m": 900 };
+  const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1d": 86400 };
+  // when a candle closes: its size on, but never past 3:30 pm of its day (the day's last 30-minute
+  // candle is a half one, and a day candle ends at the close)
+  const endOf = (b) => Math.min(b.time + SECONDS[state.interval], dayOf(b.time) * 86400 - IST_OFFSET + SESSION_END);
 
   function scoreLevels(levels) {
     const now = Date.now() / 1000;
-    const closed = sessionBars().filter(b => b.time + SECONDS[state.interval] <= now);
+    const closed = sessionBars().filter(b => endOf(b) <= now);
     const rows = levels.map(l => ({ ...l, held: 0, crossed: 0 }));
     for (let i = 1; i < closed.length; i++) {
       const bar = closed[i], prev = closed[i - 1].close;
@@ -517,6 +537,7 @@
   //   target  - the next level in the call's direction; the call ends when a later candle reaches it.
   //             No stop (owner's decision, 5 October): a call going the wrong way is held
   //   day end - a call still open at the day's last candle ends at its close; nothing carries overnight
+  //             (not on day candles, where a day is one candle: there a call runs on until its target)
   //   every confirmed signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
   const SESSION_END = 15 * 3600 + 30 * 60;  // 3:30 pm IST, in seconds since midnight
@@ -546,7 +567,7 @@
 
   function paperTrades(levels) {
     const now = Date.now() / 1000;
-    const closed = sessionBars().filter(b => b.time + SECONDS[state.interval] <= now);
+    const closed = sessionBars().filter(b => endOf(b) <= now);
     const prices = levels.map(l => l.price).sort((a, b) => a - b);
     const gain = (t, price) => Math.round((t.side === "CE" ? price - t.entry : t.entry - price) * 100) / 100;  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
@@ -555,7 +576,7 @@
     let waiting = null, ready = null, open = [];
     for (let i = 1; i < closed.length; i++) {
       const bar = closed[i], prevBar = closed[i - 1];
-      if (dayOf(bar.time) !== dayOf(prevBar.time)) {  // a new day: yesterday's calls ended with yesterday
+      if (state.interval !== "1d" && dayOf(bar.time) !== dayOf(prevBar.time)) {  // a new day: yesterday's calls ended with yesterday
         open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = [];
         waiting = null; ready = null;  // a signal late on a day has no candles left to confirm and enter on
       }
@@ -572,7 +593,7 @@
       waiting = signalAt(bar, prevBar.close, prices, used);  // every confirmed signal gives a call, open calls or not
     }
     const last = closed[closed.length - 1];
-    const over = last ? dayOver(dayOf(last.time), now) : true;
+    const over = state.interval === "1d" ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
     open.forEach(t => { if (over) end(t, last.close, last, "day end"); else t.points = gain(t, last.close); });
     if (ready && !over) trades.push(ready);
     if (waiting && !over) trades.push(waiting);
@@ -608,7 +629,7 @@
     table.querySelector("tbody").replaceChildren(...trades.slice().reverse().map(t => {
       const tr = document.createElement("tr");
       const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
-      tr.innerHTML = `<td>${istTime(t.signalTime, state.range !== "today")}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
+      tr.innerHTML = `<td>${istTime(t.signalTime, withDate())}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
         + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
         + `<td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
         + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`
@@ -732,7 +753,7 @@
   function showLegend(bar) {
     const el = document.getElementById("legend");
     if (!bar) { el.textContent = ""; return; }
-    const when = istTime(bar.time, state.range !== "today");
+    const when = istTime(bar.time, withDate());
     el.textContent = state.kind === "candles"
       ? `${when}   O ${fmt.format(bar.open)}   H ${fmt.format(bar.high)}   L ${fmt.format(bar.low)}   C ${fmt.format(bar.close)}`
       : `${when}   ${fmt.format(bar.close)}`;
@@ -754,7 +775,7 @@
     const glyph = { up: "▲", down: "▼", flat: "—" }[dir];
     popup.innerHTML = `
       <span class="x" title="Close">&times;</span>
-      <div class="t">${istTime(bar.time, state.range !== "today")} IST · ${INTERVAL_NAMES[state.interval]} bar</div>
+      <div class="t">${istTime(bar.time, withDate())} IST · ${INTERVAL_NAMES[state.interval]} bar</div>
       <div class="row"><span>Open</span><b>${fmt.format(bar.open)}</b></div>
       <div class="row"><span>High</span><b>${fmt.format(bar.high)}</b></div>
       <div class="row"><span>Low</span><b>${fmt.format(bar.low)}</b></div>
@@ -802,9 +823,7 @@
       state.lastTimes = "";
       showLegend(null);
       hidePopup();
-      empty.textContent = state.range === "today"
-        ? "No candles for today yet. The market has not traded today: a holiday, a weekend, or it is before 9:15 am. Switch to 5 days to see the last sessions."
-        : "No candles to show for this range.";
+      empty.textContent = "No candles to show yet: none came for the last days.";
       empty.hidden = false;
       return;
     }
@@ -864,6 +883,7 @@
       series.update(toPoints([last])[0]);
     } else if (bar.time > last.time && bar.time - last.time <= SECONDS[state.interval] * 3) {  // a new candle began
       bars.push({ ...bar });
+      state.candles.push(bars[bars.length - 1]);  // the chart's list is a copy of the session's
       state.lastTimes = bars.map(b => b.time).join(",");
       series.update(toPoints([bar])[0]);
       clearTimeout(state.timer);
@@ -926,7 +946,7 @@
   async function load() {
     const status = document.getElementById("status");
     try {
-      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${state.range}&interval=${state.interval}`, withTab());
+      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${rangeFor()}&interval=${state.interval}`, withTab());
       if (response.status === 401) { location.href = "/login"; return; }
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
@@ -937,8 +957,9 @@
       state.dhan = data.dhan || null;
       state.simulated = !!data.simulated;
       renderSummary(data.summary);
-      if (data.range !== state.range || data.interval !== state.interval) return;  // an older request finishing late
-      setBars(data.candles);
+      if (data.range !== rangeFor() || data.interval !== state.interval) return;  // an older request finishing late
+      state.candles = data.candles;
+      setBars(shownBars());
       drawLevels();
       state.pollMs = Math.max(1000, data.poll_seconds * 1000);
       status.className = "";
@@ -982,26 +1003,16 @@
     [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.kind === kind));
     makeSeries();
   });
-  document.getElementById("range").addEventListener("click", e => {
-    const range = e.target.dataset.range;
-    if (!range || range === state.range) return;
-    state.range = range;
-    state.lastTimes = "";
-    [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.range === range));
-    load();
-  });
-  document.getElementById("move").addEventListener("click", e => {
-    const move = e.target.dataset.move;
-    if (!move || move === state.move) return;
-    state.move = move;
-    try { localStorage.setItem("move", move); } catch (err) {}
-    [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.move === move));
+  document.getElementById("move").addEventListener("change", e => {
+    state.move = e.target.value;
+    try { localStorage.setItem("move", state.move); } catch (err) {}
     drawLevels();
   });
-  document.getElementById("session").addEventListener("click", e => {
-    const session = e.target.dataset.session;
-    if (!session || session === currentSession()) return;
-    state.session = session;
+  document.getElementById("session").addEventListener("change", e => {
+    const list = sessions(), picked = e.target.value;
+    state.session = picked === list[list.length - 1] ? null : picked;  // the latest day is followed, so "today" is still today tomorrow
+    state.lastTimes = "";
+    setBars(shownBars());
     drawLevels();
   });
   document.getElementById("signal").addEventListener("click", e => {
@@ -1025,20 +1036,19 @@
     const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `paper-calls ${name} ${state.range} ${state.interval} ${state.signal}.csv`;
+    a.download = `paper-calls ${name} ${currentSession() || "today"} ${state.interval} ${state.signal}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
-  document.getElementById("interval").addEventListener("click", e => {
-    const interval = e.target.dataset.interval;
-    if (!interval || interval === state.interval) return;
-    state.interval = interval;
+  document.getElementById("interval").addEventListener("change", e => {
+    state.interval = e.target.value;
     state.lastTimes = "";
-    [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.interval === interval));
+    chart.applyOptions({ timeScale: { timeVisible: state.interval !== "1d" } });  // day candles: dates only
     load();
   });
 
-  [...document.getElementById("move").children].forEach(b => b.classList.toggle("on", b.dataset.move === state.move));
+  document.getElementById("move").value = state.move;
+  document.getElementById("interval").value = state.interval;
   [...document.getElementById("signal").children].forEach(b => b.classList.toggle("on", b.dataset.signal === state.signal));
   load();
 </script>

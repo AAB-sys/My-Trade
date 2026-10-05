@@ -17,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 import websockets
 
 import dhan
-from providers import INDICES, INTERVALS, RANGES, DemoTicker, fetch_all_yahoo, fetch_detail_yahoo, now_ist
+from providers import INDICES, INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 
 BASE = Path(__file__).parent
 STATIC = BASE / "static"
@@ -277,12 +277,11 @@ def in_tick_hours() -> bool:
 
 
 def fold_tick(name: str, last: float, now: float, via: str) -> None:
-    """One last price into the index's live entry and the 1, 5 and 15-minute candles forming now."""
+    """One last price into the index's live entry and the candle of every size forming now."""
     entry = live.setdefault(name, {"bars": {}})
     entry.update(last=last, time=now_ist(), via=via)
     for key, spec in INTERVALS.items():
-        secs = spec["bar_seconds"]
-        bucket = int(now // secs) * secs
+        bucket = bucket_start(now, spec["bar_seconds"])
         bar = entry["bars"].get(key)
         if bar and bar["time"] == bucket:
             bar["high"], bar["low"], bar["close"] = max(bar["high"], last), min(bar["low"], last), last
