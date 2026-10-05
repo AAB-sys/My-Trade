@@ -53,6 +53,9 @@ their own logic. Read this before touching the code.
   login with no page and no handover is over. 30-day ceiling; kept in memory,
   so a restart ends it. No password set = open, with a warning. Pages show a
   **Log out** button whenever the login is on.
+- `dhan.py` - the owner's broker API (DhanHQ v2) as a data source: settings from
+  `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only, `status()` in plain
+  words; `check_dhan.py`/`check_dhan.bat` run it from the laptop.
 - `static/login.html` - the login page. `Procfile` - the host's start command.
   Hosting: one instance, secrets in the host's environment, `/health` for checks.
 - `start.bat` reads `HOST`/`PORT` from `.env` (defaults `127.0.0.1`/`8000`);
