@@ -148,7 +148,9 @@ the call entered, within one refresh (15 s) of the candle's open; it is recorded
 by the server and kept in `paper_calls.json`, because a live feed cannot give it
 back later. The premium now is read on every refresh while the call is open.
 The page must be open for a call to be recorded: a call that enters while no
-page is open gets no premium, and shows a dash. Only NIFTY 50 and NIFTY BANK
+page is open gets no premium, and shows a dash. While the page is open in
+market hours the price and the candle forming now tick every second from Dhan;
+the closed candles, and so the signals, are judged when the next candle begins. Only NIFTY 50 and NIFTY BANK
 are on Dhan so far; the other indices stay on Yahoo and have no options.
 
 **Not decided yet (owner to decide)**: whether to trade real money on any of

@@ -61,7 +61,12 @@ their own logic. Read this before touching the code.
   `paper_calls.json`; `status()`/`deep_checks()` in plain words for
   `check_dhan.py`/`check_dhan.bat`. `main.py` serves NIFTY 50/NIFTY BANK details
   from Dhan when configured (fallback to the usual source, reason in
-  `store["dhan"]`) and the `/options/{name}` routes the page uses.
+  `store["dhan"]`), the `/options/{name}` routes the page uses, and
+  `tick_forever()`: while an index page on Dhan is open (`/ws?live=<index>`) in
+  market hours, the last price every `DHAN_TICK_SECONDS`, folded into the candle
+  forming now (`live`) and pushed to those pages as `{"tick": ...}`; the page
+  moves the price, the last candle and the levels note on each tick and fetches
+  the candles when a new one begins.
 - `static/login.html` - the login page. `Procfile` - the host's start command.
   Hosting: one instance, secrets in the host's environment, `/health` for checks.
 - `start.bat` reads `HOST`/`PORT` from `.env` (defaults `127.0.0.1`/`8000`);

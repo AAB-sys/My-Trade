@@ -91,8 +91,17 @@ def expiries(name: str) -> list[str]:
 
 
 def last_price(name: str) -> float:
-    body = call("POST", "/marketfeed/ltp", {SEGMENT: [INDEX_IDS[name]]})
-    return float(body["data"][SEGMENT][str(INDEX_IDS[name])]["last_price"])
+    return last_prices([name])[name]
+
+
+def last_prices(names: list) -> dict:
+    """{index name: last price} in one request, not cached: this is the live tick."""
+    body = call("POST", "/marketfeed/ltp", {SEGMENT: [INDEX_IDS[n] for n in names]})
+    try:
+        data = body["data"][SEGMENT]
+        return {n: float(data[str(INDEX_IDS[n])]["last_price"]) for n in names if str(INDEX_IDS[n]) in data}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise DhanError("other", f"unexpected price answer from Dhan: {str(body)[:160]}") from exc
 
 
 def status() -> dict:
