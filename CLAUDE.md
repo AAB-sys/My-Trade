@@ -88,6 +88,12 @@ their own logic. Read this before touching the code.
   CSV download; nothing drawn on the chart), computed in the page from the
   summary and the bars. Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
+- `android/` - the dashboard as an Android app (Java, one Activity with a
+  WebView on the owner's server; blob downloads saved through a JavaScript
+  interface; `target=_blank` links kept in the same view so the login's tab
+  note survives). `.github/workflows/android.yml` builds and signs it with
+  `android/keystore/my-trade.jks` (a personal sideload key) and publishes the
+  APK on the `app-latest` release. Nothing in the app can reach Dhan directly.
 - `start.bat` - one-click start on Windows. `.env` is git-ignored; `.env.example`
   documents the settings.
 
