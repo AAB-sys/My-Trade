@@ -139,6 +139,16 @@ licensed source. So this is built only once the broker or data feed of phase 3b
 is connected, and nothing is estimated from the index meanwhile (owner's choice:
 no guessed premiums).
 
+**The option behind a call** (owner's decisions, 5 October): the prices come
+from the owner's **broker API**, with the key kept in `.env` and in the host's
+environment, never in the repo. A Buy CE call refers to the CE **one strike in
+the money**: the first strike below the index at entry; a Buy PE to the first
+strike above it. Both on the **nearest weekly expiry**. The premium paid is that
+option's price at the moment the call enters, recorded then and kept, because a
+live feed cannot give it back later; the current premium is read every refresh
+while the call is open. Still to settle once the broker is named: the exact
+symbols and strike step, how the daily login works, and what the feed costs.
+
 **Not decided yet (owner to decide)**: whether to trade real money on any of
 this, at what size, and with what daily limit. The score line over many days is
 the evidence for that choice.
