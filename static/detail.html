@@ -493,21 +493,21 @@
   //             break"), or either, as the switch says; when one candle signals at several levels,
   //             the one nearest its close counts: one candle, one call. A level that has given a
   //             call in a direction gives no more that way until the index closes back across it
-  //   confirm - the next candle must agree: after a cross it closes on the new side too; after a
-  //             hold it closes further from the level than the signal candle did. Else no call
+  //   the call - given the moment the signal candle closes; no confirming candle (owner's decision,
+  //             6 October: the call must come at once, not a candle later)
   //   option  - always bought, never sold: a CE when the candle closed above the level (the index
   //             should rise), a PE when it closed below (it should fall)
-  //   entry   - the open of the candle after the confirming one
-  //   target  - the next level in the call's direction; the call ends when a later candle reaches it.
-  //             No stop (owner's decision, 5 October): a call going the wrong way is held
+  //   entry   - the open of the next candle, i.e. the first price after the signal candle closes
+  //   target  - the next level in the call's direction; the call ends when a later candle reaches it,
+  //             the one forming now included, tick by tick. No stop (owner's decision, 5 October)
   //   day end - a call still open at the day's last candle ends at its close; nothing carries overnight
   //             (not on day candles, where a day is one candle: there a call runs on until its target)
-  //   every confirmed signal gives a call, whether or not earlier calls are still open;
+  //   every signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
   const SESSION_END = 15 * 3600 + 30 * 60;  // 3:30 pm IST, in seconds since midnight
   const dayOf = (t) => Math.floor((t + IST_OFFSET) / 86400);
   const dayOver = (day, now) => { const n = now + IST_OFFSET; return day < Math.floor(n / 86400) || n % 86400 >= SESSION_END; };
-  const HOW = { target: "Target", "day end": "Day end", open: "Still open", pending: "Enters at the next open", unconfirmed: "Needs the next candle to confirm" };
+  const HOW = { target: "Target", "day end": "Day end", open: "Still open", pending: "Enters at the next open" };
   let lastPaper = { trades: [], levels: [] };
 
   function signalAt(bar, prev, prices, used) {
@@ -523,44 +523,44 @@
     const side = bar.close > level ? "CE" : "PE";
     const target = side === "CE" ? prices.find(p => p > level) : prices.slice().reverse().find(p => p < level);
     if (target == null) return null;
-    return { signalTime: bar.time, level, kind, side, target, close: bar.close, entry: null, exit: null, points: null, how: "unconfirmed" };
+    return { signalTime: bar.time, level, kind, side, target, close: bar.close, entry: null, exit: null, points: null, how: "pending" };
   }
-  const confirms = (sig, bar) => sig.kind === "crossed"
-    ? (sig.side === "CE" ? bar.close > sig.level : bar.close < sig.level)   // still on the new side
-    : (sig.side === "CE" ? bar.close > sig.close : bar.close < sig.close);  // moved further from the level
 
   function paperTrades(levels) {
     const now = serverNow();
-    const closed = sessionBars().filter(b => endOf(b) <= now);
+    const bars = sessionBars();
+    const closed = bars.filter(b => endOf(b) <= now);
+    const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
     const prices = levels.map(l => l.price).sort((a, b) => a - b);
     const gain = (t, price) => Math.round((t.side === "CE" ? price - t.entry : t.entry - price) * 100) / 100;  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
+    const reaches = (t, bar) => t.side === "CE" ? bar.high >= t.target : bar.low <= t.target;
+    const newDay = (a, b) => state.interval !== "1d" && dayOf(a.time) !== dayOf(b.time);
     const trades = [];
     const used = {};  // level price + side -> true while that level has given a call that way
-    let waiting = null, ready = null, open = [];
+    let ready = null, open = [];
     for (let i = 1; i < closed.length; i++) {
       const bar = closed[i], prevBar = closed[i - 1];
-      if (state.interval !== "1d" && dayOf(bar.time) !== dayOf(prevBar.time)) {  // a new day: yesterday's calls ended with yesterday
+      if (newDay(bar, prevBar)) {  // a new day: yesterday's calls ended with yesterday
         open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = [];
-        waiting = null; ready = null;  // a signal late on a day has no candles left to confirm and enter on
+        ready = null;  // a signal on a day's last candle has no candle left to enter on
       }
       if (ready) { const t = { ...ready, entry: bar.open, entryTime: bar.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
-      if (waiting) {  // the signal candle's next candle: does it agree?
-        if (confirms(waiting, bar)) { ready = { ...waiting, how: "pending" }; used[waiting.level + waiting.side] = true; }
-        waiting = null;
-      }
-      open = open.filter(t => {
-        if (t.side === "CE" ? bar.high >= t.target : bar.low <= t.target) { end(t, t.target, bar, "target"); return false; }
-        return true;
-      });
+      open = open.filter(t => { if (reaches(t, bar)) { end(t, t.target, bar, "target"); return false; } return true; });
       prices.forEach(L => { if (bar.close < L) used[L + "CE"] = false; if (bar.close > L) used[L + "PE"] = false; });  // closed back across: the level may call again
-      waiting = signalAt(bar, prevBar.close, prices, used);  // every confirmed signal gives a call, open calls or not
+      const sig = signalAt(bar, prevBar.close, prices, used);  // the call, at the signal candle's close: every signal gives one, open calls or not
+      if (sig) { ready = sig; used[sig.level + sig.side] = true; }
     }
     const last = closed[closed.length - 1];
     const over = state.interval === "1d" ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
-    open.forEach(t => { if (over) end(t, last.close, last, "day end"); else t.points = gain(t, last.close); });
-    if (ready && !over) trades.push(ready);
-    if (waiting && !over) trades.push(waiting);
+    if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
+      if (ready) { const t = { ...ready, entry: forming.open, entryTime: forming.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
+      open = open.filter(t => { if (reaches(t, forming)) { end(t, t.target, forming, "target"); return false; } return true; });
+      open.forEach(t => t.points = gain(t, forming.close));
+    } else {
+      open.forEach(t => { if (over) end(t, last.close, last, "day end"); else t.points = gain(t, last.close); });
+    }
+    if (ready && !over) trades.push(ready);  // the next candle has not begun yet (a second or two): "Enters at the next open"
     return { trades, closed: closed.length };
   }
 
@@ -580,12 +580,12 @@
     const done = trades.filter(t => t.exit != null);
     const won = done.filter(t => t.points > 0).length, lost = done.filter(t => t.points < 0).length;
     const net = Math.round(done.reduce((s, t) => s + t.points, 0) * 100) / 100;
-    const running = trades.filter(t => t.how === "open").length, waiting = trades.some(t => t.how === "pending"), unsure = trades.some(t => t.how === "unconfirmed");
+    const running = trades.filter(t => t.how === "open").length, waiting = trades.some(t => t.how === "pending");
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
     score.textContent = (done.length
       ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
       : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
-      + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "") + (unsure ? " One needs the next candle to confirm." : "");
+      + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
     const pct = Object.fromEntries(levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
     table.hidden = !trades.length;
     table.classList.toggle("no-options", !(state.dhan && state.dhan.configured));
