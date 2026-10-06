@@ -100,6 +100,11 @@ their own logic. Read this before touching the code.
   both run one and the same rule.
 - `lab/` - the research engine (`replay.js`, run with node over `data/sessions`)
   and the log of rounds (`findings.md`). Loaded by no page.
+- `.github/workflows/wake.yml` - website side: wakes the sleeping host after the
+  close (15:42 IST) so the server saves the day, and at 16:10 reads `/health`
+  (`study.summary()`: the latest complete day, the day checked without a
+  session, any problem) and fails the run when the day is not saved and pushed.
+  The owner does not look after the saving (6 October); Claude does.
 - `study.py` - layer 4: the record of each session's candles only
   (`data/sessions/<date>.json`, git-ignored; written after the close and every
   few minutes during it; no premiums, no calls, the owner's choice) and its copy
@@ -134,7 +139,8 @@ their own logic. Read this before touching the code.
 
 The owner's rule (6 October): every pull request is one of two kinds, never
 both. A **website** pull request touches the dashboard the Render link and the
-laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `study.py`, `lab/`, the docs. An
+laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `study.py`, `lab/`,
+`.github/workflows/wake.yml`, the docs. An
 **Android app** pull request touches `android/` and `.github/workflows/android.yml`
 only. Say in the title which kind it is when it is not obvious.
 
