@@ -81,7 +81,11 @@ connection; whenever that stream is quiet it falls back to one price request a
 second, and its paper calls gain the option
 behind each call (one strike in the money, nearest expiry), the premium paid at
 entry, the premium now and the red Sell mark at half the premium paid
-(`LOGIC.md`, "Exit by premium"). Records live in `paper_calls.json` (git-ignored).
+(`LOGIC.md`, "Exit by premium"). The premium now moves tick by tick too: each
+open call's contract is added to the same feed connection (its security id read
+from Dhan's instrument list, a CSV fetched once at start and every 6 hours), the
+once-a-second poll carries it when the feed is quiet, and the option chain is
+read only when neither runs. Records live in `paper_calls.json` (git-ignored).
 Two settings, in `.env` on the laptop and in Render's Environment, never in the
 repo:
 

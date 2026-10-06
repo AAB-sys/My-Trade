@@ -156,7 +156,11 @@ the **nearest expiry** Dhan lists (weekly for NIFTY 50, monthly where that is
 all there is). The premium paid is that option's price when the page first sees
 the call entered, within one refresh (15 s) of the candle's open; it is recorded
 by the server and kept in `paper_calls.json`, because a live feed cannot give it
-back later. The premium now is read on every refresh while the call is open.
+back later. The premium now moves **tick by tick** while the call is open: the
+contract rides Dhan's live feed beside the index (its security id comes from
+Dhan's instrument list), with a once-a-second poll when the feed is quiet and the
+option chain only when neither is running (owner's choice, 6 October: no time
+shown next to it, just the live premium).
 The page must be open for a call to be recorded: a call that enters while no
 page is open gets no premium, and shows a dash. While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's

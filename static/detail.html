@@ -628,6 +628,7 @@
     drawFeedNote();
     table.querySelector("tbody").replaceChildren(...trades.slice().reverse().map(t => {
       const tr = document.createElement("tr");
+      tr.dataset.key = callKey(t);  // so a live premium finds its row
       const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
       tr.innerHTML = `<td>${istTime(t.signalTime, withDate())}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
         + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
@@ -655,6 +656,20 @@
       : r.premium_now <= r.sell_below ? `<td class="opt sell">SELL</td>`
       : `<td class="opt hold">hold, sell below ${fmt.format(r.sell_below)}</td>`;
     return `<td class="opt">${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}</td><td class="opt">${fmt.format(r.premium_paid)}</td><td class="opt">${fmt.format(r.premium_now)}</td>${sell}`;
+  }
+
+  // A premium from Dhan's feed (or the once-a-second poll) for one call: the row's option cells change in place,
+  // tick by tick, the way the index price does (see main.py push_premium)
+  function applyPremium(p) {
+    const r = optionRecords[p.key];
+    if (!r) return;  // the record arrives with the next refresh; the premium comes again with the next tick
+    Object.assign(r, p);
+    const tr = document.querySelector(`#paper tr[data-key="${CSS.escape(p.key)}"]`);
+    if (!tr) return;
+    const fresh = document.createElement("tr");
+    fresh.innerHTML = optionCells(r);
+    tr.querySelectorAll("td.opt").forEach(td => td.remove());
+    tr.append(...fresh.children);
   }
 
   const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK"];  // the indices the broker feed covers (dhan.INDEX_IDS)
@@ -988,7 +1003,7 @@
   // lives while some page does either.
   function keepAlive() {
     const ws = new WebSocket(wsUrl());
-    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); };
+    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); if (data.premium) applyPremium(data.premium); };
     ws.onclose = () => {
       beat();  // says "still here" at once, and finds out if the login is over
       setTimeout(keepAlive, 3000);

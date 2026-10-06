@@ -11,6 +11,7 @@ the repo:
 
 Only data endpoints are called here. Nothing in this file can place an order.
 """
+import csv
 import json
 import os
 import threading
@@ -24,7 +25,10 @@ from providers import bucket_start
 
 BASE = os.environ.get("DHAN_API_BASE", "https://api.dhan.co/v2")  # overridden only by tests
 SEGMENT = "IDX_I"                                  # Dhan's segment for an index itself
-INDEX_IDS = {"NIFTY 50": 13, "NIFTY BANK": 25}     # Dhan's security ids of the indices with options
+INDEX_IDS = {"NIFTY 50": 13, "NIFTY BANK": 25}
+OPTION_SEGMENT = "NSE_FNO"                                   # where the indices' options trade
+UNDERLYING = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY"}  # how Dhan's instrument list names the options' underlying
+SCRIP_MASTER_URL = os.environ.get("DHAN_SCRIP_MASTER_URL", "https://images.dhan.co/api-data/api-scrip-master.csv")     # Dhan's security ids of the indices with options
 IST = timezone(timedelta(hours=5, minutes=30))
 SELL_SHARE = float(os.environ.get("SELL_SHARE", "0.5"))  # the owner's rule: sell when the premium is at or below this share of what was paid
 RECORDS_FILE = Path(os.environ.get("CALL_RECORDS_FILE", Path(__file__).resolve().parent / "paper_calls.json"))
@@ -93,16 +97,23 @@ def expiries(name: str) -> list[str]:
 
 
 def last_price(name: str) -> float:
-    return last_prices([name])[name]
+    return last_prices([name])[0][name]
 
 
-def last_prices(names: list) -> dict:
-    """{index name: last price} in one request, not cached: this is the live tick."""
-    body = call("POST", "/marketfeed/ltp", {SEGMENT: [INDEX_IDS[n] for n in names]})
+def last_prices(names: list, option_ids: list = ()) -> tuple:
+    """({index name: last price}, {option security id: premium}) in one request, not cached: this is the
+    live tick, for the indices and for the option contracts behind the open calls."""
+    payload = {SEGMENT: [INDEX_IDS[n] for n in names]}
+    if option_ids:
+        payload[OPTION_SEGMENT] = [int(i) for i in option_ids]
+    body = call("POST", "/marketfeed/ltp", payload)
     try:
-        data = body["data"][SEGMENT]
-        return {n: float(data[str(INDEX_IDS[n])]["last_price"]) for n in names if str(INDEX_IDS[n]) in data}
-    except (KeyError, TypeError, ValueError) as exc:
+        data = body["data"]
+        indices = data.get(SEGMENT) or {}
+        options = data.get(OPTION_SEGMENT) or {}
+        return ({n: float(indices[str(INDEX_IDS[n])]["last_price"]) for n in names if str(INDEX_IDS[n]) in indices},
+                {int(i): float(options[str(i)]["last_price"]) for i in option_ids if str(i) in options})
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
         raise DhanError("other", f"unexpected price answer from Dhan: {str(body)[:160]}") from exc
 
 
@@ -329,6 +340,84 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     }
 
 
+# ---------------------------------------------------------------- the instrument list: the options' security ids
+
+def _parse_expiry(text: str):
+    """Dhan's instrument list writes the expiry as a date, sometimes with a time after it."""
+    head = text.strip()[:10]
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d-%b-%Y"):
+        try:
+            return datetime.strptime(head, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def _read_option_ids() -> dict:
+    """{(underlying, expiry iso, strike, side): security id} for the indices' options still to expire, read from
+    Dhan's instrument list (a large CSV; only the option rows of NIFTY and BANKNIFTY are kept)."""
+    found, columns = {}, None
+    wanted = set(UNDERLYING.values())
+    today = today_ist().isoformat()
+    try:
+        with httpx.stream("GET", SCRIP_MASTER_URL, timeout=180, follow_redirects=True) as response:
+            response.raise_for_status()
+            for row in csv.reader(response.iter_lines()):
+                if columns is None:  # the header: the columns are found by what their names contain, whatever the exact spelling
+                    def col(*needles):
+                        for i, name in enumerate(row):
+                            if all(n in name.upper() for n in needles):
+                                return i
+                        return None
+                    columns = (col("SECURITY_ID"), col("INSTRUMENT_NAME"), col("EXPIRY_DATE"), col("STRIKE"), col("OPTION_TYPE"),
+                               col("SYMBOL_NAME"), col("TRADING_SYMBOL"), col("EXCH_ID"))
+                    if None in columns[:5]:
+                        raise DhanError("other", f"Dhan's instrument list has an unexpected header: {', '.join(row)[:160]}")
+                    continue
+                sid, instrument, expiry, strike, side, symbol, trading, exchange = (row[i] if i is not None and i < len(row) else "" for i in columns)
+                if instrument.strip().upper() != "OPTIDX" or (exchange and exchange.strip().upper() != "NSE"):
+                    continue
+                underlying = symbol.strip().upper() or trading.strip().upper().split("-")[0]
+                if underlying not in wanted:
+                    continue
+                when = _parse_expiry(expiry)
+                if not when or when < today:
+                    continue
+                try:
+                    found[(underlying, when, round(float(strike), 2), side.strip().upper())] = int(float(sid))
+                except ValueError:
+                    continue
+    except httpx.HTTPError as exc:
+        raise DhanError("network", f"Dhan's instrument list could not be fetched ({type(exc).__name__}: {str(exc)[:100]})") from exc
+    if not found:
+        raise DhanError("other", "Dhan's instrument list had no NIFTY or BANKNIFTY options in it")
+    return found
+
+
+_option_ids = {"value": None, "until": 0.0}
+_option_ids_lock = threading.Lock()
+
+
+def option_ids() -> dict:
+    """The instrument list's option ids, read at most every 6 hours; a failed read is kept for 10 minutes."""
+    with _option_ids_lock:
+        if time.monotonic() >= _option_ids["until"]:
+            try:
+                value, ttl = _read_option_ids(), 6 * 3600
+            except DhanError as exc:
+                value, ttl = exc, 600
+            _option_ids.update(value=value, until=time.monotonic() + ttl)
+        value = _option_ids["value"]
+    if isinstance(value, DhanError):
+        raise value
+    return value
+
+
+def option_security_id(name: str, expiry: str, strike: float, side: str) -> int | None:
+    """The security id of one option contract, or None if the instrument list does not know it."""
+    return option_ids().get((UNDERLYING[name], expiry, round(float(strike), 2), side))
+
+
 # ---------------------------------------------------------------- the option chain
 
 def nearest_expiry(name: str) -> str:
@@ -343,8 +432,14 @@ def nearest_expiry(name: str) -> str:
 
 def chain(name: str, expiry: str) -> dict:
     """{"underlying": index level, "strikes": {strike: {"CE": premium, "PE": premium}}}, refreshed at most every 5 s
-    (Dhan allows one option-chain request per 3 s)."""
+    (Dhan allows one option-chain request per 3 s). A failed read is kept for those 5 s too, so a chain that
+    cannot be read is not asked again at once by every refresh, which would keep Dhan's rate limit tripping."""
     def make():
+        try:
+            return read()
+        except DhanError as exc:
+            return exc
+    def read():
         body = call("POST", "/optionchain", {"UnderlyingScrip": INDEX_IDS[name], "UnderlyingSeg": SEGMENT, "Expiry": expiry})
         data = body.get("data") or {}
         strikes = {}
@@ -362,7 +457,10 @@ def chain(name: str, expiry: str) -> dict:
         if not strikes:
             raise DhanError("other", f"unexpected option chain answer from Dhan: {str(body)[:160]}")
         return {"underlying": float(data.get("last_price") or 0), "strikes": strikes, "expiry": expiry, "time": datetime.now(IST).isoformat(timespec="seconds")}
-    return cached(("chain", name, expiry), 5, make)
+    result = cached(("chain", name, expiry), 5, make)
+    if isinstance(result, DhanError):
+        raise result
+    return result
 
 
 def itm_strike(strikes: dict, side: str, level: float) -> float | None:
@@ -422,34 +520,86 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
     now = datetime.now(IST).isoformat(timespec="seconds")
     record = {"key": key, "index": name, "side": side, "expiry": expiry, "strike": strike, "index_at_entry": float(index_at_entry),
               "premium_paid": premium, "paid_at": now, "premium_now": premium, "now_at": now, "sell_below": round(premium * SELL_SHARE, 2),
-              "sold": None, "ended": None}
+              "sold": None, "ended": None, "security_id": None}  # the id is filled in by fill_ids, so the premium is recorded at once
     with _records_lock:
         _records[key] = record
         _save_records()
     return dict(record)
 
 
-def refresh_records(name: str) -> None:
-    """Reads the premium now for every open record of the index and marks Sell the first time it is at or
-    below the sell point. The mark stays."""
-    todays = [r for r in records_for(name) if not r["ended"]]
-    if not todays:
-        return
-    now = datetime.now(IST).isoformat(timespec="seconds")
-    for r in todays:
-        try:
-            premium = chain(name, r["expiry"])["strikes"][r["strike"]][r["side"]]
-        except (DhanError, KeyError):
-            continue
-        with _records_lock:
-            rec = _records.get(r["key"])
-            if not rec:
-                continue
-            rec["premium_now"], rec["now_at"] = premium, now
-            if rec["sold"] is None and premium <= rec["sell_below"]:
-                rec["sold"] = {"premium": premium, "at": now}
+def note_premium(key: str, premium: float, when: str | None = None) -> dict | None:
+    """The premium now for one record, from the feed, the poll or the chain, and the Sell mark the first time
+    it is at or below the sell point. The mark stays. Returns the record as the page shows it, or None."""
+    premium = round(float(premium), 2)
+    with _records_lock:
+        rec = _records.get(key)
+        if not rec or rec["ended"]:
+            return None
+        rec["premium_now"], rec["now_at"] = premium, when or datetime.now(IST).isoformat(timespec="seconds")
+        if rec["sold"] is None and premium <= rec["sell_below"]:
+            rec["sold"] = {"premium": premium, "at": rec["now_at"]}
+        return dict(rec)
+
+
+def save_records() -> None:
     with _records_lock:
         _save_records()
+
+
+def open_options(names: list) -> dict:
+    """{security id: record key} for today's open calls of the indices named, where the contract's id is known."""
+    today = today_ist().isoformat()
+    with _records_lock:
+        return {r["security_id"]: r["key"] for r in _records.values()
+                if r["index"] in names and not r["ended"] and r["paid_at"][:10] == today and r.get("security_id")}
+
+
+def fill_ids(name: str) -> None:
+    """Looks up the security id of every open record still without one (the instrument list is read the first time)."""
+    with _records_lock:
+        missing = [dict(r) for r in _records.values() if r["index"] == name and not r["ended"] and not r.get("security_id")]
+    for r in missing:
+        sid = option_security_id(name, r["expiry"], r["strike"], r["side"])  # may raise: the caller says why
+        if sid:
+            with _records_lock:
+                if r["key"] in _records:
+                    _records[r["key"]]["security_id"] = sid
+
+
+def _fresh(rec: dict, seconds: float = 5) -> bool:
+    """Whether the record's premium was read within the last few seconds (by the feed or the poll)."""
+    try:
+        return (datetime.now(IST) - datetime.fromisoformat(rec["now_at"])).total_seconds() < seconds
+    except (KeyError, ValueError, TypeError):
+        return False
+
+
+def refresh_records(name: str) -> str | None:
+    """Keeps the premium now of every open record of the index current: a record the feed or the poll has just
+    updated is left alone; the others are read from the option chain. Returns None, or why a premium could not
+    be read this time (the record then keeps its last premium)."""
+    todays = [r for r in records_for(name) if not r["ended"]]
+    if not todays:
+        return None
+    problem = None
+    try:
+        fill_ids(name)
+    except DhanError as exc:
+        problem = f"the live feed cannot carry the premiums yet ({exc.message})"
+    for r in todays:
+        if _fresh(r):
+            continue
+        try:
+            premium = chain(name, r["expiry"])["strikes"][r["strike"]][r["side"]]
+        except DhanError as exc:
+            problem = exc.message
+            continue
+        except KeyError:
+            problem = f"Dhan's option chain carries no price for {int(r['strike'])} {r['side']} {r['expiry']} right now"
+            continue
+        note_premium(r["key"], premium)
+    save_records()
+    return problem
 
 
 def end_call(key: str, how: str) -> dict | None:

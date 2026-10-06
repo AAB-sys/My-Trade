@@ -299,17 +299,29 @@ async def push_tick(name: str) -> None:
                 live_subs.pop(ws, None)
 
 
+async def push_premium(rec: dict) -> None:
+    """One call's premium now (and its Sell mark) to every page watching that index."""
+    for ws, wanted in list(live_subs.items()):
+        if wanted == rec["index"]:
+            try:
+                await ws.send_json({"premium": {k: rec[k] for k in ("key", "premium_now", "now_at", "sold")}})
+            except Exception:
+                live_subs.pop(ws, None)
+
+
 async def tick_forever() -> None:
     """The fallback behind the stream: while an index page is open on Dhan during market hours and the
     stream has been quiet for a few seconds, the last price every TICK_SECONDS, one request for all
-    watched indices, folded into the candle forming now and pushed to those pages."""
+    watched indices and the option contracts behind their open calls, folded into the candle forming
+    now (the premiums into their records) and pushed to those pages."""
     while True:
         names = sorted(set(live_subs.values()))
         if not (DHAN_ON and names and in_tick_hours()) or time.time() - stream_at < 5:
             await asyncio.sleep(1)
             continue
+        options = dhan.open_options(names)
         try:
-            prices = await asyncio.to_thread(dhan.last_prices, names)
+            prices, premiums = await asyncio.to_thread(dhan.last_prices, names, list(options))
         except Exception as exc:
             dhan_status(False, dhan_reason(exc))
             await asyncio.sleep(10)
@@ -318,6 +330,12 @@ async def tick_forever() -> None:
         for name, last in prices.items():
             fold_tick(name, last, now, "poll")
             await push_tick(name)
+        for sid, premium in premiums.items():
+            rec = dhan.note_premium(options[sid], premium)
+            if rec:
+                await push_premium(rec)
+        if premiums:
+            dhan.save_records()
         await asyncio.sleep(TICK_SECONDS)
 
 
@@ -325,25 +343,35 @@ class FeedClosed(Exception):
     """Dhan hung up on purpose (packet type 50), with a reason."""
 
 
-def feed_packets(raw: bytes, by_id: dict):
-    """(index name, last price) for each price packet in one message from Dhan's feed. Packets start
-    with a type byte and a 2-byte length; types 2 (ticker), 4 (quote) and 8 (full) carry the last price
-    as a float after the 1-byte segment and 4-byte security id; type 50 is Dhan hanging up, with a reason."""
+FEED_SEGMENTS = {0: dhan.SEGMENT, 2: dhan.OPTION_SEGMENT}  # the feed's segment byte: 0 is IDX_I, 2 is NSE_FNO
+
+
+def feed_packets(raw: bytes):
+    """(segment name, security id, last price) for each price packet in one message from Dhan's feed.
+    Packets start with a type byte and a 2-byte length; types 2 (ticker), 4 (quote) and 8 (full) carry the
+    last price as a float after the 1-byte segment and 4-byte security id; type 50 is Dhan hanging up."""
     offset, found = 0, []
     while offset + 8 <= len(raw):
-        code, length, _segment, security_id = struct.unpack_from("<BHBI", raw, offset)
+        code, length, segment, security_id = struct.unpack_from("<BHBI", raw, offset)
         if code == 50:
             reason = struct.unpack_from("<H", raw, offset + 8)[0] if offset + 10 <= len(raw) else 0
             raise FeedClosed(FEED_CODES.get(reason, f"Dhan closed the feed (code {reason})"))
         if code in (2, 4, 8) and offset + 12 <= len(raw):
             last = struct.unpack_from("<f", raw, offset + 8)[0]
-            name = by_id.get(security_id)
-            if name and last > 0:
-                found.append((name, round(last, 2)))
+            if last > 0 and segment in FEED_SEGMENTS:
+                found.append((FEED_SEGMENTS[segment], security_id, round(last, 2)))
         if length < 8 or offset + length > len(raw):
             break  # one packet per message, or a length we do not trust: stop here
         offset += length
     return found
+
+
+async def feed_subscribe(ws, code: int, segment: str, ids: list) -> None:
+    """A subscribe (15) or unsubscribe (16) message, at most 100 instruments a message as Dhan asks."""
+    for start in range(0, len(ids), 100):
+        chunk = ids[start:start + 100]
+        await ws.send(json.dumps({"RequestCode": code, "InstrumentCount": len(chunk),
+                                  "InstrumentList": [{"ExchangeSegment": segment, "SecurityId": str(sid)} for sid in chunk]}))
 
 
 async def stream_forever() -> None:
@@ -362,20 +390,41 @@ async def stream_forever() -> None:
         url = f"{DHAN_FEED_URL}?version=2&token={token}&clientId={client_id}&authType=2"
         try:
             async with websockets.connect(url, ping_interval=20, ping_timeout=20, max_size=1 << 20) as ws:
-                await ws.send(json.dumps({"RequestCode": 15, "InstrumentCount": len(by_id),
-                                          "InstrumentList": [{"ExchangeSegment": dhan.SEGMENT, "SecurityId": str(sid)} for sid in by_id]}))
+                await feed_subscribe(ws, 15, dhan.SEGMENT, list(by_id))
                 store["dhan"]["stream"] = f"Stream: tick-by-tick from Dhan, connected at {now_ist()[11:19]}"
                 wait = 2
-                async for raw in ws:
-                    if not (live_subs and in_tick_hours()):
-                        break  # nobody watching, or the market closed: hang up
+                options, checked, saved = {}, 0.0, 0.0  # the option contracts behind open calls ride the same connection
+                while live_subs and in_tick_hours():  # else nobody watching, or the market closed: hang up
+                    now = time.time()
+                    if now - checked >= 1:  # calls enter and end: subscribe to their contracts, drop the ended ones
+                        checked = now
+                        wanted = dhan.open_options(list(by_id.values()))
+                        if set(wanted) != set(options):
+                            if new := [sid for sid in wanted if sid not in options]:
+                                await feed_subscribe(ws, 15, dhan.OPTION_SEGMENT, new)
+                            if gone := [sid for sid in options if sid not in wanted]:
+                                await feed_subscribe(ws, 16, dhan.OPTION_SEGMENT, gone)
+                        options = wanted
+                    try:
+                        raw = await asyncio.wait_for(ws.recv(), timeout=1)
+                    except asyncio.TimeoutError:
+                        continue
                     if not isinstance(raw, (bytes, bytearray)):
                         continue  # Dhan's text acknowledgements
                     now = time.time()
-                    for name, last in feed_packets(bytes(raw), by_id):
-                        fold_tick(name, last, now, "stream")
-                        stream_at = now
-                        await push_tick(name)
+                    for segment, sid, last in feed_packets(bytes(raw)):
+                        if segment == dhan.SEGMENT and sid in by_id:
+                            fold_tick(by_id[sid], last, now, "stream")
+                            stream_at = now
+                            await push_tick(by_id[sid])
+                        elif segment == dhan.OPTION_SEGMENT and sid in options:
+                            rec = dhan.note_premium(options[sid], last)
+                            stream_at = now
+                            if rec:
+                                await push_premium(rec)
+                            if now - saved >= 5:
+                                saved = now
+                                dhan.save_records()
             store["dhan"]["stream"] = "Stream: off (nobody watching, or the market is closed)"
             continue
         except FeedClosed as exc:  # Dhan hung up on purpose, with a reason: no point hammering it
@@ -389,11 +438,23 @@ async def stream_forever() -> None:
         wait = min(wait * 2, 30)
 
 
+async def warm_option_ids() -> None:
+    """Reads Dhan's instrument list once at start, in the background, so the first call of the day finds its
+    contract's id at once (the list is large; a failure is tried again when a call needs it)."""
+    try:
+        ids = await asyncio.to_thread(dhan.option_ids)
+        log.info("Dhan instrument list: %d option contracts of NIFTY and BANKNIFTY", len(ids))
+    except Exception as exc:
+        log.warning("Dhan instrument list: %s", exc)
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
     tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever())]
+    if DHAN_ON:
+        tasks.append(asyncio.create_task(warm_option_ids()))
     yield
     for task in tasks:
         task.cancel()
@@ -553,12 +614,16 @@ async def options_state(name: str):
     if not (DHAN_ON and key in dhan.INDEX_IDS):
         return {"active": False, "status": store["dhan"]["status"], "records": []}
     try:
-        await asyncio.to_thread(dhan.refresh_records, key)
+        problem = await asyncio.to_thread(dhan.refresh_records, key)
         expiry = await asyncio.to_thread(dhan.nearest_expiry, key)
     except Exception as exc:
         dhan_status(False, dhan_reason(exc))
         return {"active": False, "status": store["dhan"]["status"], "records": dhan.records_for(key)}
-    return {"active": True, "status": "Dhan: option premiums live from your account", "expiry": expiry,
+    # a premium that could not be read is said so, with the last values read left on the page, rather than
+    # shown as if live (the owner saw "Now" stand still on 6 October and could not tell why)
+    status = (f"Dhan: the option premiums could not be refreshed just now: {problem}. The last values read are shown."
+              if problem else "Dhan: option premiums live from your account")
+    return {"active": not problem, "status": status, "expiry": expiry,
             "sell_share": dhan.SELL_SHARE, "records": dhan.records_for(key)}
 
 
