@@ -30,6 +30,16 @@ their own logic. Read this before touching the code.
   choice marked "(owner to decide)". Code that implements it points there. Never
   settle an open choice silently: pick the smallest reasonable one, mark it, and
   make it a switch where that is cheap.
+- Ideas of Claude's own (the owner's standing instruction, 6 October): Claude may
+  read the saved candles (`data/sessions`, the `data` branch) and propose rules
+  built from this framework and these candles, never borrowed from elsewhere. A
+  proposal goes to the owner with the numbers, and **nothing is built until the
+  owner confirms**. A confirmed idea goes to the Study page first, as a switch
+  scored against the owner's rule on every saved day (`Rules.IDEAS` in
+  `static/rules.js`, options the index page never passes), and to the live index
+  page only after about 20 saved days still show it ahead, and only when the
+  owner says so. A study round never changes the index page's logic. The lab
+  (`lab/replay.js`, `lab/findings.md`) is the record of what was tested.
 
 ## Shape of the project
 
@@ -84,8 +94,12 @@ their own logic. Read this before touching the code.
   each tile links to `/index/{name}` in a new tab.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
-  candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`), loaded by the
-  index page and the study page so both run one and the same rule.
+  candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
+  under test (`IDEAS`, `ideasOf`: options of `paperTrades` that are off unless
+  the Study page passes them), loaded by the index page and the study page so
+  both run one and the same rule.
+- `lab/` - the research engine (`replay.js`, run with node over `data/sessions`)
+  and the log of rounds (`findings.md`). Loaded by no page.
 - `study.py` - layer 4: the record of each session's candles only
   (`data/sessions/<date>.json`, git-ignored; written after the close and every
   few minutes during it; no premiums, no calls, the owner's choice) and its copy
@@ -120,7 +134,7 @@ their own logic. Read this before touching the code.
 
 The owner's rule (6 October): every pull request is one of two kinds, never
 both. A **website** pull request touches the dashboard the Render link and the
-laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `study.py`, the docs. An
+laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `study.py`, `lab/`, the docs. An
 **Android app** pull request touches `android/` and `.github/workflows/android.yml`
 only. Say in the title which kind it is when it is not obvious.
 

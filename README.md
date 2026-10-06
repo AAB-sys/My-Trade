@@ -120,7 +120,11 @@ when the high and the low came, breaks of the previous day's high and low), how
 the candles behave at every Fibonacci level (touched, held, crossed, and whether
 the price then reached the next level), and the candle high and low breaks. A
 learning step on the candles' facts switches on once a setting has 100 finished
-calls over 10 days (`LOGIC.md`, layer 4).
+calls over 10 days (`LOGIC.md`, layer 4). **Ideas under test** (`LOGIC.md`, layer
+5) are switches on the Study page only, each scored against your rule on every
+saved day in the table "Your rule against the ideas under test"; the index page
+does not use them. `lab/replay.js` replays every idea tried so far over the saved
+days, and `lab/findings.md` is the log of each round.
 
 Render's files do not last (a restart wipes them), so each day is also pushed to
 the `data` branch of your own repository. That needs one more secret, made once:

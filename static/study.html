@@ -63,6 +63,8 @@
   tr.best td { background: var(--mark); }
   tr.picked td { font-weight: 600; }
   td.l, th.l { text-align: left; }
+  label.idea { font-size: 13px; color: var(--ink); display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  label.idea input { accent-color: var(--ink); width: 16px; height: 16px; margin: 0; }
   #learn .box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
   footer { margin-top: 24px; font-size: 12px; color: var(--muted); line-height: 1.5; }
   [hidden] { display: none !important; }
@@ -89,6 +91,7 @@
       <span class="lbl">Signal</span>
       <select class="pick" id="signal" aria-label="Signal"><option value="held">Held</option><option value="crossed">Crossed</option><option value="both">Both</option></select>
     </div>
+    <div class="controls" id="ideas-row"><span class="lbl">Ideas under test</span></div>
     <div id="setting-note" class="note"></div>
     <div class="tiles" id="tiles"></div>
 
@@ -103,6 +106,10 @@
 
     <h2>By side and signal</h2>
     <div class="scroll"><table id="sides"><thead><tr><th>Call</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>Your rule against the ideas under test</h2>
+    <div class="note">The setting picked above, scored on the same days under your rule as it is and under each idea. These ideas live on this page only; the index page does not use them.</div>
+    <div class="scroll"><table id="ideas"><thead><tr><th>Rule</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th><th>Per call</th><th>Ended by the clock</th><th>Day-end calls</th><th>Worst call</th><th>Days ahead</th></tr></thead><tbody></tbody></table></div>
 
     <h2>Every setting, side by side</h2>
     <div class="note">The same days under every time frame, levels and signal. The best net is marked; the setting picked above is in bold.</div>
@@ -130,7 +137,8 @@
   const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 };
   const NAMES = { interval: { "1m": "1 min", "5m": "5 min", "15m": "15 min", "30m": "30 min" }, move: { prev: "Previous day", today: "Today so far" },
                   signal: { held: "Held", crossed: "Crossed", both: "Both" } };
-  const state = { days: [], files: {}, store: null, index: "NIFTY 50", interval: "5m", move: "prev", signal: "held" };
+  const state = { days: [], files: {}, store: null, index: "NIFTY 50", interval: "5m", move: "prev", signal: "held", ideas: [] };  // ideas: the keys switched on (study only)
+  try { const k = JSON.parse(localStorage.getItem("study-ideas") || "[]"); if (Array.isArray(k)) state.ideas = k.filter(x => Rules.IDEAS[x]); } catch (e) {}
   try { const m = localStorage.getItem("levels"); if (["prev", "today"].includes(m)) state.move = m; } catch (e) {}  // the index page's choices carry over
   try { const s = localStorage.getItem("signal"); if (["held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -145,18 +153,18 @@
   const el = (id) => document.getElementById(id);
 
   // ---- the rule, run over one saved day (Rules.replayDay, the same code as the index page)
-  function replay(file, index, interval, move, signal) {
+  function replay(file, index, interval, move, signal, keys) {
     const ix = file.indices && file.indices[index];
     const bars = ix && ix.candles && ix.candles[interval];
     if (!bars || !bars.length) return [];
-    return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal }).trades
+    return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal, ideas: Rules.ideasOf(keys || []) }).trades
       .filter(t => t.exit != null).map(t => ({ ...t, date: file.date, bars, previous: ix.previous }));  // on a finished day every call has ended
   }
   const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];
     return ix && ix.candles[interval] && ix.candles[interval].length ? { date: d.date, complete: d.complete, bars: ix.candles[interval], previous: ix.previous } : null; }).filter(Boolean);  // oldest first
   const levelsFor = (move, previous) => move === "prev" ? (previous ? (() => { const fixed = Rules.levelsOf(Rules.moveOfDay(previous)); return () => fixed; })() : null)
     : (bars) => (i) => Rules.levelsOf(Rules.moveOf(bars.slice(0, i + 1)));
-  const allTrades = (index, interval, move, signal) => state.days.flatMap(d => state.files[d.date] ? replay(state.files[d.date], index, interval, move, signal) : []);
+  const allTrades = (index, interval, move, signal, keys = state.ideas) => state.days.flatMap(d => state.files[d.date] ? replay(state.files[d.date], index, interval, move, signal, keys) : []);
   function tally(trades) {
     const won = trades.filter(t => t.points > 0).length, lost = trades.filter(t => t.points < 0).length;
     const net = Rules.round2(trades.reduce((s, t) => s + t.points, 0));
@@ -173,8 +181,8 @@
     const trades = allTrades(index, interval, move, signal);
     const s = tally(trades);
     const daysWithBars = state.days.filter(d => { const f = state.files[d.date]; return f && f.indices[index] && f.indices[index].candles[interval] && f.indices[index].candles[interval].length; });
-    el("setting-note").textContent = `${index}, ${NAMES.interval[interval]} candles, ${NAMES.move[move]} levels, ${NAMES.signal[signal]} signal: `
-      + `${daysWithBars.length} day${daysWithBars.length === 1 ? "" : "s"} replayed`
+    el("setting-note").textContent = `${index}, ${NAMES.interval[interval]} candles, ${NAMES.move[move]} levels, ${NAMES.signal[signal]} signal`
+      + (state.ideas.length ? `, with ${state.ideas.join(" and ")} on` : "") + `: ${daysWithBars.length} day${daysWithBars.length === 1 ? "" : "s"} replayed`
       + (move === "today" ? ". Today-so-far levels are replayed as they stood when each candle closed, the day's range up to that candle." : ".");
     el("tiles").replaceChildren(...[["Calls", s.calls, ""], ["Won", s.won, ""], ["Lost", s.lost, ""], ["Hit rate", pct(s.won, s.calls), ""],
       ["Net points", signed.format(s.net), cls(s.net)], ["Per call", signed.format(s.avg), cls(s.avg)]].map(([k, v, c]) => {
@@ -204,10 +212,33 @@
       tr.innerHTML = cell(NAMES.interval[r.i]) + cell(NAMES.move[r.m]) + cell(NAMES.signal[r.g]) + cell(r.calls) + cell(r.won) + cell(r.lost) + cell(pct(r.won, r.calls)) + num(r.net) + num(r.avg) + cell(r.days);
       return tr;
     }));
+    drawIdeas(daysWithBars.length);
     drawPatterns();
     drawBehaviour();
     drawBreaks();
     drawLearning(trades);
+  }
+
+  // ---- your rule against the ideas under test, on the picked setting: always from the rule as it is, whatever the boxes say
+  function drawIdeas(dayCount) {
+    const { index, interval, move, signal } = state;
+    const sets = [[], ...Object.keys(Rules.IDEAS).map(k => [k])];
+    if (Object.keys(Rules.IDEAS).length > 1) sets.push(Object.keys(Rules.IDEAS));
+    const base = allTrades(index, interval, move, signal, []);
+    const byDay = (L) => { const m = {}; L.forEach(t => m[t.date] = Rules.round2((m[t.date] || 0) + t.points)); return m; };
+    const baseDays = byDay(base);
+    el("ideas").querySelector("tbody").replaceChildren(...sets.map(keys => {
+      const L = allTrades(index, interval, move, signal, keys), s = tally(L), days = byDay(L);
+      const ahead = keys.length ? Object.keys({ ...baseDays, ...days }).filter(d => (days[d] || 0) > (baseDays[d] || 0)).length : null;
+      const worst = L.length ? Math.min(...L.map(t => t.points)) : 0;
+      const tr = document.createElement("tr");
+      tr.className = keys.join("+") === state.ideas.join("+") ? "picked" : "";
+      tr.innerHTML = cell(keys.length ? keys.map(k => `${k}: ${Rules.IDEAS[k].name.toLowerCase()}`).join(" + ") : "Your rule as it is")
+        + cell(s.calls) + cell(s.won) + cell(s.lost) + cell(pct(s.won, s.calls)) + num(s.net) + num(s.avg)
+        + cell(L.filter(t => t.how === "time").length) + cell(L.filter(t => t.how === "day end").length) + num(worst)
+        + cell(ahead == null ? "—" : `${ahead} of ${dayCount}`);
+      return tr;
+    }));
   }
 
   // ---- each day's pattern, from the candles of the picked time frame
@@ -396,6 +427,17 @@
 
   el("logout").addEventListener("click", () => { fetch("/logout", { method: "POST" }).finally(() => location.href = "/login"); });
   ["index", "interval", "move", "signal"].forEach(id => el(id).addEventListener("change", e => { state[id] = e.target.value; draw(); }));
+  Object.values(Rules.IDEAS).forEach(idea => {  // the boxes: each idea on or off for everything on this page, remembered per browser
+    const label = document.createElement("label"); label.className = "idea";
+    const box = document.createElement("input"); box.type = "checkbox"; box.id = "idea-" + idea.key; box.checked = state.ideas.includes(idea.key);
+    box.addEventListener("change", () => {
+      state.ideas = Object.keys(Rules.IDEAS).filter(k => el("idea-" + k).checked);
+      try { localStorage.setItem("study-ideas", JSON.stringify(state.ideas)); } catch (e) {}
+      if (state.days.length) draw();
+    });
+    label.append(box, `${idea.key}: ${idea.name}`);
+    el("ideas-row").append(label);
+  });
   el("interval").value = state.interval; el("move").value = state.move; el("signal").value = state.signal;
   el("save").addEventListener("click", async () => {
     const note = el("save-note"); note.textContent = "Saving…"; note.className = "note";
