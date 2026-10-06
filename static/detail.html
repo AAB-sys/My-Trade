@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My-Trade</title>
 <script src="/static/vendor/lightweight-charts.js"></script>
+<script src="/static/rules.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -183,6 +184,7 @@
 <main>
   <div class="top">
     <a href="/">&larr; Dashboard</a>
+    <a href="/study/" id="study-link" title="The rules run over every saved day">Study</a>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Loading…</span>
     <button id="logout" type="button" hidden>Log out</button>
@@ -413,11 +415,8 @@
     drawLevels();
   }
 
-  // ---- Layer 1 of the owner's logic: Fibonacci levels of one move (see LOGIC.md)
-  // A move runs between a low and a high. The levels sit part-way back along it at
-  // fixed fractions. For a move that went up (low first, then high) the fractions are
-  // measured down from the high; for a move that went down, up from the low.
-  const RATIOS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+  // ---- Layer 1 of the owner's logic: Fibonacci levels of one move (see LOGIC.md). The rule itself lives
+  // in /static/rules.js (Rules), shared with the study page, so both run one and the same rule.
   let priceLines = [];
   let lastLevelsKey = "";
 
@@ -464,10 +463,9 @@
       return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
     }
     if (state.move === "today") {
-      const sb = sessionBars();
-      if (!sb.length) return null;
-      return { high: Math.max(...sb.map(b => b.high)), low: Math.min(...sb.map(b => b.low)), up: sb[sb.length - 1].close >= sb[0].open,
-               what: key === "all" ? "days shown" : isToday(key) ? "today so far" : dayLabel(key) };
+      const mv = Rules.moveOf(sessionBars());
+      if (!mv) return null;
+      return { ...mv, what: key === "all" ? "days shown" : isToday(key) ? "today so far" : dayLabel(key) };
     }
     if (!bars.length) return null;
     let hi = 0, lo = 0;
@@ -475,17 +473,12 @@
     return { high: bars[hi].high, low: bars[lo].low, up: lo < hi, what: "bars shown" };  // whichever end came first
   }
 
-  function levelsOf(m) {
-    const span = m.high - m.low;
-    return RATIOS.map(r => ({ ratio: r, price: Math.round((m.up ? m.high - r * span : m.low + r * span) * 100) / 100 }));
-  }
+  const levelsOf = Rules.levelsOf;
 
   // ---- Layer 2 of the owner's logic, held and crossed (see LOGIC.md), is judged inside the paper
   // calls below; its own table came off the page on 6 October (owner's choice).
   const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1d": 86400 };
-  // when a candle closes: its size on, but never past 3:30 pm of its day (the day's last 30-minute
-  // candle is a half one, and a day candle ends at the close)
-  const endOf = (b) => Math.min(b.time + SECONDS[state.interval], dayOf(b.time) * 86400 - IST_OFFSET + SESSION_END);
+  const endOf = (b) => Rules.endOf(b, SECONDS[state.interval]);  // when a candle closes (never past 3:30 pm of its day)
 
   // ---- Layer 3 of the owner's logic: paper calls (see LOGIC.md)
   // The rule, run over the closed candles shown with the levels on the chart:
@@ -504,64 +497,15 @@
   //             (not on day candles, where a day is one candle: there a call runs on until its target)
   //   every signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
-  const SESSION_END = 15 * 3600 + 30 * 60;  // 3:30 pm IST, in seconds since midnight
-  const dayOf = (t) => Math.floor((t + IST_OFFSET) / 86400);
-  const dayOver = (day, now) => { const n = now + IST_OFFSET; return day < Math.floor(n / 86400) || n % 86400 >= SESSION_END; };
+  const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
   const HOW = { target: "Target", "day end": "Day end", open: "Still open", pending: "Enters at the next open" };
   let lastPaper = { trades: [], levels: [] };
 
-  function signalAt(bar, prev, prices, used) {
-    const crossed = L => (prev < L && bar.close > L) || (prev > L && bar.close < L);
-    const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
-    const hits = prices.filter(L => {
-      const kind = crossed(L) ? "crossed" : held(L) ? "held" : null;
-      return kind && (state.signal === "both" || state.signal === kind) && !used[L + (bar.close > L ? "CE" : "PE")];
-    });
-    if (!hits.length) return null;
-    const level = hits.reduce((a, b) => Math.abs(b - bar.close) < Math.abs(a - bar.close) ? b : a);
-    const kind = crossed(level) ? "crossed" : "held";
-    const side = bar.close > level ? "CE" : "PE";
-    const target = side === "CE" ? prices.find(p => p > level) : prices.slice().reverse().find(p => p < level);
-    if (target == null) return null;
-    return { signalTime: bar.time, level, kind, side, target, close: bar.close, entry: null, exit: null, points: null, how: "pending" };
-  }
-
+  // The rule is Rules.paperTrades in /static/rules.js; this page hands it the session's candles, the levels on the
+  // chart (which stand still within one run; the live page redraws them on a new high or low) and the server's clock
   function paperTrades(levels) {
-    const now = serverNow();
-    const bars = sessionBars();
-    const closed = bars.filter(b => endOf(b) <= now);
-    const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
-    const prices = levels.map(l => l.price).sort((a, b) => a - b);
-    const gain = (t, price) => Math.round((t.side === "CE" ? price - t.entry : t.entry - price) * 100) / 100;  // index points
-    const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
-    const reaches = (t, bar) => t.side === "CE" ? bar.high >= t.target : bar.low <= t.target;
-    const newDay = (a, b) => state.interval !== "1d" && dayOf(a.time) !== dayOf(b.time);
-    const trades = [];
-    const used = {};  // level price + side -> true while that level has given a call that way
-    let ready = null, open = [];
-    for (let i = 1; i < closed.length; i++) {
-      const bar = closed[i], prevBar = closed[i - 1];
-      if (newDay(bar, prevBar)) {  // a new day: yesterday's calls ended with yesterday
-        open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = [];
-        ready = null;  // a signal on a day's last candle has no candle left to enter on
-      }
-      if (ready) { const t = { ...ready, entry: bar.open, entryTime: bar.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
-      open = open.filter(t => { if (reaches(t, bar)) { end(t, t.target, bar, "target"); return false; } return true; });
-      prices.forEach(L => { if (bar.close < L) used[L + "CE"] = false; if (bar.close > L) used[L + "PE"] = false; });  // closed back across: the level may call again
-      const sig = signalAt(bar, prevBar.close, prices, used);  // the call, at the signal candle's close: every signal gives one, open calls or not
-      if (sig) { ready = sig; used[sig.level + sig.side] = true; }
-    }
-    const last = closed[closed.length - 1];
-    const over = state.interval === "1d" ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
-    if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
-      if (ready) { const t = { ...ready, entry: forming.open, entryTime: forming.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
-      open = open.filter(t => { if (reaches(t, forming)) { end(t, t.target, forming, "target"); return false; } return true; });
-      open.forEach(t => t.points = gain(t, forming.close));
-    } else {
-      open.forEach(t => { if (over) end(t, last.close, last, "day end"); else t.points = gain(t, last.close); });
-    }
-    if (ready && !over) trades.push(ready);  // the next candle has not begun yet (a second or two): "Enters at the next open"
-    return { trades, closed: closed.length };
+    return Rules.paperTrades({ bars: sessionBars(), levelsAt: () => levels, now: serverNow(), seconds: SECONDS[state.interval],
+                               dayCandles: state.interval === "1d", signal: state.signal });
   }
 
   function drawPaper(levels) {
@@ -586,7 +530,7 @@
       ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
       : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
       + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
-    const pct = Object.fromEntries(levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
+    const pct = (t) => (t.ratio * 100).toFixed(1) + "%";
     table.hidden = !trades.length;
     table.classList.toggle("no-options", !(state.dhan && state.dhan.configured));
     drawFeedNote();
@@ -594,7 +538,7 @@
       const tr = document.createElement("tr");
       tr.dataset.key = callKey(t);  // so a live premium finds its row
       const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
-      tr.innerHTML = `<td>${istTime(t.signalTime, withDate())}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
+      tr.innerHTML = `<td>${istTime(t.signalTime, withDate())}</td><td>${pct(t)} (${fmt.format(t.level)}) ${t.kind}</td>`
         + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
         + `<td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
         + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`
@@ -666,7 +610,8 @@
         const key = callKey(t);
         if (t.how === "open" && !registered.has(key) && !optionRecords[key]) {
           registered.add(key);
-          const r = await post(`/options/${encodeURIComponent(name)}/calls`, { key, side: t.side, index_at_entry: t.entry });
+          const r = await post(`/options/${encodeURIComponent(name)}/calls`, { key, side: t.side, index_at_entry: t.entry,  // and which setting gave the call, for the record of the day
+            interval: state.interval, signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, target: t.target, levels: state.move, signal: state.signal });
           if (r.status === 401) { location.href = "/login"; return; }
           if (!r.ok) registered.delete(key);  // try again next time
         }
@@ -1032,12 +977,11 @@
   });
   document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
     const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-    const pct = Object.fromEntries(lastPaper.levels.map(l => [l.price, (l.ratio * 100).toFixed(1) + "%"]));
     const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by",
                   "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium"];
     const rows = lastPaper.trades.map(t => {
       const r = optionRecords[callKey(t)];
-      return [stamp(t.signalTime), pct[t.level], t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how,
+      return [stamp(t.signalTime), (t.ratio * 100).toFixed(1) + "%", t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how,
               r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : ""];
     });
     const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });

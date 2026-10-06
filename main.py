@@ -14,10 +14,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 import websockets
 
 import dhan
+import study
 from providers import INDICES, INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 
 BASE = Path(__file__).parent
@@ -136,6 +138,7 @@ live_subs: dict = {}     # websocket -> the index name whose ticks it wants (an 
 logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "dropped_at", "last_beat"}}, "handover_until"}
 ws_pages: dict[WebSocket, tuple[str, str]] = {}  # socket -> (token, page id)
 PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
+PAGE_EXACT = ("/study", "/study/")  # pages too; everything else under /study/ is data and needs the note
 
 
 # ---------------------------------------------------------------- login
@@ -492,7 +495,8 @@ async def lifespan(app: FastAPI):
     asyncio.get_running_loop().set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=16, thread_name_prefix="work"))
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
-    tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever())]
+    tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever()),
+             asyncio.create_task(study.study_forever(DHAN_ON))]
     if DHAN_ON:
         tasks.append(asyncio.create_task(warm_option_ids()))
     yield
@@ -503,12 +507,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Indices API", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # the saved days are large; compressed they travel fast to a phone
 
 
 @app.middleware("http")
 async def require_login(request: Request, call_next):
     path = request.url.path
-    is_page = path == "/" or path.startswith(PAGE_PATHS[1:])
+    is_page = path == "/" or path in PAGE_EXACT or path.startswith(PAGE_PATHS[1:])
     if path.startswith(OPEN_PATHS) or (page_allowed(request) if is_page else logged_in(request)):
         return await call_next(request)
     if "text/html" in request.headers.get("accept", ""):
@@ -684,8 +689,9 @@ async def options_register(name: str, request: Request):
         raise HTTPException(status_code=400, detail="index_at_entry must be a number")
     if not call_key or side not in ("CE", "PE"):
         raise HTTPException(status_code=400, detail="key and side (CE or PE) are required")
+    details = {k: (v if isinstance(v, (int, float)) else str(v)[:40]) for k, v in body.items() if k in dhan.CALL_DETAILS}
     try:
-        return await asyncio.to_thread(dhan.register_call, key, call_key, side, level)
+        return await asyncio.to_thread(dhan.register_call, key, call_key, side, level, details)
     except Exception as exc:
         dhan_status(False, dhan_reason(exc))
         raise HTTPException(status_code=502, detail=store["dhan"]["status"])
@@ -699,6 +705,50 @@ async def options_ended(name: str, request: Request):
     if record is None:
         raise HTTPException(status_code=404, detail="no such call recorded")
     return record
+
+
+# ---------------------------------------------------------------- the record of each session, and the study of it (study.py)
+
+@app.get("/study/")
+@app.get("/study", include_in_schema=False)
+def study_page():
+    return FileResponse(STATIC / "study.html", headers=NO_CACHE)
+
+
+@app.get("/study/days")
+def study_days():
+    """The saved days, newest first, and where they are kept."""
+    return {"days": study.saved_days(), "store": {**study.state, "dhan": DHAN_ON, "save_at": study.SAVE_AT}, "today": dhan.today_ist().isoformat(),
+            "sell_share": dhan.SELL_SHARE}
+
+
+@app.get("/study/days/{day}")
+def study_day(day: str):
+    try:
+        when = datetime.strptime(day, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="the day must be YYYY-MM-DD")
+    data = study.read_day(when)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"no record of {day}")
+    return data
+
+
+@app.post("/study/save")
+async def study_save():
+    """Saves today now (a partial copy during the session, the final one after it), and says how it went."""
+    if not DHAN_ON:
+        raise HTTPException(status_code=409, detail="Only sessions on Dhan are recorded, and Dhan is not set up here.")
+    now = datetime.now(dhan.IST)
+    complete = now.weekday() < 5 and (now.hour, now.minute) >= study.save_time()
+    try:
+        data = await asyncio.to_thread(study.save_day, now.date(), complete)
+    except study.StudyError as exc:
+        return {"saved": False, "problem": str(exc), "reason": ""}
+    if data is None:
+        return {"saved": False, "problem": study.state["problem"], "reason": "Dhan has no candle for today yet: nothing to save."}
+    return {"saved": True, "date": data["date"], "complete": complete, "calls": len(data["calls"]), "problem": study.state["problem"],
+            "pushed_at": study.state["pushed_at"]}
 
 
 @app.get("/indices/{name}")

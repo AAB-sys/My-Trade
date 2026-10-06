@@ -492,6 +492,8 @@ def itm_strike(strikes: dict, side: str, level: float) -> float | None:
 
 _records: dict = {}   # key -> record
 _records_lock = threading.Lock()
+_records_changes = 0  # counts every change, so the session record (study.py) knows when there is something new to copy
+SAMPLE_SECONDS = 60   # a call's premium is kept once a minute (and at its Sell mark and its end), for the record of the day
 
 
 def _load_records() -> None:
@@ -519,10 +521,44 @@ def records_for(name: str) -> list:
         return [dict(r) for r in _records.values() if r["index"] == name and r["paid_at"][:10] == today]
 
 
-def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict:
+def records_on(day: str) -> list:
+    """Every record of one day (YYYY-MM-DD), any index, oldest first: the day's calls for the session record."""
+    with _records_lock:
+        return sorted((json.loads(json.dumps(r)) for r in _records.values() if r["paid_at"][:10] == day), key=lambda r: r["paid_at"])
+
+
+def records_version() -> int:
+    return _records_changes
+
+
+def _changed() -> None:
+    global _records_changes
+    _records_changes += 1
+
+
+def restore_records(records: list) -> int:
+    """Records saved earlier (the session record's copy of today) back into memory after a restart wiped them,
+    leaving alone any the server already has. Returns how many came back."""
+    back = 0
+    with _records_lock:
+        for r in records:
+            if isinstance(r, dict) and r.get("key") and r["key"] not in _records:
+                _records[r["key"]] = r
+                back += 1
+        if back:
+            _save_records()
+            _changed()
+    return back
+
+
+CALL_DETAILS = ("interval", "signal_time", "level", "ratio", "kind", "target", "levels", "signal")  # what the page may say about a call, kept for the study
+
+
+def register_call(name: str, key: str, side: str, index_at_entry: float, details: dict | None = None) -> dict:
     """Records the option behind a call the page has seen enter: the one-strike-in-the-money contract on the
     nearest expiry, and its premium now, which is the premium paid. Asked again for the same key, returns
-    the record as it is."""
+    the record as it is. `details` (which setting gave the call: the time frame, the level, held or crossed,
+    the target) is kept as it is, for the study."""
     with _records_lock:
         if key in _records:
             return dict(_records[key])
@@ -535,11 +571,31 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
     now = datetime.now(IST).isoformat(timespec="seconds")
     record = {"key": key, "index": name, "side": side, "expiry": expiry, "strike": strike, "index_at_entry": float(index_at_entry),
               "premium_paid": premium, "paid_at": now, "premium_now": premium, "now_at": now, "sell_below": round(premium * SELL_SHARE, 2),
-              "sold": None, "ended": None, "security_id": None}  # the id is filled in by fill_ids, so the premium is recorded at once
+              "sold": None, "ended": None, "security_id": None,  # the id is filled in by fill_ids, so the premium is recorded at once
+              "premiums": [[now[11:19], premium]], "premium_at_end": None,  # the premium's path, once a minute, for the record of the day
+              **{k: v for k, v in (details or {}).items() if k in CALL_DETAILS}}
     with _records_lock:
         _records[key] = record
         _save_records()
+        _changed()
     return dict(record)
+
+
+def _clock_seconds(hms: str) -> int:
+    h, m, s = (int(x) for x in hms[:8].split(":"))
+    return h * 3600 + m * 60 + s
+
+
+def _sample(rec: dict, premium: float, when: str, always: bool = False) -> None:
+    """The premium into the record's path ([time of day, premium]), at most once a minute unless `always` (the
+    Sell mark, the end)."""
+    path = rec.setdefault("premiums", [])
+    try:
+        due = not path or abs(_clock_seconds(when[11:19]) - _clock_seconds(path[-1][0])) >= SAMPLE_SECONDS
+    except (ValueError, IndexError, TypeError):
+        due = True
+    if always or due:
+        path.append([when[11:19], premium])
 
 
 def note_premium(key: str, premium: float, when: str | None = None) -> dict | None:
@@ -551,8 +607,11 @@ def note_premium(key: str, premium: float, when: str | None = None) -> dict | No
         if not rec or rec["ended"]:
             return None
         rec["premium_now"], rec["now_at"] = premium, when or datetime.now(IST).isoformat(timespec="seconds")
-        if rec["sold"] is None and premium <= rec["sell_below"]:
+        sold_now = rec["sold"] is None and premium <= rec["sell_below"]
+        if sold_now:
             rec["sold"] = {"premium": premium, "at": rec["now_at"]}
+            _changed()
+        _sample(rec, premium, rec["now_at"], always=sold_now)
         return dict(rec)
 
 
@@ -623,7 +682,10 @@ def end_call(key: str, how: str) -> dict | None:
         rec = _records.get(key)
         if rec and not rec["ended"]:
             rec["ended"] = {"how": how, "at": datetime.now(IST).isoformat(timespec="seconds")}
+            rec["premium_at_end"] = rec["premium_now"]  # the last premium read while the call was open
+            _sample(rec, rec["premium_now"], rec["ended"]["at"], always=True)
             _save_records()
+            _changed()
         return dict(rec) if rec else None
 
 
