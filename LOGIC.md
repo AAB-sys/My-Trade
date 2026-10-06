@@ -239,3 +239,39 @@ finished calls over 10 days**; with fewer, a model only learns the chance
 pattern of those days and would mislead, so until then the page shows the
 counter. It never fires a call and never changes a rule: it is evidence for the
 owner's own decisions, and it says nothing a plain reading of the tables cannot.
+
+## Layer 5: Ideas under test - the Study page only
+
+The owner's standing instruction (6 October): Claude may read the saved candles
+and propose rules of its own, built from this framework and these candles, not
+borrowed from anywhere. A proposal goes to the owner with the numbers. **Nothing
+is built until the owner confirms.** A confirmed idea goes to the Study page
+first, as a switch scored against the owner's rule on every saved day, and
+reaches the live index page only after about 20 saved days still show it ahead,
+and only when the owner says so. The index page's logic is never changed by a
+study round. The engine behind the pages (`static/rules.js`) carries the ideas
+as options that are off unless the Study page asks for them; the index page
+never asks.
+
+Under test since 6 October (confirmed by the owner for the Study page):
+
+- **P1: close open calls at 15:00.** Every call still open ends at the close of
+  the first candle that closes at or after 15:00, and no new call opens after
+  that. The reason: on the first five saved days the last half hour ran against
+  the open calls more often than not, and a call entered then rarely reached its
+  target.
+- **P2: no new calls after 14:00.** A signal candle that closes after 14:00
+  gives no call. The reason: a call needs time to reach its target, and the
+  calls entered after 14:00 were mostly the day-end losers.
+
+Tested and set aside on the same five days (`lab/findings.md` has the numbers):
+ending a call when a candle closes back across its level (it cut about half the
+winners), a stop at half or the full distance to the target (caps the worst call,
+costs about two thirds of the net: the owner's risk choice, not taken from five
+days), levels from the first 15 or 30 minutes' range, trading only with the
+day's direction, a 5-minute signal only when the higher frame agrees (mixed),
+leaving out the 23.6% level (a gain on NIFTY BANK only, to watch).
+
+The lab (`lab/replay.js`) replays every idea over the saved days and is the
+record of what was tested.
+

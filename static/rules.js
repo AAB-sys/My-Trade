@@ -57,7 +57,12 @@
   //   the call   given the moment the signal candle closes; entry at the open of the next candle; target the next level in the
   //              call's direction, reached tick by tick (the forming candle counts); no stop; a call still open at the day's last
   //              candle ends at its close; every signal gives a call, open calls or not
-  function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal }) {
+  //   ideas      the ideas under test (LOGIC.md, layer 5), each off unless asked for; the index page never asks, so its calls
+  //              are untouched: closeAt (seconds since midnight IST: every open call ends at the close of the first candle
+  //              closing at or after it, and no call opens after it), noNewAfter (a signal candle closing after it gives no call)
+  function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal, ideas }) {
+    const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter;
+    const clockEnd = (b) => (b.time + IST_OFFSET) % 86400 + seconds;  // when the candle closes, in seconds since midnight IST
     const closed = bars.filter(b => endOf(b, seconds) <= now);
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
     const gain = (t, price) => round2(t.side === "CE" ? price - t.entry : t.entry - price);  // index points
@@ -75,10 +80,12 @@
       }
       if (ready) { const t = { ...ready, entry: bar.open, entryTime: bar.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
       open = open.filter(t => { if (reaches(t, bar)) { end(t, t.target, bar, "target"); return false; } return true; });
+      if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       const levels = levelsAt(i);
       levels.forEach(l => { if (bar.close < l.price) used[l.ratio + "CE"] = false; if (bar.close > l.price) used[l.ratio + "PE"] = false; });  // closed back across: the level may call again
       const sig = signalAt(bar, prevBar.close, levels, used, signal);  // the call, at the signal candle's close
-      if (sig) { ready = sig; used[sig.ratio + sig.side] = true; }
+      const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
+      if (sig && !late) { ready = sig; used[sig.ratio + sig.side] = true; }
     }
     const last = closed[closed.length - 1];
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
@@ -96,12 +103,19 @@
   // A finished day replayed: every candle has closed, so the clock is set past the day's end. "Previous day" levels
   // stand still; "today so far" levels are the ones the page had drawn when each candle closed, the day's range up
   // to that candle (the live page redraws them with every new high or low)
-  function replayDay({ bars, move, previous, seconds, signal }) {
+  function replayDay({ bars, move, previous, seconds, signal, ideas }) {
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null;
     if (move === "prev" && !fixed) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : (i) => levelsOf(moveOf(bars.slice(0, i + 1)));
-    return paperTrades({ bars, levelsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal });
+    return paperTrades({ bars, levelsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas });
   }
+  // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
+  // page only on 6 October. The index page does not know them.
+  const IDEAS = {
+    P1: { key: "P1", name: "Close open calls at 15:00", ideas: { closeAt: 15 * 3600 } },
+    P2: { key: "P2", name: "No new calls after 14:00", ideas: { noNewAfter: 14 * 3600 } },
+  };
+  const ideasOf = (keys) => Object.assign({}, ...keys.map(k => IDEAS[k].ideas));
 
   // ---- Layer 4, the study: plain facts about a day's candles (LOGIC.md). Candles only: no premiums anywhere here.
   function breakOf(bars, line, dir) {  // the first candle closing beyond a line (up: above it; down: below it), and what the day did after it
@@ -164,5 +178,5 @@
   }
 
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay,
-                 breakOf, dayFacts, candleBreaks, levelBehaviour };
+                 breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);
