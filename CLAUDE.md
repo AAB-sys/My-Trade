@@ -61,7 +61,9 @@ their own logic. Read this before touching the code.
   quotes and the option chain for `INDEX_IDS` (NIFTY 50, NIFTY BANK), with small
   caches for Dhan's rate limits; the record of each paper call's option (strike
   one in the money, nearest expiry, premium paid, premium now, the Sell mark) in
-  `paper_calls.json`; `status()`/`deep_checks()` in plain words for
+  `paper_calls.json`, with the contract's security id from Dhan's instrument list
+  (`option_ids()`, a CSV at `DHAN_SCRIP_MASTER_URL`) so the feed and the poll in
+  `main.py` carry its premium tick by tick (`note_premium`, `open_options`); `status()`/`deep_checks()` in plain words for
   `check_dhan.py`/`check_dhan.bat`. `main.py` serves NIFTY 50/NIFTY BANK details
   from Dhan when configured (fallback to the usual source, reason in
   `store["dhan"]`), the `/options/{name}` routes the page uses, and

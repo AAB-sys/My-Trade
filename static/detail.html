@@ -115,7 +115,6 @@
   #paper td.down { color: var(--down); }
   #paper td.sell { color: #fff; background: var(--down); font-weight: 600; text-align: center; padding-left: 10px; }
   #paper td.hold { color: var(--muted); }
-  #paper td small { font-size: 11px; color: var(--muted); margin-left: 5px; }  /* when the premium was read */
   #paper.no-options .opt { display: none; }
   #feed-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
   #paper[hidden] { display: none; }
@@ -629,6 +628,7 @@
     drawFeedNote();
     table.querySelector("tbody").replaceChildren(...trades.slice().reverse().map(t => {
       const tr = document.createElement("tr");
+      tr.dataset.key = callKey(t);  // so a live premium finds its row
       const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
       tr.innerHTML = `<td>${istTime(t.signalTime, withDate())}</td><td>${pct[t.level]} (${fmt.format(t.level)}) ${t.kind}</td>`
         + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
@@ -649,16 +649,27 @@
   let syncing = false;
   const callKey = (t) => `${state.interval}|${t.signalTime}|${t.level}|${t.side}`;
   const expiryLabel = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
-  const readAt = (iso) => iso ? new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) : "";
 
   function optionCells(r) {
     if (!r) return `<td class="opt">—</td><td class="opt">—</td><td class="opt">—</td><td class="opt">—</td>`;
     const sell = r.sold ? `<td class="opt sell">SOLD at ${fmt.format(r.sold.premium)}</td>`
       : r.premium_now <= r.sell_below ? `<td class="opt sell">SELL</td>`
       : `<td class="opt hold">hold, sell below ${fmt.format(r.sell_below)}</td>`;
-    // "Now" carries the time the premium was read, so a value that stands still can be told from one that is live
-    return `<td class="opt">${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}</td><td class="opt">${fmt.format(r.premium_paid)}</td>`
-      + `<td class="opt">${fmt.format(r.premium_now)}<small>${readAt(r.now_at)}</small></td>${sell}`;
+    return `<td class="opt">${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}</td><td class="opt">${fmt.format(r.premium_paid)}</td><td class="opt">${fmt.format(r.premium_now)}</td>${sell}`;
+  }
+
+  // A premium from Dhan's feed (or the once-a-second poll) for one call: the row's option cells change in place,
+  // tick by tick, the way the index price does (see main.py push_premium)
+  function applyPremium(p) {
+    const r = optionRecords[p.key];
+    if (!r) return;  // the record arrives with the next refresh; the premium comes again with the next tick
+    Object.assign(r, p);
+    const tr = document.querySelector(`#paper tr[data-key="${CSS.escape(p.key)}"]`);
+    if (!tr) return;
+    const fresh = document.createElement("tr");
+    fresh.innerHTML = optionCells(r);
+    tr.querySelectorAll("td.opt").forEach(td => td.remove());
+    tr.append(...fresh.children);
   }
 
   const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK"];  // the indices the broker feed covers (dhan.INDEX_IDS)
@@ -992,7 +1003,7 @@
   // lives while some page does either.
   function keepAlive() {
     const ws = new WebSocket(wsUrl());
-    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); };
+    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); if (data.premium) applyPremium(data.premium); };
     ws.onclose = () => {
       beat();  // says "still here" at once, and finds out if the login is over
       setTimeout(keepAlive, 3000);
