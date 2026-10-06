@@ -394,20 +394,35 @@ def _read_option_ids() -> dict:
     return found
 
 
-_option_ids = {"value": None, "until": 0.0}
+_option_ids = {"value": None, "until": 0.0, "busy": False}
 _option_ids_lock = threading.Lock()
 
 
-def option_ids() -> dict:
-    """The instrument list's option ids, read at most every 6 hours; a failed read is kept for 10 minutes."""
+def _refresh_option_ids() -> None:
+    """Reads the list (a large download) in a thread of its own; never raises."""
+    try:
+        value, ttl = _read_option_ids(), 6 * 3600
+    except DhanError as exc:
+        value, ttl = exc, 600
+    except Exception as exc:  # whatever happens, the list is never left stuck "busy"
+        value, ttl = DhanError("other", f"Dhan's instrument list could not be read ({type(exc).__name__}: {str(exc)[:100]})"), 600
     with _option_ids_lock:
-        if time.monotonic() >= _option_ids["until"]:
-            try:
-                value, ttl = _read_option_ids(), 6 * 3600
-            except DhanError as exc:
-                value, ttl = exc, 600
-            _option_ids.update(value=value, until=time.monotonic() + ttl)
+        _option_ids.update(value=value, until=time.monotonic() + ttl, busy=False)
+
+
+def option_ids() -> dict:
+    """The instrument list's option ids as read so far. The read itself (a large download, up to minutes on a
+    slow line) runs in a thread of its own, started here when the list is missing or older than 6 hours (10
+    minutes after a failure), so no request ever waits for it: on 6 October requests waiting on that download
+    used up the server's worker threads and the whole page stalled. Until the first read lands this raises,
+    and the premiums come from the option chain meanwhile; a stale list is used while a fresh one is read."""
+    with _option_ids_lock:
+        if time.monotonic() >= _option_ids["until"] and not _option_ids["busy"]:
+            _option_ids["busy"] = True
+            threading.Thread(target=_refresh_option_ids, name="dhan-instrument-list", daemon=True).start()
         value = _option_ids["value"]
+    if value is None:
+        raise DhanError("other", "Dhan's instrument list is still being read")
     if isinstance(value, DhanError):
         raise value
     return value
@@ -584,8 +599,8 @@ def refresh_records(name: str) -> str | None:
     problem = None
     try:
         fill_ids(name)
-    except DhanError as exc:
-        problem = f"the live feed cannot carry the premiums yet ({exc.message})"
+    except DhanError:
+        pass  # no instrument list yet: the chain below carries the premiums until it lands
     for r in todays:
         if _fresh(r):
             continue
