@@ -55,6 +55,8 @@
   h1 { font-size: 20px; font-weight: 600; margin: 0; }
   #status { color: var(--ink-2); font-size: 14px; }
   #status.error { color: var(--down); }
+  header a.page { color: var(--ink-2); font-size: 14px; text-decoration: none; }
+  header a.page:hover { color: var(--ink); }
   #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
   #mode.on { display: inline-block; }
   #missing { flex-basis: 100%; color: var(--down); font-size: 14px; }
@@ -104,6 +106,7 @@
     <h1>Indian market indices</h1>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Connecting…</span>
+    <a class="page" href="/study/" title="The rules run over every saved day">Study</a>
     <button id="logout" type="button" hidden>Log out</button>
     <span id="missing"></span>
     <span id="open-warning" hidden>No password is set, so anyone who can reach this address can see this page. Fine on your own laptop; set DASHBOARD_PASSWORD before putting it online.</span>

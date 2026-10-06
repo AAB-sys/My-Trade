@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Study · My-Trade</title>
+<script src="/static/rules.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --border: rgba(11, 11, 11, 0.10); --grid: #e1e0d9;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781; --up: #006300; --down: #d03b3b; --mark: rgba(0, 99, 0, 0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255, 255, 255, 0.10); --grid: #2c2c2a;
+      --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --up: #0ca30c; --down: #e66767; --mark: rgba(12, 163, 12, 0.16);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --border: rgba(255, 255, 255, 0.10); --grid: #2c2c2a;
+    --ink: #ffffff; --ink-2: #c3c2b7; --muted: #898781; --up: #0ca30c; --down: #e66767; --mark: rgba(12, 163, 12, 0.16);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  .top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+  .top a { color: var(--ink-2); font-size: 14px; text-decoration: none; }
+  .top a:hover { color: var(--ink); }
+  #status { color: var(--ink-2); font-size: 14px; margin-left: auto; }
+  #status.error { color: var(--down); }
+  #logout { align-self: center; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+  #logout[hidden] { display: none; }
+  .hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 12px 0 6px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  .sub { font-size: 14px; color: var(--ink-2); }
+  h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 22px 0 6px; }
+  .note { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin: 6px 0; }
+  .note.problem, .bad { color: var(--down); }
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 10px 0; }
+  .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  select.pick, button.act {
+    font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer; max-width: 100%;
+    color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  }
+  select.pick { padding-right: 30px; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23898781' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center; }
+  select.pick:hover, button.act:hover { border-color: var(--ink-2); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 8px 0 4px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+  .tile .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .tile .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .tile .v.up { color: var(--up); } .tile .v.down { color: var(--down); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  td.up { color: var(--up); } td.down { color: var(--down); }
+  tr.best td { background: var(--mark); }
+  tr.picked td { font-weight: 600; }
+  td.l, th.l { text-align: left; }
+  #learn .box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.5; }
+  footer { margin-top: 24px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <a href="/">&larr; Dashboard</a>
+    <span id="status">Loading…</span>
+    <button id="logout" type="button" hidden>Log out</button>
+  </div>
+  <div class="hero"><h1>Study</h1><span class="sub">Your rules and your candles, over every saved trading day</span></div>
+  <div id="store" class="note"></div>
+  <div class="controls"><button class="act" id="save" type="button">Save today now</button><span id="save-note" class="note"></span></div>
+
+  <div id="body" hidden>
+    <div class="controls">
+      <span class="lbl">Index</span><select class="pick" id="index" aria-label="Index"></select>
+      <span class="lbl">Time frame</span>
+      <select class="pick" id="interval" aria-label="Time frame"><option value="1m">1 min</option><option value="5m" selected>5 min</option><option value="15m">15 min</option><option value="30m">30 min</option></select>
+      <span class="lbl">Levels</span>
+      <select class="pick" id="move" aria-label="Levels"><option value="prev">Previous day</option><option value="today">Today so far</option></select>
+      <span class="lbl">Signal</span>
+      <select class="pick" id="signal" aria-label="Signal"><option value="held">Held</option><option value="crossed">Crossed</option><option value="both">Both</option></select>
+    </div>
+    <div id="setting-note" class="note"></div>
+    <div class="tiles" id="tiles"></div>
+
+    <h2>Day by day</h2>
+    <div class="scroll"><table id="days"><thead><tr><th>Day</th><th>Calls</th><th>Won</th><th>Lost</th><th>Net points</th><th class="l">The calls</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>By the hour the signal came</h2>
+    <div class="scroll"><table id="hours"><thead><tr><th>Hour</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>By level</h2>
+    <div class="scroll"><table id="levels"><thead><tr><th>Level</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>By side and signal</h2>
+    <div class="scroll"><table id="sides"><thead><tr><th>Call</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>Every setting, side by side</h2>
+    <div class="note">The same days under every time frame, levels and signal. The best net is marked; the setting picked above is in bold.</div>
+    <div class="scroll"><table id="all"><thead><tr><th>Time frame</th><th>Levels</th><th>Signal</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th><th>Per call</th><th>Days with calls</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>Each day's pattern</h2>
+    <div id="pattern-note" class="note"></div>
+    <div class="scroll"><table id="pattern"><thead><tr><th>Day</th><th>Gap at the open</th><th>Open to close</th><th>Range</th><th>High at</th><th>Low at</th><th>Close in the range</th><th class="l">Closed above the previous day's high</th><th class="l">Closed below the previous day's low</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>The candles at the levels</h2>
+    <div id="levels-note" class="note"></div>
+    <div class="scroll"><table id="behaviour"><thead><tr><th>Level</th><th>Touched</th><th>Held</th><th>Crossed</th><th>Held share</th><th>After a hold: reached the next level</th><th>After a cross: went on to the next level</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>Candle high and low breaks</h2>
+    <div id="breaks-note" class="note"></div>
+    <div class="scroll"><table id="breaks"><thead><tr><th>A candle that closed</th><th>Times</th><th>The next candle went on that way</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>What the winning calls have in common</h2>
+    <div id="learn"></div>
+  </div>
+  <footer id="footer"></footer>
+</main>
+
+<script>
+  const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 };
+  const NAMES = { interval: { "1m": "1 min", "5m": "5 min", "15m": "15 min", "30m": "30 min" }, move: { prev: "Previous day", today: "Today so far" },
+                  signal: { held: "Held", crossed: "Crossed", both: "Both" } };
+  const state = { days: [], files: {}, store: null, index: "NIFTY 50", interval: "5m", move: "prev", signal: "held" };
+  try { const m = localStorage.getItem("levels"); if (["prev", "today"].includes(m)) state.move = m; } catch (e) {}  // the index page's choices carry over
+  try { const s = localStorage.getItem("signal"); if (["held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
+  const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
+  const pct = (n, d) => d ? Math.round(n / d * 100) + "%" : "—";
+  const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
+  const istTime = (epoch) => epoch == null ? "—" : new Date(epoch * 1000).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
+  const hourLabel = (epoch) => new Date(epoch * 1000).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric" }).replace(/^0/, "");
+  const cls = (v) => v > 0 ? "up" : v < 0 ? "down" : "";
+  const cell = (v, c = "") => `<td class="${c}">${v}</td>`;
+  const num = (v) => cell(signed.format(v), cls(v));
+  const el = (id) => document.getElementById(id);
+
+  // ---- the rule, run over one saved day (Rules.replayDay, the same code as the index page)
+  function replay(file, index, interval, move, signal) {
+    const ix = file.indices && file.indices[index];
+    const bars = ix && ix.candles && ix.candles[interval];
+    if (!bars || !bars.length) return [];
+    return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal }).trades
+      .filter(t => t.exit != null).map(t => ({ ...t, date: file.date, bars, previous: ix.previous }));  // on a finished day every call has ended
+  }
+  const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];
+    return ix && ix.candles[interval] && ix.candles[interval].length ? { date: d.date, complete: d.complete, bars: ix.candles[interval], previous: ix.previous } : null; }).filter(Boolean);  // oldest first
+  const levelsFor = (move, previous) => move === "prev" ? (previous ? (() => { const fixed = Rules.levelsOf(Rules.moveOfDay(previous)); return () => fixed; })() : null)
+    : (bars) => (i) => Rules.levelsOf(Rules.moveOf(bars.slice(0, i + 1)));
+  const allTrades = (index, interval, move, signal) => state.days.flatMap(d => state.files[d.date] ? replay(state.files[d.date], index, interval, move, signal) : []);
+  function tally(trades) {
+    const won = trades.filter(t => t.points > 0).length, lost = trades.filter(t => t.points < 0).length;
+    const net = Rules.round2(trades.reduce((s, t) => s + t.points, 0));
+    return { calls: trades.length, won, lost, net, avg: trades.length ? Rules.round2(net / trades.length) : 0, days: new Set(trades.map(t => t.date)).size };
+  }
+  const group = (trades, by) => { const g = {}; trades.forEach(t => (g[by(t)] = g[by(t)] || []).push(t)); return g; };
+  const tallyRows = (tbody, groups, order) => {
+    tbody.replaceChildren(...order.map(k => { const s = tally(groups[k] || []); const tr = document.createElement("tr");
+      tr.innerHTML = cell(k) + cell(s.calls) + cell(s.won) + cell(s.lost) + cell(pct(s.won, s.calls)) + num(s.net); return tr; }));
+  };
+
+  function draw() {
+    const { index, interval, move, signal } = state;
+    const trades = allTrades(index, interval, move, signal);
+    const s = tally(trades);
+    const daysWithBars = state.days.filter(d => { const f = state.files[d.date]; return f && f.indices[index] && f.indices[index].candles[interval] && f.indices[index].candles[interval].length; });
+    el("setting-note").textContent = `${index}, ${NAMES.interval[interval]} candles, ${NAMES.move[move]} levels, ${NAMES.signal[signal]} signal: `
+      + `${daysWithBars.length} day${daysWithBars.length === 1 ? "" : "s"} replayed`
+      + (move === "today" ? ". Today-so-far levels are replayed as they stood when each candle closed, the day's range up to that candle." : ".");
+    el("tiles").replaceChildren(...[["Calls", s.calls, ""], ["Won", s.won, ""], ["Lost", s.lost, ""], ["Hit rate", pct(s.won, s.calls), ""],
+      ["Net points", signed.format(s.net), cls(s.net)], ["Per call", signed.format(s.avg), cls(s.avg)]].map(([k, v, c]) => {
+      const d = document.createElement("div"); d.className = "tile"; d.innerHTML = `<div class="k">${k}</div><div class="v ${c}">${v}</div>`; return d; }));
+
+    // day by day, newest first, with the calls in a few words
+    const byDay = group(trades, t => t.date);
+    el("days").querySelector("tbody").replaceChildren(...daysWithBars.map(d => {
+      const list = byDay[d.date] || [], t = tally(list), tr = document.createElement("tr");
+      const words = list.map(c => `${istTime(c.signalTime)} ${c.side} ${(c.ratio * 100).toFixed(1)}% ${c.kind} ${signed.format(c.points)}`).join(", ");
+      tr.innerHTML = cell(dayLabel(d.date) + (d.complete ? "" : " (partial)")) + cell(t.calls) + cell(t.won) + cell(t.lost) + num(t.net) + `<td class="l">${words || "—"}</td>`;
+      return tr;
+    }));
+    const hours = ["9 am", "10 am", "11 am", "12 pm", "1 pm", "2 pm", "3 pm"];
+    tallyRows(el("hours").querySelector("tbody"), group(trades, t => hourLabel(t.signalTime)), hours);
+    tallyRows(el("levels").querySelector("tbody"), group(trades, t => (t.ratio * 100).toFixed(1) + "%"), Rules.RATIOS.map(r => (r * 100).toFixed(1) + "%"));
+    const kinds = signal === "both" ? ["CE held", "CE crossed", "PE held", "PE crossed"] : ["CE " + signal, "PE " + signal];
+    tallyRows(el("sides").querySelector("tbody"), group(trades, t => t.side + " " + t.kind), kinds);
+
+    // every setting side by side
+    const rows = [];
+    for (const i of Object.keys(SECONDS)) for (const m of ["prev", "today"]) for (const g of ["held", "crossed", "both"]) rows.push({ i, m, g, ...tally(allTrades(index, i, m, g)) });
+    const best = Math.max(...rows.map(r => r.net));
+    el("all").querySelector("tbody").replaceChildren(...rows.map(r => {
+      const tr = document.createElement("tr");
+      tr.className = (r.calls && r.net === best ? "best " : "") + (r.i === interval && r.m === move && r.g === signal ? "picked" : "");
+      tr.innerHTML = cell(NAMES.interval[r.i]) + cell(NAMES.move[r.m]) + cell(NAMES.signal[r.g]) + cell(r.calls) + cell(r.won) + cell(r.lost) + cell(pct(r.won, r.calls)) + num(r.net) + num(r.avg) + cell(r.days);
+      return tr;
+    }));
+    drawPatterns();
+    drawBehaviour();
+    drawBreaks();
+    drawLearning(trades);
+  }
+
+  // ---- each day's pattern, from the candles of the picked time frame
+  function drawPatterns() {
+    const days = dayBars(state.index, state.interval).reverse();  // newest first
+    const facts = days.map(d => ({ ...d, f: Rules.dayFacts(d.bars, d.previous) }));
+    const withPrev = facts.filter(x => x.f.gap != null);
+    const up = withPrev.filter(x => x.f.gap > 0).length, down = withPrev.filter(x => x.f.gap < 0).length, closedUp = facts.filter(x => x.f.change > 0).length;
+    const above = withPrev.filter(x => x.f.aboveHigh), below = withPrev.filter(x => x.f.belowLow);
+    const stayed = (list, key) => list.filter(x => !x.f[key].backAt).length;
+    el("pattern-note").textContent = `${facts.length} day${facts.length === 1 ? "" : "s"}: opened above the previous close on ${up}, below it on ${down}; closed above its open on ${closedUp}. `
+      + `Closed above the previous day's high on ${above.length} day${above.length === 1 ? "" : "s"}${above.length ? ` (stayed above to the close on ${stayed(above, "aboveHigh")})` : ""}, `
+      + `below its low on ${below.length}${below.length ? ` (stayed below on ${stayed(below, "belowLow")})` : ""}.`;
+    const brk = (b) => !b ? "—" : `${istTime(b.time)}, then ${signed.format(b.toClose)} to the close` + (b.backAt ? `, back inside at ${istTime(b.backAt)}` : "");
+    el("pattern").querySelector("tbody").replaceChildren(...facts.map(x => {
+      const f = x.f, tr = document.createElement("tr");
+      tr.innerHTML = cell(dayLabel(x.date) + (x.complete ? "" : " (so far)")) + (f.gap == null ? cell("—") : num(f.gap)) + num(f.change) + cell(fmt.format(f.range))
+        + cell(istTime(f.highAt)) + cell(istTime(f.lowAt)) + cell(f.closeInRange == null ? "—" : f.closeInRange + "%") + `<td class="l">${brk(f.aboveHigh)}</td><td class="l">${brk(f.belowLow)}</td>`;
+      return tr;
+    }));
+  }
+
+  // ---- how the candles behave at every level, over every judged candle of every day (not only the ones that gave a call)
+  function drawBehaviour() {
+    const days = dayBars(state.index, state.interval);
+    const totals = {}; Rules.RATIOS.forEach(r => totals[r] = { touched: 0, held: 0, crossed: 0, heldJudged: 0, heldOn: 0, crossedJudged: 0, crossedOn: 0 });
+    let counted = 0;
+    days.forEach(d => {
+      const at = levelsFor(state.move, d.previous); if (!at) return;
+      counted++;
+      const rows = Rules.levelBehaviour(d.bars, state.move === "prev" ? at : at(d.bars));
+      Rules.RATIOS.forEach(r => Object.keys(totals[r]).forEach(k => totals[r][k] += rows[r][k]));
+    });
+    el("levels-note").textContent = `${counted} day${counted === 1 ? "" : "s"}, ${NAMES.interval[state.interval]} candles, ${NAMES.move[state.move]} levels. A candle touched a level when its high and low straddle it; held and crossed are the rule's own judgement; `
+      + `"reached the next level" means the price got to the next level in that direction before a candle closed back across this one, by the day's end.`;
+    const share = (n, d) => d ? `${n} of ${d} (${Math.round(n / d * 100)}%)` : "—";
+    el("behaviour").querySelector("tbody").replaceChildren(...Rules.RATIOS.map(r => {
+      const t = totals[r], tr = document.createElement("tr");
+      tr.innerHTML = cell((r * 100).toFixed(1) + "%") + cell(t.touched) + cell(t.held) + cell(t.crossed) + cell(pct(t.held, t.held + t.crossed)) + cell(share(t.heldOn, t.heldJudged)) + cell(share(t.crossedOn, t.crossedJudged));
+      return tr;
+    }));
+  }
+
+  // ---- candles closing beyond the previous candle's high or low
+  function drawBreaks() {
+    const days = dayBars(state.index, state.interval);
+    const t = { up: 0, upWentOn: 0, upJudged: 0, down: 0, downWentOn: 0, downJudged: 0 };
+    days.forEach(d => { const b = Rules.candleBreaks(d.bars); Object.keys(t).forEach(k => t[k] += b[k]); });
+    const share = (n, d) => d ? `${n} of ${d} (${Math.round(n / d * 100)}%)` : "—";
+    el("breaks-note").textContent = `${days.length} day${days.length === 1 ? "" : "s"}, ${NAMES.interval[state.interval]} candles: a candle that closed above the previous candle's high, or below its low, and whether the candle after it closed further that way.`;
+    el("breaks").querySelector("tbody").replaceChildren(...[["above the previous candle's high", t.up, share(t.upWentOn, t.upJudged)], ["below the previous candle's low", t.down, share(t.downWentOn, t.downJudged)]].map(([k, n, s]) => {
+      const tr = document.createElement("tr"); tr.innerHTML = cell(k) + cell(n) + cell(s); return tr; }));
+  }
+
+  // ---- the learning step: a small model of the owner's own calls, switched on only once there are enough of them.
+  // Each finished call is described by nine plain facts read off the candles (when in the session, which level, CE or
+  // PE, held or crossed, how far the target was, how big the signal candle was, the day's gap at the open, which way
+  // the day had gone so far, whether the signal candle also broke the previous candle's high or low) and whether it
+  // won. The model is judged honestly: for each day it is trained on the other days only and asked which of that
+  // day's calls to take.
+  function candleFacts(t) {  // the candles around the signal candle
+    const i = t.bars.findIndex(b => b.time === t.signalTime), bar = t.bars[i], prev = t.bars[i - 1], sofar = t.bars.slice(0, i + 1);
+    return { gapPct: t.previous ? (t.bars[0].open - t.previous.close) / t.previous.close * 100 : 0,
+             dayUp: bar.close >= t.bars[0].open ? 1 : 0,
+             broke: prev && (t.side === "CE" ? bar.close > prev.high : bar.close < prev.low) ? 1 : 0,
+             inRange: (() => { const h = Math.max(...sofar.map(b => b.high)), l = Math.min(...sofar.map(b => b.low)); return h > l ? (bar.close - l) / (h - l) : 0.5; })() };
+  }
+  const FEATURES = [
+    ["earlier in the session", "later in the session", t => Rules.sessionShare(t.signalTime)],
+    ["lower levels (nearer 0%)", "higher levels (nearer 100%)", t => t.ratio],
+    ["PE calls", "CE calls", t => t.side === "CE" ? 1 : 0],
+    ["held signals", "crossed signals", t => t.kind === "crossed" ? 1 : 0],
+    ["nearer targets", "farther targets", t => Math.abs(t.target - t.entry) / t.entry * 100],
+    ["small signal candles", "big signal candles", t => (t.range || 0) / t.close * 100],
+    ["days that opened lower", "days that opened higher", t => candleFacts(t).gapPct],
+    ["days going down so far", "days going up so far", t => candleFacts(t).dayUp],
+    ["signal candles inside the previous candle", "signal candles that broke the previous candle's high or low", t => candleFacts(t).broke],
+  ];
+  const NEED = { calls: 100, days: 10 };
+  function fit(rows, labels, iterations = 400, rate = 0.1, l2 = 0.01) {  // logistic regression by plain gradient descent on standardized facts
+    const n = rows.length, k = FEATURES.length;
+    const mean = Array(k).fill(0), sd = Array(k).fill(0);
+    rows.forEach(r => r.forEach((v, j) => mean[j] += v / n));
+    rows.forEach(r => r.forEach((v, j) => sd[j] += (v - mean[j]) ** 2 / n));
+    sd.forEach((v, j) => sd[j] = Math.sqrt(v) || 1);
+    const z = rows.map(r => r.map((v, j) => (v - mean[j]) / sd[j]));
+    const w = Array(k).fill(0); let b = 0;
+    for (let it = 0; it < iterations; it++) {
+      const gw = Array(k).fill(0); let gb = 0;
+      z.forEach((r, i) => { const p = 1 / (1 + Math.exp(-(r.reduce((s, v, j) => s + v * w[j], b)))); const e = p - labels[i]; r.forEach((v, j) => gw[j] += e * v / n); gb += e / n; });
+      w.forEach((v, j) => w[j] -= rate * (gw[j] + l2 * v)); b -= rate * gb;
+    }
+    return { predict: r => 1 / (1 + Math.exp(-(r.reduce((s, v, j) => s + (v - mean[j]) / sd[j] * w[j], b)))), w };
+  }
+  function learn(trades) {
+    const rows = trades.map(t => FEATURES.map(f => f[2](t))), labels = trades.map(t => t.points > 0 ? 1 : 0);
+    const days = [...new Set(trades.map(t => t.date))];
+    const picked = [];
+    days.forEach(day => {  // each day judged by a model that never saw it
+      const train = trades.map((t, i) => i).filter(i => trades[i].date !== day);
+      const model = fit(train.map(i => rows[i]), train.map(i => labels[i]));
+      trades.forEach((t, i) => { if (t.date === day && model.predict(rows[i]) >= 0.5) picked.push(t); });
+    });
+    const full = fit(rows, labels);
+    const leans = full.w.map((v, j) => ({ v, j })).filter(x => Math.abs(x.v) >= 0.1).sort((a, b) => Math.abs(b.v) - Math.abs(a.v)).slice(0, 3)
+      .map(x => FEATURES[x.j][x.v > 0 ? 1 : 0]);
+    return { picked, leans };
+  }
+  function drawLearning(trades) {
+    const box = el("learn");
+    const days = new Set(trades.map(t => t.date)).size;
+    if (trades.length < NEED.calls || days < NEED.days) {
+      box.innerHTML = `<div class="box">Not enough yet to learn from: ${trades.length} of ${NEED.calls} finished calls, ${days} of ${NEED.days} days with calls, in this setting. `
+        + `With fewer, a model only learns the chance pattern of those few days and would mislead. The counter moves with every saved day.</div>`;
+      return;
+    }
+    const { picked, leans } = learn(trades);
+    const all = tally(trades), took = tally(picked);
+    box.innerHTML = `<div class="box">For each day a model was trained on the other days' calls only and asked which of that day's calls to take. `
+      + `It took <b>${took.calls}</b> of the ${all.calls} calls: those won <b>${pct(took.won, took.calls)}</b> of the time for <b>${signed.format(took.net)}</b> points, `
+      + `against ${pct(all.won, all.calls)} and ${signed.format(all.net)} points for taking every call.`
+      + (leans.length ? ` Trained on every day, it leans towards ${leans.join(", ")}.` : "")
+      + ` This is the past; it promises nothing about tomorrow, and it says nothing a plain reading of the tables above does not.</div>`;
+  }
+
+  // ---- the saved days
+  function drawStore() {
+    const st = state.store, line = el("store"), days = state.days;
+    const span = days.length ? `${days.length} day${days.length === 1 ? "" : "s"} saved, ${dayLabel(days[days.length - 1].date)} to ${dayLabel(days[0].date)}` : "No day saved yet";
+    let kept = st.github ? `Kept on GitHub too (branch ${st.branch} of ${st.repo})${st.pushed_at ? ", last pushed " + st.pushed_at.slice(11, 16) + " IST on " + dayLabel(st.pushed_at.slice(0, 10)) : ""}.`
+      : "Kept on this server only, which loses them at each restart on the free host: add GITHUB_DATA_TOKEN to the host's environment to keep them on GitHub (see README).";
+    if (!st.dhan) kept = "Only sessions on Dhan are recorded, and Dhan is not set up on this server.";
+    line.className = "note";
+    line.textContent = `${span}. Each day is saved after its close at ${st.save_at || "15:40"} IST, with a partial copy every few minutes during the session. ${kept}`;
+    if (st.problem) { line.className = "note problem"; line.textContent += ` Problem: ${st.problem}`; }
+    el("save").hidden = !st.dhan;
+    el("body").hidden = !days.length;
+    el("footer").textContent = days.length ? "Every number above comes from the candles of the saved days alone, under the rules in LOGIC.md, in index points. Paper only; nothing is sent anywhere."
+      : "Once a session on Dhan has been saved, this page replays your rules over it in every setting.";
+  }
+
+  let TAB = "";
+  try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
+  const handed = new URLSearchParams(location.hash.slice(1)).get("t");
+  if (handed) { TAB = handed; try { sessionStorage.setItem("tab", TAB); } catch (e) {} history.replaceState(null, "", location.pathname); }
+  let PAGE = "";
+  const withTab = () => ({ headers: { "X-Tab": TAB, "X-Page": PAGE } });
+  async function beat() {  // "still here": keeps the login alive while this page is open
+    try {
+      const r = await fetch("/alive", { method: "POST", ...withTab() });
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (r.ok) { const data = await r.json(); if (data.page) PAGE = data.page; el("logout").hidden = !data.auth_enabled; }
+    } catch (e) {}
+  }
+  async function load() {
+    const status = el("status");
+    try {
+      const r = await fetch("/study/days", withTab());
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const data = await r.json();
+      state.days = data.days; state.store = data.store;
+      const wanted = state.days.filter(d => !state.files[d.date] || !d.complete || state.files[d.date].saved_at !== d.saved_at);
+      status.textContent = wanted.length ? `Loading ${wanted.length} day${wanted.length === 1 ? "" : "s"}…` : "Loading…";
+      await Promise.all(wanted.map(async d => {
+        const one = await fetch(`/study/days/${d.date}`, withTab());
+        if (one.ok) state.files[d.date] = await one.json();
+      }));
+      const indices = [...new Set(state.days.flatMap(d => (state.files[d.date] && Object.keys(state.files[d.date].indices)) || []))].sort();
+      const pick = el("index");
+      if (pick.dataset.shape !== indices.join("|")) {
+        pick.replaceChildren(...indices.map(n => { const o = document.createElement("option"); o.value = n; o.textContent = n; return o; }));
+        pick.dataset.shape = indices.join("|");
+      }
+      if (!indices.includes(state.index) && indices.length) state.index = indices[0];
+      pick.value = state.index;
+      drawStore();
+      if (state.days.length) draw();
+      status.className = ""; status.textContent = "Loaded " + new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+    } catch (err) {
+      status.className = "error"; status.textContent = "Couldn't load (" + err.message + "). Retrying…";
+    }
+    clearTimeout(state.timer);
+    state.timer = setTimeout(load, 300000);  // every five minutes: a partial copy of today may have landed
+  }
+
+  el("logout").addEventListener("click", () => { fetch("/logout", { method: "POST" }).finally(() => location.href = "/login"); });
+  ["index", "interval", "move", "signal"].forEach(id => el(id).addEventListener("change", e => { state[id] = e.target.value; draw(); }));
+  el("interval").value = state.interval; el("move").value = state.move; el("signal").value = state.signal;
+  el("save").addEventListener("click", async () => {
+    const note = el("save-note"); note.textContent = "Saving…"; note.className = "note";
+    try {
+      const r = await fetch("/study/save", { method: "POST", ...withTab() });
+      const data = await r.json();
+      if (!r.ok) { note.className = "note problem"; note.textContent = data.detail || ("HTTP " + r.status); return; }
+      note.textContent = data.saved ? `Saved ${dayLabel(data.date)}${data.complete ? "" : " so far"}, ${data.candles} minute candles${data.pushed_at ? ", and pushed to GitHub" : ""}.` : data.reason;
+      if (data.problem) { note.className = "note problem"; note.textContent += " " + data.problem; }
+      load();
+    } catch (err) { note.className = "note problem"; note.textContent = "Could not save: " + err.message; }
+  });
+  beat().then(load);
+  setInterval(beat, 15000);
+</script>
+</body>
+</html>
