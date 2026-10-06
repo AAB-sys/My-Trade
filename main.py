@@ -593,7 +593,7 @@ async def index_detail(
         try:
             payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES)
             dhan_status(True, "Dhan: real-time candles and quotes from your account")
-            payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
+            payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"], now=now_ist())
             detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload)
             return payload
         except Exception as exc:
@@ -608,7 +608,8 @@ async def index_detail(
     except Exception as exc:
         log.warning("detail fetch failed for %s: %s", key, exc)
         raise HTTPException(status_code=502, detail="Couldn't fetch the chart data from the source right now.")
-    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
+    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"],
+                   now=now_ist())  # the server's clock: the page judges which candles have closed by it, never by the device's clock
     detail_cache[(key, range_key, interval_key)] = (time.monotonic(), payload)
     return payload
 

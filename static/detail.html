@@ -285,6 +285,12 @@
   state.signal = "held";  // layer 3's switch: off, held or crossed
   try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
   const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute", "1d": "1-day" };
+  // The server's clock, not the device's: a laptop or phone clock that runs minutes slow made the page judge
+  // candles closed minutes late, so the calls came late (6 October). Every refresh and every tick carries the
+  // server's time; the difference to the device's clock is kept and applied wherever "now" matters.
+  let clockOffset = 0;  // seconds to add to the device's clock
+  const serverNow = () => Date.now() / 1000 + clockOffset;
+  const learnClock = (iso) => { const t = Date.parse(iso); if (!isNaN(t)) clockOffset = t / 1000 - Date.now() / 1000; };
   const rangeFor = () => state.interval === "1d" ? "3mo" : "5d";  // what the server is asked for: the last five days, or three months of day candles
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -427,7 +433,7 @@
   const shownBars = () => state.interval === "1d" || state.session === "all" ? state.candles.slice() : sessionBars();  // what the chart draws
   const withDate = () => state.interval === "1d" || state.session === "all";  // times on the page carry the day when several days show
   const sessionDate = (key) => key === "all" && state.candles.length ? dateKey(state.candles[state.candles.length - 1].time) : key;  // day candles: the last day
-  const isToday = (key) => key === dateKey(Date.now() / 1000);
+  const isToday = (key) => key === dateKey(serverNow());
   const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
   const sessionName = (key) => key === "all" ? "the days shown" : key ? (isToday(key) ? "today" : dayLabel(key)) : "today";
   const dayBefore = (key) => { const earlier = state.days.filter(d => d.date < sessionDate(key)); return earlier[earlier.length - 1] || null; };
@@ -524,7 +530,7 @@
     : (sig.side === "CE" ? bar.close > sig.close : bar.close < sig.close);  // moved further from the level
 
   function paperTrades(levels) {
-    const now = Date.now() / 1000;
+    const now = serverNow();
     const closed = sessionBars().filter(b => endOf(b) <= now);
     const prices = levels.map(l => l.price).sort((a, b) => a - b);
     const gain = (t, price) => Math.round((t.side === "CE" ? price - t.entry : t.entry - price) * 100) / 100;  // index points
@@ -835,6 +841,7 @@
   function applyTick(t) {
     if (t.name !== name || state.feed !== "dhan" || !state.summary) return;
     lastSeen = Date.now();
+    if (t.time) learnClock(t.time);
     const s = state.summary;
     s.last = t.last; s.time = t.time; s.open = true;
     if (s.previous_close) {
@@ -878,7 +885,7 @@
 
   function renderSummary(s) {
     renderHero(s);
-    const today = dateKey(Date.now() / 1000);
+    const today = dateKey(serverNow());
     const prev = [...state.days].reverse().find(d => d.date < today);  // the last session before today, as the tiles are
     const group = (title, figs) => {
       const el = document.createElement("div");
@@ -942,6 +949,7 @@
       state.simulated = !!data.simulated;
       renderSummary(data.summary);
       lastSeen = Date.now();
+      if (data.now) learnClock(data.now);
       if (data.range !== rangeFor() || data.interval !== state.interval) return;  // an older request finishing late
       state.candles = data.candles;
       setBars(shownBars());
