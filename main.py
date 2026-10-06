@@ -689,9 +689,8 @@ async def options_register(name: str, request: Request):
         raise HTTPException(status_code=400, detail="index_at_entry must be a number")
     if not call_key or side not in ("CE", "PE"):
         raise HTTPException(status_code=400, detail="key and side (CE or PE) are required")
-    details = {k: (v if isinstance(v, (int, float)) else str(v)[:40]) for k, v in body.items() if k in dhan.CALL_DETAILS}
     try:
-        return await asyncio.to_thread(dhan.register_call, key, call_key, side, level, details)
+        return await asyncio.to_thread(dhan.register_call, key, call_key, side, level)
     except Exception as exc:
         dhan_status(False, dhan_reason(exc))
         raise HTTPException(status_code=502, detail=store["dhan"]["status"])
@@ -718,8 +717,7 @@ def study_page():
 @app.get("/study/days")
 def study_days():
     """The saved days, newest first, and where they are kept."""
-    return {"days": study.saved_days(), "store": {**study.state, "dhan": DHAN_ON, "save_at": study.SAVE_AT}, "today": dhan.today_ist().isoformat(),
-            "sell_share": dhan.SELL_SHARE}
+    return {"days": study.saved_days(), "store": {**study.state, "dhan": DHAN_ON, "save_at": study.SAVE_AT}, "today": dhan.today_ist().isoformat()}
 
 
 @app.get("/study/days/{day}")
@@ -747,8 +745,8 @@ async def study_save():
         return {"saved": False, "problem": str(exc), "reason": ""}
     if data is None:
         return {"saved": False, "problem": study.state["problem"], "reason": "Dhan has no candle for today yet: nothing to save."}
-    return {"saved": True, "date": data["date"], "complete": complete, "calls": len(data["calls"]), "problem": study.state["problem"],
-            "pushed_at": study.state["pushed_at"]}
+    return {"saved": True, "date": data["date"], "complete": complete, "candles": len(data["indices"].get("NIFTY 50", {}).get("candles", {}).get("1m", [])),
+            "problem": study.state["problem"], "pushed_at": study.state["pushed_at"]}
 
 
 @app.get("/indices/{name}")

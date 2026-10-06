@@ -108,16 +108,19 @@ share of the premium paid.
 
 ## The record of each session, and the study
 
-After every session the server saves the day (the minute candles of NIFTY 50
-and NIFTY BANK, the day's figures, and every paper call with the premium paid,
-its premium once a minute, its premium at the end and its Sell mark) to
-`data/sessions/<date>.json`, with a partial copy every few minutes during the
-session. **Study** (linked from the dashboard and the index page, `/study/`)
-replays your rules over every saved day: pick the index, the time frame, the
-levels and the signal, and read the calls day by day, by hour, by level, by side,
-and every setting side by side; the real premiums of the calls recorded live are
-listed apart; a learning step switches on once a setting has 100 finished calls
-over 10 days (`LOGIC.md`, layer 4).
+After every session the server saves the day's candles (NIFTY 50 and NIFTY
+BANK, in 1, 5, 15 and 30 minutes, with the day's and the previous day's open,
+high, low and close) to `data/sessions/<date>.json`, with a partial copy every
+few minutes during the session. Candles only: no premiums, no calls. **Study**
+(linked from the dashboard and the index page, `/study/`) replays your rules
+over every saved day: pick the index, the time frame, the levels and the signal,
+and read the paper calls day by day, by hour, by level, by side, and every
+setting side by side; then each day's pattern (the gap at the open, the range,
+when the high and the low came, breaks of the previous day's high and low), how
+the candles behave at every Fibonacci level (touched, held, crossed, and whether
+the price then reached the next level), and the candle high and low breaks. A
+learning step on the candles' facts switches on once a setting has 100 finished
+calls over 10 days (`LOGIC.md`, layer 4).
 
 Render's files do not last (a restart wipes them), so each day is also pushed to
 the `data` branch of your own repository. That needs one more secret, made once:
@@ -223,9 +226,10 @@ The app is ready to run on a platform that deploys from GitHub:
 - `static/index.html` opens the WebSocket, redraws on every message, and
   reconnects by itself if the connection drops. Every tile is a link to that
   index's detail page, opened in a new tab.
-- `study.py` keeps the record of each session (`data/sessions/`, and the `data`
-  branch on GitHub) and `static/study.html` replays the rules over it, with the
-  same `static/rules.js` the index page runs.
+- `study.py` keeps the record of each session's candles (`data/sessions/`, and
+  the `data` branch on GitHub) and `static/study.html` replays the rules over
+  it and reads the candles' patterns, with the same `static/rules.js` the index
+  page runs.
 - `LOGIC.md` is the owner's own trading logic in plain words: what is built, what
   is still the owner's to decide. The index page draws its first layer, Fibonacci
   levels of a chosen move, as lines on the chart with a one-line readout; its

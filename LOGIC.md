@@ -178,50 +178,64 @@ the evidence for that choice.
 
 ## Layer 4: The record and the study - built
 
-The owner's idea (6 October): keep each session's data, and after the close use
-it to try the rules out and improve them, with a learning step on top once there
-is enough of it.
+The owner's idea (6 October): keep each session's candles, and after the close
+use them to try the rules out and improve them, with a learning step on top once
+there is enough. **Candles only** (owner's decision, 6 October): the record and
+the learning never look at premiums, the premium paid, the premium at the end or
+the Sell mark. Those stay on the index page, as layer 3 says; the study is about
+the candles, their daily patterns, their high and low breaks, and how they
+behave around the Fibonacci levels.
 
 **The record.** After every session (at 15:40 IST, the `STUDY_SAVE_AT` setting)
 the server saves the day to `data/sessions/<date>.json`: the 1-, 5-, 15- and
-30-minute candles of each index on Dhan, the day's and the previous session's
-open, high, low and close, and every paper call recorded that day with the
-option behind it, the premium paid, the premium once a minute while it was open,
-the premium at its end and its Sell mark. During the session a partial copy is
-written every ten minutes, and within two minutes of a call entering, ending or
-being marked Sell. A server that was asleep at the close saves the day when it
-next wakes; any finished weekday of the last week without its final copy is
-saved too. The host's files do not last, so each copy is also pushed to the
-`data` branch of the owner's own GitHub repository (data only, never merged into
-`main`) when `GITHUB_DATA_TOKEN` is set; at start the server fetches the days
-it lacks from there, and today's calls come back into the records after a
-restart with the premiums they were paid at. Only sessions on Dhan are
-recorded; nothing is sent anywhere but the owner's own repository.
+30-minute candles of each index on Dhan, and the day's and the previous
+session's open, high, low and close. Nothing else. During the session a partial
+copy is written every ten minutes, so the study can show today so far. A server
+that was asleep at the close saves the day when it next wakes; any finished
+weekday of the last week without its final copy is saved too. The host's files
+do not last, so each copy is also pushed to the `data` branch of the owner's own
+GitHub repository (data only, never merged into `main`) when
+`GITHUB_DATA_TOKEN` is set, and at start the server fetches the days it lacks
+from there. Only sessions on Dhan are recorded; nothing is sent anywhere but the
+owner's own repository.
 
-**The study** (`/study/`, linked from the dashboard and the index page) runs the
-rules above over every saved day, with the same code the index page runs
-(`static/rules.js`): pick the index, the time frame, the levels and the signal,
-and it shows the calls day by day, by the hour the signal came, by level, by
-side and signal, and every setting side by side (four time frames, two kinds of
-levels, three signals) with the best net marked. Points are index points, as on
-the index page. The real premiums of the calls recorded live are listed apart,
-paid against the premium at the end, because they are the only money-like
-numbers. *Today so far* levels are replayed as they stood when each candle
-closed: the day's range up to that candle, as the live page had drawn them.
-(The index page's own list for a *past* day under *Today so far* judges every
-candle with the day's final levels; the study's way is what the live page would
-have fired at the time. **Owner to decide**: whether the index page should do
-the same for past days.) On a finished day every call has ended, so "still open"
-does not arise.
+**The study** (`/study/`, linked from the dashboard and the index page) is one
+page over every saved day, for the index, time frame, levels and signal picked:
 
-**The learning step.** Each finished call is described by six plain facts: when
-in the session it came, which level, CE or PE, held or crossed, how far the
-target was, how big the signal candle was. A small model (a logistic regression
-fitted in the page) learns which of these go with winning. It is judged
-honestly: for each day it is trained on the other days only and asked which of
-that day's calls to take, and the page shows how those picks did against taking
-every call. It switches on only once a setting has **100 finished calls over 10
-days**; with fewer, a model only learns the chance pattern of those days and
-would mislead, so until then the page shows the counter. It never fires a call
-and never changes a rule: it is evidence for the owner's own decisions, and it
-says nothing a plain reading of the tables cannot.
+- *The paper calls* the rules above give on those candles, with the same code
+  the index page runs (`static/rules.js`): day by day, by the hour the signal
+  came, by level, by side and signal, and every setting side by side (four time
+  frames, two kinds of levels, three signals) with the best net marked. Points
+  are index points. *Today so far* levels are replayed as they stood when each
+  candle closed, the day's range up to that candle, as the live page had drawn
+  them. (The index page's own list for a *past* day under *Today so far* judges
+  every candle with the day's final levels; the study's way is what the live
+  page would have fired at the time. **Owner to decide**: whether the index
+  page should do the same for past days.)
+- *Each day's pattern*: the gap at the open against the previous close, open to
+  close, the range, when the high and the low came, where the close sat in the
+  range, and whether a candle closed above the previous day's high or below its
+  low: at what time, how far the day then went to its close, and whether it
+  closed back inside.
+- *The candles at the levels*: for every level, over every judged candle of
+  every day (not only the ones that gave a call): how often it was touched,
+  held or crossed, the held share, and after a hold or a cross whether the
+  price reached the next level before a candle closed back across. This is the
+  owner's own evidence of how the candles work around the levels.
+- *Candle high and low breaks*: how often a candle closed above the previous
+  candle's high or below its low, and how often the next candle went on that
+  way.
+
+**The learning step.** Each finished paper call is described by nine plain
+facts read off the candles alone: when in the session it came, which level, CE
+or PE, held or crossed, how far the target was, how big the signal candle was,
+the day's gap at the open, which way the day had gone so far, and whether the
+signal candle also broke the previous candle's high or low. A small model (a
+logistic regression fitted in the page) learns which of these go with winning.
+It is judged honestly: for each day it is trained on the other days only and
+asked which of that day's calls to take, and the page shows how those picks did
+against taking every call. It switches on only once a setting has **100
+finished calls over 10 days**; with fewer, a model only learns the chance
+pattern of those days and would mislead, so until then the page shows the
+counter. It never fires a call and never changes a rule: it is evidence for the
+owner's own decisions, and it says nothing a plain reading of the tables cannot.

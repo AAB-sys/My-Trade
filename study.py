@@ -1,10 +1,9 @@
 """The record of each trading session, and its copy on GitHub (LOGIC.md, "The record and the study").
 
 After every session the server writes the day to data/sessions/<date>.json: the minute candles of each index
-on Dhan (1, 5, 15 and 30 minutes), the day's and the previous day's four figures, and the paper calls recorded
-that day with their premiums. During the session a partial copy is written every few minutes, so a server that
-is put to sleep or restarted (the free host wipes its files) loses at most a few minutes. The study page runs
-the owner's rules over every saved day.
+on Dhan (1, 5, 15 and 30 minutes) and the day's and the previous day's four figures. Candles only, by the
+owner's choice (6 October): no premiums, no calls. During the session a partial copy is written every few
+minutes, so the study page can show today so far. The study page runs the owner's rules over every saved day.
 
 The host's files do not last, so each file is also pushed to a branch of the owner's own repository, which
 needs one more secret in the host's environment, never in the repo:
@@ -42,7 +41,7 @@ PARTIAL_SECONDS = float(os.environ.get("STUDY_PARTIAL_SECONDS", "600"))  # the p
 CANDLE_KEYS = ("1m", "5m", "15m", "30m")
 BRANCH_README = ("# My-Trade: the record of each trading session\n\n"
                  "Written by the dashboard's server after every session (and every few minutes during one): the minute\n"
-                 "candles of each index, the day's figures and the paper calls with their premiums, one file a day under\n"
+                 "candles of each index and the day's figures, one file a day under\n"
                  "`sessions/`. The study page reads them. This branch holds data only: never merge it into `main`.\n")
 
 state = {"github": bool(TOKEN), "repo": REPO, "branch": BRANCH, "problem": None, "saved_at": None, "pushed_at": None, "last": None}
@@ -86,7 +85,7 @@ def day_figures(bars: list) -> dict:
 
 def build_day(day: date, complete: bool) -> dict | None:
     """The day's record from Dhan's candles (the last days are asked for in one request each, and cached briefly)
-    and the records of the calls. None when Dhan has no candle for that day (a holiday, or not traded yet)."""
+    None when Dhan has no candle for that day (a holiday, or not traded yet)."""
     indices, missing = {}, {}
     for name in dhan.INDEX_IDS:
         try:
@@ -113,7 +112,7 @@ def build_day(day: date, complete: bool) -> dict | None:
         if missing:
             raise StudyError("Dhan gave no candles: " + "; ".join(f"{n}: {m}" for n, m in missing.items()))
         return None
-    data = {"date": day.isoformat(), "saved_at": now_ist(), "complete": complete, "indices": indices, "calls": dhan.records_on(day.isoformat())}
+    data = {"date": day.isoformat(), "saved_at": now_ist(), "complete": complete, "indices": indices}
     if missing:
         data["missing"] = missing
     return data
@@ -136,13 +135,13 @@ def is_complete(day: date) -> bool:
 
 
 def saved_days() -> list:
-    """One line per saved day, newest first: the date, whether it is the day's final copy, when, how many calls."""
+    """One line per saved day, newest first: the date, whether it is the day's final copy, when, which indices."""
     out = []
     for path in sorted(SESSIONS.glob("*.json"), reverse=True):
         try:
             data = json.loads(path.read_text())
             out.append({"date": data["date"], "complete": bool(data.get("complete")), "saved_at": data.get("saved_at"),
-                        "indices": sorted(data.get("indices", {})), "calls": len(data.get("calls", []))})
+                        "indices": sorted(data.get("indices", {}))})
         except (OSError, ValueError, KeyError):
             continue
     return out
@@ -274,13 +273,6 @@ def pull_missing() -> int:
 
 # ---------------------------------------------------------------- the loop
 
-def restore_today() -> int:
-    """The calls of today's partial copy back into the records (a restart wiped them), so the page keeps the
-    premiums paid as they were, not as they are now."""
-    data = read_day(dhan.today_ist())
-    return dhan.restore_records(data.get("calls", [])) if data else 0
-
-
 def catch_up(days_back: int = 7) -> None:
     """Any finished weekday of the last days without a final copy is saved now (the server was asleep at its close)."""
     today = dhan.today_ist()
@@ -297,9 +289,8 @@ def in_session(now: datetime) -> bool:
 
 
 async def study_forever(dhan_on: bool) -> None:
-    """At start: the days on GitHub that this server lacks, today's calls back into the records. Then, on Dhan: the
-    partial copy every PARTIAL_SECONDS during the session (sooner after a call enters, ends or is marked Sell), the
-    final copy at SAVE_AT, and once an hour a look for finished days without one."""
+    """At start: the days on GitHub that this server lacks. Then, on Dhan: the partial copy every PARTIAL_SECONDS
+    during the session, the final copy at SAVE_AT, and once an hour a look for finished days without one."""
     if TOKEN:
         try:
             got = await asyncio.to_thread(pull_missing)
@@ -308,20 +299,15 @@ async def study_forever(dhan_on: bool) -> None:
         except StudyError as exc:
             state["problem"] = str(exc)
             log.warning("study: %s", exc)
-    restored = await asyncio.to_thread(restore_today)
-    if restored:
-        log.info("study: %d of today's calls restored from the saved copy", restored)
     if not dhan_on:
         return  # nothing to record without the owner's own feed
-    partial_at, caught_up, seen = 0.0, 0.0, dhan.records_version()
+    partial_at, caught_up = 0.0, 0.0
     while True:
         try:
             now = datetime.now(dhan.IST)
-            if in_session(now):
-                changed = dhan.records_version() != seen
-                if time.monotonic() - partial_at >= (120 if changed else PARTIAL_SECONDS):
-                    partial_at, seen = time.monotonic(), dhan.records_version()
-                    await asyncio.to_thread(save_day, now.date(), False)
+            if in_session(now) and time.monotonic() - partial_at >= PARTIAL_SECONDS:
+                partial_at = time.monotonic()
+                await asyncio.to_thread(save_day, now.date(), False)
             if time.monotonic() - caught_up >= 3600 or ((now.hour, now.minute) >= save_time() and now.weekday() < 5 and not is_complete(now.date())):
                 caught_up = time.monotonic()
                 await asyncio.to_thread(catch_up)

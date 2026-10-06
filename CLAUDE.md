@@ -83,17 +83,19 @@ their own logic. Read this before touching the code.
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
   each tile links to `/index/{name}` in a new tab.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
-  state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`), loaded by the
+  state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
+  candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`), loaded by the
   index page and the study page so both run one and the same rule.
-- `study.py` - layer 4: the record of each session (`data/sessions/<date>.json`,
-  git-ignored; written after the close and every few minutes during it, with the
-  calls and their premium path) and its copy on the `data` branch of the owner's
-  repository through the GitHub API (`GITHUB_DATA_TOKEN`; the branch holds data
-  only and is never merged into `main`); `study_forever()` runs it, `pull_missing()`
-  fetches the days a fresh host lacks, `restore_today()` puts today's calls back
-  after a restart. `main.py` serves `/study/` (`static/study.html`: every saved
-  day replayed in every setting, the real premiums, the learning step gated on
-  100 calls over 10 days), `/study/days`, `/study/days/{day}` and `POST /study/save`.
+- `study.py` - layer 4: the record of each session's candles only
+  (`data/sessions/<date>.json`, git-ignored; written after the close and every
+  few minutes during it; no premiums, no calls, the owner's choice) and its copy
+  on the `data` branch of the owner's repository through the GitHub API
+  (`GITHUB_DATA_TOKEN`; the branch holds data only and is never merged into
+  `main`); `study_forever()` runs it, `pull_missing()` fetches the days a fresh
+  host lacks. `main.py` serves `/study/` (`static/study.html`: every saved day
+  replayed in every setting, each day's pattern, the candles at the levels, the
+  high and low breaks, the learning step on the candles' facts gated on 100 calls
+  over 10 days), `/study/days`, `/study/days/{day}` and `POST /study/save`.
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all

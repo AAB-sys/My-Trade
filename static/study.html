@@ -75,7 +75,7 @@
     <span id="status">Loading…</span>
     <button id="logout" type="button" hidden>Log out</button>
   </div>
-  <div class="hero"><h1>Study</h1><span class="sub">Your rules, run over every saved trading day</span></div>
+  <div class="hero"><h1>Study</h1><span class="sub">Your rules and your candles, over every saved trading day</span></div>
   <div id="store" class="note"></div>
   <div class="controls"><button class="act" id="save" type="button">Save today now</button><span id="save-note" class="note"></span></div>
 
@@ -108,9 +108,17 @@
     <div class="note">The same days under every time frame, levels and signal. The best net is marked; the setting picked above is in bold.</div>
     <div class="scroll"><table id="all"><thead><tr><th>Time frame</th><th>Levels</th><th>Signal</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th><th>Per call</th><th>Days with calls</th></tr></thead><tbody></tbody></table></div>
 
-    <h2>The real premiums</h2>
-    <div id="premium-note" class="note"></div>
-    <div class="scroll"><table id="premiums"><thead><tr><th>Day</th><th>Index</th><th>Signal</th><th>Setting</th><th>Option</th><th>Paid</th><th>At the end</th><th>Change</th><th>Sell mark</th><th>Ended by</th></tr></thead><tbody></tbody></table></div>
+    <h2>Each day's pattern</h2>
+    <div id="pattern-note" class="note"></div>
+    <div class="scroll"><table id="pattern"><thead><tr><th>Day</th><th>Gap at the open</th><th>Open to close</th><th>Range</th><th>High at</th><th>Low at</th><th>Close in the range</th><th class="l">Closed above the previous day's high</th><th class="l">Closed below the previous day's low</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>The candles at the levels</h2>
+    <div id="levels-note" class="note"></div>
+    <div class="scroll"><table id="behaviour"><thead><tr><th>Level</th><th>Touched</th><th>Held</th><th>Crossed</th><th>Held share</th><th>After a hold: reached the next level</th><th>After a cross: went on to the next level</th></tr></thead><tbody></tbody></table></div>
+
+    <h2>Candle high and low breaks</h2>
+    <div id="breaks-note" class="note"></div>
+    <div class="scroll"><table id="breaks"><thead><tr><th>A candle that closed</th><th>Times</th><th>The next candle went on that way</th></tr></thead><tbody></tbody></table></div>
 
     <h2>What the winning calls have in common</h2>
     <div id="learn"></div>
@@ -122,14 +130,14 @@
   const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 };
   const NAMES = { interval: { "1m": "1 min", "5m": "5 min", "15m": "15 min", "30m": "30 min" }, move: { prev: "Previous day", today: "Today so far" },
                   signal: { held: "Held", crossed: "Crossed", both: "Both" } };
-  const state = { days: [], files: {}, store: null, index: "NIFTY 50", interval: "5m", move: "prev", signal: "held", sellShare: 0.65 };
+  const state = { days: [], files: {}, store: null, index: "NIFTY 50", interval: "5m", move: "prev", signal: "held" };
   try { const m = localStorage.getItem("levels"); if (["prev", "today"].includes(m)) state.move = m; } catch (e) {}  // the index page's choices carry over
   try { const s = localStorage.getItem("signal"); if (["held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
   const pct = (n, d) => d ? Math.round(n / d * 100) + "%" : "—";
   const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
-  const istTime = (epoch) => new Date(epoch * 1000).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
+  const istTime = (epoch) => epoch == null ? "—" : new Date(epoch * 1000).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit" });
   const hourLabel = (epoch) => new Date(epoch * 1000).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric" }).replace(/^0/, "");
   const cls = (v) => v > 0 ? "up" : v < 0 ? "down" : "";
   const cell = (v, c = "") => `<td class="${c}">${v}</td>`;
@@ -142,8 +150,12 @@
     const bars = ix && ix.candles && ix.candles[interval];
     if (!bars || !bars.length) return [];
     return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal }).trades
-      .filter(t => t.exit != null).map(t => ({ ...t, date: file.date }));  // on a finished day every call has ended
+      .filter(t => t.exit != null).map(t => ({ ...t, date: file.date, bars, previous: ix.previous }));  // on a finished day every call has ended
   }
+  const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];
+    return ix && ix.candles[interval] && ix.candles[interval].length ? { date: d.date, complete: d.complete, bars: ix.candles[interval], previous: ix.previous } : null; }).filter(Boolean);  // oldest first
+  const levelsFor = (move, previous) => move === "prev" ? (previous ? (() => { const fixed = Rules.levelsOf(Rules.moveOfDay(previous)); return () => fixed; })() : null)
+    : (bars) => (i) => Rules.levelsOf(Rules.moveOf(bars.slice(0, i + 1)));
   const allTrades = (index, interval, move, signal) => state.days.flatMap(d => state.files[d.date] ? replay(state.files[d.date], index, interval, move, signal) : []);
   function tally(trades) {
     const won = trades.filter(t => t.points > 0).length, lost = trades.filter(t => t.points < 0).length;
@@ -192,37 +204,77 @@
       tr.innerHTML = cell(NAMES.interval[r.i]) + cell(NAMES.move[r.m]) + cell(NAMES.signal[r.g]) + cell(r.calls) + cell(r.won) + cell(r.lost) + cell(pct(r.won, r.calls)) + num(r.net) + num(r.avg) + cell(r.days);
       return tr;
     }));
-    drawPremiums();
+    drawPatterns();
+    drawBehaviour();
+    drawBreaks();
     drawLearning(trades);
   }
 
-  // ---- the calls recorded live, with the premium paid and the premium at the end: the only money-like numbers here
-  function drawPremiums() {
-    const calls = state.days.flatMap(d => ((state.files[d.date] || {}).calls || []).map(c => ({ ...c, date: d.date }))).reverse();
-    const note = el("premium-note"), table = el("premiums");
-    if (!calls.length) { note.textContent = "No call has been recorded with its premium yet. A call is recorded while an index page is open on Dhan when it enters."; table.hidden = true; return; }
-    table.hidden = false;
-    const end = (c) => c.premium_at_end != null ? c.premium_at_end : c.premium_now;
-    const change = (c) => Rules.round2(end(c) - c.premium_paid);
-    const total = Rules.round2(calls.reduce((s, c) => s + change(c), 0));
-    const sold = calls.filter(c => c.sold).length;
-    note.textContent = `${calls.length} call${calls.length === 1 ? "" : "s"} recorded live with their premiums: in all ${signed.format(total)} per unit of premium (paid against the premium when each call ended), `
-      + `${sold} reached the Sell mark (a fall of ${Math.round((1 - state.sellShare) * 100)}%).`;
-    table.querySelector("tbody").replaceChildren(...calls.map(c => {
-      const tr = document.createElement("tr"), ch = change(c);
-      const setting = [c.interval && NAMES.interval[c.interval], c.levels && NAMES.move[c.levels], c.kind].filter(Boolean).join(", ") || "—";
-      const when = c.signal_time ? istTime(c.signal_time) : (c.paid_at || "").slice(11, 16);
-      tr.innerHTML = cell(dayLabel(c.date)) + cell(c.index) + cell(when) + cell(setting) + cell(`${Math.round(c.strike)} ${c.side} ${dayLabel(c.expiry)}`)
-        + cell(fmt.format(c.premium_paid)) + cell(fmt.format(end(c))) + num(ch) + cell(c.sold ? `at ${fmt.format(c.sold.premium)}` : "—", c.sold ? "down" : "")
-        + cell(c.ended ? ({ target: "Target", "day end": "Day end" }[c.ended.how] || c.ended.how) : "still open");
+  // ---- each day's pattern, from the candles of the picked time frame
+  function drawPatterns() {
+    const days = dayBars(state.index, state.interval).reverse();  // newest first
+    const facts = days.map(d => ({ ...d, f: Rules.dayFacts(d.bars, d.previous) }));
+    const withPrev = facts.filter(x => x.f.gap != null);
+    const up = withPrev.filter(x => x.f.gap > 0).length, down = withPrev.filter(x => x.f.gap < 0).length, closedUp = facts.filter(x => x.f.change > 0).length;
+    const above = withPrev.filter(x => x.f.aboveHigh), below = withPrev.filter(x => x.f.belowLow);
+    const stayed = (list, key) => list.filter(x => !x.f[key].backAt).length;
+    el("pattern-note").textContent = `${facts.length} day${facts.length === 1 ? "" : "s"}: opened above the previous close on ${up}, below it on ${down}; closed above its open on ${closedUp}. `
+      + `Closed above the previous day's high on ${above.length} day${above.length === 1 ? "" : "s"}${above.length ? ` (stayed above to the close on ${stayed(above, "aboveHigh")})` : ""}, `
+      + `below its low on ${below.length}${below.length ? ` (stayed below on ${stayed(below, "belowLow")})` : ""}.`;
+    const brk = (b) => !b ? "—" : `${istTime(b.time)}, then ${signed.format(b.toClose)} to the close` + (b.backAt ? `, back inside at ${istTime(b.backAt)}` : "");
+    el("pattern").querySelector("tbody").replaceChildren(...facts.map(x => {
+      const f = x.f, tr = document.createElement("tr");
+      tr.innerHTML = cell(dayLabel(x.date) + (x.complete ? "" : " (so far)")) + (f.gap == null ? cell("—") : num(f.gap)) + num(f.change) + cell(fmt.format(f.range))
+        + cell(istTime(f.highAt)) + cell(istTime(f.lowAt)) + cell(f.closeInRange == null ? "—" : f.closeInRange + "%") + `<td class="l">${brk(f.aboveHigh)}</td><td class="l">${brk(f.belowLow)}</td>`;
       return tr;
     }));
   }
 
+  // ---- how the candles behave at every level, over every judged candle of every day (not only the ones that gave a call)
+  function drawBehaviour() {
+    const days = dayBars(state.index, state.interval);
+    const totals = {}; Rules.RATIOS.forEach(r => totals[r] = { touched: 0, held: 0, crossed: 0, heldJudged: 0, heldOn: 0, crossedJudged: 0, crossedOn: 0 });
+    let counted = 0;
+    days.forEach(d => {
+      const at = levelsFor(state.move, d.previous); if (!at) return;
+      counted++;
+      const rows = Rules.levelBehaviour(d.bars, state.move === "prev" ? at : at(d.bars));
+      Rules.RATIOS.forEach(r => Object.keys(totals[r]).forEach(k => totals[r][k] += rows[r][k]));
+    });
+    el("levels-note").textContent = `${counted} day${counted === 1 ? "" : "s"}, ${NAMES.interval[state.interval]} candles, ${NAMES.move[state.move]} levels. A candle touched a level when its high and low straddle it; held and crossed are the rule's own judgement; `
+      + `"reached the next level" means the price got to the next level in that direction before a candle closed back across this one, by the day's end.`;
+    const share = (n, d) => d ? `${n} of ${d} (${Math.round(n / d * 100)}%)` : "—";
+    el("behaviour").querySelector("tbody").replaceChildren(...Rules.RATIOS.map(r => {
+      const t = totals[r], tr = document.createElement("tr");
+      tr.innerHTML = cell((r * 100).toFixed(1) + "%") + cell(t.touched) + cell(t.held) + cell(t.crossed) + cell(pct(t.held, t.held + t.crossed)) + cell(share(t.heldOn, t.heldJudged)) + cell(share(t.crossedOn, t.crossedJudged));
+      return tr;
+    }));
+  }
+
+  // ---- candles closing beyond the previous candle's high or low
+  function drawBreaks() {
+    const days = dayBars(state.index, state.interval);
+    const t = { up: 0, upWentOn: 0, upJudged: 0, down: 0, downWentOn: 0, downJudged: 0 };
+    days.forEach(d => { const b = Rules.candleBreaks(d.bars); Object.keys(t).forEach(k => t[k] += b[k]); });
+    const share = (n, d) => d ? `${n} of ${d} (${Math.round(n / d * 100)}%)` : "—";
+    el("breaks-note").textContent = `${days.length} day${days.length === 1 ? "" : "s"}, ${NAMES.interval[state.interval]} candles: a candle that closed above the previous candle's high, or below its low, and whether the candle after it closed further that way.`;
+    el("breaks").querySelector("tbody").replaceChildren(...[["above the previous candle's high", t.up, share(t.upWentOn, t.upJudged)], ["below the previous candle's low", t.down, share(t.downWentOn, t.downJudged)]].map(([k, n, s]) => {
+      const tr = document.createElement("tr"); tr.innerHTML = cell(k) + cell(n) + cell(s); return tr; }));
+  }
+
   // ---- the learning step: a small model of the owner's own calls, switched on only once there are enough of them.
-  // Each finished call is described by six plain facts (when in the session, which level, CE or PE, held or crossed,
-  // how far the target was, how big the signal candle was) and whether it won. The model is judged honestly: for
-  // each day it is trained on the other days only and asked which of that day's calls to take.
+  // Each finished call is described by nine plain facts read off the candles (when in the session, which level, CE or
+  // PE, held or crossed, how far the target was, how big the signal candle was, the day's gap at the open, which way
+  // the day had gone so far, whether the signal candle also broke the previous candle's high or low) and whether it
+  // won. The model is judged honestly: for each day it is trained on the other days only and asked which of that
+  // day's calls to take.
+  function candleFacts(t) {  // the candles around the signal candle
+    const i = t.bars.findIndex(b => b.time === t.signalTime), bar = t.bars[i], prev = t.bars[i - 1], sofar = t.bars.slice(0, i + 1);
+    return { gapPct: t.previous ? (t.bars[0].open - t.previous.close) / t.previous.close * 100 : 0,
+             dayUp: bar.close >= t.bars[0].open ? 1 : 0,
+             broke: prev && (t.side === "CE" ? bar.close > prev.high : bar.close < prev.low) ? 1 : 0,
+             inRange: (() => { const h = Math.max(...sofar.map(b => b.high)), l = Math.min(...sofar.map(b => b.low)); return h > l ? (bar.close - l) / (h - l) : 0.5; })() };
+  }
   const FEATURES = [
     ["earlier in the session", "later in the session", t => Rules.sessionShare(t.signalTime)],
     ["lower levels (nearer 0%)", "higher levels (nearer 100%)", t => t.ratio],
@@ -230,6 +282,9 @@
     ["held signals", "crossed signals", t => t.kind === "crossed" ? 1 : 0],
     ["nearer targets", "farther targets", t => Math.abs(t.target - t.entry) / t.entry * 100],
     ["small signal candles", "big signal candles", t => (t.range || 0) / t.close * 100],
+    ["days that opened lower", "days that opened higher", t => candleFacts(t).gapPct],
+    ["days going down so far", "days going up so far", t => candleFacts(t).dayUp],
+    ["signal candles inside the previous candle", "signal candles that broke the previous candle's high or low", t => candleFacts(t).broke],
   ];
   const NEED = { calls: 100, days: 10 };
   function fit(rows, labels, iterations = 400, rate = 0.1, l2 = 0.01) {  // logistic regression by plain gradient descent on standardized facts
@@ -290,7 +345,7 @@
     if (st.problem) { line.className = "note problem"; line.textContent += ` Problem: ${st.problem}`; }
     el("save").hidden = !st.dhan;
     el("body").hidden = !days.length;
-    el("footer").textContent = days.length ? "Every number above is index points from the candles of the saved days, under the rules in LOGIC.md, except the premiums, which are the real prices Dhan gave while each call was open. Paper only; nothing is sent anywhere."
+    el("footer").textContent = days.length ? "Every number above comes from the candles of the saved days alone, under the rules in LOGIC.md, in index points. Paper only; nothing is sent anywhere."
       : "Once a session on Dhan has been saved, this page replays your rules over it in every setting.";
   }
 
@@ -314,7 +369,7 @@
       if (r.status === 401) { location.href = "/login"; return; }
       if (!r.ok) throw new Error("HTTP " + r.status);
       const data = await r.json();
-      state.days = data.days; state.store = data.store; state.sellShare = data.sell_share || state.sellShare;
+      state.days = data.days; state.store = data.store;
       const wanted = state.days.filter(d => !state.files[d.date] || !d.complete || state.files[d.date].saved_at !== d.saved_at);
       status.textContent = wanted.length ? `Loading ${wanted.length} day${wanted.length === 1 ? "" : "s"}…` : "Loading…";
       await Promise.all(wanted.map(async d => {
@@ -348,7 +403,7 @@
       const r = await fetch("/study/save", { method: "POST", ...withTab() });
       const data = await r.json();
       if (!r.ok) { note.className = "note problem"; note.textContent = data.detail || ("HTTP " + r.status); return; }
-      note.textContent = data.saved ? `Saved ${dayLabel(data.date)}${data.complete ? "" : " so far"} with ${data.calls} call${data.calls === 1 ? "" : "s"}${data.pushed_at ? ", and pushed to GitHub" : ""}.` : data.reason;
+      note.textContent = data.saved ? `Saved ${dayLabel(data.date)}${data.complete ? "" : " so far"}, ${data.candles} minute candles${data.pushed_at ? ", and pushed to GitHub" : ""}.` : data.reason;
       if (data.problem) { note.className = "note problem"; note.textContent += " " + data.problem; }
       load();
     } catch (err) { note.className = "note problem"; note.textContent = "Could not save: " + err.message; }

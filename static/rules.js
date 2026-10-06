@@ -103,5 +103,66 @@
     return paperTrades({ bars, levelsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal });
   }
 
-  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay };
+  // ---- Layer 4, the study: plain facts about a day's candles (LOGIC.md). Candles only: no premiums anywhere here.
+  function breakOf(bars, line, dir) {  // the first candle closing beyond a line (up: above it; down: below it), and what the day did after it
+    const i = bars.findIndex(b => dir === "up" ? b.close > line : b.close < line);
+    if (i < 0) return null;
+    const at = bars[i], rest = bars.slice(i + 1), close = bars[bars.length - 1].close;
+    const further = rest.length ? (dir === "up" ? Math.max(...rest.map(b => b.high)) - at.close : at.close - Math.min(...rest.map(b => b.low))) : 0;
+    const back = rest.find(b => dir === "up" ? b.close <= line : b.close >= line);  // closed back on the other side again
+    return { time: at.time, close: at.close, toClose: round2(dir === "up" ? close - at.close : at.close - close), further: round2(Math.max(0, further)), backAt: back ? back.time : null };
+  }
+  function dayFacts(bars, previous) {  // one day's shape: gap at the open, open to close, range, when the high and the low came, breaks of the previous day's high and low
+    if (!bars.length) return null;
+    const open = bars[0].open, close = bars[bars.length - 1].close;
+    let hi = 0, lo = 0;
+    bars.forEach((b, i) => { if (b.high > bars[hi].high) hi = i; if (b.low < bars[lo].low) lo = i; });
+    const high = bars[hi].high, low = bars[lo].low, range = round2(high - low);
+    const facts = { open, high, low, close, range, up: close >= open, change: round2(close - open), highAt: bars[hi].time, lowAt: bars[lo].time,
+                    closeInRange: range ? Math.round((close - low) / range * 100) : null, gap: null, gapPct: null, aboveHigh: null, belowLow: null };
+    if (previous) {
+      facts.gap = round2(open - previous.close);
+      facts.gapPct = Math.round(facts.gap / previous.close * 10000) / 100;
+      facts.aboveHigh = breakOf(bars, previous.high, "up");
+      facts.belowLow = breakOf(bars, previous.low, "down");
+    }
+    return facts;
+  }
+  function candleBreaks(bars) {  // a candle closing above the previous candle's high (or below its low), and whether the next candle went on that way
+    const out = { up: 0, upWentOn: 0, upJudged: 0, down: 0, downWentOn: 0, downJudged: 0 };
+    for (let i = 1; i < bars.length; i++) {
+      const b = bars[i], p = bars[i - 1], n = bars[i + 1];
+      if (b.close > p.high) { out.up++; if (n) { out.upJudged++; if (n.close > b.close) out.upWentOn++; } }
+      if (b.close < p.low) { out.down++; if (n) { out.downJudged++; if (n.close < b.close) out.downWentOn++; } }
+    }
+    return out;
+  }
+  function levelBehaviour(bars, levelsAt) {  // per level ratio, over every judged candle: touched, held, crossed, and whether the price then reached the next level before closing back across
+    const out = {};
+    RATIOS.forEach(r => out[r] = { touched: 0, held: 0, crossed: 0, heldJudged: 0, heldOn: 0, crossedJudged: 0, crossedOn: 0 });
+    for (let i = 1; i < bars.length; i++) {
+      const bar = bars[i], prev = bars[i - 1].close, levels = levelsAt(i);
+      levels.forEach((l, k) => {
+        const L = l.price, row = out[l.ratio];
+        if (bar.low <= L && bar.high >= L) row.touched++;
+        const crossed = (prev < L && bar.close > L) || (prev > L && bar.close < L);
+        const held = !crossed && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
+        if (!crossed && !held) return;
+        row[crossed ? "crossed" : "held"]++;
+        const upward = bar.close > L;  // the way the price left the level: a bounce up or a break up, else down
+        const next = upward ? levels[k + 1] : levels[k - 1];
+        if (!next) return;
+        row[crossed ? "crossedJudged" : "heldJudged"]++;
+        for (let j = i + 1; j < bars.length; j++) {
+          const c = bars[j];
+          if (upward ? c.high >= next.price : c.low <= next.price) { row[crossed ? "crossedOn" : "heldOn"]++; break; }
+          if (upward ? c.close < L : c.close > L) break;  // closed back across first
+        }
+      });
+    }
+    return out;
+  }
+
+  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay,
+                 breakOf, dayFacts, candleBreaks, levelBehaviour };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -610,8 +610,7 @@
         const key = callKey(t);
         if (t.how === "open" && !registered.has(key) && !optionRecords[key]) {
           registered.add(key);
-          const r = await post(`/options/${encodeURIComponent(name)}/calls`, { key, side: t.side, index_at_entry: t.entry,  // and which setting gave the call, for the record of the day
-            interval: state.interval, signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, target: t.target, levels: state.move, signal: state.signal });
+          const r = await post(`/options/${encodeURIComponent(name)}/calls`, { key, side: t.side, index_at_entry: t.entry });
           if (r.status === 401) { location.href = "/login"; return; }
           if (!r.ok) registered.delete(key);  // try again next time
         }
