@@ -30,7 +30,7 @@ OPTION_SEGMENT = "NSE_FNO"                                   # where the indices
 UNDERLYING = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY"}  # how Dhan's instrument list names the options' underlying
 SCRIP_MASTER_URL = os.environ.get("DHAN_SCRIP_MASTER_URL", "https://images.dhan.co/api-data/api-scrip-master.csv")     # Dhan's security ids of the indices with options
 IST = timezone(timedelta(hours=5, minutes=30))
-SELL_SHARE = float(os.environ.get("SELL_SHARE", "0.5"))  # the owner's rule: sell when the premium is at or below this share of what was paid
+SELL_SHARE = float(os.environ.get("SELL_SHARE", "0.35"))  # the owner's rule (6 October): sell when the premium is at or below this share of what was paid
 RECORDS_FILE = Path(os.environ.get("CALL_RECORDS_FILE", Path(__file__).resolve().parent / "paper_calls.json"))
 
 
