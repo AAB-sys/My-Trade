@@ -278,8 +278,9 @@ def in_tick_hours() -> bool:
 
 
 def fold_tick(name: str, last: float, now: float, via: str) -> None:
-    """One last price into the index's live entry and the candle of every size forming now."""
-    entry = live.setdefault(name, {"bars": {}})
+    """One last price into the index's live entry and the candle of every size forming now. A candle that
+    just closed is kept (the last 48 of each size), so the detail answer carries it the second it closes."""
+    entry = live.setdefault(name, {"bars": {}, "closed": {}})
     entry.update(last=last, time=now_ist(), via=via)
     for key, spec in INTERVALS.items():
         bucket = bucket_start(now, spec["bar_seconds"])
@@ -287,7 +288,37 @@ def fold_tick(name: str, last: float, now: float, via: str) -> None:
         if bar and bar["time"] == bucket:
             bar["high"], bar["low"], bar["close"] = max(bar["high"], last), min(bar["low"], last), last
         else:
+            if bar and bar["time"] < bucket:
+                done = entry.setdefault("closed", {}).setdefault(key, [])
+                done.append(bar)
+                del done[:-48]
             entry["bars"][key] = {"time": bucket, "open": last, "high": last, "low": last, "close": last}
+
+
+def tick_candles(name: str, key: str) -> list:
+    """The candles of one size built from the ticks: the closed ones kept, then the one forming now."""
+    entry = live.get(name) or {}
+    bars = list((entry.get("closed") or {}).get(key) or [])
+    forming = (entry.get("bars") or {}).get(key)
+    if forming:
+        bars.append(forming)
+    return bars
+
+
+def with_live_candles(candles: list, name: str, key: str) -> list:
+    """Dhan's chart answer ends with a bar stamped at the latest trade's minute rather than at a candle
+    boundary (seen at 18:45 after hours, and during the day), and the candle that just closed can take a
+    while to appear in it. So: bars off the candle boundaries are dropped, and today's candles built from
+    the ticks fill in what the answer lacks, the one forming now and any just closed. Dhan's own candle
+    wins where both have one. On 6 October this is what made the calls late: the page judged a candle
+    only once Dhan's list carried it, minutes after it had closed."""
+    secs = INTERVALS[key]["bar_seconds"]
+    by_time = {b["time"]: b for b in candles if bucket_start(b["time"], secs) == b["time"]}
+    today = datetime.now(dhan.IST).date()
+    for b in tick_candles(name, key):
+        if b["time"] not in by_time and datetime.fromtimestamp(b["time"], dhan.IST).date() == today:
+            by_time[b["time"]] = dict(b)
+    return [by_time[t] for t in sorted(by_time)]
 
 
 async def push_tick(name: str) -> None:
@@ -589,16 +620,19 @@ async def index_detail(
     if DHAN_ON and key in dhan.INDEX_IDS:  # the broker feed first, real time
         cached = detail_cache.get(("dhan", key, range_key, interval_key))
         if cached and time.monotonic() - cached[0] < DHAN_POLL_SECONDS * 0.7:
-            return cached[1]
-        try:
-            payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES)
-            dhan_status(True, "Dhan: real-time candles and quotes from your account")
-            payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
-            detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload)
-            return payload
-        except Exception as exc:
-            dhan_status(False, dhan_reason(exc) + f" Prices from {PROVIDER}, about 15 minutes delayed, meanwhile.")
-            log.warning("Dhan detail failed for %s, falling back to %s: %s", key, PROVIDER, exc)
+            payload = cached[1]
+        else:
+            try:
+                payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES)
+                dhan_status(True, "Dhan: real-time candles and quotes from your account")
+                payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
+                detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload)
+            except Exception as exc:
+                payload = None
+                dhan_status(False, dhan_reason(exc) + f" Prices from {PROVIDER}, about 15 minutes delayed, meanwhile.")
+                log.warning("Dhan detail failed for %s, falling back to %s: %s", key, PROVIDER, exc)
+        if payload is not None:  # the candles from the ticks and the server's clock are added fresh to every answer, cached or not
+            return {**payload, "candles": with_live_candles(payload["candles"], key, interval_key), "now": now_ist()}
 
     cached = detail_cache.get((key, range_key, interval_key))
     if cached and time.monotonic() - cached[0] < POLL_SECONDS:
@@ -608,7 +642,8 @@ async def index_detail(
     except Exception as exc:
         log.warning("detail fetch failed for %s: %s", key, exc)
         raise HTTPException(status_code=502, detail="Couldn't fetch the chart data from the source right now.")
-    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
+    payload.update(source=PROVIDER, simulated=PROVIDER == "demo", poll_seconds=POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"],
+                   now=now_ist())  # the server's clock: the page judges which candles have closed by it, never by the device's clock
     detail_cache[(key, range_key, interval_key)] = (time.monotonic(), payload)
     return payload
 
