@@ -85,8 +85,9 @@ time is not a wall. This is the owner's own evidence for the signal rule.
 **Owner decided** (2 October): all seven levels count; the signal is a hold or a
 cross, chosen by a switch on the page; the trade goes the way the candle closed.
 Still open **(owner to decide)**: whether a near miss counts (today "reaches" means
-touching the level exactly), whether the candle's colour or size matters, and
-whether the next candle must confirm.
+touching the level exactly) and whether the candle's colour or size matters. The
+next candle does not confirm (owner's decision, 6 October; it did from 4 to 6
+October).
 
 ## Layer 3: Paper calls - built
 
@@ -107,30 +108,30 @@ The rule, in the order it is applied:
    direction gives no more that way until the index has closed back across it
    (owner's decision, 4 October: no repeat calls while the index hovers at one
    level).
-2. **Confirmation** - the next candle must agree, or there is no call (owner's
-   decision, 4 October). After a cross, it closes on the new side of the level
-   too. After a hold, it closes further from the level than the signal candle
-   did. While it is still forming, the list shows the signal as "Needs the next
-   candle to confirm".
+2. **The call comes at once** - the moment the signal candle closes, with no
+   confirming candle (owner's decision, 6 October: the call must be there when
+   the signal fires, not a candle later; from 4 to 6 October the next candle had
+   to agree first).
 3. **Option** - always bought, never sold. The signal candle closed above the
    level: buy a CE, the index should rise. Below it: buy a PE, it should fall.
    For a hold that is the bounce away from the level; for a cross, the break
    through it.
-4. **Entry** - the open of the candle after the confirming one, since one can
-   only act once that candle has closed **(owner to decide)**. Until then the
-   call is listed as "Enters at the next open".
+4. **Entry** - the open of the next candle, i.e. the first price after the
+   signal candle closes. The option's premium is recorded at that moment. In the
+   second or two before that candle begins, the call is listed as "Enters at the
+   next open".
 5. **Target** - the next level in the call's direction. The call ends when a
-   later candle reaches it, at that level's price. **No stop** (owner's decision,
+   later candle reaches it, at that level's price; the candle forming now counts
+   too, tick by tick. **No stop** (owner's decision,
    5 October): a call that goes the wrong way is held, to the target or to the
    day's last candle, and its loss is whatever the day does. A signal pointing
    outward from the 0% or 100% level has no next level, so it gives no call
    **(owner to decide)**.
 6. **Day end** - a call still open at the day's last closed candle ends at its
-   close; nothing carries overnight. A signal in the day's last two candles has
-   no candles left to confirm and enter on, so it gives nothing. While today is
-   still running the call shows as "Still open" with its points at the last
-   closed candle.
-7. **Every confirmed signal gives a call** - whether or not earlier calls are
+   close; nothing carries overnight. A signal on the day's last candle has no
+   candle left to enter on, so it gives nothing. While today is still running the
+   call shows as "Still open" with its points at the live price.
+7. **Every signal gives a call** - whether or not earlier calls are
    still open (owner's decision, 4 October). Several calls can run at once, each
    to its own exit.
 

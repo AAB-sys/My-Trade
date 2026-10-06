@@ -185,8 +185,8 @@ The app is ready to run on a platform that deploys from GitHub:
   is still the owner's to decide. The index page draws its first layer, Fibonacci
   levels of a chosen move, as lines on the chart with a one-line readout; its
   second, whether a closed candle held or crossed a level, is the signal of its
-  third, the paper trades that rule would have given on those candles (a Held/Crossed/Both switch, the next candle must
-  confirm, buy a CE or a PE, entry at the following open, the next level as
+  third, the paper trades that rule would have given on those candles (a Held/Crossed/Both switch, the call the
+  moment the signal candle closes, buy a CE or a PE, entry at the next price, the next level as
   target and no stop, one call per level and direction until the index closes
   back across it, closed at the day's end), listed with their points, scored,
   and downloadable as a CSV file.
