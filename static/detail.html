@@ -104,13 +104,13 @@
   .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; min-width: 54px; }
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   #session-row[hidden] { display: none; }
-  #score-box, #paper-box { margin-top: 16px; }
-  #score-box h2, #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
-  #score-note, #paper-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
-  #score, #paper { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-  #score th, #score td, #paper th, #paper td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  #score th:first-child, #score td:first-child, #paper th:first-child, #paper td:first-child { text-align: left; }
-  #score th, #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #paper-box { margin-top: 16px; }
+  #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
+  #paper-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  #paper { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #paper th, #paper td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #paper th:first-child, #paper td:first-child { text-align: left; }
+  #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
   #paper td.up { color: var(--up); }
   #paper td.down { color: var(--down); }
   #paper td.sell { color: #fff; background: var(--down); font-weight: 600; text-align: center; padding-left: 10px; }
@@ -271,15 +271,6 @@
         <tbody></tbody>
       </table>
     </div>
-  </section>
-
-  <section id="score-box" aria-label="How each level behaved" hidden>
-    <h2>How each level behaved</h2>
-    <div id="score-note"></div>
-    <table id="score">
-      <thead><tr><th>Level</th><th>Price</th><th>Held</th><th>Crossed</th><th>Held share</th></tr></thead>
-      <tbody></tbody>
-    </table>
   </section>
 
   <footer id="footer"></footer>
@@ -483,45 +474,12 @@
     return RATIOS.map(r => ({ ratio: r, price: Math.round((m.up ? m.high - r * span : m.low + r * span) * 100) / 100 }));
   }
 
-  // ---- Layer 2 of the owner's logic: the evidence, one row per level (see LOGIC.md)
-  // For every closed candle (the one still forming is judged once it closes), judged against
-  // where the previous candle closed: a candle that reaches a level and closes back on the side
-  // it came from HELD it; one that closes on the other side CROSSED it. Nothing is drawn on the chart.
+  // ---- Layer 2 of the owner's logic, held and crossed (see LOGIC.md), is judged inside the paper
+  // calls below; its own table came off the page on 6 October (owner's choice).
   const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1d": 86400 };
   // when a candle closes: its size on, but never past 3:30 pm of its day (the day's last 30-minute
   // candle is a half one, and a day candle ends at the close)
   const endOf = (b) => Math.min(b.time + SECONDS[state.interval], dayOf(b.time) * 86400 - IST_OFFSET + SESSION_END);
-
-  function scoreLevels(levels) {
-    const now = Date.now() / 1000;
-    const closed = sessionBars().filter(b => endOf(b) <= now);
-    const rows = levels.map(l => ({ ...l, held: 0, crossed: 0 }));
-    for (let i = 1; i < closed.length; i++) {
-      const bar = closed[i], prev = closed[i - 1].close;
-      for (const row of rows) {
-        const L = row.price;
-        if ((prev < L && bar.close > L) || (prev > L && bar.close < L)) row.crossed++;
-        else if ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L)) row.held++;
-      }
-    }
-    return { rows, closed: closed.length };
-  }
-
-  function drawScore(levels) {
-    const box = document.getElementById("score-box");
-    if (!levels.length) { box.hidden = true; return; }
-    const { rows, closed } = scoreLevels(levels);
-    box.hidden = false;
-    document.getElementById("score-note").textContent =
-      `In the ${closed} closed candles of ${sessionName(currentSession())}. Held: a candle reached the level and closed back on the side it came from. Crossed: it closed on the other side.`;
-    document.getElementById("score").querySelector("tbody").replaceChildren(...rows.slice().reverse().map(r => {
-      const tr = document.createElement("tr");
-      const total = r.held + r.crossed;
-      tr.innerHTML = `<td>${(r.ratio * 100).toFixed(1)}%</td><td>${fmt.format(r.price)}</td><td>${r.held}</td><td>${r.crossed}</td>`
-        + `<td>${total ? Math.round(r.held / total * 100) + "%" : "—"}</td>`;
-      return tr;
-    }));
-  }
 
   // ---- Layer 3 of the owner's logic: paper calls (see LOGIC.md)
   // The rule, run over the closed candles shown with the levels on the chart:
@@ -731,7 +689,6 @@
     drawSessions();
     const m = theMove();
     const levels = m ? levelsOf(m) : [];
-    drawScore(levels);
     drawPaper(levels);
     const key = JSON.stringify([state.move, currentSession(), levels]);
     if (series && key !== lastLevelsKey) {
