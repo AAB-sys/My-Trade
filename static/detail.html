@@ -877,6 +877,7 @@
   // ---- live ticks from Dhan: the price and the candle forming now move every second (see main.py tick_forever)
   function applyTick(t) {
     if (t.name !== name || state.feed !== "dhan" || !state.summary) return;
+    lastSeen = Date.now();
     const s = state.summary;
     s.last = t.last; s.time = t.time; s.open = true;
     if (s.previous_close) {
@@ -964,10 +965,15 @@
     } catch (e) {}
   }
 
+  let lastSeen = Date.now();  // the last tick or refresh that reached the page
+  let loadAbort = null;        // the refresh in flight: the newest wins, a hung one is dropped after 20 s
   async function load() {
     const status = document.getElementById("status");
+    if (loadAbort) loadAbort.abort();
+    const controller = loadAbort = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 20000);
     try {
-      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${rangeFor()}&interval=${state.interval}`, withTab());
+      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${rangeFor()}&interval=${state.interval}`, { ...withTab(), signal: controller.signal });
       if (response.status === 401) { location.href = "/login"; return; }
       if (!response.ok) throw new Error("HTTP " + response.status);
       const data = await response.json();
@@ -978,6 +984,7 @@
       state.dhan = data.dhan || null;
       state.simulated = !!data.simulated;
       renderSummary(data.summary);
+      lastSeen = Date.now();
       if (data.range !== rangeFor() || data.interval !== state.interval) return;  // an older request finishing late
       state.candles = data.candles;
       setBars(shownBars());
@@ -992,8 +999,11 @@
         ? `Data from Dhan, your own account, in real time, ${INTERVAL_NAMES[data.interval]} bars: the price and the candle forming now tick every second, the rest refreshes every ${data.poll_seconds} s.`
         : `Data from Yahoo Finance, about 15 minutes delayed, ${INTERVAL_NAMES[data.interval]} bars. Refreshes every ${data.poll_seconds} s.`;
     } catch (err) {
+      if (controller !== loadAbort) return;  // a newer refresh took over; it carries on from here
       status.className = "error";
-      status.textContent = "Couldn't load (" + err.message + "). Retrying…";
+      status.textContent = "Couldn't load (" + (err.name === "AbortError" ? "no answer in 20 s" : err.message) + "). Retrying…";
+    } finally {
+      clearTimeout(deadline);
     }
     clearTimeout(state.timer);
     state.timer = setTimeout(load, state.pollMs);
@@ -1001,8 +1011,9 @@
 
   // Holds a /ws connection while this page is open, and reports in every BEAT_MS: the login
   // lives while some page does either.
+  let liveWs = null;
   function keepAlive() {
-    const ws = new WebSocket(wsUrl());
+    const ws = liveWs = new WebSocket(wsUrl());
     ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); if (data.premium) applyPremium(data.premium); };
     ws.onclose = () => {
       beat();  // says "still here" at once, and finds out if the login is over
@@ -1012,6 +1023,16 @@
   }
   beat().then(keepAlive);  // report in first (a new page gets its id), then open the stream
   setInterval(beat, BEAT_MS);
+  // Silence is a dead connection, not a quiet market: ticks come every second in market hours and a refresh
+  // every poll. After twice the poll (at least 45 s) with neither, the socket is closed, which makes it
+  // reconnect, and a refresh is forced. A connection that dies without saying so (a laptop asleep, a phone
+  // changing network) no longer leaves the page standing still.
+  setInterval(() => {
+    if (Date.now() - lastSeen < Math.max(45000, state.pollMs * 2)) return;
+    lastSeen = Date.now();
+    if (liveWs && liveWs.readyState === WebSocket.OPEN) liveWs.close();
+    load();
+  }, 15000);
 
   // ---- controls
   document.getElementById("logout").addEventListener("click", () => {

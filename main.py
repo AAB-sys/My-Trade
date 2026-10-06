@@ -2,6 +2,7 @@ import asyncio
 import json
 import struct
 from datetime import datetime
+import concurrent.futures
 import contextlib
 import hashlib
 import hmac
@@ -439,17 +440,25 @@ async def stream_forever() -> None:
 
 
 async def warm_option_ids() -> None:
-    """Reads Dhan's instrument list once at start, in the background, so the first call of the day finds its
-    contract's id at once (the list is large; a failure is tried again when a call needs it)."""
-    try:
-        ids = await asyncio.to_thread(dhan.option_ids)
-        log.info("Dhan instrument list: %d option contracts of NIFTY and BANKNIFTY", len(ids))
-    except Exception as exc:
-        log.warning("Dhan instrument list: %s", exc)
+    """Starts the read of Dhan's instrument list at start (it runs in its own thread), so the first call of
+    the day finds its contract's id at once, and logs how it went."""
+    why = None
+    for _ in range(60):  # up to ten minutes for the first read; after that, the next call that needs it tries again
+        try:
+            ids = dhan.option_ids()
+            log.info("Dhan instrument list: %d option contracts of NIFTY and BANKNIFTY", len(ids))
+            return
+        except Exception as exc:
+            why = exc
+        await asyncio.sleep(10)
+    log.warning("Dhan instrument list: %s", why)
 
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Dhan calls, the detail payload and the records run in worker threads; the default pool (a handful
+    # on a small host) ran dry on 6 October and every page stalled, so it is given room
+    asyncio.get_running_loop().set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=16, thread_name_prefix="work"))
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
     tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever())]
