@@ -88,9 +88,9 @@ their own logic. Read this before touching the code.
   five; day candles show three months), fed by `/indices/{name}/detail`
   (`?range=&interval=`; the page always asks for `5d`, or `3mo` on day candles),
   plus layers 1, 2 and 3 of `LOGIC.md` (level price lines
-  with a readout; a held/crossed table per level under the chart; the paper
-  trades the owner's rule gives on the closed candles, with a score line and a
-  CSV download; nothing drawn on the chart), computed in the page from the
+  with a readout; held/crossed judged per closed candle, its own table taken off
+  the page on 6 October; the paper trades the owner's rule gives on the closed
+  candles, with a score line and a CSV download; nothing drawn on the chart), computed in the page from the
   summary and the bars. Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
 - `android/` - the dashboard as an Android app (Java, one Activity with a

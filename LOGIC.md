@@ -41,7 +41,7 @@ turn after a move. Whether that holds is for the owner's own record to show.
 
 **Which session**: today by default (the latest trading day among the candles
 loaded, which are the last five days). The *Session* drop-down picks another of
-those days, or all five on one chart, and the levels, the evidence table and the
+those days, or all five on one chart, and the levels and the
 calls all switch to that day, with that day's own previous day (owner's decision,
 4 October: a past day must be judged with the levels it had then, not with
 today's). With all five days on the chart the levels and the calls are the latest
@@ -58,11 +58,13 @@ its percentage on the price axis (the two ends solid, the rest dashed), and show
 one line of text: the move, its direction, and how far the last price is from the
 nearest level. Nothing else yet.
 
-## Layer 2: The evidence - built
+## Layer 2: The evidence - built, its table taken off the page
 
-Under the chart, one row per level: how many closed candles **held** it and how
-many **crossed** it, in the session picked, and the held share. Nothing is drawn
-on the chart.
+What counts as a level **held** or **crossed**, judged candle by candle. Its own
+table under the chart (held and crossed counts per level, and the held share) was
+taken off the page on 6 October (owner's decision: not needed); the judgement
+itself lives on inside layer 3, where it is the signal. Nothing is drawn on the
+chart.
 
 Judged for every closed candle (the one still forming is judged once it closes)
 against where the previous candle closed:
