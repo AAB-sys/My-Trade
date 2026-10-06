@@ -79,13 +79,17 @@ function all(index, interval, opts) {
   return DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix) return [];
     return run(ix.candles[interval], ix.previous, { levels: "prev", signal: "both", ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
 }
-function tally(L) {
+const byDay = (L) => { const m = {}; L.forEach(x => m[x.date] = r2((m[x.date] || 0) + x.points)); return m; };
+function tally(L, base) {
   const won = L.filter(x => x.points > 0).length, lost = L.filter(x => x.points < 0).length, net = r2(L.reduce((s, x) => s + x.points, 0));
-  const byDay = {}; L.forEach(x => byDay[x.date] = r2((byDay[x.date] || 0) + x.points)); const days = Object.values(byDay);
+  const mine = byDay(L), days = Object.values(mine), theirs = base ? byDay(base) : null;
+  const ahead = theirs ? DAYS.filter(d => (mine[d.date] || 0) > (theirs[d.date] || 0)).length : null;  // days on which the idea beat the owner's rule
+  const behind = theirs ? DAYS.filter(d => (mine[d.date] || 0) < (theirs[d.date] || 0)).length : null;
   return { n: L.length, won, lost, net, avg: L.length ? r2(net / L.length) : 0, ends: L.filter(x => x.how === "day end").length,
-           worst: L.length ? Math.min(...L.map(x => x.points)) : 0, worstDay: days.length ? Math.min(...days) : 0, daysUp: days.filter(d => d > 0).length };
+           worst: L.length ? Math.min(...L.map(x => x.points)) : 0, worstDay: days.length ? Math.min(...days) : 0, daysUp: days.filter(d => d > 0).length, ahead, behind };
 }
-const row = (name, s) => `${name.padEnd(46)} ${String(s.n).padStart(3)} calls ${String(s.won).padStart(3)}W ${String(s.lost).padStart(3)}L  net ${String(s.net).padStart(9)}  avg ${String(s.avg).padStart(7)}  day-end ${String(s.ends).padStart(2)}  worst call ${String(s.worst).padStart(8)}  days up ${s.daysUp}/${DAYS.length}  worst day ${s.worstDay}`;
+const row = (name, s) => `${name.padEnd(46)} ${String(s.n).padStart(3)} calls ${String(s.won).padStart(3)}W ${String(s.lost).padStart(3)}L  net ${String(s.net).padStart(9)}  avg ${String(s.avg).padStart(7)}  day-end ${String(s.ends).padStart(2)}  worst call ${String(s.worst).padStart(8)}  days up ${s.daysUp}/${DAYS.length}  worst day ${String(s.worstDay).padStart(8)}`
+  + (s.ahead == null ? "" : `  ahead of the rule on ${s.ahead}, behind on ${s.behind}`);
 
 // The ideas. The first rows are the owner's rule; P1 and P2 are the ones the owner confirmed for the study page (6 October).
 const IDEAS = [
@@ -115,5 +119,6 @@ for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", 
   const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both" }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
   const same = mine.n === page.n && mine.net === page.net;
   console.log(`\n==== ${index}, ${interval} candles ${same ? "(base line agrees with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify(page)}`);
-  IDEAS.forEach(([name, opts]) => console.log(row(name, tally(all(index, interval, opts)))));
+  const base = all(index, interval, {});
+  IDEAS.forEach(([name, opts], i) => console.log(row(name, tally(all(index, interval, opts), i ? base : null))));
 }
