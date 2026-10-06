@@ -532,7 +532,9 @@ def known_index(name: str) -> str:
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7]}  # which version is running
+    """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
+    day's session was saved. No secret in here: dates, and a problem said in plain words."""
+    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7], "dhan": DHAN_ON, "study": study.summary()}
 
 
 @app.get("/login")

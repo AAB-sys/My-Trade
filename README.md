@@ -11,7 +11,7 @@ dashboard that shows them and updates the moment they change.
 | POST   | `/login`          | `{"password": "..."}` | sets the login cookie, or 401                          |
 | POST   | `/logout`         | nothing       | clears the login cookie                                       |
 | POST   | `/alive`          | the tab note and page id (headers) | "still here" from an open page: the latest snapshot plus the page's id |
-| GET    | `/health`         | nothing       | `{"status": "ok"}` - open, for the host's health checks       |
+| GET    | `/health`         | nothing       | `{"status": "ok", ...}` - open, for the host's health checks and the wake-up workflow: the commit, and under `study` the latest saved day and any saving problem |
 | GET    | `/`               | nothing       | the dashboard page                                            |
 | GET    | `/index/{name}`   | an index name | the detail page for that index (summary + chart)              |
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
@@ -141,6 +141,21 @@ the `data` branch of your own repository. That needs one more secret, made once:
    that value > save. Render restarts the dashboard. Add the same line to `.env`
    only if the laptop runs the server too. Never paste the token into the repo or
    into a chat.
+
+**Nobody has to look after the saving** (the owner's instruction, 6 October).
+Render puts the server to sleep when nobody is on a page, and a sleeping server
+saves nothing, so `.github/workflows/wake.yml` knocks on the server's open
+health address at 15:42 IST on weekdays (the server wakes and saves the day on
+its own), and at 16:10 reads `/health` to check that the day is saved and
+pushed. A failed check is a red run under the Actions tab, and GitHub emails
+the owner about failed runs; the research round reads it too. `/health` now
+says, without a login and without any secret, the latest day with its final
+copy, whether today was checked and found without a session (a holiday), and
+any problem in plain words. The one thing the server cannot do by itself is
+renew the Dhan access token: with an expired token there are no candles to
+save. Dhan's token page may offer a validity longer than a day; the longest
+offered means fewer renewals. A day missed for a bad token is saved at the next
+wake with a good one, for up to a week back.
 
 The first save creates the `data` branch (data only; never merge it into
 `main`): on the repository page, open the branch drop-down and pick `data` to

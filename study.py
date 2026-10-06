@@ -44,7 +44,8 @@ BRANCH_README = ("# My-Trade: the record of each trading session\n\n"
                  "candles of each index and the day's figures, one file a day under\n"
                  "`sessions/`. The study page reads them. This branch holds data only: never merge it into `main`.\n")
 
-state = {"github": bool(TOKEN), "repo": REPO, "branch": BRANCH, "problem": None, "saved_at": None, "pushed_at": None, "last": None}
+state = {"github": bool(TOKEN), "repo": REPO, "branch": BRANCH, "problem": None, "saved_at": None, "pushed_at": None, "last": None,
+         "checked": None}  # checked: the day the final save was tried and Dhan had no candle for it (a holiday)
 _lock = threading.Lock()
 
 
@@ -145,6 +146,14 @@ def saved_days() -> list:
         except (OSError, ValueError, KeyError):
             continue
     return out
+
+
+def summary() -> dict:
+    """For /health, which the wake-up check reads without a login: the latest day with its final copy (from the files, so
+    a fresh host answers right after it fetched them), the day checked and found without a session, and any problem."""
+    complete = [d["date"] for d in saved_days() if d["complete"]]
+    return {"last_complete": complete[0] if complete else None, "checked": state["checked"], "saved_at": state["saved_at"],
+            "pushed_at": state["pushed_at"], "github": state["github"], "problem": state["problem"]}
 
 
 def save_day(day: date, complete: bool) -> dict | None:
@@ -281,7 +290,8 @@ def catch_up(days_back: int = 7) -> None:
         day = today - timedelta(days=back)
         if day.weekday() >= 5 or is_complete(day) or (day == today and (now.hour, now.minute) < save_time()):
             continue
-        save_day(day, complete=True)
+        if save_day(day, complete=True) is None and day == today:
+            state["checked"] = today.isoformat()  # looked, and Dhan had no candle for today: a holiday, nothing to save
 
 
 def in_session(now: datetime) -> bool:

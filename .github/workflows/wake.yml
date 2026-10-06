@@ -1,0 +1,55 @@
+# The owner's instruction (6 October): saving each day's session is not the owner's job. The server saves the day at
+# 15:40 IST, but the free host puts it to sleep when nobody is on a page, and a sleeping server saves nothing. So
+# this workflow knocks on the server's door after the close (which wakes it; it then saves the day on its own and
+# pushes it to the data branch), and a little later reads the server's open health address to check that the day
+# is saved. A failed check is a red run here, and GitHub emails the owner about failed runs. Website side only.
+name: Wake the server after the close
+
+on:
+  schedule:
+    - cron: "12 10 * * 1-5"   # 15:42 IST, Monday to Friday: wake the server so it saves the day
+    - cron: "40 10 * * 1-5"   # 16:10 IST: check that the day was saved
+  workflow_dispatch:           # or by hand, from the Actions tab
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    env:
+      SITE: https://my-trade-hvny.onrender.com   # the dashboard's address (no secret: the page itself asks for the password)
+    steps:
+      - name: Wake the server
+        run: |
+          # a sleeping Render service takes up to a minute to come back; the first knock may time out, that is fine
+          curl -s -o /dev/null --max-time 120 "$SITE/health" || true
+          sleep 100
+      - name: Read the server's health
+        run: |
+          curl -s --max-time 60 "$SITE/health" | tee health.json
+          echo
+      - name: Check that the day was saved (the 16:10 run only)
+        run: |
+          python3 - <<'PY'
+          import json, sys
+          from datetime import datetime, timedelta, timezone
+          now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+          try:
+              health = json.load(open("health.json"))
+          except Exception as exc:
+              sys.exit(f"The server did not answer its health address: {exc}")
+          study = health.get("study") or {}
+          print("server says:", json.dumps(study))
+          if now.hour < 16:
+              print("The wake-up run: the server is up; it saves the day at 15:40 on its own."); sys.exit(0)
+          if now.weekday() >= 5:
+              print("A weekend: nothing to save."); sys.exit(0)
+          today = now.date().isoformat()
+          pushed_today = (study.get("pushed_at") or "")[:10] == today
+          if study.get("last_complete") == today:
+              print(f"Today's session ({today}) is saved" + (" and pushed to GitHub." if pushed_today else ", but on the server only: " + str(study.get("problem") or "no GitHub token set") + "."))
+              sys.exit(0 if pushed_today else 1)
+          if study.get("checked") == today:
+              print(f"The server looked after the close and Dhan had no candle for today ({today}): a market holiday."); sys.exit(0)
+          if not health.get("dhan"):
+              sys.exit("Dhan is not set up on the server (DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN missing), so nothing is saved.")
+          sys.exit(f"Today's session ({today}) is NOT saved yet. The server says: {study.get('problem') or 'no problem reported; it may still be fetching the day, run this again in a few minutes'}")
+          PY
