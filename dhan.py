@@ -343,8 +343,14 @@ def nearest_expiry(name: str) -> str:
 
 def chain(name: str, expiry: str) -> dict:
     """{"underlying": index level, "strikes": {strike: {"CE": premium, "PE": premium}}}, refreshed at most every 5 s
-    (Dhan allows one option-chain request per 3 s)."""
+    (Dhan allows one option-chain request per 3 s). A failed read is kept for those 5 s too, so a chain that
+    cannot be read is not asked again at once by every refresh, which would keep Dhan's rate limit tripping."""
     def make():
+        try:
+            return read()
+        except DhanError as exc:
+            return exc
+    def read():
         body = call("POST", "/optionchain", {"UnderlyingScrip": INDEX_IDS[name], "UnderlyingSeg": SEGMENT, "Expiry": expiry})
         data = body.get("data") or {}
         strikes = {}
@@ -362,7 +368,10 @@ def chain(name: str, expiry: str) -> dict:
         if not strikes:
             raise DhanError("other", f"unexpected option chain answer from Dhan: {str(body)[:160]}")
         return {"underlying": float(data.get("last_price") or 0), "strikes": strikes, "expiry": expiry, "time": datetime.now(IST).isoformat(timespec="seconds")}
-    return cached(("chain", name, expiry), 5, make)
+    result = cached(("chain", name, expiry), 5, make)
+    if isinstance(result, DhanError):
+        raise result
+    return result
 
 
 def itm_strike(strikes: dict, side: str, level: float) -> float | None:
@@ -429,17 +438,23 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
     return dict(record)
 
 
-def refresh_records(name: str) -> None:
+def refresh_records(name: str) -> str | None:
     """Reads the premium now for every open record of the index and marks Sell the first time it is at or
-    below the sell point. The mark stays."""
+    below the sell point. The mark stays. Returns None, or why a premium could not be read this time
+    (the record then keeps its last premium and the time it was read)."""
     todays = [r for r in records_for(name) if not r["ended"]]
     if not todays:
-        return
+        return None
     now = datetime.now(IST).isoformat(timespec="seconds")
+    problem = None
     for r in todays:
         try:
             premium = chain(name, r["expiry"])["strikes"][r["strike"]][r["side"]]
-        except (DhanError, KeyError):
+        except DhanError as exc:
+            problem = exc.message
+            continue
+        except KeyError:
+            problem = f"Dhan's option chain carries no price for {int(r['strike'])} {r['side']} {r['expiry']} right now"
             continue
         with _records_lock:
             rec = _records.get(r["key"])
@@ -450,6 +465,7 @@ def refresh_records(name: str) -> None:
                 rec["sold"] = {"premium": premium, "at": now}
     with _records_lock:
         _save_records()
+    return problem
 
 
 def end_call(key: str, how: str) -> dict | None:

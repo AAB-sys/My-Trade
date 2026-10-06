@@ -553,12 +553,16 @@ async def options_state(name: str):
     if not (DHAN_ON and key in dhan.INDEX_IDS):
         return {"active": False, "status": store["dhan"]["status"], "records": []}
     try:
-        await asyncio.to_thread(dhan.refresh_records, key)
+        problem = await asyncio.to_thread(dhan.refresh_records, key)
         expiry = await asyncio.to_thread(dhan.nearest_expiry, key)
     except Exception as exc:
         dhan_status(False, dhan_reason(exc))
         return {"active": False, "status": store["dhan"]["status"], "records": dhan.records_for(key)}
-    return {"active": True, "status": "Dhan: option premiums live from your account", "expiry": expiry,
+    # a premium that could not be read is said so, with the last values read left on the page, rather than
+    # shown as if live (the owner saw "Now" stand still on 6 October and could not tell why)
+    status = (f"Dhan: the option premiums could not be refreshed just now: {problem}. The last values read are shown, with their time."
+              if problem else "Dhan: option premiums live from your account")
+    return {"active": not problem, "status": status, "expiry": expiry,
             "sell_share": dhan.SELL_SHARE, "records": dhan.records_for(key)}
 
 
