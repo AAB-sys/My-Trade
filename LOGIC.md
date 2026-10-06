@@ -140,9 +140,9 @@ no option prices, so which strike to buy and what its premium did are the
 owner's to track **(owner to decide)**.
 
 **Exit by premium - built, on Dhan** (owner's decision, 5 October). Each call has
-the premium paid for the CE or PE at entry. The sell point is 35% of it (the
-`SELL_SHARE` setting; owner's decision of 6 October, down from the 50% of the day
-before). While the call is open, when the current premium is
+the premium paid for the CE or PE at entry. The sell point is a fall of 35% of
+it, i.e. 65% of the premium paid (the `SELL_SHARE` setting; owner's decision of
+6 October: a fall of 35%, not the 50% of the day before). While the call is open, when the current premium is
 at or below the sell point, the **Sell** column lights red ("SELL", then "SOLD at
 <premium>") and stays lit. The premiums are real prices from the owner's broker
 account; nothing is estimated from the index (owner's choice: no guessed
