@@ -134,7 +134,9 @@ their own logic. Read this before touching the code.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
   (`readOf()`: the candle verdict of 7 October, CARRY or EXIT with the reason, for
   whichever level gave the call, sent with every recorded call into the calls CSV;
-  `rule.read_of` is its Python twin for the watcher; not on the table; changes no call. Idea
+  `rule.read_of` is its Python twin for the watcher; not on the table; changes no call;
+  `carryOf()` / `rule.carry_of` the carry read of 7 October evening, idea P5's
+  question, three more CSV columns; trades carry `ladder`, the levels beyond the target. Idea
   P4 is the same exit acted on, `exitBack` in `paperTrades`, Study page only)
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas

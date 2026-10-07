@@ -21,7 +21,8 @@ const out = jobs.map(j => {
   const levels = j.levels;  // the live page: the levels as they stand now, for every candle
   const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined })
     : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined });
-  res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // the candle verdict too
+  res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now });  // the candle verdict too
+    t.carry = R.carryOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // and the carry read
   return res;
 });
 process.stdout.write(JSON.stringify(out));
@@ -43,6 +44,7 @@ def py_run(jobs: list) -> list:
             res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"))
         for t in res["trades"]:
             t["read"] = rule.read_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # the candle verdict too
+            t["carry"] = rule.carry_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # and the carry read
         out.append(res)
     return out
 
@@ -92,7 +94,9 @@ def main() -> int:
     jobs = []
     IDEAS = [None, {"closeAt": 15 * 3600}, {"noNewAfter": 14 * 3600}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600},
              {"minDepth": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25},
-             {"exitBack": 0.25}, {"minDepth": 0.25, "exitBack": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25, "exitBack": 0.25}]
+             {"exitBack": 0.25}, {"minDepth": 0.25, "exitBack": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25, "exitBack": 0.25},
+             {"carryOn": 0.25}, {"carryOn": 0}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "carryOn": 0.25},
+             {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25, "exitBack": 0.25, "carryOn": 0.25}]
     # 1. the saved days, replayed in every setting
     days = saved_days(folder) if folder.exists() else []
     for d in days:

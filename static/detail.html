@@ -569,10 +569,11 @@
   async function recordCalls(trades) {
     const session = currentSession();
     if (state.simulated || !trades.length || !session || session === "all" || !isToday(session)) return;
-    const rows = trades.map(t => { const r = optionRecords[callKey(t)], cr = candleRead(t); return {
+    const rows = trades.map(t => { const r = optionRecords[callKey(t)], cr = candleRead(t), ca = carryRead(t); return {
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
       candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
+      carry_deep: ca ? ca.deep : "", beyond_level: ca ? ca.beyond : null, beyond_reached: ca ? ca.reached : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
     const shape = rows.map(r => `${r.signal_time}${r.side}${r.how}${r.sold_at ?? ""}${r.contract}`).join(",");
@@ -630,6 +631,12 @@
   function candleRead(t) {
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
     return rd ? { say: rd.word, exitAt: rd.exitAt, why: rd.why } : null;
+  }
+  // The carry read (idea P5's question, 7 October evening; Rules.carryOf): at the candle that reached the target, did the
+  // close go a quarter into the next gap, and was the level beyond reached later. For the CSV and the research engine only
+  function carryRead(t) {
+    const c = Rules.carryOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
+    return c ? { deep: c.deep ? "yes" : "no", beyond: c.beyond, reached: c.reached ? "yes" : "no" } : null;
   }
 
   // paid → now while the call is open; paid → at exit once it has ended, with the Sell mark (LOGIC.md, "Exit by premium"):
@@ -1123,12 +1130,14 @@
   document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
     const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
     const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by",
-                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium", "candles_say", "exit_said_at_ist", "candles_why"];
+                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium", "candles_say", "exit_said_at_ist", "candles_why",
+                  "carry_deep", "beyond_level", "beyond_reached"];
     const rows = lastPaper.trades.map(t => {
-      const r = optionRecords[callKey(t)], cr = candleRead(t);
+      const r = optionRecords[callKey(t)], cr = candleRead(t), ca = carryRead(t);
       return [stamp(t.signalTime), (t.ratio * 100).toFixed(1) + "%", t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how,
               r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : "",
-              cr ? cr.say : "", cr && cr.exitAt ? stamp(cr.exitAt) : "", cr ? `"${cr.why}"` : ""];  // the reason holds a comma, so it is quoted
+              cr ? cr.say : "", cr && cr.exitAt ? stamp(cr.exitAt) : "", cr ? `"${cr.why}"` : "",  // the reason holds a comma, so it is quoted
+              ca ? ca.deep : "", ca ? ca.beyond : "", ca ? ca.reached : ""];
     });
     const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
     const a = document.createElement("a");

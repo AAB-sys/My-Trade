@@ -61,7 +61,8 @@
       target = beyond; aimed = "beyond";
     }
     const { prices, ...rest } = sig;
-    return { ...rest, target, aimed, entry: bar.open, entryTime: bar.time, how: "open" };
+    const ladder = sig.side === "CE" ? prices.filter(p => p > target) : prices.filter(p => p < target).reverse();  // the levels beyond the target, nearest first: idea P5 carries the call up them, and the carry read asks about the first
+    return { ...rest, target, aimed, ladder, entry: bar.open, entryTime: bar.time, how: "open" };
   }
 
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
@@ -79,9 +80,13 @@
   //              minDepth (idea P3, 7 October: a crossed signal counts only when its candle closed at least this share of the
   //              way from the level to the next one; a shallower cross gives no call and leaves the level free to call later),
   //              exitBack (idea P4, 7 October, the owner's rule: a closed candle that goes back across the call's level by this
-  //              share of the gap to the target ends the call at its close, "candle"; the same measure as readOf's verdict below)
+  //              share of the gap to the target ends the call at its close, "candle"; the same measure as readOf's verdict below),
+  //              carryOn (idea P5, 7 October: when the candle that reaches the target closes at least this share of the next
+  //              gap past it, the call carries on to the level beyond, again and again up the ladder; otherwise it ends at the
+  //              target as ever. The decision waits for that candle to close: on the candle forming now the call stays open)
   function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal, ideas }) {
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
+    const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
     const clockEnd = (b) => (b.time + IST_OFFSET) % 86400 + seconds;  // when the candle closes, in seconds since midnight IST
     const closed = bars.filter(b => endOf(b, seconds) <= now);
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
@@ -89,6 +94,16 @@
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
     const reaches = (t, bar) => t.side === "CE" ? bar.high >= t.target : bar.low <= t.target;
     const backAcross = (t, close) => t.side === "CE" ? t.level - close : close - t.level;  // how far a close went back across the call's level, in points
+    const settle = (t, bar) => {  // the target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target
+      while (reaches(t, bar)) {
+        const beyond = carryOn != null && t.ladder.length ? t.ladder[0] : null;
+        if (beyond != null && (t.side === "CE" ? bar.close - t.target : t.target - bar.close) >= carryOn * Math.abs(beyond - t.target)) {
+          t.carried = (t.carried || 0) + 1; t.target = beyond; t.ladder = t.ladder.slice(1); continue;  // and the same candle may have reached the next one too
+        }
+        end(t, t.target, bar, "target"); return false;
+      }
+      return true;
+    };
     const newDay = (a, b) => !dayCandles && dayOf(a.time) !== dayOf(b.time);
     const trades = [];
     const used = {};  // level ratio + side -> true while that level has given a call that way
@@ -100,7 +115,7 @@
         ready = null;  // a signal on a day's last candle has no candle left to enter on
       }
       if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
-      open = open.filter(t => { if (reaches(t, bar)) { end(t, t.target, bar, "target"); return false; } return true; });
+      open = open.filter(t => settle(t, bar));
       if (exitBack) open = open.filter(t => { if (backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       const levels = levelsAt(i);
@@ -114,7 +129,8 @@
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
       if (ready) { const t = enterAt(ready, forming); if (t) { trades.push(t); open.push(t); } ready = null; }
-      open = open.filter(t => { if (reaches(t, forming)) { end(t, t.target, forming, "target"); return false; } return true; });
+      open = open.filter(t => { if (!reaches(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
+                                end(t, t.target, forming, "target"); return false; });
       open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at
     } else {
       open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
@@ -139,6 +155,7 @@
     P2: { key: "P2", name: "No new calls after 14:00", ideas: { noNewAfter: 14 * 3600 } },
     P3: { key: "P3", name: "Crossed signals only a quarter of the way to the next level", ideas: { minDepth: 0.25 } },
     P4: { key: "P4", name: "Exit when a candle closes on the wrong side of the level", ideas: { exitBack: 0.25 } },  // the owner's rule of 7 October, acted on: a close a quarter of the gap past the level
+    P5: { key: "P5", name: "Carry on to the next level when the candle reaching the target closes a quarter into the next gap", ideas: { carryOn: 0.25 } },  // 7 October evening, from the carry study (lab/findings.md, round 3)
   };
   const ideasOf = (keys) => Object.assign({}, ...keys.map(k => IDEAS[k].ideas));
 
@@ -251,6 +268,25 @@
     return { depth, body, back, retest, strength, word, why, exitAt, exitPrice };
   }
 
-  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf,
+  // ---- The carry read (idea P5's question, asked of every call of the rule as it is, for the day's calls CSV and the
+  // research engine; 7 October evening): at the candle that reached the call's target, did the close go at least a quarter
+  // (CARRY_ON) of the next gap past the target, and was the level beyond reached by a later closed candle (the same candle
+  // counts). null until the target is reached, and for a call with no level beyond its target. Changes nothing about a call
+  const CARRY_ON = IDEAS.P5.ideas.carryOn;
+  function carryOf({ trade: t, bars, seconds, now }) {
+    if (t.how !== "target" || !t.ladder || !t.ladder.length) return null;
+    const hit = bars.find(b => b.time === t.exitTime);
+    if (!hit) return null;
+    const beyond = t.ladder[0], dir = t.side === "CE" ? 1 : -1;
+    const deep = dir * (hit.close - t.target) >= CARRY_ON * Math.abs(beyond - t.target);
+    let reachedAt = null;
+    for (const b of bars) {
+      if (b.time < t.exitTime || endOf(b, seconds) > now) continue;
+      if (dir > 0 ? b.high >= beyond : b.low <= beyond) { reachedAt = b.time; break; }
+    }
+    return { deep, beyond, reached: reachedAt != null, reachedAt };
+  }
+
+  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);
