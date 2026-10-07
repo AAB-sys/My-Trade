@@ -95,9 +95,12 @@ The rule above, run over the closed candles of the session picked, with that
 session's levels. Each call (buy a CE, or buy a PE) is one row of the list, read
 left to right: the time, **what to do now** in plain words (*Enter at the next
 open*, *HOLD* with the sell line, *SELL NOW*, *SOLD at* a premium, *Target hit*,
-*Closed at day end*), the call with its contract, the level that gave it, the
-index at entry and the target, the index now (or at the exit), the points, and
-the premium paid and now. The list is in time order, the newest call at the
+*Closed at day end*), the call with its contract, the signal (*Held* or
+*Crossed*, the level's ratio and price), the index at entry and the target, the
+index now or at the exit ("Now / exit"), the points, and the premium paid and
+now (at exit, once the call has ended). A finished call that no page saw enter
+reads "not seen at entry" in the premium cell: no page was open at its entry,
+so no premium could be recorded then (7 October). The list is in time order, the newest call at the
 top, open or finished alike (owner's ask, 7 October: an open call listed above a
 later one read as if it had been given later); one line keeps the score (owner's
 ask, 7 October: the list must say what is happening and what action is needed). Paper only: nothing is sent anywhere, and
