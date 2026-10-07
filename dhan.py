@@ -64,7 +64,7 @@ PACE_SECONDS = {"feed": 1.2, "chain": 3.1, "other": 0.35}  # a little over the l
 
 def _pace(path: str) -> None:
     """Waits for this request's turn, so Dhan's rate limits are kept whoever asks."""
-    group = "feed" if path.startswith("/marketfeed") else "chain" if path.startswith("/optionchain") else "other"
+    group = "feed" if path.startswith("/marketfeed") else "chain" if path == "/optionchain" else "other"  # the chain itself: one every 3 s; its expiry list is an ordinary request
     with _pace_lock:
         wait = _pace_next[group] - time.monotonic()
         if wait > 0:
