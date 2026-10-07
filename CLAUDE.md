@@ -115,6 +115,9 @@ their own logic. Read this before touching the code.
 - `start.bat` reads `HOST`/`PORT` from `.env` (defaults `127.0.0.1`/`8000`);
   `HOST=0.0.0.0` opens the dashboard to other devices on the owner's home network
   and prints the addresses to use.
+- Every answer from the server (`store`, `/alive`) carries `commit` (Render's
+  `RENDER_GIT_COMMIT`); both pages reload themselves when it changes
+  (`newDeploy()`), at most once a minute, so a merge reaches an open tab.
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
   each tile links to `/index/{name}` in a new tab. The top row is NIFTY 50,
   NIFTY BANK, SENSEX (`PINNED`). In market hours those three tiles carry Dhan's

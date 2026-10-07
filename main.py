@@ -26,6 +26,7 @@ import rule
 BASE = Path(__file__).parent
 STATIC = BASE / "static"
 NO_CACHE = {"Cache-Control": "no-cache"}
+COMMIT = os.environ.get("RENDER_GIT_COMMIT", "")[:7]  # the code this server runs (Render sets it): /health says it, and the pages reload on a new one
 log = logging.getLogger("my-trade")
 
 
@@ -84,6 +85,7 @@ store = {
     "simulated": PROVIDER == "demo",
     "poll_seconds": POLL_SECONDS,
     "auth_enabled": AUTH_ENABLED,
+    "commit": COMMIT,  # every answer carries it: an open page reloads itself when the server comes up with new code
     "updated_at": None,
     "quotes": [],
     "failed": [],
@@ -773,7 +775,7 @@ def known_index(name: str) -> str:
 def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
     day's session was saved. No secret in here: dates, and a problem said in plain words."""
-    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7], "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(),
+    return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(),
             "feed": feed_state()}
 
 

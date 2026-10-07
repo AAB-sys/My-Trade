@@ -927,12 +927,28 @@
   const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host
     + "/ws?tab=" + encodeURIComponent(TAB) + "&page=" + encodeURIComponent(PAGE) + "&live=" + encodeURIComponent(name);
 
+  // A merge restarts the server with new page code, and an open page keeps the old code until it is reloaded (7 October:
+  // the tiles stood still after a merge on a tab that had not been reloaded). So every answer from the server carries the
+  // commit it runs, and a page that sees a different one from the one it started with reloads itself, at most once a
+  // minute (during Render's switchover the old and the new server can both answer for a moment)
+  let loadedCommit = null;
+  function newDeploy(commit) {
+    if (!commit) return false;
+    if (loadedCommit === null) { loadedCommit = commit; return false; }
+    if (commit === loadedCommit) return false;
+    let last = 0; try { last = parseInt(sessionStorage.getItem("reloaded-at") || "0", 10); } catch (e) {}
+    if (Date.now() - last < 60000) return false;
+    try { sessionStorage.setItem("reloaded-at", String(Date.now())); } catch (e) {}
+    location.reload();
+    return true;
+  }
+
   // "Still here": keeps the login alive even while /ws is down.
   async function beat() {
     try {
       const r = await fetch("/alive", { method: "POST", ...withTab() });
       if (r.status === 401) { location.href = "/login"; return; }
-      if (r.ok) { const data = await r.json(); if (data.page) PAGE = data.page; }
+      if (r.ok) { const data = await r.json(); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; }
     } catch (e) {}
   }
 
@@ -989,7 +1005,7 @@
   let liveWs = null;
   function keepAlive() {
     const ws = liveWs = new WebSocket(wsUrl());
-    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); if (data.premium) applyPremium(data.premium); };
+    ws.onmessage = event => { const data = JSON.parse(event.data); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); if (data.premium) applyPremium(data.premium); };
     ws.onclose = () => {
       beat();  // says "still here" at once, and finds out if the login is over
       setTimeout(keepAlive, 3000);
