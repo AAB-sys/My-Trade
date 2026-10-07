@@ -218,3 +218,30 @@ the next one. That is the case for P5, which rides the candle that reached the t
 betting on the one after.
 
 Nothing proposed from this round: the retest facts are the same facts P3 and P5 already use (the depth of a close).
+
+## Round 5, night of 7 October: rules built on the retest facts
+
+From round 4: a held retest whose candle closes a quarter of the way on, in the direction of the cross, carries on
+to the next level 74% of the time; a failed retest after a deep cross runs back 26 times in 27. Two rules built on
+those facts, applied to every call of the owner's rule on the six days (eight boards, in `lab/replay.js`):
+
+**Carry on a held deep retest: aim one level beyond.** While a call is open, a candle that comes back to within a
+fifth of the gap of the call's level and closes at least a quarter of the way to the target, in the call's direction,
+moves the target one level beyond (once per call). On its own: NIFTY 50 5m today's levels +826 against +480 (34 calls
+changed, 30 for the better), previous day +849 against +316 (23 changed, 21 better); NIFTY BANK 5m today's levels
++2,523 against +1,144, previous day +4,325 against +2,164; 15-minute boards ahead on three of four. Over the eight
+boards +11,810 against +6,403. Together with P5 (carry on at the target): +20,566, ahead of P5 alone (+15,341) on
+seven boards of eight and level on the eighth; with P1 and P2 as well +20,340. Its cost: the worst day on NIFTY 50
+5m today's levels goes from −150 to −306 (−270 with P5), because a call aimed one level further gives back more when
+the day turns.
+
+**Exit on a failed retest after a deep cross.** When the signal candle had closed past halfway and a later candle
+closes back across the level, the call ends at that close. It fires rarely (0 to 7 calls per board) and does not pay:
++4,843 over the eight boards against +6,403 holding; ahead on NIFTY 50 previous-day boards only. The 96% of round 4
+is about where the index goes next, not about those calls: most of them were already going to end at the day's end,
+and the exit only fixed the loss earlier. Set aside.
+
+Where this leaves the carry question: the two carry readings, at the target (P5) and at a held retest, are the
+strongest things found so far, and they add up. Six days is the sample; both now run in every nightly round, and
+the retest carry waits for ten days before it can be proposed as a switch. The exit side stays as the owner's rule
+has it: no stop, the day's end, and the clock ideas P1 and P2.

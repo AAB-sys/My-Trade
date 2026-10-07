@@ -39,6 +39,9 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 //   at least this share of the gap (7 October: the depth of the close past a level is what tells a cross from a bounce)
 //   carryOn: idea P5 (7 October evening): when the candle reaching the target closes at least this share of the next gap past it,
 //   the call carries on to the level beyond, again and again up the ladder of levels in force at the signal
+//   retestCarry (night of 7 October, from lab/candles.js): a held retest of the call's level (a candle within a fifth of the gap
+//   of it that closes at least this share of the way to the target, in the call's direction) moves the target one level
+//   beyond, once   exitFailedDeep: when the signal candle had closed past halfway, the first close back across the level ends the call
 function run(bars, previous, o, higher) {
   const sec = o.sec;
   const fixed = o.levels === "prev" ? (previous ? R.levelsOf(R.moveOfDay(previous)) : null) : null;
@@ -58,7 +61,8 @@ function run(bars, previous, o, higher) {
         target = beyond == null ? null : beyond; aimed = "beyond";
       }
       if (target != null) { const ladder = ready.side === "CE" ? ready.prices.filter(p => p > target) : ready.prices.filter(p => p < target).reverse();
-        const x = { ...ready, target, aimed, ladder, entry: bar.open, entryTime: bar.time, how: "open", adv: 0, fav: 0 }; trades.push(x); open.push(x); }
+        const gap0 = Math.abs(target - ready.level), sigDepth = Math.abs(ready.close - ready.level) / gap0;
+        const x = { ...ready, target, aimed, ladder, gap0, sigDepth, entry: bar.open, entryTime: bar.time, how: "open", adv: 0, fav: 0 }; trades.push(x); open.push(x); }
       ready = null;
     }
     open = open.filter(x => {
@@ -68,6 +72,12 @@ function run(bars, previous, o, higher) {
         if (beyond != null && (x.side === "CE" ? bar.close - x.target : x.target - bar.close) >= o.carryOn * Math.abs(beyond - x.target)) { x.carried = (x.carried || 0) + 1; x.target = beyond; x.ladder = x.ladder.slice(1); continue; }
         end(x, x.target, bar, "target"); return false;
       }
+      if (o.retestCarry != null && !x.retested && x.ladder.length) {  // a held retest with a deep close in the call's direction: aim one level beyond
+        const near = x.side === "CE" ? bar.low <= x.level + 0.2 * x.gap0 : bar.high >= x.level - 0.2 * x.gap0;
+        const deep = (x.side === "CE" ? bar.close - x.level : x.level - bar.close) >= o.retestCarry * x.gap0, withIt = x.side === "CE" ? bar.close > bar.open : bar.close < bar.open;
+        if (near && deep && withIt) { x.retested = true; x.carried = (x.carried || 0) + 1; x.target = x.ladder[0]; x.ladder = x.ladder.slice(1); }
+      }
+      if (o.exitFailedDeep && x.sigDepth >= 0.5 && (x.side === "CE" ? bar.close < x.level : bar.close > x.level)) { end(x, bar.close, bar, "candle"); return false; }
       if (o.stopShare) { const stop = x.side === "CE" ? x.entry - o.stopShare * (x.target - x.entry) : x.entry + o.stopShare * (x.entry - x.target);
         if (x.side === "CE" ? bar.low <= stop : bar.high >= stop) { end(x, stop, bar, "stop"); return false; } }
       if (o.closeBack && (x.side === "CE" ? bar.close < x.level : bar.close > x.level)) { end(x, bar.close, bar, "candle"); return false; }
@@ -176,6 +186,12 @@ const IDEAS = [
   ["P1 + P2 + P3 + P4 + P5", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25, closeBackShare: 0.25, carryOn: 0.25 }],
   ["today-so-far levels + P5", { levels: "today", carryOn: 0.25 }],
   ["today-so-far levels + P1 + P2 + P5", { levels: "today", closeAt: hm(15, 0), noNewAfter: hm(14, 0), carryOn: 0.25 }],
+  // night of 7 October, from the retest facts of lab/candles.js (findings, round 5)
+  ["carry on a held deep retest: aim one level beyond", { retestCarry: 0.25 }],
+  ["P5 + carry on a held deep retest", { carryOn: 0.25, retestCarry: 0.25 }],
+  ["P1 + P2 + P5 + carry on a held deep retest", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), carryOn: 0.25, retestCarry: 0.25 }],
+  ["today-so-far levels + P5 + carry on a held deep retest", { levels: "today", carryOn: 0.25, retestCarry: 0.25 }],
+  ["exit on a failed retest after a deep cross", { exitFailedDeep: true }],
   ["P3 + P4", { minDepth: 0.25, closeBackShare: 0.25 }],
   ["P1 + P2 + P3 + P4", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25, closeBackShare: 0.25 }],
   ["today-so-far levels + P4", { levels: "today", closeBackShare: 0.25 }],
