@@ -85,11 +85,14 @@ def _num(value):
         return ""
 
 
+MOVING = ("points", "premium_now")  # the fields of a row that move with the price: not a change of the list
+
+
 def record_calls(index: str, interval: str, levels: str, signal: str, session: str, calls: list) -> int:
     """The list the page shows for one setting of one index, merged in; returns how many rows are new."""
     global _calls_version
     now = now_ist()
-    new = 0
+    new, changed = 0, False
     with _calls_lock:
         day = live_calls.setdefault(session, {})
         for c in calls:
@@ -100,6 +103,7 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
             if row is None:
                 row = {"date": session, "index": index, "time_frame": interval, "levels": levels, "signal_mode": signal, "first_seen_ist": now[:16].replace("T", " ")}
                 new += 1
+            before = {k: v for k, v in row.items() if k not in MOVING}
             row.update({"signal_time_ist": _stamp(c.get("signal_time")), "level_pct": f"{float(c.get('ratio') or 0) * 100:.1f}%", "level_price": _num(c.get("level")),
                         "kind": str(c.get("kind") or "")[:10], "option_side": str(c.get("side") or "")[:2], "entry_time_ist": _stamp(c.get("entry_time")) if c.get("entry_time") else "",
                         "index_at_entry": _num(c.get("entry")), "target": _num(c.get("target")), "exit_time_ist": _stamp(c.get("exit_time")) if c.get("exit_time") else "",
@@ -107,7 +111,10 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                         "contract": str(c.get("contract") or "")[:40], "premium_paid": _num(c.get("premium_paid")), "premium_now": _num(c.get("premium_now")),
                         "sell_below": _num(c.get("sell_below")), "sold_at_premium": _num(c.get("sold_at"))})
             day[key] = row
-        _calls_version += 1
+            if {k: v for k, v in row.items() if k not in MOVING} != before:
+                changed = True
+        if changed:  # the page sends its list every minute, and an open call's points move with every tick: only a call entering,
+            _calls_version += 1  # ending, getting its contract or its Sell mark (not its points or premium moving) hurries the partial copy
         try:
             CALLS.mkdir(parents=True, exist_ok=True)
             (CALLS / f"{session}.json").write_text(json.dumps(list(day.values()), indent=1))
