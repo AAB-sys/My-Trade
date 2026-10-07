@@ -589,21 +589,35 @@
   }
 
   // One row reads left to right, in the owner's format of 7 October: the time, the call with its contract, the signal,
-  // the entry (the contract's strike number; the index at entry until the contract is known), the target level (with
+  // the entry (the strike number bought; the index at entry only where there is no strike), the target level (with
   // "hit" or "not reached" once the call has ended), the premium paid and now, and what the candles say.
   function rowCells(t, r) {
+    const strike = strikeOf(t, r);
     return `<td>${callTime(t.signalTime)}</td>`
-      + `<td class="call">Buy ${t.side}${r ? ` · ${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}` : ""}</td>`
+      + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, r) + targetCell(t) + premiumCell(t, r) + candleCell(t);
+      + entryCell(t, strike) + targetCell(t) + premiumCell(t, r) + candleCell(t);
   }
   const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
 
-  // "Call Entry": the strike number of the contract bought (the owner's word: the same number as in the call); until the
-  // contract is known (no Dhan, or the page was not open at the entry) the index price the call entered at
-  function entryCell(t, r) {
+  // The strike bought (the owner's choice, one strike in the money: a CE the first strike below the index at entry, a PE the
+  // first above, dhan.itm_strike): the server's record names it once the call has been seen entering; before that, and for
+  // a call no page saw enter, the page works it out the same way from the index at entry on the chain's strike step.
+  // Without a strike step (an index with no option chain here) there is no strike.
+  const STRIKE_STEP = { "NIFTY 50": 50, "NIFTY BANK": 100 };
+  function strikeOf(t, r) {
+    if (r) return Math.round(r.strike);
+    const step = STRIKE_STEP[name];
+    if (!step || t.entry == null) return null;
+    const k = t.entry / step, on = Number.isInteger(k);  // exactly on a strike: the next one below (CE) or above (PE), as the server does
+    return (t.side === "CE" ? (on ? k - 1 : Math.floor(k)) : (on ? k + 1 : Math.ceil(k))) * step;
+  }
+
+  // "Call Entry": the strike number of the contract bought (the owner's word: the same number as in the call); the index
+  // price the call entered at only where there is no strike
+  function entryCell(t, strike) {
     if (t.entry == null) return `<td class="entry wait">next open</td>`;
-    return `<td class="entry">${r ? Math.round(r.strike) : fmt.format(t.entry)}</td>`;
+    return `<td class="entry">${strike != null ? strike : fmt.format(t.entry)}</td>`;
   }
 
   // "Call Target": the next level in the call's direction, and how the call ended once it has
