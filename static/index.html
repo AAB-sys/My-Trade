@@ -134,6 +134,7 @@
     const at = new Date(q.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" });
     const el = document.createElement("a");
     el.className = "tile" + (featured ? " featured" : "");
+    el.dataset.name = q.name;  // a live price finds its tile by this
     el.href = "/index/" + encodeURIComponent(q.name) + "#t=" + encodeURIComponent(TAB);  // hands the note to the new tab
     el.target = "_blank";
     el.rel = "noopener";
@@ -146,11 +147,35 @@
     return el;
   }
 
+  // The Dhan tiles move every second (owner's ask, 7 October): the server sends the latest live price of each index
+  // on Dhan once a second ("live"), and the tile is redrawn in place from it. The refresh's quote (every poll) keeps
+  // the previous close the change is measured against; a live price newer than that quote wins over it on every redraw
+  let lastQuotes = {}, liveNow = {};
+  const at = iso => new Date(iso).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" });
+  const withLive = q => {
+    const t = liveNow[q.name];
+    if (!t || !(new Date(t.time) > new Date(q.time))) return q;
+    const previousClose = Math.round((q.level - q.change) * 100) / 100, change = Math.round((t.last - previousClose) * 100) / 100;
+    return { ...q, level: t.last, change, change_percent: previousClose ? Math.round(change / previousClose * 10000) / 100 : 0, time: t.time, source: "dhan" };
+  };
+  function applyLive(live) {
+    Object.assign(liveNow, live);
+    let newest = "";
+    for (const name of Object.keys(live)) {
+      const q = lastQuotes[name], el = document.querySelector(`.tile[data-name="${CSS.escape(name)}"]`);
+      if (q && el) el.replaceWith(tile(withLive(q), el.classList.contains("featured")));
+      if (live[name].time > newest) newest = live[name].time;
+    }
+    if (connected && newest) document.getElementById("status").textContent = "Live · updated " + at(newest);
+  }
+
   function render(quotes) {
     const byName = Object.fromEntries(quotes.map(q => [q.name, q]));
-    const featured = PINNED.map(n => byName[n]).filter(Boolean);
+    lastQuotes = byName;
+    const featured = PINNED.map(n => byName[n]).filter(Boolean).map(withLive);
     const others = quotes
       .filter(q => !PINNED.includes(q.name))
+      .map(withLive)
       .sort((a, b) => b.change_percent - a.change_percent);
 
     document.getElementById("featured").replaceChildren(...featured.map(q => tile(q, true)));
@@ -191,7 +216,7 @@
     }
     render(data.quotes);
     status.className = connected ? "" : "error";
-    status.textContent = (connected ? "Live" : "Reconnecting, updating every " + BEAT_MS / 1000 + " s meanwhile") + " · updated " + clock();
+    status.textContent = (connected ? "Live" : "Reconnecting, updating every " + BEAT_MS / 1000 + " s meanwhile") + " · updated " + (data.updated_at ? at(data.updated_at) : clock());  // the server's clock, as the index page shows it
     document.getElementById("mode").className = data.simulated ? "on" : "";
     document.getElementById("logout").hidden = !data.auth_enabled;
     document.getElementById("open-warning").hidden = data.auth_enabled;
@@ -211,7 +236,7 @@
   function connect() {
     const ws = new WebSocket(wsUrl());
     ws.onopen = () => { connected = true; };
-    ws.onmessage = event => apply(JSON.parse(event.data));
+    ws.onmessage = event => { const data = JSON.parse(event.data); if (data.live) applyLive(data.live); else apply(data); };
     ws.onclose = () => {
       connected = false;
       const status = document.getElementById("status");
