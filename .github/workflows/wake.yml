@@ -63,9 +63,12 @@ jobs:
               print("A weekend: nothing to save."); sys.exit(0)
           today = now.date().isoformat()
           pushed_today = (study.get("pushed_at") or "")[:10] == today
+          # a restart after the push (an evening merge) clears pushed_at: the server then pulled the complete day back
+          # from GitHub at start, so the day is there; only a push problem, or no token, means "on the server only"
+          on_github = pushed_today or (study.get("github") and not study.get("problem") and not study.get("pushed_at"))
           if study.get("last_complete") == today:
-              print(f"Today's session ({today}) is saved" + (" and pushed to GitHub." if pushed_today else ", but on the server only: " + str(study.get("problem") or "no GitHub token set") + "."))
-              sys.exit((warn or 0) if pushed_today else 1)
+              print(f"Today's session ({today}) is saved" + (" and pushed to GitHub." if pushed_today else " and on GitHub (pushed before the server's last restart)." if on_github else ", but on the server only: " + str(study.get("problem") or "no GitHub token set") + "."))
+              sys.exit((warn or 0) if on_github else 1)
           if study.get("checked") == today:
               print(f"The server looked after the close and Dhan had no candle for today ({today}): a market holiday."); sys.exit(warn or 0)
           if not health.get("dhan"):
