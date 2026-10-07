@@ -22,6 +22,7 @@ dashboard that shows them and updates the moment they change.
 | POST   | `/options/{name}/calls`, `/options/{name}/calls/ended` | JSON `{key, side, index_at_entry, ...}` / `{key, how}` | the index page reports a call entering or ending; the server records the contract and premiums |
 | GET    | `/study/`         | nothing       | the study page: the rules replayed over every saved day            |
 | GET    | `/study/days`, `/study/days/{date}` | a date as YYYY-MM-DD | the saved days (newest first) and where they are kept; one day's record |
+| POST   | `/calls/{name}`   | JSON `{interval, levels, signal, session, calls: [...]}` | the index page reports the calls it shows for today; the server records each and every one for the day's CSV |
 | POST   | `/study/save`     | nothing       | saves today now (a partial copy during the session, the final one after it) |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |
 
@@ -113,8 +114,10 @@ share of the premium paid.
 
 After every session the server saves the day's candles (NIFTY 50 and NIFTY
 BANK, in 1, 5, 15 and 30 minutes, with the day's and the previous day's open,
-high, low and close) to `data/sessions/<date>.json`, with a partial copy every
-few minutes during the session. Candles only: no premiums, no calls. **Study**
+high, low and close) to `data/sessions/<date>.json`, and beside it every call
+the index page suggested that day to `data/sessions/<date>-calls.csv` (the page
+sends its list as it draws it, `POST /calls/{name}`), with a partial copy of
+both every few minutes during the session. **Study**
 (linked from the dashboard and the index page, `/study/`) replays your rules
 over every saved day: pick the index, the time frame, the levels and the signal,
 and read the paper calls day by day, by hour, by level, by side, and every
