@@ -1,0 +1,212 @@
+"""The owner's rule (LOGIC.md, layers 1 to 3) in Python: the same rule as static/rules.js, line for line, so the
+server can watch the calls itself (the owner's decision of 7 October, "option 2": a call is recorded the moment it
+enters, page or no page). check_rule.py proves this copy and the page's engine give the same calls on every saved
+day, on a hand-made day and on random days; a round of research runs that check too. Nothing here comes from
+another product: it is the page's engine written again in Python, with the same names."""
+import math
+
+IST_OFFSET = 19800
+SESSION_END = 15 * 3600 + 30 * 60
+SESSION_START = 9 * 3600 + 15 * 60
+RATIOS = (0, 0.236, 0.382, 0.5, 0.618, 0.786, 1)
+INF = float("inf")
+
+
+def round2(x: float) -> float:
+    """JavaScript's Math.round(x * 100) / 100: to the nearest, a tie going up."""
+    v = x * 100
+    r = math.floor(v)
+    return (r + 1 if v - r >= 0.5 else r) / 100
+
+
+def day_of(t: float) -> int:
+    return math.floor((t + IST_OFFSET) / 86400)
+
+
+def day_over(day: int, now: float) -> bool:
+    if math.isinf(now):
+        return True
+    n = now + IST_OFFSET
+    return day < math.floor(n / 86400) or n % 86400 >= SESSION_END
+
+
+def end_of(b: dict, seconds: int) -> float:
+    """When a candle closes: its size on, but never past 3:30 pm of its day."""
+    return min(b["time"] + seconds, day_of(b["time"]) * 86400 - IST_OFFSET + SESSION_END)
+
+
+# ---- Layer 1: the levels of one move
+
+def levels_of(m: dict) -> list:
+    span = m["high"] - m["low"]
+    levels = [{"ratio": r, "price": round2(m["high"] - r * span if m["up"] else m["low"] + r * span)} for r in RATIOS]
+    return sorted(levels, key=lambda l: l["price"])  # a stable sort, as the page's
+
+
+def move_of(bars: list):
+    """"Today so far": the session's own low to high, an up move when its last close is above its open."""
+    if not bars:
+        return None
+    return {"high": max(b["high"] for b in bars), "low": min(b["low"] for b in bars), "up": bars[-1]["close"] >= bars[0]["open"]}
+
+
+def move_of_day(d):
+    """"Previous day": only the day's four figures are known, so it is an up move when it closed above its open."""
+    return {"high": d["high"], "low": d["low"], "up": d["close"] >= d["open"]} if d else None
+
+
+# ---- Layer 2 inside layer 3's signal: held or crossed, one candle one call, no repeat until closed back across
+
+def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str):
+    def crossed(L):
+        return (prev < L < bar["close"]) or (prev > L > bar["close"])
+
+    def held(L):
+        return not crossed(L) and ((prev > L and bar["low"] <= L and bar["close"] > L) or (prev < L and bar["high"] >= L and bar["close"] < L))
+
+    hits = []
+    for l in levels:
+        kind = "crossed" if crossed(l["price"]) else "held" if held(l["price"]) else None
+        if kind and (signal == "both" or signal == kind) and not used.get((l["ratio"], "CE" if bar["close"] > l["price"] else "PE")):
+            hits.append(l)
+    if not hits:
+        return None
+    at = hits[0]
+    for b in hits[1:]:  # the one nearest the close counts; the first of equals, as the page's reduce
+        if abs(b["price"] - bar["close"]) < abs(at["price"] - bar["close"]):
+            at = b
+    kind = "crossed" if crossed(at["price"]) else "held"
+    side = "CE" if bar["close"] > at["price"] else "PE"
+    nxt = next((l for l in levels if l["price"] > at["price"]), None) if side == "CE" else next((l for l in reversed(levels) if l["price"] < at["price"]), None)
+    if nxt is None:
+        return None  # a signal pointing outward from the 0% or 100% level has no next level
+    return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
+            "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
+            "prices": [l["price"] for l in levels]}
+
+
+def enter_at(sig: dict, bar: dict):
+    """The entry (owner, 7 October): already at or past the target, the call aims at the first level beyond the entry
+    price; with no level left beyond it, there is no call."""
+    target, aimed = sig["target"], None
+    if bar["open"] >= target if sig["side"] == "CE" else bar["open"] <= target:
+        prices = sig["prices"]
+        beyond = next((p for p in prices if p > bar["open"]), None) if sig["side"] == "CE" else next((p for p in reversed(prices) if p < bar["open"]), None)
+        if beyond is None:
+            return None
+        target, aimed = beyond, "beyond"
+    t = {k: v for k, v in sig.items() if k != "prices"}
+    t.update(target=target, aimed=aimed, entry=bar["open"], entryTime=bar["time"], how="open")
+    return t
+
+
+# ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
+
+def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None) -> dict:
+    close_at = (ideas or {}).get("closeAt")
+    no_new_after = (ideas or {}).get("noNewAfter")
+
+    def clock_end(b):
+        return (b["time"] + IST_OFFSET) % 86400 + seconds
+
+    closed = [b for b in bars if end_of(b, seconds) <= now]
+    forming = bars[len(closed)] if len(bars) > len(closed) else None
+
+    def gain(t, price):
+        return round2(price - t["entry"] if t["side"] == "CE" else t["entry"] - price)
+
+    def end(t, price, bar, how):
+        t["exit"], t["exitTime"], t["how"], t["points"] = price, bar["time"], how, gain(t, price)
+
+    def reaches(t, bar):
+        return bar["high"] >= t["target"] if t["side"] == "CE" else bar["low"] <= t["target"]
+
+    def new_day(a, b):
+        return not day_candles and day_of(a["time"]) != day_of(b["time"])
+
+    trades, used, ready, open_ = [], {}, None, []
+    for i in range(1, len(closed)):
+        bar, prev_bar = closed[i], closed[i - 1]
+        if new_day(bar, prev_bar):  # a new day: yesterday's calls ended with yesterday
+            for t in open_:
+                end(t, prev_bar["close"], prev_bar, "day end")
+            open_, ready = [], None
+        if ready:
+            t = enter_at(ready, bar)
+            if t:
+                trades.append(t)
+                open_.append(t)
+            ready = None
+        still = []
+        for t in open_:
+            if reaches(t, bar):
+                end(t, t["target"], bar, "target")
+            else:
+                still.append(t)
+        open_ = still
+        if close_at and not day_candles and clock_end(bar) >= close_at:  # idea P1
+            for t in open_:
+                end(t, bar["close"], bar, "time")
+            open_ = []
+        levels = levels_at(i)
+        for l in levels:  # closed back across: the level may call again
+            if bar["close"] < l["price"]:
+                used[(l["ratio"], "CE")] = False
+            if bar["close"] > l["price"]:
+                used[(l["ratio"], "PE")] = False
+        sig = signal_at(bar, prev_bar["close"], levels, used, signal)
+        late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
+        if sig and not late:
+            ready = sig
+            used[(sig["ratio"], sig["side"])] = True
+    last = closed[-1] if closed else None
+    over = False if day_candles else (day_over(day_of(last["time"]), now) if last else True)
+    if forming and last and not over and not new_day(forming, last):
+        if ready:
+            t = enter_at(ready, forming)
+            if t:
+                trades.append(t)
+                open_.append(t)
+            ready = None
+        still = []
+        for t in open_:
+            if reaches(t, forming):
+                end(t, t["target"], forming, "target")
+            else:
+                still.append(t)
+        open_ = still
+        for t in open_:
+            t["points"], t["last"] = gain(t, forming["close"]), forming["close"]
+    else:
+        for t in open_:
+            if over:
+                end(t, last["close"], last, "day end")
+            else:
+                t["points"], t["last"] = gain(t, last["close"]), last["close"]
+    if ready and not over:
+        trades.append({k: v for k, v in ready.items() if k != "prices"})
+    return {"trades": trades, "closed": len(closed)}
+
+
+def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None) -> dict:
+    """A finished day replayed, as the Study page and the research engine do it."""
+    fixed = (levels_of(move_of_day(previous)) if previous else None) if move == "prev" else None
+    if move == "prev" and not fixed:
+        return {"trades": [], "closed": 0}
+    levels_at = (lambda i: fixed) if move == "prev" else (lambda i: levels_of(move_of(bars[:i + 1])))
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas)
+
+
+IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}}
+
+
+def ideas_of(keys) -> dict:
+    out = {}
+    for k in keys:
+        out.update(IDEAS[k])
+    return out
+
+
+def call_key(index: str, interval: str, t: dict, levels: str) -> str:
+    """The name of a call, as the index page names it: the index, the time frame, the signal candle, the side and the levels mode."""
+    return f"{index}|{interval}|{t['signalTime']}|{t['side']}|{levels}"

@@ -70,6 +70,14 @@ their own logic. Read this before touching the code.
   gone; a login with no page and no handover is over. 30-day ceiling; kept in memory,
   so a restart ends it. No password set = open, with a warning. Pages show a
   **Log out** button whenever the login is on.
+- `rule.py` - the owner's rule (layers 1 to 3) in Python, the page's engine line
+  for line, so the server can watch the calls itself (`calls_forever` /
+  `watch_index` in `main.py`, setting `WATCH_INTERVAL`/`WATCH_LEVELS`/`WATCH_SIGNAL`,
+  state on `/health` under `feed.watch`). `check_rule.py [folder]` runs the page's
+  engine (node, static/rules.js) and this copy side by side over every saved day,
+  the hand-made day and random days, replayed and live, every setting and idea,
+  and fails on one differing call. Any change to the rule goes into both files
+  and must pass it; a research round runs it too.
 - `dhan.py` - the owner's broker API (DhanHQ v2) as a data source: settings from
   `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. Real-time candles,
   quotes and the option chain for `INDEX_IDS` (NIFTY 50, NIFTY BANK), with small

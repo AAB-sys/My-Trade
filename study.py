@@ -118,11 +118,11 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                 changed = True
         if changed:  # the page sends its list every minute, and an open call's points move with every tick: only a call entering,
             _calls_version += 1  # ending, getting its contract or its Sell mark (not its points or premium moving) hurries the partial copy
-        try:
-            CALLS.mkdir(parents=True, exist_ok=True)
-            (CALLS / f"{session}.json").write_text(json.dumps(list(day.values()), indent=1))
-        except OSError:
-            pass
+            try:  # the working file on disk follows real changes (the server's watcher sends the list every few seconds)
+                CALLS.mkdir(parents=True, exist_ok=True)
+                (CALLS / f"{session}.json").write_text(json.dumps(list(day.values()), indent=1))
+            except OSError:
+                pass
     return new
 
 
