@@ -92,7 +92,12 @@ entry, the premium now and the red Sell mark once the premium has fallen by 35%
 open call's contract is added to the same feed connection (its security id read
 from Dhan's instrument list, a CSV fetched once at start and every 6 hours), the
 once-a-second poll carries it when the feed is quiet, and the option chain is
-read only when neither runs. Records live in `paper_calls.json` (git-ignored).
+read only when neither runs. Records live in `paper_calls.json` (git-ignored)
+and, with the GitHub token set, go to the `data` branch as `records/<date>.json`
+within half a minute of a call entering, getting its contract, its Sell mark or
+its end; a fresh server (every restart on Render empties the disk) fetches the
+day's records back at start, so the premium paid and the sell line stay what
+they were (7 October).
 Two settings, in `.env` on the laptop and in Render's Environment, never in the
 repo:
 
@@ -122,7 +127,8 @@ BANK, in 1, 5, 15 and 30 minutes, with the day's and the previous day's open,
 high, low and close) to `data/sessions/<date>.json`, and beside it every call
 the index page suggested that day to `data/sessions/<date>-calls.csv` (the page
 sends its list as it draws it, `POST /calls/{name}`), with a partial copy of
-both every few minutes during the session. **Study**
+both every few minutes during the session, and the options behind the day's
+calls to `records/<date>.json` as they change. **Study**
 (linked from the dashboard and the index page, `/study/`) replays your rules
 over every saved day: pick the index, the time frame, the levels and the signal,
 and read the paper calls day by day, by hour, by level, by side, and every

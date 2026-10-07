@@ -555,6 +555,47 @@ def itm_strike(strikes: dict, side: str, level: float) -> float | None:
 
 _records: dict = {}   # key -> record
 _records_lock = threading.Lock()
+_records_version = 0  # bumped when a record is made, gets its contract id, its Sell mark or its end (not on a premium tick):
+                      # study.py pushes the day's records to the data branch when it changes, so a restart loses none
+
+
+def records_version() -> int:
+    return _records_version
+
+
+def _changed() -> None:
+    global _records_version
+    _records_version += 1
+
+
+def records_text(day_iso: str) -> str | None:
+    """The records of the calls that entered on that day, as JSON text for the data branch; None when there are none."""
+    with _records_lock:
+        day = sorted((r for r in _records.values() if r["paid_at"][:10] == day_iso), key=lambda r: r["paid_at"])
+    return json.dumps(day, indent=1) + "\n" if day else None
+
+
+def restore_records(text: str) -> int:
+    """Records fetched from the data branch after a restart: those this server lacks are taken as they were, so the
+    premium paid, the sell line, the Sell mark and the end stay what they were. Returns how many came back."""
+    try:
+        data = json.loads(text)
+    except ValueError:
+        return 0
+    got = 0
+    with _records_lock:
+        for r in data if isinstance(data, list) else []:
+            if not (isinstance(r, dict) and r.get("key") and r.get("paid_at")):
+                continue
+            local = _records.get(r["key"])
+            if local is None or r["paid_at"] < local.get("paid_at", ""):  # the older record is the true one: a page that sent its
+                _records[r["key"]] = r                                   # open call again in the seconds before the fetch made a new one
+                got += 1
+        if got:
+            _save_records()
+    if got:
+        _changed()
+    return got
 
 
 def _load_records() -> None:
@@ -602,6 +643,7 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
     with _records_lock:
         _records[key] = record
         _save_records()
+    _changed()
     return dict(record)
 
 
@@ -616,6 +658,7 @@ def note_premium(key: str, premium: float, when: str | None = None) -> dict | No
         rec["premium_now"], rec["now_at"] = premium, when or datetime.now(IST).isoformat(timespec="seconds")
         if rec["sold"] is None and premium <= rec["sell_below"]:
             rec["sold"] = {"premium": premium, "at": rec["now_at"]}
+            _changed()
         return dict(rec)
 
 
@@ -642,6 +685,7 @@ def fill_ids(name: str) -> None:
             with _records_lock:
                 if r["key"] in _records:
                     _records[r["key"]]["security_id"] = sid
+            _changed()
 
 
 def _fresh(rec: dict, seconds: float = 5) -> bool:
@@ -687,6 +731,7 @@ def end_call(key: str, how: str) -> dict | None:
         if rec and not rec["ended"]:
             rec["ended"] = {"how": how, "at": datetime.now(IST).isoformat(timespec="seconds")}
             _save_records()
+            _changed()
         return dict(rec) if rec else None
 
 
