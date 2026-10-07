@@ -211,7 +211,9 @@ there is enough. **Candles only** (owner's decision, 6 October): the record and
 the learning never look at premiums, the premium paid, the premium at the end or
 the Sell mark. Those stay on the index page, as layer 3 says; the study is about
 the candles, their daily patterns, their high and low breaks, and how they
-behave around the Fibonacci levels.
+behave around the Fibonacci levels. Restated on 7 October: the research engine
+drops the premium columns of the calls CSV the moment it reads one, and never
+reads the `records/<date>.json` files (the options behind the calls) at all.
 
 **The record.** After every session (at 15:40 IST, the `STUDY_SAVE_AT` setting)
 the server saves the day to `data/sessions/<date>.json`: the 1-, 5-, 15- and

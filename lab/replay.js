@@ -14,10 +14,15 @@ const folder = process.argv[2] || path.join(__dirname, "..", "data", "sessions")
 const DAYS = fs.readdirSync(folder).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().map(f => JSON.parse(fs.readFileSync(path.join(folder, f), "utf8"))).filter(d => d.complete);
 if (!DAYS.length) { console.log("no finished day in " + folder); process.exit(1); }
 // the calls the index page suggested live, one CSV a day beside the candles (<date>-calls.csv), the owner's ask of 7 October
+// The owner's rule (6 and 7 October): the research works on the candles and their levels only. The premium columns of
+// the calls CSV (the contract, the premium paid and now, the sell line, the premium sold at) are information for the
+// index page and never research input, so they are dropped the moment a CSV is read; and records/<date>.json on the
+// data branch (the options behind the calls) is never read here at all.
+const NOT_RESEARCH = new Set(["contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium"]);
 function readCsv(file) {
   const [head, ...lines] = fs.readFileSync(file, "utf8").trim().split(/\r?\n/);
   const cols = head.split(",");
-  return lines.filter(Boolean).map(line => { const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(c => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')); return Object.fromEntries(cols.map((k, i) => [k, cells[i] ?? ""])); });
+  return lines.filter(Boolean).map(line => { const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(c => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')); return Object.fromEntries(cols.map((k, i) => [k, cells[i] ?? ""]).filter(([k]) => !NOT_RESEARCH.has(k))); });
 }
 const LIVE = [].concat(...fs.readdirSync(folder).filter(f => /^\d{4}-\d{2}-\d{2}-calls\.csv$/.test(f)).sort().map(f => readCsv(path.join(folder, f))));
 const SEC = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 }, IST = 19800;

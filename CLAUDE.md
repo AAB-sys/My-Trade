@@ -32,7 +32,11 @@ their own logic. Read this before touching the code.
   make it a switch where that is cheap.
 - Ideas of Claude's own (the owner's standing instruction, 6 October): Claude may
   read the saved candles (`data/sessions`, the `data` branch) and propose rules
-  built from this framework and these candles, never borrowed from elsewhere. A
+  built from this framework and these candles, never borrowed from elsewhere.
+  The research works on the candles and their levels only (7 October, restated):
+  never the option premiums, in any table, idea, learning step or proposal. The
+  premium columns of the calls CSV are dropped on read in `lab/replay.js`, and
+  the `records/<date>.json` files are never research input. A
   proposal goes to the owner with the numbers, and **nothing is built until the
   owner confirms**. A confirmed idea goes to the Study page first, as a switch
   scored against the owner's rule on every saved day (`Rules.IDEAS` in

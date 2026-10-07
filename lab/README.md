@@ -13,6 +13,12 @@ ended at the day's end, the worst call, days up and the worst day.
 the calls worked out by hand, the candle facts, and the ideas under test. A research round runs it
 before it proposes anything.
 
+**Candles and their levels only** (the owner's rule, 6 and 7 October): the research, the research engine
+and every round work on the saved candles, the Fibonacci levels built from them and the calls' index
+points that follow from both. Never the option premiums: the premium columns of the calls CSV are
+dropped when a CSV is read, and the `records/<date>.json` files on the `data` branch (the options
+behind the calls) are never read by the research at all. They are information for the index page.
+
 `findings.md` is the log of the rounds done by hand. The owner's instruction of 6 October: the
 research also runs on its own, without waiting for a signal. A scheduled routine (a Claude session
 started after each trading day's close) pulls the saved days from the `data` branch, runs the lab,
