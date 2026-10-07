@@ -149,7 +149,26 @@ The rule, in the order it is applied:
    candle left to enter on, so it gives nothing. The day's final save (15:40)
    marks any record of the day still open as ended at the day end, whoever made
    it (7 October: records under the call keys of earlier versions, which no page
-   or watcher matched any more, had stayed open). While today is still running the
+   or watcher matched any more, had stayed open).
+7. **The candle read** (owner's ask, 7 October, from two screenshots of a fall
+   through the levels and a retest) - under the owner's word in "What now", the
+   page says what the closed candles say about the call. It changes nothing: not
+   the call, its target, its end or its points. Everything is measured against
+   the gap from the call's level to its target. The signal is *strong* when its
+   candle closed past halfway to the target or had a body of a whole gap, *fair*
+   when a quarter of the way or a body of half the gap, *weak* otherwise. While
+   the call is open, the read is *carry* until a closed candle goes back across
+   the level by a quarter of the gap (*watch*) or by a whole gap (*weak*); a
+   weak signal reads *watch* from the start; a candle that came back to within a
+   fifth of the gap of the level and closed on the call's side is "retest held".
+   Only closed candles count, as everywhere in this layer. The numbers behind it
+   (`lab/findings.md`, round 2): on the six saved days, 29 Sep to 7 Oct, signals
+   closed past halfway won 93% of the time and under a quarter 67%; calls never
+   closed back a quarter won 89%, back a quarter to a whole gap 73-80%, back a
+   whole gap or more 35%. A retest by itself told nothing (48% either way): the
+   depth of the next close did. Exiting at any of those reclaims still cost
+   points against holding on those days, so the read advises and the rule keeps
+   its no-stop decision; it says *weak*, never "exit". While today is still running the
    call shows as "Still open" with its points at the live price.
 7. **Every signal gives a call** - whether or not earlier calls are
    still open (owner's decision, 4 October). Several calls can run at once, each

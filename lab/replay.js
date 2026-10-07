@@ -33,13 +33,17 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 //   closeAt, noNewAfter: as in Rules (ideas P1 and P2)   onlyRatios: [..]   closeBack: exit when a candle closes back across the level
 //   stopShare: exit when against by this share of the distance to the target   agree: the last closed candle of the higher frame must
 //   sit on the call's side of the level   sideOnDay: "with" takes CE only on a day up so far, PE only on a day down   minNeed: least distance to the target
+//   minDepth: a crossed signal counts only when its candle closed at least this share of the way from the level to the next one
+//   (waitDeeper: a shallower cross waits, and the first later candle closing that deep gives the call)   minBody: a crossed
+//   signal needs a body of at least this share of that gap   closeBackShare: exit when a candle closes back across the level by
+//   at least this share of the gap (7 October: the depth of the close past a level is what tells a cross from a bounce)
 function run(bars, previous, o, higher) {
   const sec = o.sec;
   const fixed = o.levels === "prev" ? (previous ? R.levelsOf(R.moveOfDay(previous)) : null) : null;
   const openRange = n => { const first = bars.filter(b => tod(b.time) < hm(9, 15) + n * 60); return first.length ? R.levelsOf(R.moveOf(first)) : null; };
   const opening = o.levels === "open30" ? openRange(30) : o.levels === "open15" ? openRange(15) : null;
   const levelsAt = i => o.levels === "prev" ? fixed : o.levels === "today" ? R.levelsOf(R.moveOf(bars.slice(0, i + 1))) : opening;
-  const trades = [], used = {}, crossedAgo = {}; let ready = null, open = [];
+  const trades = [], used = {}, crossedAgo = {}, shallow = {}; let ready = null, open = [];
   const gain = (x, p) => r2(x.side === "CE" ? p - x.entry : x.entry - p);
   const end = (x, p, bar, how) => { x.exit = p; x.exitTime = bar.time; x.how = how; x.points = gain(x, p); };
   for (let i = 1; i < bars.length; i++) {
@@ -60,6 +64,8 @@ function run(bars, previous, o, higher) {
       if (o.stopShare) { const stop = x.side === "CE" ? x.entry - o.stopShare * (x.target - x.entry) : x.entry + o.stopShare * (x.entry - x.target);
         if (x.side === "CE" ? bar.low <= stop : bar.high >= stop) { end(x, stop, bar, "stop"); return false; } }
       if (o.closeBack && (x.side === "CE" ? bar.close < x.level : bar.close > x.level)) { end(x, bar.close, bar, "closed back"); return false; }
+      if (o.closeBackShare) { const gap = Math.abs(x.target - x.level), back = x.side === "CE" ? x.level - bar.close : bar.close - x.level;
+        if (gap > 0 && back >= o.closeBackShare * gap) { end(x, bar.close, bar, "closed back"); return false; } }
       return true;
     });
     if (o.closeAt && clockEnd >= o.closeAt) { open.forEach(x => end(x, bar.close, bar, "time")); open = []; }
@@ -77,12 +83,27 @@ function run(bars, previous, o, higher) {
     });
     levels.forEach(l => { if (crossed(l.price)) crossedAgo[l.ratio + (bar.close > l.price ? "CE" : "PE")] = i; });
     let sig = null;
+    // a shallow cross that waits (minDepth + waitDeeper): the first later candle closing deep enough, still on that side, gives the call
+    if (!hits.length && o.minDepth && o.waitDeeper) {
+      for (const key of Object.keys(shallow)) {
+        const w = shallow[key]; if (!w) continue;
+        const l = levels.find(x => x.ratio === w.ratio), k = l ? levels.indexOf(l) : -1, next = k < 0 ? null : (w.side === "CE" ? levels[k + 1] : levels[k - 1]);
+        const onSide = l && (w.side === "CE" ? bar.close > l.price : bar.close < l.price);
+        if (!onSide) { delete shallow[key]; continue; }
+        if (next && !used[key] && Math.abs(bar.close - l.price) >= o.minDepth * Math.abs(next.price - l.price)) { hits.push(l); delete shallow[key]; break; }
+      }
+    }
     if (hits.length) {
       const at = hits.reduce((a, b) => Math.abs(b.price - bar.close) < Math.abs(a.price - bar.close) ? b : a);
       const kind = crossed(at.price) ? "crossed" : "held", side = bar.close > at.price ? "CE" : "PE";
       const k = levels.indexOf(at), next = side === "CE" ? levels[k + 1] : levels[k - 1];
       const late = (o.noNewAfter && clockEnd > o.noNewAfter) || (o.closeAt && clockEnd >= o.closeAt);
       let ok = !!next && !late;
+      if (ok && kind === "crossed" && next) {  // the depth and the body of the crossing candle, against the gap to the next level
+        const gap = Math.abs(next.price - at.price), depth = Math.abs(bar.close - at.price) / gap, body = Math.abs(bar.close - bar.open) / gap;
+        if (o.minDepth && depth < o.minDepth) { ok = false; if (o.waitDeeper) shallow[at.ratio + side] = { ratio: at.ratio, side }; }
+        if (ok && o.minBody && body < o.minBody) ok = false;
+      }
       if (ok && o.sideOnDay === "with") ok = (side === "CE") === (bar.close >= bars[0].open);
       if (ok && o.agree && higher) { const done = higher.filter(b => b.time + o.higherSec <= bar.time + sec); const c = done[done.length - 1]; ok = !!c && (side === "CE" ? c.close > at.price : c.close < at.price); }
       if (ok && o.minNeed) ok = Math.abs(next.price - bar.close) >= o.minNeed;
@@ -131,6 +152,18 @@ const IDEAS = [
   ["levels from the first 15 minutes' range", { levels: "open15" }],
   ["only with the day's direction so far", { sideOnDay: "with" }],
   ["today-so-far levels + P1 + P2", { levels: "today", closeAt: hm(15, 0), noNewAfter: hm(14, 0) }],
+  // 7 October, from the owner's two screenshots: the depth of the close past a level tells a cross from a bounce
+  ["crossed only when the close is past halfway to the next level", { minDepth: 0.5 }],
+  ["crossed only when the close is a quarter of the way", { minDepth: 0.25 }],
+  ["a shallow cross waits for a close past halfway", { minDepth: 0.5, waitDeeper: true }],
+  ["crossed only with a body of half the gap", { minBody: 0.5 }],
+  ["exit when a candle closes back across the level by a quarter of the gap", { closeBackShare: 0.25 }],
+  ["exit when a candle closes back by half the gap", { closeBackShare: 0.5 }],
+  ["exit when a candle closes back by a whole gap", { closeBackShare: 1 }],
+  ["depth past halfway + exit on a quarter reclaim", { minDepth: 0.5, closeBackShare: 0.25 }],
+  ["today-so-far levels + depth past halfway", { levels: "today", minDepth: 0.5 }],
+  ["today-so-far levels + exit on a quarter reclaim", { levels: "today", closeBackShare: 0.25 }],
+  ["today-so-far levels + depth past halfway + quarter reclaim", { levels: "today", minDepth: 0.5, closeBackShare: 0.25 }],
 ];
 console.log(`${DAYS.length} finished days: ${DAYS[0].date} to ${DAYS[DAYS.length - 1].date}; ${LIVE.length} calls suggested live on the index page in ${new Set(LIVE.map(c => c.date)).size} of them`);
 // the live calls: what the page suggested, setting by setting, by the page's own points; and whether the replay gives the same call
