@@ -636,8 +636,7 @@
     if (!rd) return `<td class="cand">—</td>`;
     if (t.exit == null) return `<td class="cand ${rd.word}">${rd.word === "exit" ? "EXIT" : "CARRY"}<small>${rd.why}</small></td>`;
     if (rd.exitAt == null) return `<td class="cand carry">CARRY the whole time<small>${rd.why}</small></td>`;
-    const then = Math.round((t.side === "CE" ? rd.exitPrice - t.entry : t.entry - rd.exitPrice) * 100) / 100;  // the call's points at that candle's close
-    return `<td class="cand exit">Said EXIT at ${callTime(rd.exitAt)}<small>${rd.why} · ${signed.format(then)} at that time, ${signed.format(t.points)} at the end</small></td>`;
+    return `<td class="cand exit">Said EXIT at ${callTime(rd.exitAt)}<small>${rd.why}</small></td>`;  // no points here (owner's ask): the table reads clean
   }
 
   // paid → now while the call is open; paid → at exit once it has ended, with the Sell mark (LOGIC.md, "Exit by premium"):
