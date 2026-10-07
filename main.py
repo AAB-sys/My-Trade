@@ -409,7 +409,7 @@ async def tick_forever() -> None:
     quietly would leave every page standing still with nothing said."""
     while True:
         try:
-            names = sorted(set(live_subs.values()))
+            names = feed_wanted()
             if not (DHAN_ON and names and in_tick_hours()) or time.time() - stream_at < 5:
                 await asyncio.sleep(1)
                 continue
@@ -490,7 +490,7 @@ async def stream_forever() -> None:
     wait = 2
     by_id = {sid: name for name, sid in dhan.INDEX_IDS.items()}
     while True:
-        if not (DHAN_ON and live_subs and in_tick_hours()):
+        if not (DHAN_ON and feed_wanted() and in_tick_hours()):
             await asyncio.sleep(2)
             continue
         client_id, token = dhan.settings()
@@ -501,7 +501,7 @@ async def stream_forever() -> None:
                 store["dhan"]["stream"] = f"Stream: tick-by-tick from Dhan, connected at {now_ist()[11:19]}"
                 wait = 2
                 options, checked, saved = {}, 0.0, 0.0  # the option contracts behind open calls ride the same connection
-                while live_subs and in_tick_hours():  # else nobody watching, or the market closed: hang up
+                while feed_wanted() and in_tick_hours():  # else nobody needs it, or the market closed: hang up
                     now = time.time()
                     if now - checked >= 1:  # calls enter and end: subscribe to their contracts, drop the ended ones
                         checked = now
@@ -559,6 +559,16 @@ WATCH_INTERVAL = os.environ.get("WATCH_INTERVAL", "5m")                  # the t
 WATCH_LEVELS = os.environ.get("WATCH_LEVELS", "today")                    # "today" (today so far) or "prev" (previous day)
 WATCH_SIGNAL = os.environ.get("WATCH_SIGNAL", "both")                     # "held", "crossed" or "both"
 WATCH_SECONDS = float(os.environ.get("WATCH_SECONDS", "5"))
+WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL != "1d" and WATCH_LEVELS in ("today", "prev") and WATCH_SIGNAL in ("held", "crossed", "both")
+# The live feed (the stream, and the poll behind it) used to run only while an index page was open. The watcher needs the
+# candle forming now and the open calls' premiums whether or not a page is open, so in market hours the feed runs for the
+# watcher too: the indices it watches, and the option contracts behind its open calls (the Sell mark works with no page).
+def feed_wanted() -> list:
+    """The indices whose live price the server needs now: the pages' and, with the watcher on, every index on Dhan."""
+    names = set(live_subs.values())
+    if WATCH_ON:
+        names |= set(dhan.INDEX_IDS)
+    return sorted(names)
 watch_state = {"at": None, "calls": 0, "open": 0, "problem": None}
 watch_retry: dict = {}  # call key -> when to try registering its option again, after Dhan refused (no flood of requests or log lines)
 
@@ -608,7 +618,7 @@ def watch_index(name: str) -> dict:
 
 async def calls_forever() -> None:
     """The watcher's loop: every WATCH_SECONDS in market hours, each index on Dhan."""
-    if WATCH_INTERVAL not in INTERVALS or WATCH_INTERVAL == "1d" or WATCH_LEVELS not in ("today", "prev") or WATCH_SIGNAL not in ("held", "crossed", "both"):
+    if not WATCH_ON:
         watch_state["problem"] = f"the watcher's setting is not one the page has: {WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}"
         log.warning("watch: %s", watch_state["problem"])
         return

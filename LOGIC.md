@@ -194,7 +194,10 @@ setting the owner trades on (`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL`:
 the moment it enters, with its option and its premium paid, page or no page,
 restart or no restart; a call that ends is marked; and the day's calls go into
 the record for the CSV. The page does the same when it is open, and whichever
-is first wins: the other finds the record. A call that entered and ended before
+is first wins: the other finds the record. For this the live feed (Dhan's stream,
+and the once-a-second poll behind it) runs all session for the watcher, page or
+no page, with the option contracts behind the open calls on it, so the Sell mark
+is judged with the page closed too. A call that entered and ended before
 either looked (a server just started) still has no premium: nothing can be
 recorded after the fact, and its cell reads "not seen at entry". While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's
