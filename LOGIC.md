@@ -100,8 +100,9 @@ number as in the call; the index price at entry until the contract is known:
 no Dhan, or no page open at the entry), **Call Target** (the next level in the
 call's direction; once the call has ended, *hit* or *not reached, day end*
 under it), **Premium Paid -> Now** (at exit once the call has ended; *SELL NOW*
-while the premium sits below the sell mark, *sold at* once marked sold) and
-**Candle status** (item 7 below). A finished row is greyed. A finished call that
+while the premium sits below the sell mark, *sold at* once marked sold). The
+candle verdict of item 7 is not on the table (owner's ask, 7 October evening):
+it goes with every call into the day's calls CSV. A finished row is greyed. A finished call that
 no page saw enter reads "not seen at entry" in the premium cell: no page was
 open at its entry, so no premium could be recorded then (7 October). The header
 row stays in view while the page scrolls (owner's ask, 7 October). The list is in time order, the newest call at the
@@ -154,9 +155,9 @@ The rule, in the order it is applied:
    marks any record of the day still open as ended at the day end, whoever made
    it (7 October: records under the call keys of earlier versions, which no page
    or watcher matched any more, had stayed open).
-7. **Candle status: CARRY or EXIT** (owner's ask, 7 October, from two
+7. **The candle verdict: CARRY or EXIT** (owner's ask, 7 October, from two
    screenshots of a fall through the levels and a retest; made plain the same
-   evening) - a "Candle status" cell on every call row: one word, CARRY or EXIT, from the
+   evening) - for every call, one word, CARRY or EXIT, from the
    closed candles around the level that gave the call, whichever Fibonacci
    level that is (0% to 100% alike), with the reason under it in plain words.
    It changes nothing: not the call, its target, its end or its points. The
@@ -178,9 +179,12 @@ The rule, in the order it is applied:
      big when it closed past halfway to the target or had a body of a whole
      gap, plain when a quarter of the way or a body of half the gap, small
      otherwise - and no candle has closed on the wrong side since.
-   A finished call's cell says what the word was and when ("Said EXIT at
-   12:40", with the call's points at that time and at the end, or "CARRY the
-   whole time"), so the owner can judge the word against the result. Only
+   The verdict is not on the table (owner's ask, 7 October evening): it goes
+   with every call into the day's calls CSV for the research engine, as
+   `candles_say` (carry or exit), `exit_said_at_ist` (the first candle that said
+   exit) and `candles_why` (the reason), from the page and from the server's
+   watcher alike (`rule.read_of`, the same code in Python, kept the same by
+   `check_rule.py`); the page's CSV download carries the three too. Only
    closed candles count, as everywhere in this layer. The numbers behind it
    (`lab/findings.md`, round 2): calls never closed back a quarter won 89%,
    back a whole gap or more 35%. The same exit, acted on, is idea P4 on the

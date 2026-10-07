@@ -18,9 +18,11 @@ require(process.argv[1]);
 const R = globalThis.Rules;
 const jobs = JSON.parse(require("fs").readFileSync(0, "utf8"));
 const out = jobs.map(j => {
-  if (j.mode === "replay") return R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined });
   const levels = j.levels;  // the live page: the levels as they stand now, for every candle
-  return R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined });
+  const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined })
+    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined });
+  res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // the candle verdict too
+  return res;
 });
 process.stdout.write(JSON.stringify(out));
 """
@@ -35,10 +37,13 @@ def py_run(jobs: list) -> list:
     out = []
     for j in jobs:
         if j["mode"] == "replay":
-            out.append(rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas")))
+            res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"))
         else:
             levels = j["levels"]
-            out.append(rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas")))
+            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"))
+        for t in res["trades"]:
+            t["read"] = rule.read_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # the candle verdict too
+        out.append(res)
     return out
 
 

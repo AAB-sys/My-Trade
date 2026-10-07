@@ -125,11 +125,6 @@
   #paper td.target small { display: block; color: var(--muted); }
   #paper td.target small.up { color: var(--up); }
   #paper td.prem small.sell { color: var(--down); font-weight: 600; }
-  /* "Candle status": carry or exit, from the closed candles around the call's level, with the reason under it */
-  #paper td.cand { text-align: left; font-weight: 600; }
-  #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
-  #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
-  #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
   #paper td.call { text-align: left; }
   #paper tr.ended td { color: var(--ink-2); }
   #paper tr.ended td.up { color: var(--up); } #paper tr.ended td.down { color: var(--down); }
@@ -288,7 +283,7 @@
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th>Candle status</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -574,9 +569,10 @@
   async function recordCalls(trades) {
     const session = currentSession();
     if (state.simulated || !trades.length || !session || session === "all" || !isToday(session)) return;
-    const rows = trades.map(t => { const r = optionRecords[callKey(t)]; return {
+    const rows = trades.map(t => { const r = optionRecords[callKey(t)], cr = candleRead(t); return {
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
+      candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
     const shape = rows.map(r => `${r.signal_time}${r.side}${r.how}${r.sold_at ?? ""}${r.contract}`).join(",");
@@ -590,13 +586,14 @@
 
   // One row reads left to right, in the owner's format of 7 October: the time, the call with its contract, the signal,
   // the entry (the strike number bought; the index at entry only where there is no strike), the target level (with
-  // "hit" or "not reached" once the call has ended), the premium paid and now, and what the candles say.
+  // "hit" or "not reached" once the call has ended) and the premium paid and now. The candle verdict is not on the table
+  // (owner's ask, 7 October evening): it goes with every recorded call and into the CSV, for the research engine.
   function rowCells(t, r) {
     const strike = strikeOf(t, r);
     return `<td>${callTime(t.signalTime)}</td>`
       + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t) + premiumCell(t, r) + candleCell(t);
+      + entryCell(t, strike) + targetCell(t) + premiumCell(t, r);
   }
   const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
 
@@ -627,16 +624,12 @@
     return `<td class="target">${fmt.format(t.target)}${note}</td>`;
   }
 
-  // "Candle status" (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): one word for every open call, CARRY or EXIT,
-  // from the closed candles around the level that gave the call, whichever level that is, with the reason in words under
-  // it; on a finished call, what the word was and when, so the owner can judge it against the points. Information for the
-  // owner's eyes: it changes nothing about the call (the Study page's P4 is the same exit, acted on)
-  function candleCell(t) {
+  // The candle verdict (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): CARRY or EXIT with its reason, for the
+  // research engine: the page sends it with every call it records (the server's watcher does the same with rule.read_of),
+  // and the CSV download carries it. Not on the table (owner's ask, the same evening). It changes nothing about a call
+  function candleRead(t) {
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
-    if (!rd) return `<td class="cand">—</td>`;
-    if (t.exit == null) return `<td class="cand ${rd.word}">${rd.word === "exit" ? "EXIT" : "CARRY"}<small>${rd.why}</small></td>`;
-    if (rd.exitAt == null) return `<td class="cand carry">CARRY the whole time<small>${rd.why}</small></td>`;
-    return `<td class="cand exit">Said EXIT at ${callTime(rd.exitAt)}<small>${rd.why}</small></td>`;  // no points here (owner's ask): the table reads clean
+    return rd ? { say: rd.word, exitAt: rd.exitAt, why: rd.why } : null;
   }
 
   // paid → now while the call is open; paid → at exit once it has ended, with the Sell mark (LOGIC.md, "Exit by premium"):
@@ -1130,11 +1123,12 @@
   document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
     const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
     const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by",
-                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium"];
+                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium", "candles_say", "exit_said_at_ist", "candles_why"];
     const rows = lastPaper.trades.map(t => {
-      const r = optionRecords[callKey(t)];
+      const r = optionRecords[callKey(t)], cr = candleRead(t);
       return [stamp(t.signalTime), (t.ratio * 100).toFixed(1) + "%", t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how,
-              r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : ""];
+              r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : "",
+              cr ? cr.say : "", cr && cr.exitAt ? stamp(cr.exitAt) : "", cr ? `"${cr.why}"` : ""];  // the reason holds a comma, so it is quoted
     });
     const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
     const a = document.createElement("a");

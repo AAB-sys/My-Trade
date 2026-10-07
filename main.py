@@ -648,10 +648,12 @@ def watch_index(name: str) -> dict:
         levels = rule.levels_of(rule.move_of_day(previous))
     else:
         levels = rule.levels_of(rule.move_of(bars))
-    trades = rule.paper_trades(bars, lambda i: levels, time.time(), seconds, False, WATCH_SIGNAL)["trades"]
+    now = time.time()
+    trades = rule.paper_trades(bars, lambda i: levels, now, seconds, False, WATCH_SIGNAL)["trades"]
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, WATCH_LEVELS)
+        read = rule.read_of(t, bars, seconds, now)  # the candle verdict, for the day's calls CSV (the research engine's), as the page gives it
         rec = dhan.record_of(call_key)
         if t["how"] == "open" and rec is None and time.monotonic() >= watch_retry.get(call_key, 0):  # entered, and no record yet: the option and its premium, now
             try:
@@ -665,6 +667,7 @@ def watch_index(name: str) -> dict:
         rows.append({"signal_time": t["signalTime"], "level": t["level"], "ratio": t["ratio"], "kind": t["kind"], "side": t["side"],
                      "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
                      "points": t.get("points"), "how": t["how"],
+                     "candles_say": read["word"] if read else "", "exit_said_at": read["exitAt"] if read else None, "candles_why": read["why"] if read else "",
                      "contract": f"{round(rec['strike'])} {rec['side']} {rec['expiry']}" if rec else "", "premium_paid": rec["premium_paid"] if rec else None,
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None})
