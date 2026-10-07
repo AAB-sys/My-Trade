@@ -92,9 +92,9 @@
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
       if (ready) { const t = { ...ready, entry: forming.open, entryTime: forming.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
       open = open.filter(t => { if (reaches(t, forming)) { end(t, t.target, forming, "target"); return false; } return true; });
-      open.forEach(t => t.points = gain(t, forming.close));
+      open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at
     } else {
-      open.forEach(t => { if (over) end(t, last.close, last, "day end"); else t.points = gain(t, last.close); });
+      open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
     }
     if (ready && !over) trades.push(ready);  // the next candle has not begun yet (a second or two): "Enters at the next open"
     return { trades, closed: closed.length };

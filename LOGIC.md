@@ -92,9 +92,14 @@ October).
 ## Layer 3: Paper calls - built
 
 The rule above, run over the closed candles of the session picked, with that
-session's levels. Each call (buy a CE, or buy a PE) is listed under the evidence
-table with the index at entry, its stop, its target, the index at exit and the
-points, and one line keeps the score. Paper only: nothing is sent anywhere, and
+session's levels. Each call (buy a CE, or buy a PE) is one row of the list, read
+left to right: the time, **what to do now** in plain words (*Enter at the next
+open*, *HOLD* with the sell line, *SELL NOW*, *SOLD at* a premium, *Target hit*,
+*Closed at day end*), the call with its contract, the level that gave it, the
+index at entry and the target, the index now (or at the exit), the points, and
+the premium paid and now. Open calls sit at the top, finished ones below, each
+newest first; one line keeps the score (owner's ask, 7 October: the list must say
+what is happening and what action is needed). Paper only: nothing is sent anywhere, and
 the list is worked out afresh from the candles every minute. **Download CSV**
 saves it as a file for the owner's own record, one session at a time.
 

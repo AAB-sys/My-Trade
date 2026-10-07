@@ -114,8 +114,19 @@
   #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
   #paper td.up { color: var(--up); }
   #paper td.down { color: var(--down); }
-  #paper td.sell { color: #fff; background: var(--down); font-weight: 600; text-align: center; padding-left: 10px; }
-  #paper td.hold { color: var(--muted); }
+  /* the "What now" cell: the one thing to read on a row */
+  #paper td.st { text-align: left; font-weight: 600; }
+  #paper td.st.wait { color: var(--ink-2); }
+  #paper td.st.hold { color: var(--ink); }
+  #paper td.st.hold small, #paper td.st.sold small, #paper td.st.done small { font-weight: 400; color: var(--muted); }
+  #paper td.st.sell { color: #fff; background: var(--down); padding-left: 8px; border-radius: 4px; }
+  #paper td.st.sold { color: var(--down); }
+  #paper td.st.done { color: var(--muted); font-weight: 500; }
+  #paper td.st.done.up { color: var(--up); }
+  #paper td.call { text-align: left; }
+  #paper tr.ended td { color: var(--ink-2); }
+  #paper tr.ended td.up { color: var(--up); } #paper tr.ended td.down { color: var(--down); }
+  #paper td.prem small { color: var(--muted); }
   #paper.no-options .opt { display: none; }
   #feed-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
   #paper[hidden] { display: none; }
@@ -269,7 +280,7 @@
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Signal</th><th>Level</th><th>Option</th><th>Index at entry</th><th>Target</th><th>Index at exit</th><th>Points</th><th>Ended by</th><th class="opt">Contract</th><th class="opt">Paid</th><th class="opt">Now</th><th class="opt">Sell</th></tr></thead>
+        <thead><tr><th>Time</th><th>What now</th><th>Call</th><th>Signal at</th><th>Index: entry → target</th><th>Index now</th><th>Points</th><th class="opt">Premium: paid → now</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -498,7 +509,8 @@
   //   every signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", open: "Still open", pending: "Enters at the next open" };
+  const HOW = { target: "Target", "day end": "Day end", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
   // The rule is Rules.paperTrades in /static/rules.js; this page hands it the session's candles, the levels on the
@@ -530,22 +542,48 @@
       ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
       : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
       + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
-    const pct = (t) => (t.ratio * 100).toFixed(1) + "%";
     table.hidden = !trades.length;
     table.classList.toggle("no-options", !(state.dhan && state.dhan.configured));
     drawFeedNote();
-    table.querySelector("tbody").replaceChildren(...trades.slice().reverse().map(t => {
+    // the open calls first (the ones that need an eye), then the finished ones, each newest first
+    const rows = [...trades.filter(t => t.exit == null).reverse(), ...trades.filter(t => t.exit != null).reverse()];
+    table.querySelector("tbody").replaceChildren(...rows.map(t => {
       const tr = document.createElement("tr");
       tr.dataset.key = callKey(t);  // so a live premium finds its row
-      const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
-      tr.innerHTML = `<td>${istTime(t.signalTime, withDate())}</td><td>${pct(t)} (${fmt.format(t.level)}) ${t.kind}</td>`
-        + `<td>Buy ${t.side}</td><td>${t.entry != null ? fmt.format(t.entry) : t.how === "pending" ? "next open" : "—"}</td>`
-        + `<td>${fmt.format(t.target)}</td><td>${t.exit == null ? "—" : fmt.format(t.exit)}</td>`
-        + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td><td>${HOW[t.how]}</td>`
-        + optionCells(optionRecords[callKey(t)]);
+      tr.className = t.exit != null ? "ended" : "";
+      tr.innerHTML = rowCells(t, optionRecords[callKey(t)]);
       return tr;
     }));
     syncOptions(trades);
+  }
+
+  // One row reads left to right: when, what to do now, the call, the level that gave it, the index at entry and
+  // the target, where the index is now (or ended), the points, and the option's premium paid and now.
+  function rowCells(t, r) {
+    const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
+    const entry = t.entry != null ? fmt.format(t.entry) : "next open";
+    const now = t.exit != null ? fmt.format(t.exit) : t.last != null ? fmt.format(t.last) : "—";
+    return `<td>${istTime(t.signalTime, withDate())}</td>` + statusCell(t, r)
+      + `<td class="call">Buy ${t.side}${r ? ` · ${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}` : ""}</td>`
+      + `<td>${pctOf(t)} (${fmt.format(t.level)}) ${t.kind}</td><td>${entry} → ${fmt.format(t.target)}</td><td>${now}</td>`
+      + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td>` + premiumCell(r);
+  }
+
+  // "What now", in the owner's words: enter, hold, sell now, sold, target hit, closed at the day's end
+  function statusCell(t, r) {
+    const soldNote = r && r.sold ? ` <small>sold earlier at ${fmt.format(r.sold.premium)}</small>` : "";
+    if (t.how === "pending") return `<td class="st wait">Enter at the next open</td>`;
+    if (t.how === "target") return `<td class="st done up">Target hit${soldNote}</td>`;
+    if (t.how === "day end") return `<td class="st done">Closed at day end${soldNote}</td>`;
+    if (r && r.sold) return `<td class="st sold">SOLD at ${fmt.format(r.sold.premium)} <small>premium fell ${Math.round((1 - r.sell_below / r.premium_paid) * 100)}%</small></td>`;
+    if (r && r.premium_now <= r.sell_below) return `<td class="st sell">SELL NOW · premium ${fmt.format(r.premium_now)}</td>`;
+    return `<td class="st hold">HOLD${r ? ` <small>sell if below ${fmt.format(r.sell_below)}</small>` : ""}</td>`;
+  }
+
+  function premiumCell(r) {
+    if (!r) return `<td class="opt prem">—</td>`;
+    const change = Math.round((r.premium_now - r.premium_paid) / r.premium_paid * 100);
+    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)</small></td>`;
   }
 
   // ---- the option behind each call: recorded by the server from Dhan (see LOGIC.md, "Exit by premium")
@@ -558,26 +596,19 @@
   const callKey = (t) => `${state.interval}|${t.signalTime}|${t.level}|${t.side}`;
   const expiryLabel = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
 
-  function optionCells(r) {
-    if (!r) return `<td class="opt">—</td><td class="opt">—</td><td class="opt">—</td><td class="opt">—</td>`;
-    const sell = r.sold ? `<td class="opt sell">SOLD at ${fmt.format(r.sold.premium)}</td>`
-      : r.premium_now <= r.sell_below ? `<td class="opt sell">SELL</td>`
-      : `<td class="opt hold">hold, sell below ${fmt.format(r.sell_below)}</td>`;
-    return `<td class="opt">${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}</td><td class="opt">${fmt.format(r.premium_paid)}</td><td class="opt">${fmt.format(r.premium_now)}</td>${sell}`;
-  }
-
-  // A premium from Dhan's feed (or the once-a-second poll) for one call: the row's option cells change in place,
-  // tick by tick, the way the index price does (see main.py push_premium)
+  // A premium from Dhan's feed (or the once-a-second poll) for one call: the row's "What now" and premium cells change
+  // in place, tick by tick, the way the index price does (see main.py push_premium)
   function applyPremium(p) {
     const r = optionRecords[p.key];
     if (!r) return;  // the record arrives with the next refresh; the premium comes again with the next tick
     Object.assign(r, p);
     const tr = document.querySelector(`#paper tr[data-key="${CSS.escape(p.key)}"]`);
-    if (!tr) return;
+    const t = lastPaper.trades.find(x => callKey(x) === p.key);
+    if (!tr || !t) return;
     const fresh = document.createElement("tr");
-    fresh.innerHTML = optionCells(r);
-    tr.querySelectorAll("td.opt").forEach(td => td.remove());
-    tr.append(...fresh.children);
+    fresh.innerHTML = statusCell(t, r) + premiumCell(r);
+    tr.querySelector("td.st").replaceWith(fresh.children[0]);
+    tr.querySelector("td.prem").replaceWith(fresh.children[0]);
   }
 
   const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK"];  // the indices the broker feed covers (dhan.INDEX_IDS)
