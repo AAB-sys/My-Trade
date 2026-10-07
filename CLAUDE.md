@@ -91,7 +91,10 @@ their own logic. Read this before touching the code.
   `HOST=0.0.0.0` opens the dashboard to other devices on the owner's home network
   and prints the addresses to use.
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
-  each tile links to `/index/{name}` in a new tab.
+  each tile links to `/index/{name}` in a new tab. In market hours the NIFTY 50
+  and NIFTY BANK tiles carry Dhan's last price (`with_dhan_prices()` in
+  `main.py`, `source: "dhan"`, "Dhan · live" on the tile); the footer says
+  which tiles are Dhan's and which Yahoo's.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
