@@ -96,7 +96,7 @@
     <div class="tiles" id="tiles"></div>
 
     <h2>Day by day</h2>
-    <div class="scroll"><table id="days"><thead><tr><th>Day</th><th>Calls</th><th>Won</th><th>Lost</th><th>Net points</th><th class="l">The calls</th></tr></thead><tbody></tbody></table></div>
+    <div class="scroll"><table id="days"><thead><tr><th>Day</th><th>Calls</th><th>Won</th><th>Lost</th><th>Net points</th><th>Suggested live</th><th class="l">The calls</th></tr></thead><tbody></tbody></table></div>
 
     <h2>By the hour the signal came</h2>
     <div class="scroll"><table id="hours"><thead><tr><th>Hour</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th></tr></thead><tbody></tbody></table></div>
@@ -180,7 +180,7 @@
     const { index, interval, move, signal } = state;
     const trades = allTrades(index, interval, move, signal);
     const s = tally(trades);
-    const daysWithBars = state.days.filter(d => { const f = state.files[d.date]; return f && f.indices[index] && f.indices[index].candles[interval] && f.indices[index].candles[interval].length; });
+    const daysWithBars = state.days.filter(d => { const f = state.files[d.date]; return f && f.indices[index] && f.indices[index].candles[interval] && f.indices[index].candles[interval].length; });  // each carries live_calls: the calls the index page suggested that day, in any setting (the day's CSV on the data branch)
     el("setting-note").textContent = `${index}, ${NAMES.interval[interval]} candles, ${NAMES.move[move]} levels, ${NAMES.signal[signal]} signal`
       + (state.ideas.length ? `, with ${state.ideas.join(" and ")} on` : "") + `: ${daysWithBars.length} day${daysWithBars.length === 1 ? "" : "s"} replayed`
       + (move === "today" ? ". Today-so-far levels are replayed as they stood when each candle closed, the day's range up to that candle." : ".");
@@ -193,7 +193,7 @@
     el("days").querySelector("tbody").replaceChildren(...daysWithBars.map(d => {
       const list = byDay[d.date] || [], t = tally(list), tr = document.createElement("tr");
       const words = list.map(c => `${istTime(c.signalTime)} ${c.side} ${(c.ratio * 100).toFixed(1)}% ${c.kind} ${signed.format(c.points)}`).join(", ");
-      tr.innerHTML = cell(dayLabel(d.date) + (d.complete ? "" : " (partial)")) + cell(t.calls) + cell(t.won) + cell(t.lost) + num(t.net) + `<td class="l">${words || "—"}</td>`;
+      tr.innerHTML = cell(dayLabel(d.date) + (d.complete ? "" : " (partial)")) + cell(t.calls) + cell(t.won) + cell(t.lost) + num(t.net) + cell(d.live_calls || 0) + `<td class="l">${words || "—"}</td>`;
       return tr;
     }));
     const hours = ["9 am", "10 am", "11 am", "12 pm", "1 pm", "2 pm", "3 pm"];

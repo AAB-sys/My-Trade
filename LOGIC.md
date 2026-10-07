@@ -194,8 +194,19 @@ behave around the Fibonacci levels.
 **The record.** After every session (at 15:40 IST, the `STUDY_SAVE_AT` setting)
 the server saves the day to `data/sessions/<date>.json`: the 1-, 5-, 15- and
 30-minute candles of each index on Dhan, and the day's and the previous
-session's open, high, low and close. Nothing else. During the session a partial
-copy is written every ten minutes, so the study can show today so far. A server
+session's open, high, low and close. Beside it, `data/sessions/<date>-calls.csv`
+(owner's ask, 7 October): **every call the index page suggested that day**, each
+and every one, as the page showed it: the setting it ran in (time frame, levels,
+signal), when it was first seen, the level, held or crossed, CE or PE, the entry,
+the target, the exit, the points, how it ended, and the option's contract and
+premiums as the page showed them. The page sends its list to the server as it
+draws it; the server keeps the latest state of each call and writes the CSV. The
+lab and the research rounds read it: what was suggested live, how it did by the
+page's own points, and whether the replay from the candles gives the same call,
+which is the test of the live page's timing and levels. During the session a
+partial copy of both files is written every ten minutes, and within two minutes
+of a call entering or ending, so the study can show today so far and a restart
+loses little. A server
 that was asleep at the close saves the day when it next wakes; any finished
 weekday of the last week without its final copy is saved too. The host's files
 do not last, so each copy is also pushed to the `data` branch of the owner's own
