@@ -59,17 +59,34 @@ def configured() -> bool:
 # while the live ticks were ignored. So every request takes its turn here, spaced out, whoever asks.
 _pace_lock = threading.Lock()
 _pace_next = {"feed": 0.0, "chain": 0.0, "other": 0.0}
-PACE_SECONDS = {"feed": 1.2, "chain": 3.1, "other": 0.35}  # a little over the limit's second: the gap is measured where Dhan sees it, not where it is sent
+PACE_SECONDS = {"feed": 1.2, "chain": 3.1, "other": 0.6}  # a little over the limit's second: the gap is measured where Dhan sees it, not where it is sent
+_hold = {"until": 0.0, "seconds": 0.0}  # after a refusal: every request waits, longer each time it happens again, until one gets through
 
 
 def _pace(path: str) -> None:
-    """Waits for this request's turn, so Dhan's rate limits are kept whoever asks."""
+    """Waits for this request's turn, so Dhan's rate limits are kept whoever asks: a gap inside each group of
+    endpoints, and after Dhan has refused one ("too many requests") a pause for everyone, 2 s, then 4, 8, up
+    to 15, until a request gets through again. Dhan's exact counting is not published in full, so the pause
+    is the safety net behind the gaps."""
     group = "feed" if path.startswith("/marketfeed") else "chain" if path == "/optionchain" else "other"  # the chain itself: one every 3 s; its expiry list is an ordinary request
     with _pace_lock:
-        wait = _pace_next[group] - time.monotonic()
+        wait = max(_pace_next[group], _hold["until"]) - time.monotonic()
         if wait > 0:
             time.sleep(wait)
         _pace_next[group] = time.monotonic() + PACE_SECONDS[group]
+
+
+def _refused() -> float:
+    """Dhan refused a request for its rate: everyone pauses, longer each time in a row. Returns the pause."""
+    with _pace_lock:
+        _hold["seconds"] = min(15.0, _hold["seconds"] * 2 if _hold["seconds"] else 2.0)
+        _hold["until"] = time.monotonic() + _hold["seconds"]
+        return _hold["seconds"]
+
+
+def _got_through() -> None:
+    with _pace_lock:
+        _hold["seconds"] = 0.0
 
 
 def call(method: str, path: str, payload: dict | None = None) -> dict:
@@ -101,9 +118,11 @@ def call(method: str, path: str, payload: dict | None = None) -> dict:
     if response.status_code == 401 or code == "DH-901":
         raise DhanError("token", f"Dhan refused the token ({said})")
     if response.status_code == 429 or code == "DH-904":
-        raise DhanError("rate", f"Dhan's rate limit was hit ({said})")
+        pause = _refused()
+        raise DhanError("rate", f"Dhan's rate limit was hit ({said}); every request waits {pause:g} s")
     if response.status_code >= 400 or code or body.get("status") == "failure":
         raise DhanError("other", f"HTTP {response.status_code} {code} {said}".strip())
+    _got_through()
     return body
 
 
