@@ -197,7 +197,13 @@ the record for the CSV. The page does the same when it is open, and whichever
 is first wins: the other finds the record. For this the live feed (Dhan's stream,
 and the once-a-second poll behind it) runs all session for the watcher, page or
 no page, with the option contracts behind the open calls on it, so the Sell mark
-is judged with the page closed too. A call that entered and ended before
+is judged with the page closed too. The watcher also keeps the premium now of
+every open record current itself, for both indices: the contracts' security ids
+from Dhan's instrument list (then they ride the stream and the poll), and the
+option chain for a record the feed has not touched in the last few seconds.
+Until 7 October only an open page asked for this, so an index nobody had open
+kept every premium at the value paid and no Sell mark could come (NIFTY BANK,
+that afternoon). A call that entered and ended before
 either looked (a server just started) still has no premium: nothing can be
 recorded after the fact, and its cell reads "not seen at entry". While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's

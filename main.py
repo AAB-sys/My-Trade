@@ -569,7 +569,7 @@ def feed_wanted() -> list:
     if WATCH_ON:
         names |= set(dhan.INDEX_IDS)
     return sorted(names)
-watch_state = {"at": None, "calls": 0, "open": 0, "problem": None}
+watch_state = {"at": None, "calls": 0, "open": 0, "without_id": 0, "premiums": None, "problem": None}
 watch_retry: dict = {}  # call key -> when to try registering its option again, after Dhan refused (no flood of requests or log lines)
 
 
@@ -616,8 +616,23 @@ def watch_index(name: str) -> dict:
     return {"calls": len(rows), "open": sum(1 for t in trades if t["how"] == "open")}
 
 
+def watch_premiums(name: str) -> dict:
+    """The premium now and the Sell mark of the index's open records, page or no page: the contracts' security ids
+    from Dhan's instrument list (then they ride the stream and the poll), and the option chain for a record the feed
+    has not read in the last few seconds. Until 7 October only an open page asked for this, so an index nobody had
+    open kept every premium at the value paid and no Sell mark could come (NIFTY BANK, that afternoon). Returns what
+    /health says: how many open calls have no contract on the feed yet, and why a premium could not be read, if so."""
+    try:
+        problem = dhan.refresh_records(name)
+    except Exception as exc:  # a premium problem never stops the watching of the calls
+        problem = f"{type(exc).__name__}: {str(exc)[:120]}"
+        log.warning("watch premiums: %s: %s", name, exc)
+    without_id = sum(1 for r in dhan.records_for(name) if not r["ended"] and not r.get("security_id"))
+    return {"without_id": without_id, "premiums": problem}
+
+
 async def calls_forever() -> None:
-    """The watcher's loop: every WATCH_SECONDS in market hours, each index on Dhan."""
+    """The watcher's loop: every WATCH_SECONDS in market hours, each index on Dhan: the calls, then their premiums."""
     if not WATCH_ON:
         watch_state["problem"] = f"the watcher's setting is not one the page has: {WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}"
         log.warning("watch: %s", watch_state["problem"])
@@ -625,12 +640,16 @@ async def calls_forever() -> None:
     while True:
         try:
             if DHAN_ON and in_tick_hours():
-                calls = open_now = 0
+                calls = open_now = without_id = 0
+                premiums = None
                 for name in dhan.INDEX_IDS:
                     got = await asyncio.to_thread(watch_index, name)
                     calls += got["calls"]
                     open_now += got["open"]
-                watch_state.update(at=now_ist(), calls=calls, open=open_now, problem=None)
+                    more = await asyncio.to_thread(watch_premiums, name)  # after the calls: a call entering is recorded first, the premiums now next
+                    without_id += more["without_id"]  # open calls whose contract is not on the feed yet (the instrument list still loading, or one it does not know)
+                    premiums = premiums or more["premiums"]  # why a premium could not be read just now, if so
+                watch_state.update(at=now_ist(), calls=calls, open=open_now, without_id=without_id, premiums=premiums, problem=None)
         except Exception as exc:
             watch_state["problem"] = f"{type(exc).__name__}: {str(exc)[:160]}"
             log.warning("watch: %s", exc)
