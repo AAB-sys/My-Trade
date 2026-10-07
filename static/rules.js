@@ -46,7 +46,22 @@
     const next = side === "CE" ? levels.find(l => l.price > at.price) : levels.slice().reverse().find(l => l.price < at.price);
     if (!next) return null;  // a signal pointing outward from the 0% or 100% level has no next level
     return { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close,
-             range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending" };
+             range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending",
+             prices: levels.map(l => l.price) };  // the levels in force at the signal, for the entry's check below
+  }
+
+  // The entry (owner's decision, 7 October): when the next candle opens already at or past the target (the signal candle
+  // itself ran through the next level), the call aims one level further, the first level beyond the entry price; with no
+  // level left beyond it, there is no call. Until then such a call "hit" a target below its entry and lost at once.
+  function enterAt(sig, bar) {
+    let target = sig.target, aimed = null;
+    if (sig.side === "CE" ? bar.open >= target : bar.open <= target) {
+      const beyond = sig.side === "CE" ? sig.prices.find(p => p > bar.open) : sig.prices.slice().reverse().find(p => p < bar.open);
+      if (beyond == null) return null;
+      target = beyond; aimed = "beyond";
+    }
+    const { prices, ...rest } = sig;
+    return { ...rest, target, aimed, entry: bar.open, entryTime: bar.time, how: "open" };
   }
 
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
@@ -55,8 +70,9 @@
   //   now        the server's clock: candles that have closed by it are judged, the one forming now runs the open calls
   //   seconds    the size of one candle; dayCandles: a day is one candle, so no day end; signal: "held", "crossed" or "both"
   //   the call   given the moment the signal candle closes; entry at the open of the next candle; target the next level in the
-  //              call's direction, reached tick by tick (the forming candle counts); no stop; a call still open at the day's last
-  //              candle ends at its close; every signal gives a call, open calls or not
+  //              call's direction (one level further when the entry is already past it, see enterAt), reached tick by tick (the
+  //              forming candle counts); no stop; a call still open at the day's last candle ends at its close; every signal
+  //              gives a call, open calls or not
   //   ideas      the ideas under test (LOGIC.md, layer 5), each off unless asked for; the index page never asks, so its calls
   //              are untouched: closeAt (seconds since midnight IST: every open call ends at the close of the first candle
   //              closing at or after it, and no call opens after it), noNewAfter (a signal candle closing after it gives no call)
@@ -78,7 +94,7 @@
         open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = [];
         ready = null;  // a signal on a day's last candle has no candle left to enter on
       }
-      if (ready) { const t = { ...ready, entry: bar.open, entryTime: bar.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
+      if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
       open = open.filter(t => { if (reaches(t, bar)) { end(t, t.target, bar, "target"); return false; } return true; });
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       const levels = levelsAt(i);
@@ -90,13 +106,13 @@
     const last = closed[closed.length - 1];
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
-      if (ready) { const t = { ...ready, entry: forming.open, entryTime: forming.time, how: "open" }; trades.push(t); open.push(t); ready = null; }
+      if (ready) { const t = enterAt(ready, forming); if (t) { trades.push(t); open.push(t); } ready = null; }
       open = open.filter(t => { if (reaches(t, forming)) { end(t, t.target, forming, "target"); return false; } return true; });
       open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at
     } else {
       open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
     }
-    if (ready && !over) trades.push(ready);  // the next candle has not begun yet (a second or two): "Enters at the next open"
+    if (ready && !over) { const { prices, ...pending } = ready; trades.push(pending); }  // the next candle has not begun yet (a second or two): "Enters at the next open"
     return { trades, closed: closed.length };
   }
 

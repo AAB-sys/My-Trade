@@ -590,7 +590,7 @@
     const now = t.exit != null ? fmt.format(t.exit) : t.last != null ? fmt.format(t.last) : "—";
     return `<td>${istTime(t.signalTime, withDate())}</td>` + statusCell(t, r)
       + `<td class="call">Buy ${t.side}${r ? ` · ${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}` : ""}</td>`
-      + `<td>${pctOf(t)} (${fmt.format(t.level)}) ${t.kind}</td><td>${entry} → ${fmt.format(t.target)}</td><td>${now}</td>`
+      + `<td>${pctOf(t)} (${fmt.format(t.level)}) ${t.kind}</td><td>${entry} → ${fmt.format(t.target)}${t.aimed ? " <small>one level on</small>" : ""}</td><td>${now}</td>`
       + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td>` + premiumCell(r);
   }
 
