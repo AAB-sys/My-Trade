@@ -21,6 +21,7 @@ import websockets
 import dhan
 import study
 from providers import INDICES, INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
+import rule
 
 BASE = Path(__file__).parent
 STATIC = BASE / "static"
@@ -432,9 +433,10 @@ async def tick_forever() -> None:
                 fold_tick(name, last, now, "poll")
                 await push_tick(name)
             for sid, premium in premiums.items():
-                rec = dhan.note_premium(options[sid], premium)
-                if rec:
-                    await push_premium(rec)
+                for rec_key in options[sid]:
+                    rec = dhan.note_premium(rec_key, premium)
+                    if rec:
+                        await push_premium(rec)
             if premiums:
                 dhan.save_records()
             await asyncio.sleep(TICK_SECONDS)
@@ -524,10 +526,11 @@ async def stream_forever() -> None:
                             store["dhan"]["stream_tick"] = live[by_id[sid]]["time"]
                             await push_tick(by_id[sid])
                         elif segment == dhan.OPTION_SEGMENT and sid in options:
-                            rec = dhan.note_premium(options[sid], last)
                             stream_at = now
-                            if rec:
-                                await push_premium(rec)
+                            for rec_key in options[sid]:
+                                rec = dhan.note_premium(rec_key, last)
+                                if rec:
+                                    await push_premium(rec)
                             if now - saved >= 5:
                                 saved = now
                                 dhan.save_records()
@@ -545,6 +548,83 @@ async def stream_forever() -> None:
 
 
 TOKEN_CHECK_SECONDS = float(os.environ.get("DHAN_TOKEN_CHECK_SECONDS", "1800"))
+
+# ---------------------------------------------------------------- the server watches the calls itself (owner, 7 October: "option 2")
+# The rule used to run only in the page: a call that entered while no page was open got no premium, and one that entered
+# during a restart got a late one. Now the server runs the same rule (rule.py, the page's engine in Python, proven the
+# same by check_rule.py) on the same candles, for the setting the owner uses live, every few seconds in market hours:
+# a call that enters is recorded at once (its option, its premium paid), a call that ends is marked, and the day's
+# calls are recorded for the CSV. The page does all this too; whichever is first wins, the other finds the record.
+WATCH_INTERVAL = os.environ.get("WATCH_INTERVAL", "5m")                  # the time frame the owner trades on
+WATCH_LEVELS = os.environ.get("WATCH_LEVELS", "today")                    # "today" (today so far) or "prev" (previous day)
+WATCH_SIGNAL = os.environ.get("WATCH_SIGNAL", "both")                     # "held", "crossed" or "both"
+WATCH_SECONDS = float(os.environ.get("WATCH_SECONDS", "5"))
+watch_state = {"at": None, "calls": 0, "open": 0, "problem": None}
+watch_retry: dict = {}  # call key -> when to try registering its option again, after Dhan refused (no flood of requests or log lines)
+
+
+def watch_index(name: str) -> dict:
+    """One look at one index: the day's candles as the page has them (Dhan's, with the one forming now from the ticks), the
+    levels as the page draws them now, the rule, then the records and the day's calls brought up to date. Returns counts."""
+    key, seconds = WATCH_INTERVAL, INTERVALS[WATCH_INTERVAL]["bar_seconds"]
+    today = dhan.today_ist()
+    minutes = seconds // 60
+    all_candles = dhan.intraday(name, minutes)
+    todays = [b for b in all_candles if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
+    bars = with_live_candles(todays, name, key)
+    if not bars:
+        return {"calls": 0, "open": 0}
+    if WATCH_LEVELS == "prev":
+        previous = dhan.previous_day(name, all_candles)
+        if not previous:
+            return {"calls": 0, "open": 0}
+        levels = rule.levels_of(rule.move_of_day(previous))
+    else:
+        levels = rule.levels_of(rule.move_of(bars))
+    trades = rule.paper_trades(bars, lambda i: levels, time.time(), seconds, False, WATCH_SIGNAL)["trades"]
+    rows = []
+    for t in trades:
+        call_key = rule.call_key(name, key, t, WATCH_LEVELS)
+        rec = dhan.record_of(call_key)
+        if t["how"] == "open" and rec is None and time.monotonic() >= watch_retry.get(call_key, 0):  # entered, and no record yet: the option and its premium, now
+            try:
+                rec = dhan.register_call(name, call_key, t["side"], t["entry"])
+                watch_retry.pop(call_key, None)
+            except Exception as exc:
+                watch_retry[call_key] = time.monotonic() + 30  # Dhan refused (its limit, the chain down): again in half a minute
+                log.warning("watch: %s %s: %s", name, call_key, exc)
+        elif t.get("exit") is not None and rec and not rec["ended"]:
+            rec = dhan.end_call(call_key, t["how"]) or rec
+        rows.append({"signal_time": t["signalTime"], "level": t["level"], "ratio": t["ratio"], "kind": t["kind"], "side": t["side"],
+                     "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
+                     "points": t.get("points"), "how": t["how"],
+                     "contract": f"{round(rec['strike'])} {rec['side']} {rec['expiry']}" if rec else "", "premium_paid": rec["premium_paid"] if rec else None,
+                     "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
+                     "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None})
+    if rows:
+        study.record_calls(name, key, WATCH_LEVELS, WATCH_SIGNAL, today.isoformat(), rows)
+    return {"calls": len(rows), "open": sum(1 for t in trades if t["how"] == "open")}
+
+
+async def calls_forever() -> None:
+    """The watcher's loop: every WATCH_SECONDS in market hours, each index on Dhan."""
+    if WATCH_INTERVAL not in INTERVALS or WATCH_INTERVAL == "1d" or WATCH_LEVELS not in ("today", "prev") or WATCH_SIGNAL not in ("held", "crossed", "both"):
+        watch_state["problem"] = f"the watcher's setting is not one the page has: {WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}"
+        log.warning("watch: %s", watch_state["problem"])
+        return
+    while True:
+        try:
+            if DHAN_ON and in_tick_hours():
+                calls = open_now = 0
+                for name in dhan.INDEX_IDS:
+                    got = await asyncio.to_thread(watch_index, name)
+                    calls += got["calls"]
+                    open_now += got["open"]
+                watch_state.update(at=now_ist(), calls=calls, open=open_now, problem=None)
+        except Exception as exc:
+            watch_state["problem"] = f"{type(exc).__name__}: {str(exc)[:160]}"
+            log.warning("watch: %s", exc)
+        await asyncio.sleep(WATCH_SECONDS)
 
 
 async def token_forever() -> None:
@@ -590,6 +670,7 @@ async def lifespan(app: FastAPI):
     if DHAN_ON:
         tasks.append(asyncio.create_task(warm_option_ids()))
         tasks.append(asyncio.create_task(token_forever()))
+        tasks.append(asyncio.create_task(calls_forever()))
     yield
     for task in tasks:
         task.cancel()
@@ -634,7 +715,8 @@ def feed_state() -> dict:
     d = store["dhan"]
     return {"server_time": now_ist(), "started_at": started_at, "tick_hours": in_tick_hours(), "watching": sorted(set(live_subs.values())),
             "status": d["status"], "stream": d["stream"], "stream_tick": d["stream_tick"], "poll": d["poll"], "tiles": d["tiles"],
-            "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()}}
+            "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
+            "watch": {"setting": f"{WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}", **watch_state}}
 
 
 @app.get("/login")

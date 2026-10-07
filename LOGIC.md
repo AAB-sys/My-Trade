@@ -184,8 +184,19 @@ contract rides Dhan's live feed beside the index (its security id comes from
 Dhan's instrument list), with a once-a-second poll when the feed is quiet and the
 option chain only when neither is running (owner's choice, 6 October: no time
 shown next to it, just the live premium).
-The page must be open for a call to be recorded: a call that enters while no
-page is open gets no premium, and shows a dash. While the page is open in
+The server watches the calls itself (owner's decision, 7 October, "option 2"):
+the same rule, written again in Python (`rule.py`) and proven the same as the
+page's engine call for call by `check_rule.py` on every saved day, a hand-made
+day and random days, runs on the server every few seconds in market hours, on
+the same candles the page has and the levels as the page draws them, for the
+setting the owner trades on (`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL`:
+5-minute candles, today so far, both signals). A call that enters is recorded
+the moment it enters, with its option and its premium paid, page or no page,
+restart or no restart; a call that ends is marked; and the day's calls go into
+the record for the CSV. The page does the same when it is open, and whichever
+is first wins: the other finds the record. A call that entered and ended before
+either looked (a server just started) still has no premium: nothing can be
+recorded after the fact, and its cell reads "not seen at entry". While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's
 own feed (one price a second if that feed is quiet); the closed candles, and so
 the signals, are judged when the next candle begins. Only NIFTY 50 and NIFTY BANK

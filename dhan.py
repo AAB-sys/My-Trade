@@ -332,6 +332,24 @@ def quote(name: str) -> dict:
     return cached(("quote", name), 3, make)
 
 
+def previous_day(name: str, all_candles: list) -> dict | None:
+    """The last session before today as the index page's "previous day" levels take it: Dhan's daily bar, or, when
+    the daily list lags (today's bar arrives after the close, sometimes later), the session built from its candles.
+    The same list fetch_detail hands the page as "days"."""
+    today = today_ist()
+    bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
+    sessions = sorted({bar_date(b) for b in all_candles})
+    days = list(daily(name))
+    known = {bar_date(d) for d in days}
+    for day in sessions:
+        if day not in known:
+            bars = [b for b in all_candles if bar_date(b) == day]
+            days.append({"time": bars[0]["time"], "open": bars[0]["open"], "high": max(b["high"] for b in bars), "low": min(b["low"] for b in bars), "close": bars[-1]["close"]})
+    days.sort(key=lambda d: d["time"])
+    before = [d for d in days if bar_date(d) < today]
+    return before[-1] if before else None
+
+
 def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, ranges: dict, last_price: float | None = None) -> dict:
     """The index page's detail, in the same shape as the Yahoo one, from Dhan in real time. With last_price given
     (the live price the server already holds from the stream or the poll) no quote request is made: that request
@@ -616,6 +634,13 @@ def _save_records() -> None:
 _load_records()
 
 
+def record_of(key: str) -> dict | None:
+    """One call's record as the page shows it, or None."""
+    with _records_lock:
+        rec = _records.get(key)
+        return dict(rec) if rec else None
+
+
 def records_for(name: str) -> list:
     """Today's records of an index, as the page shows them."""
     today = today_ist().isoformat()
@@ -641,6 +666,8 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
               "premium_paid": premium, "paid_at": now, "premium_now": premium, "now_at": now, "sell_below": round(premium * SELL_SHARE, 2),
               "sold": None, "ended": None, "security_id": None}  # the id is filled in by fill_ids, so the premium is recorded at once
     with _records_lock:
+        if key in _records:  # the page and the server's watcher may both have asked in the same second: the first record stands
+            return dict(_records[key])
         _records[key] = record
         _save_records()
     _changed()
@@ -668,11 +695,15 @@ def save_records() -> None:
 
 
 def open_options(names: list) -> dict:
-    """{security id: record key} for today's open calls of the indices named, where the contract's id is known."""
+    """{security id: [record keys]} for today's open calls of the indices named, where the contract's id is known. One
+    contract may stand behind several records (the same call under two levels modes, the page's and the watcher's)."""
     today = today_ist().isoformat()
+    out: dict = {}
     with _records_lock:
-        return {r["security_id"]: r["key"] for r in _records.values()
-                if r["index"] in names and not r["ended"] and r["paid_at"][:10] == today and r.get("security_id")}
+        for r in _records.values():
+            if r["index"] in names and not r["ended"] and r["paid_at"][:10] == today and r.get("security_id"):
+                out.setdefault(r["security_id"], []).append(r["key"])
+    return out
 
 
 def fill_ids(name: str) -> None:
