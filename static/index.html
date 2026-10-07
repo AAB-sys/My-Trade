@@ -143,7 +143,7 @@
       <div class="label">${q.name}</div>
       <div class="value">${level.format(q.level)}</div>
       <div class="delta ${dir}">${glyph} ${signed.format(q.change)} (${signed.format(q.change_percent)}%)</div>
-      <div class="time">${q.source === "dhan" ? "Dhan · live · " + at + " IST" : "as of " + at + " IST"}</div>`;
+      <div class="time">${q.source === "dhan" ? (q.live === false ? "Dhan · closed · " : "Dhan · live · ") + at + " IST" : "as of " + at + " IST"}</div>`;
     return el;
   }
 
@@ -246,7 +246,7 @@
       : d.configured && d.tiles
       ? "NIFTY 50, NIFTY BANK and SENSEX: Dhan, your own account, in real time, here and on their pages. The other tiles: Yahoo Finance, about 15 minutes delayed; the server refreshes every " + data.poll_seconds + " s and pushes changes here instantly."
       : d.configured
-      ? "Tiles from Yahoo Finance, about 15 minutes delayed (the NIFTY 50, NIFTY BANK and SENSEX tiles follow Dhan in market hours); their pages run on Dhan, your own account. The server refreshes every " + data.poll_seconds + " s and pushes changes here instantly."
+      ? "Tiles from Yahoo Finance, about 15 minutes delayed (the NIFTY 50, NIFTY BANK and SENSEX tiles follow Dhan whenever it answers); their pages run on Dhan, your own account. The server refreshes every " + data.poll_seconds + " s and pushes changes here instantly."
       : "Data from Yahoo Finance, about 15 minutes delayed; the server refreshes every " + data.poll_seconds + " s and pushes changes here instantly.";
   }
 

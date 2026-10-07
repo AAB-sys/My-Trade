@@ -120,9 +120,11 @@ their own logic. Read this before touching the code.
   (`newDeploy()`), at most once a minute, so a merge reaches an open tab.
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
   each tile links to `/index/{name}` in a new tab. The top row is NIFTY 50,
-  NIFTY BANK, SENSEX (`PINNED`). In market hours those three tiles carry Dhan's
-  last price (`with_dhan_prices()` in `main.py`, `source: "dhan"`, "Dhan · live"
-  on the tile) and move every second: `live_forever` sends `{"live": {...}}` to
+  NIFTY BANK, SENSEX (`PINNED`). Those three tiles carry Dhan's last price at
+  all hours, against Dhan's previous close like their pages (`with_dhan_prices()`
+  and `dhan_tile_prices()` in `main.py`, `dhan.previous_close()`; `source:
+  "dhan"`, `live`, "Dhan · live" or "Dhan · closed" on the tile) and in market
+  hours move every second: `live_forever` sends `{"live": {...}}` to
   the dashboard sockets (`dash_subs`) once a second, `applyLive` redraws the
   tile in place; the footer says which tiles are Dhan's and which Yahoo's.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page

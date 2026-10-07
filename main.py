@@ -101,7 +101,7 @@ store = {
         "poll": "",  # the once-a-second price request's state (the fallback behind the stream), in plain words
         "stream_tick": None,  # when the last index price came over the stream
         "token": None,  # the last token check (token_forever): ok, valid_till, checked_at, problem
-        "tiles": False,  # whether the dashboard's NIFTY 50, NIFTY BANK and SENSEX tiles carry Dhan's live price right now
+        "tiles": False,  # whether the dashboard's NIFTY 50, NIFTY BANK and SENSEX tiles carry Dhan's price right now (at all hours, 7 October)
     },
 }
 stream_at = 0.0  # when the last tick came over the stream; the one-a-second polling steps in while it is quiet
@@ -271,20 +271,35 @@ async def broadcast(payload: dict) -> None:
             clients.discard(ws)
 
 
-def with_dhan_prices(quotes: list, prices: dict) -> list:
+def with_dhan_prices(quotes: list, prices: dict, closes: dict | None = None) -> list:
     """The dashboard's tiles: the quotes of the indices Dhan covers carry Dhan's last price in place of Yahoo's
-    (about 15 minutes behind), the change re-done against the same previous close, and say so (source: dhan)."""
+    (about 15 minutes behind), the change against Dhan's previous close (closes: the same one the index page uses,
+    so the tile and the page agree; Yahoo's, used until 7 October, was another day's and gave the wrong sign),
+    and say so (source: dhan; live: whether the price moves every second now, or stands at the close)."""
     out = []
     for q in quotes:
         last = prices.get(q["name"])
         if last is None:
             out.append(q)
             continue
-        previous_close = round(q["level"] - q["change"], 2)
+        previous_close = (closes or {}).get(q["name"]) or round(q["level"] - q["change"], 2)
         change = round(last - previous_close, 2)
         out.append({**q, "level": last, "change": change, "change_percent": round(change / previous_close * 100, 2) if previous_close else 0.0,
-                    "time": now_ist(), "source": "dhan"})
+                    "previous_close": previous_close, "time": now_ist(), "source": "dhan", "live": in_tick_hours()})
     return out
+
+
+def dhan_tile_prices(names: list) -> tuple:
+    """For the tiles: Dhan's last price of each index, and its previous close (None for an index whose close could not
+    be read just now: the tile then measures against Yahoo's, as before)."""
+    prices, _ = dhan.last_prices(names)
+    closes = {}
+    for name in names:
+        try:
+            closes[name] = dhan.previous_close(name)
+        except Exception as exc:
+            log.warning("Dhan tiles: no previous close for %s: %s", name, exc)
+    return prices, closes
 
 
 async def refresh_forever() -> None:
@@ -292,17 +307,15 @@ async def refresh_forever() -> None:
         try:
             result = await asyncio.to_thread(fetch_all)
             reason = result.get("reason") or ""
-            if result["quotes"] and DHAN_ON and in_tick_hours():  # the tiles of the Dhan indices follow the owner's own feed in market hours
+            if result["quotes"] and DHAN_ON:  # the tiles of the Dhan indices follow the owner's own feed, at all hours (the close after hours)
                 try:
                     names = [q["name"] for q in result["quotes"] if q["name"] in dhan.QUOTE_IDS]
-                    prices, _ = await asyncio.to_thread(dhan.last_prices, names)
-                    result["quotes"] = with_dhan_prices(result["quotes"], prices)
+                    prices, closes = await asyncio.to_thread(dhan_tile_prices, names)
+                    result["quotes"] = with_dhan_prices(result["quotes"], prices, closes)
                     store["dhan"]["tiles"] = bool(prices)
                 except Exception as exc:
                     store["dhan"]["tiles"] = False
                     log.warning("Dhan tiles: %s", exc)
-            elif not in_tick_hours():
-                store["dhan"]["tiles"] = False
             if result["quotes"]:
                 if result["failed"]:
                     log.warning("refresh missed %s: %s", result["failed"], reason)
