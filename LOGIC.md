@@ -93,14 +93,18 @@ October).
 
 The rule above, run over the closed candles of the session picked, with that
 session's levels. Each call (buy a CE, or buy a PE) is one row of the list, read
-left to right: the time, **what to do now** in plain words (*Enter at the next
-open*, *HOLD* with the sell line, *SELL NOW*, *SOLD at* a premium, *Target hit*,
-*Closed at day end*), the call with its contract, the signal (*Held* or
-*Crossed*, the level's ratio and price), the index at entry and the target, the
-index now or at the exit ("Now / exit"), the points, and the premium paid and
-now (at exit, once the call has ended). A finished call that no page saw enter
-reads "not seen at entry" in the premium cell: no page was open at its entry,
-so no premium could be recorded then (7 October). The list is in time order, the newest call at the
+left to right, in the owner's format of 7 October evening: **Time** (9:15 AM),
+**Call (CE/PE)** with its contract, **Signal** (*Held* or *Crossed*, the level's
+ratio and price), **Call Entry** (the strike number of the contract, the same
+number as in the call; the index price at entry until the contract is known:
+no Dhan, or no page open at the entry), **Call Target** (the next level in the
+call's direction; once the call has ended, *hit* or *not reached, day end*
+under it), **Premium Paid -> Now** (at exit once the call has ended; *SELL NOW*
+while the premium sits below the sell mark, *sold at* once marked sold) and
+**Candle status** (item 7 below). A finished row is greyed. A finished call that
+no page saw enter reads "not seen at entry" in the premium cell: no page was
+open at its entry, so no premium could be recorded then (7 October). The header
+row stays in view while the page scrolls (owner's ask, 7 October). The list is in time order, the newest call at the
 top, open or finished alike (owner's ask, 7 October: an open call listed above a
 later one read as if it had been given later); one line keeps the score (owner's
 ask, 7 October: the list must say what is happening and what action is needed). Paper only: nothing is sent anywhere, and
@@ -150,9 +154,9 @@ The rule, in the order it is applied:
    marks any record of the day still open as ended at the day end, whoever made
    it (7 October: records under the call keys of earlier versions, which no page
    or watcher matched any more, had stayed open).
-7. **Candles say: CARRY or EXIT** (owner's ask, 7 October, from two screenshots
-   of a fall through the levels and a retest; made plain the same evening) - a
-   "Candles say" cell on every call row: one word, CARRY or EXIT, from the
+7. **Candle status: CARRY or EXIT** (owner's ask, 7 October, from two
+   screenshots of a fall through the levels and a retest; made plain the same
+   evening) - a "Candle status" cell on every call row: one word, CARRY or EXIT, from the
    closed candles around the level that gave the call, whichever Fibonacci
    level that is (0% to 100% alike), with the reason under it in plain words.
    It changes nothing: not the call, its target, its end or its points. The
