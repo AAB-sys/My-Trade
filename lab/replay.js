@@ -37,6 +37,8 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 //   (waitDeeper: a shallower cross waits, and the first later candle closing that deep gives the call)   minBody: a crossed
 //   signal needs a body of at least this share of that gap   closeBackShare: exit when a candle closes back across the level by
 //   at least this share of the gap (7 October: the depth of the close past a level is what tells a cross from a bounce)
+//   carryOn: idea P5 (7 October evening): when the candle reaching the target closes at least this share of the next gap past it,
+//   the call carries on to the level beyond, again and again up the ladder of levels in force at the signal
 function run(bars, previous, o, higher) {
   const sec = o.sec;
   const fixed = o.levels === "prev" ? (previous ? R.levelsOf(R.moveOfDay(previous)) : null) : null;
@@ -55,12 +57,17 @@ function run(bars, previous, o, higher) {
         const beyond = ready.side === "CE" ? ready.prices.find(p => p > bar.open) : ready.prices.slice().reverse().find(p => p < bar.open);
         target = beyond == null ? null : beyond; aimed = "beyond";
       }
-      if (target != null) { const x = { ...ready, target, aimed, entry: bar.open, entryTime: bar.time, how: "open", adv: 0, fav: 0 }; trades.push(x); open.push(x); }
+      if (target != null) { const ladder = ready.side === "CE" ? ready.prices.filter(p => p > target) : ready.prices.filter(p => p < target).reverse();
+        const x = { ...ready, target, aimed, ladder, entry: bar.open, entryTime: bar.time, how: "open", adv: 0, fav: 0 }; trades.push(x); open.push(x); }
       ready = null;
     }
     open = open.filter(x => {
       x.fav = Math.max(x.fav, x.side === "CE" ? bar.high - x.entry : x.entry - bar.low); x.adv = Math.max(x.adv, x.side === "CE" ? x.entry - bar.low : bar.high - x.entry);
-      if (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target) { end(x, x.target, bar, "target"); return false; }
+      while (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target) {  // the target reached: idea P5 may carry on to the level beyond
+        const beyond = o.carryOn != null && x.ladder.length ? x.ladder[0] : null;
+        if (beyond != null && (x.side === "CE" ? bar.close - x.target : x.target - bar.close) >= o.carryOn * Math.abs(beyond - x.target)) { x.carried = (x.carried || 0) + 1; x.target = beyond; x.ladder = x.ladder.slice(1); continue; }
+        end(x, x.target, bar, "target"); return false;
+      }
       if (o.stopShare) { const stop = x.side === "CE" ? x.entry - o.stopShare * (x.target - x.entry) : x.entry + o.stopShare * (x.entry - x.target);
         if (x.side === "CE" ? bar.low <= stop : bar.high >= stop) { end(x, stop, bar, "stop"); return false; } }
       if (o.closeBack && (x.side === "CE" ? bar.close < x.level : bar.close > x.level)) { end(x, bar.close, bar, "candle"); return false; }
@@ -160,6 +167,15 @@ const IDEAS = [
   ["a shallow cross waits for a close past halfway", { minDepth: 0.5, waitDeeper: true }],
   ["crossed only with a body of half the gap", { minBody: 0.5 }],
   ["P4 exit when a candle closes on the wrong side of the level", { closeBackShare: 0.25 }],  // the owner's rule, 7 October evening: a quarter of the gap past it
+  // 7 October evening, the carry study (findings, round 3): at the target, a close a quarter into the next gap carries the call on
+  ["P5 carry on a quarter into the next gap, again and again", { carryOn: 0.25 }],
+  ["carry on: any close past the target", { carryOn: 0 }],
+  ["carry on: close past halfway of the next gap", { carryOn: 0.5 }],
+  ["P1 + P2 + P5", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), carryOn: 0.25 }],
+  ["P1 + P2 + P3 + P5", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25, carryOn: 0.25 }],
+  ["P1 + P2 + P3 + P4 + P5", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25, closeBackShare: 0.25, carryOn: 0.25 }],
+  ["today-so-far levels + P5", { levels: "today", carryOn: 0.25 }],
+  ["today-so-far levels + P1 + P2 + P5", { levels: "today", closeAt: hm(15, 0), noNewAfter: hm(14, 0), carryOn: 0.25 }],
   ["P3 + P4", { minDepth: 0.25, closeBackShare: 0.25 }],
   ["P1 + P2 + P3 + P4", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25, closeBackShare: 0.25 }],
   ["today-so-far levels + P4", { levels: "today", closeBackShare: 0.25 }],

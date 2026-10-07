@@ -128,3 +128,44 @@ P4 on the Study page beside P1 to P3. On the six days it is ahead of the rule on
 against +148) and behind on the other three boards (+92 against +316, +559 against +2,164, −1,316 against +153),
 while its worst call is far smaller (−58 against −178, −184 against −523, −338 against −569): it cuts the big losers
 and the winners that came back alike. It stays a switch until the days say otherwise.
+
+## Round 3, 7 October evening: carry or exit, read from every candle after entry
+
+The owner's ask: an indicator that says, while a call runs, carry on or get out, from the candles around the
+levels. Every call of the rule as it is on the six saved days (29 Sep to 7 Oct), both indices, 5 and 15 minutes,
+today-so-far and previous-day levels (eight boards, 735 calls), re-run under fourteen exit readings judged at
+candle closes, the target still reached tick by tick first.
+
+**No exit reading beat holding.** Any close back across the level, a quarter back (P4), a whole gap back, a close
+beyond the signal candle's far end or the entry candle's, two closes in a row against the call, not halfway after
+3 or 6 candles, a rejection wick, a trailing exit once past halfway, and mixes: every one lost net points against
+holding over the eight boards (holding +6,403; the best exit, the trailing one, +6,192; P4 −469; a whole gap back
+−2,105). The reason is the rule's own shape: a call can only lose at the day's end, every other end is the target,
+and the index crosses these levels back and forth all day, so a close-based exit leaves winners that were about to
+come back far more often than it saves losers (NIFTY 50 5m, today's levels: P4 changed 66 calls, 18 for the better).
+
+**The losses are the clock's.** Calls entered before 14:00: 582, of which 504 won. Entered 14:00 to 15:00: 98,
+60 won, 38 lost. After 15:00: 55, 26 won, 29 lost, net −761. That is P1 and P2.
+
+**The carry side is where the candles help.** At the candle that reaches the target, a close at least a quarter
+of the next gap past it, and the call carries on to the level beyond, again and again up the ladder (the engine's
+own numbers, `Rules.replayDay` with P5 on; a candle through two levels is settled on that candle):
+
+| Board | Hold | P5 | Carried: better / worse than the first target | Days ahead / behind |
+|---|---|---|---|---|
+| NIFTY 50, 5 min, today's levels | +480 | +1,653 | 49 / 0 | 6 / 0 |
+| NIFTY 50, 5 min, previous day | +316 | +614 | 13 / 2 | 3 / 0 |
+| NIFTY 50, 15 min, today's levels | +251 | +1,029 | 22 / 0 | 5 / 0 |
+| NIFTY 50, 15 min, previous day | +148 | +546 | 8 / 0 | 3 / 0 |
+| NIFTY BANK, 5 min, today's levels | +1,144 | +2,688 | 24 / 7 | 4 / 2 |
+| NIFTY BANK, 5 min, previous day | +2,164 | +4,490 | 16 / 0 | 3 / 0 |
+| NIFTY BANK, 15 min, today's levels | +1,748 | +2,544 | 14 / 3 | 5 / 0 |
+| NIFTY BANK, 15 min, previous day | +153 | +1,776 | 12 / 0 | 2 / 0 |
+
+Over the eight boards: holding +6,403; P5 +15,341; P1 + P2 + P5 +15,289. Any close past the target carried more
+calls with more reversals; past halfway carried fewer and earned less. A quarter is the setting.
+
+Decided by the owner (7 October evening): P5, carry on a quarter again and again, goes on the Study page as a
+switch beside P1 to P4; the day's calls CSV records the carry read for every call (`carry_deep`, `beyond_level`,
+`beyond_reached`) so the nightly round keeps counting it on the real days; the live page is unchanged. Six days
+with trends in them: a sideways day will show more reversals, which is what the switch is there to count.

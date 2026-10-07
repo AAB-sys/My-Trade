@@ -96,7 +96,9 @@ def enter_at(sig: dict, bar: dict):
             return None
         target, aimed = beyond, "beyond"
     t = {k: v for k, v in sig.items() if k != "prices"}
-    t.update(target=target, aimed=aimed, entry=bar["open"], entryTime=bar["time"], how="open")
+    prices = sig["prices"]  # the levels beyond the target, nearest first: idea P5 carries the call up them, and the carry read asks about the first
+    ladder = [p for p in prices if p > target] if sig["side"] == "CE" else [p for p in reversed(prices) if p < target]
+    t.update(target=target, aimed=aimed, ladder=ladder, entry=bar["open"], entryTime=bar["time"], how="open")
     return t
 
 
@@ -107,6 +109,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     no_new_after = (ideas or {}).get("noNewAfter")
     min_depth = (ideas or {}).get("minDepth")  # idea P3 (7 October): a crossed signal must close this share of the way to the next level
     exit_back = (ideas or {}).get("exitBack")  # idea P4 (7 October, the owner's rule): a candle closing back across the level by this share of the gap ends the call
+    carry_on = (ideas or {}).get("carryOn")  # idea P5 (7 October evening): at the target, a close this share into the next gap carries the call on to the level beyond
 
     def clock_end(b):
         return (b["time"] + IST_OFFSET) % 86400 + seconds
@@ -122,6 +125,18 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
     def reaches(t, bar):
         return bar["high"] >= t["target"] if t["side"] == "CE" else bar["low"] <= t["target"]
+
+    def settle(t, bar):
+        """The target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target."""
+        while reaches(t, bar):
+            beyond = t["ladder"][0] if carry_on is not None and t["ladder"] else None
+            if beyond is not None and (bar["close"] - t["target"] if t["side"] == "CE" else t["target"] - bar["close"]) >= carry_on * abs(beyond - t["target"]):
+                t["carried"] = t.get("carried", 0) + 1
+                t["target"], t["ladder"] = beyond, t["ladder"][1:]
+                continue
+            end(t, t["target"], bar, "target")
+            return False
+        return True
 
     def new_day(a, b):
         return not day_candles and day_of(a["time"]) != day_of(b["time"])
@@ -139,13 +154,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 trades.append(t)
                 open_.append(t)
             ready = None
-        still = []
-        for t in open_:
-            if reaches(t, bar):
-                end(t, t["target"], bar, "target")
-            else:
-                still.append(t)
-        open_ = still
+        open_ = [t for t in open_ if settle(t, bar)]
         if exit_back:  # idea P4: the candle says exit, at its close
             still = []
             for t in open_:
@@ -182,7 +191,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             ready = None
         still = []
         for t in open_:
-            if reaches(t, forming):
+            if reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close
                 end(t, t["target"], forming, "target")
             else:
                 still.append(t)
@@ -209,8 +218,30 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas)
 
 
-IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}}
+IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25}}
 EXIT_BACK = IDEAS["P4"]["exitBack"]
+CARRY_ON = IDEAS["P5"]["carryOn"]
+
+
+def carry_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
+    """The carry read, as static/rules.js carryOf gives it: at the candle that reached the target, did the close go a quarter
+    of the next gap past it, and was the level beyond reached by a later closed candle. None before the target, or with no
+    level beyond."""
+    if t.get("how") != "target" or not t.get("ladder"):
+        return None
+    hit = next((b for b in bars if b["time"] == t["exitTime"]), None)
+    if hit is None:
+        return None
+    beyond, d = t["ladder"][0], (1 if t["side"] == "CE" else -1)
+    deep = d * (hit["close"] - t["target"]) >= CARRY_ON * abs(beyond - t["target"])
+    reached_at = None
+    for b in bars:
+        if b["time"] < t["exitTime"] or end_of(b, seconds) > now:
+            continue
+        if (b["high"] >= beyond) if d > 0 else (b["low"] <= beyond):
+            reached_at = b["time"]
+            break
+    return {"deep": deep, "beyond": beyond, "reached": reached_at is not None, "reachedAt": reached_at}
 
 
 def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:

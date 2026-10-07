@@ -184,7 +184,14 @@ The rule, in the order it is applied:
    `candles_say` (carry or exit), `exit_said_at_ist` (the first candle that said
    exit) and `candles_why` (the reason), from the page and from the server's
    watcher alike (`rule.read_of`, the same code in Python, kept the same by
-   `check_rule.py`); the page's CSV download carries the three too. Only
+   `check_rule.py`); the page's CSV download carries the three too. Beside
+   them, the *carry read* (idea P5's question, `Rules.carryOf` and
+   `rule.carry_of`, 7 October evening): for a call that reached its target,
+   `carry_deep` says whether the candle that reached it closed at least a
+   quarter of the next gap past it, `beyond_level` is the level beyond, and
+   `beyond_reached` whether a later closed candle got there. Every call now
+   carries its `ladder`, the levels beyond its target at the signal, nearest
+   first, for both. Only
    closed candles count, as everywhere in this layer. The numbers behind it
    (`lab/findings.md`, round 2): calls never closed back a quarter won 89%,
    back a whole gap or more 35%. The same exit, acted on, is idea P4 on the
@@ -390,6 +397,22 @@ Under test since 6 October (confirmed by the owner for the Study page):
   far smaller worst calls (`lab/findings.md`, round 2); it lives here as a
   switch so the owner sees it scored against the rule as the days come in,
   while the index page shows the same verdict for reading.
+- **P5: carry on to the next level when the candle reaching the target closes
+  a quarter into the next gap** (confirmed by the owner, 7 October evening,
+  from the carry study of round 3). The target is reached tick by tick as
+  ever, but the decision waits for that candle to close: if its close is at
+  least a quarter of the way from the target to the level beyond, the call's
+  target moves to that level, and the same test applies there, again and
+  again up the ladder of levels in force at the signal; if not, the call ends
+  at the target price, exactly as the rule does. On the candle forming now
+  the call stays open at the live price until the close decides. The reason:
+  on the six saved days every exit reading lost against holding, while this
+  carry reading more than doubled the net over the eight boards (+6,403 to
+  +15,341), with 8 to 49 calls carried per board and 0 to 7 of them ending
+  worse than their first target. The owner's third observation, "a strong cross carries to the next
+  level", taken to every level. The carry read of layer 3 (`carry_deep`,
+  `beyond_level`, `beyond_reached` in the day's calls CSV) lets the nightly
+  round keep counting it on the real days.
 
 Tested and set aside on the same five days (`lab/findings.md` has the numbers):
 ending a call when a candle closes back across its level (it cut about half the
