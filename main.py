@@ -67,8 +67,8 @@ elif PROVIDER == "demo":
 else:
     raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use yahoo or demo.")
 
-# Dhan, the owner's broker API: real-time candles, quotes and option premiums for the indices it
-# covers (dhan.INDEX_IDS), when its two settings are present and the source is the real one.
+# Dhan, the owner's broker API: real-time candles and quotes for the indices it covers (dhan.QUOTE_IDS) and
+# option premiums for the two with options (dhan.INDEX_IDS), when its two settings are present and the source is the real one.
 # Everything else, and every Dhan failure, falls back to the source above.
 DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
 DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
@@ -99,7 +99,7 @@ store = {
         "poll": "",  # the once-a-second price request's state (the fallback behind the stream), in plain words
         "stream_tick": None,  # when the last index price came over the stream
         "token": None,  # the last token check (token_forever): ok, valid_till, checked_at, problem
-        "tiles": False,  # whether the dashboard's NIFTY 50 and NIFTY BANK tiles carry Dhan's live price right now
+        "tiles": False,  # whether the dashboard's NIFTY 50, NIFTY BANK and SENSEX tiles carry Dhan's live price right now
     },
 }
 stream_at = 0.0  # when the last tick came over the stream; the one-a-second polling steps in while it is quiet
@@ -291,7 +291,7 @@ async def refresh_forever() -> None:
             reason = result.get("reason") or ""
             if result["quotes"] and DHAN_ON and in_tick_hours():  # the tiles of the Dhan indices follow the owner's own feed in market hours
                 try:
-                    names = [q["name"] for q in result["quotes"] if q["name"] in dhan.INDEX_IDS]
+                    names = [q["name"] for q in result["quotes"] if q["name"] in dhan.QUOTE_IDS]
                     prices, _ = await asyncio.to_thread(dhan.last_prices, names)
                     result["quotes"] = with_dhan_prices(result["quotes"], prices)
                     store["dhan"]["tiles"] = bool(prices)
@@ -488,7 +488,7 @@ async def stream_forever() -> None:
     does. Whenever the stream is quiet, tick_forever's polling steps in."""
     global stream_at
     wait = 2
-    by_id = {sid: name for name, sid in dhan.INDEX_IDS.items()}
+    by_id = {sid: name for name, sid in dhan.QUOTE_IDS.items()}
     while True:
         if not (DHAN_ON and feed_wanted() and in_tick_hours()):
             await asyncio.sleep(2)
@@ -564,10 +564,11 @@ WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL != "1d" and WATCH_LEVE
 # candle forming now and the open calls' premiums whether or not a page is open, so in market hours the feed runs for the
 # watcher too: the indices it watches, and the option contracts behind its open calls (the Sell mark works with no page).
 def feed_wanted() -> list:
-    """The indices whose live price the server needs now: the pages' and, with the watcher on, every index on Dhan."""
+    """The indices whose live price the server needs now: the pages' and, with the watcher on, every index on Dhan
+    (the two it watches, and SENSEX for its tile: owner's ask, 7 October)."""
     names = set(live_subs.values())
     if WATCH_ON:
-        names |= set(dhan.INDEX_IDS)
+        names |= set(dhan.QUOTE_IDS)
     return sorted(names)
 watch_state = {"at": None, "calls": 0, "open": 0, "without_id": 0, "premiums": None, "problem": None}
 watch_retry: dict = {}  # call key -> when to try registering its option again, after Dhan refused (no flood of requests or log lines)
@@ -665,6 +666,12 @@ async def token_forever() -> None:
             store["dhan"]["token"] = await asyncio.to_thread(dhan.token_check)
             if not store["dhan"]["token"]["ok"]:
                 log.warning("Dhan token: %s", store["dhan"]["token"]["problem"])
+            try:
+                dhan.option_ids()  # starts the instrument list's read (in its own thread) if it is missing or stale: the ids check, and the contracts' ids
+            except dhan.DhanError:
+                pass
+            if problem := dhan.id_problem():
+                log.warning("Dhan ids: %s", problem)
         except Exception as exc:
             store["dhan"]["token"] = {"ok": False, "valid_till": None, "checked_at": now_ist(), "problem": f"{type(exc).__name__}: {str(exc)[:120]}"}
         await asyncio.sleep(TOKEN_CHECK_SECONDS)
@@ -745,7 +752,8 @@ def feed_state() -> dict:
     return {"server_time": now_ist(), "started_at": started_at, "tick_hours": in_tick_hours(), "watching": sorted(set(live_subs.values())),
             "status": d["status"], "stream": d["stream"], "stream_tick": d["stream_tick"], "poll": d["poll"], "tiles": d["tiles"],
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
-            "watch": {"setting": f"{WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}", **watch_state}}
+            "watch": {"setting": f"{WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}", **watch_state},
+            "ids": dhan.id_problem()}  # null, or what Dhan's instrument list says differs from the index ids this code uses
 
 
 @app.get("/login")
@@ -837,7 +845,7 @@ async def index_detail(
     if interval_key not in INTERVALS:
         raise HTTPException(status_code=400, detail=f"interval must be one of: {', '.join(INTERVALS)}")
 
-    if DHAN_ON and key in dhan.INDEX_IDS:  # the broker feed first, real time
+    if DHAN_ON and key in dhan.QUOTE_IDS:  # the broker feed first, real time
         cached = detail_cache.get(("dhan", key, range_key, interval_key))
         if cached and time.monotonic() - cached[0] < DHAN_POLL_SECONDS * 0.7:
             payload = cached[1]
@@ -1020,7 +1028,7 @@ async def stream(ws: WebSocket):
         entry["pages"][page_id]["socket"] = ws  # its latest connection
         ws_pages[ws] = (token, page_id)
     wanted = ws.query_params.get("live", "").upper()
-    if DHAN_ON and wanted in dhan.INDEX_IDS:  # an index page on Dhan: it gets the live ticks of its index
+    if DHAN_ON and wanted in dhan.QUOTE_IDS:  # an index page on Dhan: it gets the live ticks of its index
         live_subs[ws] = wanted
     try:
         await ws.send_json({**store, "page": page_id})

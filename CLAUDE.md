@@ -83,7 +83,9 @@ their own logic. Read this before touching the code.
   and must pass it; a research round runs it too.
 - `dhan.py` - the owner's broker API (DhanHQ v2) as a data source: settings from
   `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. Real-time candles,
-  quotes and the option chain for `INDEX_IDS` (NIFTY 50, NIFTY BANK), with small
+  quotes for `QUOTE_IDS` (NIFTY 50, NIFTY BANK, SENSEX; the ids are checked
+  against Dhan's instrument list once it is read, `id_problem()` on `/health`
+  as `feed.ids`) and the option chain for `INDEX_IDS` (NIFTY 50, NIFTY BANK), with small
   caches for Dhan's rate limits and every request paced to them in `call()`
   (`_pace`: market-feed requests 1.2 s apart, option chain 3.1 s; on 7 October
   the once-a-second poll and the page's quote in the same second got the quote
@@ -114,10 +116,10 @@ their own logic. Read this before touching the code.
   `HOST=0.0.0.0` opens the dashboard to other devices on the owner's home network
   and prints the addresses to use.
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
-  each tile links to `/index/{name}` in a new tab. In market hours the NIFTY 50
-  and NIFTY BANK tiles carry Dhan's last price (`with_dhan_prices()` in
-  `main.py`, `source: "dhan"`, "Dhan · live" on the tile); the footer says
-  which tiles are Dhan's and which Yahoo's.
+  each tile links to `/index/{name}` in a new tab. The top row is NIFTY 50,
+  NIFTY BANK, SENSEX (`PINNED`). In market hours those three tiles carry Dhan's
+  last price (`with_dhan_prices()` in `main.py`, `source: "dhan"`, "Dhan · live"
+  on the tile); the footer says which tiles are Dhan's and which Yahoo's.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
