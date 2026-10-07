@@ -26,29 +26,48 @@ jobs:
         run: |
           curl -s --max-time 60 "$SITE/health" | tee health.json
           echo
-      - name: Check that the day was saved (the 16:10 run only)
+      - name: Check the Dhan token, and that the day was saved (the 16:10 run)
         run: |
           python3 - <<'PY'
           import json, sys
           from datetime import datetime, timedelta, timezone
-          now = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+          IST = timezone(timedelta(hours=5, minutes=30))
+          now = datetime.now(IST)
           try:
               health = json.load(open("health.json"))
           except Exception as exc:
               sys.exit(f"The server did not answer its health address: {exc}")
-          study = health.get("study") or {}
+          study, token = health.get("study") or {}, health.get("token") or {}
           print("server says:", json.dumps(study))
+          # the token: the one thing only the owner can renew. Red when it is refused, or will have expired before the next trading day's close
+          warn = None
+          if token:
+              print("token:", json.dumps(token))
+              if not token.get("ok"):
+                  warn = f"Dhan refuses the token: {token.get('problem')}. Paste a fresh DHAN_ACCESS_TOKEN into Render's Environment page."
+              elif token.get("valid_till"):
+                  try:
+                      till = datetime.fromisoformat(token["valid_till"])
+                      nxt = now + timedelta(days=1)
+                      while nxt.weekday() >= 5: nxt += timedelta(days=1)
+                      close = nxt.replace(hour=15, minute=40, second=0, microsecond=0)
+                      print(f"The token is valid till {till.strftime('%d %b %H:%M')} IST.")
+                      if till < close:
+                          warn = f"The token expires at {till.strftime('%d %b %H:%M')} IST, before the next trading day's close ({close.strftime('%d %b %H:%M')}). Paste a fresh DHAN_ACCESS_TOKEN into Render's Environment page before then, or that day will not be saved."
+                  except ValueError:
+                      print("The token's validity could not be read:", token["valid_till"])
           if now.hour < 16:
-              print("The wake-up run: the server is up; it saves the day at 15:40 on its own."); sys.exit(0)
+              print("The wake-up run: the server is up; it saves the day at 15:40 on its own.")
+              sys.exit(warn or 0)
           if now.weekday() >= 5:
               print("A weekend: nothing to save."); sys.exit(0)
           today = now.date().isoformat()
           pushed_today = (study.get("pushed_at") or "")[:10] == today
           if study.get("last_complete") == today:
               print(f"Today's session ({today}) is saved" + (" and pushed to GitHub." if pushed_today else ", but on the server only: " + str(study.get("problem") or "no GitHub token set") + "."))
-              sys.exit(0 if pushed_today else 1)
+              sys.exit((warn or 0) if pushed_today else 1)
           if study.get("checked") == today:
-              print(f"The server looked after the close and Dhan had no candle for today ({today}): a market holiday."); sys.exit(0)
+              print(f"The server looked after the close and Dhan had no candle for today ({today}): a market holiday."); sys.exit(warn or 0)
           if not health.get("dhan"):
               sys.exit("Dhan is not set up on the server (DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN missing), so nothing is saved.")
           sys.exit(f"Today's session ({today}) is NOT saved yet. The server says: {study.get('problem') or 'no problem reported; it may still be fetching the day, run this again in a few minutes'}")
