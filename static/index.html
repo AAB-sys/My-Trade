@@ -120,7 +120,7 @@
 </main>
 
 <script>
-  const PINNED = ["NIFTY 50", "SENSEX"];
+  const PINNED = ["NIFTY 50", "NIFTY BANK", "SENSEX"];  // the top row, in this order (owner's ask, 7 October)
   const RECONNECT_MS = 3000;
   const BEAT_MS = 15000;  // how often this page reports in (the server allows twice that)
 
@@ -202,9 +202,9 @@
     document.getElementById("footer").textContent = data.simulated
       ? "Simulated random-walk prices for testing the plumbing; the server ticks every " + data.poll_seconds + " s. Not real market data."
       : d.configured && d.tiles
-      ? "NIFTY 50 and NIFTY BANK: Dhan, your own account, in real time, here and on their pages. The other tiles: Yahoo Finance, about 15 minutes delayed; the server refreshes every " + data.poll_seconds + " s and pushes changes here instantly."
+      ? "NIFTY 50, NIFTY BANK and SENSEX: Dhan, your own account, in real time, here and on their pages. The other tiles: Yahoo Finance, about 15 minutes delayed; the server refreshes every " + data.poll_seconds + " s and pushes changes here instantly."
       : d.configured
-      ? "Tiles from Yahoo Finance, about 15 minutes delayed (the NIFTY 50 and NIFTY BANK tiles follow Dhan in market hours); the NIFTY 50 and NIFTY BANK pages run on Dhan, your own account. The server refreshes every " + data.poll_seconds + " s and pushes changes here instantly."
+      ? "Tiles from Yahoo Finance, about 15 minutes delayed (the NIFTY 50, NIFTY BANK and SENSEX tiles follow Dhan in market hours); their pages run on Dhan, your own account. The server refreshes every " + data.poll_seconds + " s and pushes changes here instantly."
       : "Data from Yahoo Finance, about 15 minutes delayed; the server refreshes every " + data.poll_seconds + " s and pushes changes here instantly.";
   }
 

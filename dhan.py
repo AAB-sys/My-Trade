@@ -13,6 +13,7 @@ Only data endpoints are called here. Nothing in this file can place an order.
 """
 import csv
 import json
+import logging
 import os
 import threading
 import time
@@ -23,9 +24,13 @@ import httpx
 
 from providers import bucket_start
 
+log = logging.getLogger("dhan")
+
 BASE = os.environ.get("DHAN_API_BASE", "https://api.dhan.co/v2")  # overridden only by tests
 SEGMENT = "IDX_I"                                  # Dhan's segment for an index itself
-INDEX_IDS = {"NIFTY 50": 13, "NIFTY BANK": 25}
+INDEX_IDS = {"NIFTY 50": 13, "NIFTY BANK": 25}  # the indices with the owner's options: the chain, the records, the watcher
+QUOTE_IDS = {**INDEX_IDS, "SENSEX": 51}          # every index quoted live from Dhan: those two, and SENSEX for its tile and page (owner's ask, 7 October)
+LIST_NAMES = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY", "SENSEX": "SENSEX"}  # how Dhan's instrument list names the index rows themselves
 OPTION_SEGMENT = "NSE_FNO"                                   # where the indices' options trade
 UNDERLYING = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY"}  # how Dhan's instrument list names the options' underlying
 SCRIP_MASTER_URL = os.environ.get("DHAN_SCRIP_MASTER_URL", "https://images.dhan.co/api-data/api-scrip-master.csv")     # Dhan's security ids of the indices with options
@@ -169,7 +174,7 @@ def last_price(name: str) -> float:
 def last_prices(names: list, option_ids: list = ()) -> tuple:
     """({index name: last price}, {option security id: premium}) in one request, not cached: this is the
     live tick, for the indices and for the option contracts behind the open calls."""
-    payload = {SEGMENT: [INDEX_IDS[n] for n in names]}
+    payload = {SEGMENT: [QUOTE_IDS[n] for n in names]}
     if option_ids:
         payload[OPTION_SEGMENT] = [int(i) for i in option_ids]
     body = call("POST", "/marketfeed/ltp", payload)
@@ -177,7 +182,7 @@ def last_prices(names: list, option_ids: list = ()) -> tuple:
         data = body["data"]
         indices = data.get(SEGMENT) or {}
         options = data.get(OPTION_SEGMENT) or {}
-        return ({n: float(indices[str(INDEX_IDS[n])]["last_price"]) for n in names if str(INDEX_IDS[n]) in indices},
+        return ({n: float(indices[str(QUOTE_IDS[n])]["last_price"]) for n in names if str(QUOTE_IDS[n]) in indices},
                 {int(i): float(options[str(i)]["last_price"]) for i in option_ids if str(i) in options})
     except (KeyError, TypeError, ValueError, AttributeError) as exc:
         raise DhanError("other", f"unexpected price answer from Dhan: {str(body)[:160]}") from exc
@@ -279,7 +284,7 @@ def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
     """A chart request for the last days_back days. Dhan's toDate has been exclusive in some versions,
     so tomorrow is asked for first; if Dhan refuses the date, today is tried."""
     start = (today_ist() - timedelta(days=days_back)).isoformat()
-    base = {"securityId": str(INDEX_IDS[name]), "exchangeSegment": SEGMENT, "instrument": "INDEX", "oi": False, "fromDate": start, **extra}
+    base = {"securityId": str(QUOTE_IDS[name]), "exchangeSegment": SEGMENT, "instrument": "INDEX", "oi": False, "fromDate": start, **extra}
     try:
         return _bars(call("POST", path, {**base, "toDate": (today_ist() + timedelta(days=1)).isoformat()}))
     except DhanError as exc:
@@ -343,9 +348,9 @@ def daily(name: str, days_back: int = 45) -> list:
 def quote(name: str) -> dict:
     """{"last_price": ..., "ohlc": {...}} for an index, refreshed at most every 3 s."""
     def make():
-        body = call("POST", "/marketfeed/ohlc", {SEGMENT: [INDEX_IDS[name]]})
+        body = call("POST", "/marketfeed/ohlc", {SEGMENT: [QUOTE_IDS[name]]})
         try:
-            return body["data"][SEGMENT][str(INDEX_IDS[name])]
+            return body["data"][SEGMENT][str(QUOTE_IDS[name])]
         except (KeyError, TypeError) as exc:
             raise DhanError("other", f"unexpected quote answer from Dhan: {str(body)[:160]}") from exc
     return cached(("quote", name), 3, make)
@@ -431,7 +436,7 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     }
     return {
         "name": name,
-        "ticker": f"dhan:{INDEX_IDS[name]}",
+        "ticker": f"dhan:{QUOTE_IDS[name]}",
         "range": range_key,
         "interval": interval_key,
         "summary": summary,
@@ -458,6 +463,8 @@ def _read_option_ids() -> dict:
     Dhan's instrument list (a large CSV; only the option rows of NIFTY and BANKNIFTY are kept)."""
     found, columns = {}, None
     wanted = set(UNDERLYING.values())
+    index_rows = set(LIST_NAMES.values())
+    seen_index = {}  # the list's own ids of the indices (checked against QUOTE_IDS: a wrong id would show another instrument's price)
     today = today_ist().isoformat()
     try:
         with httpx.stream("GET", SCRIP_MASTER_URL, timeout=180, follow_redirects=True) as response:
@@ -475,6 +482,14 @@ def _read_option_ids() -> dict:
                         raise DhanError("other", f"Dhan's instrument list has an unexpected header: {', '.join(row)[:160]}")
                     continue
                 sid, instrument, expiry, strike, side, symbol, trading, exchange = (row[i] if i is not None and i < len(row) else "" for i in columns)
+                if instrument.strip().upper() == "INDEX":
+                    label = (symbol.strip() or trading.strip()).upper()
+                    if label in index_rows and label not in seen_index:
+                        try:
+                            seen_index[label] = int(float(sid))
+                        except ValueError:
+                            pass
+                    continue
                 if instrument.strip().upper() != "OPTIDX" or (exchange and exchange.strip().upper() != "NSE"):
                     continue
                 underlying = symbol.strip().upper() or trading.strip().upper().split("-")[0]
@@ -491,7 +506,24 @@ def _read_option_ids() -> dict:
         raise DhanError("network", f"Dhan's instrument list could not be fetched ({type(exc).__name__}: {str(exc)[:100]})") from exc
     if not found:
         raise DhanError("other", "Dhan's instrument list had no NIFTY or BANKNIFTY options in it")
+    with _option_ids_lock:
+        _index_ids_seen.update(seen_index)
+    if problem := id_problem():
+        log.warning("Dhan ids: %s", problem)
     return found
+
+
+_index_ids_seen: dict = {}  # the instrument list's ids of the index rows, by the list's name (NIFTY, BANKNIFTY, SENSEX), once read
+
+
+def id_problem() -> str | None:
+    """The ids this code uses for the indices (QUOTE_IDS) against Dhan's own instrument list, once it has been read:
+    None, or what differs. A wrong id would show another instrument's price under an index's name, so /health says."""
+    with _option_ids_lock:
+        seen = dict(_index_ids_seen)
+    wrong = [f"{name} is {seen[LIST_NAMES[name]]}, not {sid}" for name, sid in QUOTE_IDS.items()
+             if LIST_NAMES[name] in seen and seen[LIST_NAMES[name]] != sid]
+    return "Dhan's instrument list says " + "; ".join(wrong) if wrong else None
 
 
 _option_ids = {"value": None, "until": 0.0, "busy": False}

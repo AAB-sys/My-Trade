@@ -208,8 +208,10 @@ either looked (a server just started) still has no premium: nothing can be
 recorded after the fact, and its cell reads "not seen at entry". While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's
 own feed (one price a second if that feed is quiet); the closed candles, and so
-the signals, are judged when the next candle begins. Only NIFTY 50 and NIFTY BANK
-are on Dhan so far; the other indices stay on Yahoo and have no options.
+the signals, are judged when the next candle begins. NIFTY 50, NIFTY BANK and
+SENSEX are on Dhan (SENSEX since 7 October, for its tile and its page: no
+options, no records, no watcher there); the other indices stay on Yahoo and have
+no options.
 
 The session's candles run from 09:15 to 15:30 and nothing else is a candle
 (7 October): the pre-open prices from 09:00 move the price at the top of the
