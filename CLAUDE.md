@@ -73,7 +73,10 @@ their own logic. Read this before touching the code.
 - `rule.py` - the owner's rule (layers 1 to 3) in Python, the page's engine line
   for line, so the server can watch the calls itself (`calls_forever` /
   `watch_index` in `main.py`, setting `WATCH_INTERVAL`/`WATCH_LEVELS`/`WATCH_SIGNAL`,
-  state on `/health` under `feed.watch`). `check_rule.py [folder]` runs the page's
+  state on `/health` under `feed.watch`; `watch_premiums` then keeps the open
+  records' security ids, premium now and Sell mark current for both indices,
+  page or no page: until 7 October only an open page did, and NIFTY BANK's
+  premiums stood still all afternoon). `check_rule.py [folder]` runs the page's
   engine (node, static/rules.js) and this copy side by side over every saved day,
   the hand-made day and random days, replayed and live, every setting and idea,
   and fails on one differing call. Any change to the rule goes into both files
@@ -84,7 +87,9 @@ their own logic. Read this before touching the code.
   caches for Dhan's rate limits and every request paced to them in `call()`
   (`_pace`: market-feed requests 1.2 s apart, option chain 3.1 s; on 7 October
   the once-a-second poll and the page's quote in the same second got the quote
-  refused and the page thrown to Yahoo); `fetch_detail` takes the live price
+  refused and the page thrown to Yahoo; a request waits for its turn outside
+  the lock, so the chain's gap never holds up the poll, and `cached` remakes a
+  value by one caller at a time); `fetch_detail` takes the live price
   the server holds, so it needs no quote request while ticks flow; the record of each paper call's option (strike
   one in the money, nearest expiry, premium paid, premium now, the Sell mark) in
   `paper_calls.json` (and on the data branch as `records/<date>.json`, pushed by

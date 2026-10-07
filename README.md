@@ -121,7 +121,10 @@ are the setting the server watches the calls in by itself, every `WATCH_SECONDS`
 (5) in market hours, so a call entering with no page open is still recorded
 (`rule.py` is the page's rule in Python; `python3 check_rule.py` proves the two
 give the same calls); with the watcher on, the live feed runs all session whether
-or not a page is open;
+or not a page is open, and the server keeps the premium now and the Sell mark of
+both indices' open calls current itself (`/health`'s `watch` says `without_id`,
+open calls whose contract is not on the feed yet, and `premiums`, why a premium
+could not be read just now, or null);
 `DHAN_TICK_SECONDS` (default 1) how often the live price is read while an index
 page is open in market hours and the stream is quiet; `SELL_SHARE` (default 0.65) is the sell point as a
 share of the premium paid.

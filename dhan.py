@@ -67,13 +67,16 @@ def _pace(path: str) -> None:
     """Waits for this request's turn, so Dhan's rate limits are kept whoever asks: a gap inside each group of
     endpoints, and after Dhan has refused one ("too many requests") a pause for everyone, 2 s, then 4, 8, up
     to 15, until a request gets through again. Dhan's exact counting is not published in full, so the pause
-    is the safety net behind the gaps."""
+    is the safety net behind the gaps. The turn is taken under the lock and waited for outside it, so a request
+    waiting for its group's gap (the chain's 3 s) never holds up another group's (the once-a-second price poll:
+    on 7 October the watcher's chain reads beside the page's held the poll back and the price stood still)."""
     group = "feed" if path.startswith("/marketfeed") else "chain" if path == "/optionchain" else "other"  # the chain itself: one every 3 s; its expiry list is an ordinary request
     with _pace_lock:
-        wait = max(_pace_next[group], _hold["until"]) - time.monotonic()
-        if wait > 0:
-            time.sleep(wait)
-        _pace_next[group] = time.monotonic() + PACE_SECONDS[group]
+        now = time.monotonic()
+        turn = max(_pace_next[group], _hold["until"], now)
+        _pace_next[group] = turn + PACE_SECONDS[group]
+    if turn > now:
+        time.sleep(turn - now)
 
 
 def _refused() -> float:
@@ -220,18 +223,34 @@ def status() -> dict:
 
 _cache: dict = {}
 _cache_lock = threading.Lock()
+_cache_making: dict = {}  # key -> an Event while one caller remakes the value: whoever else asks meanwhile waits for it
 
 
 def cached(key: tuple, ttl: float, make):
-    """The value for key, remade at most once per ttl seconds."""
-    with _cache_lock:
-        hit = _cache.get(key)
-        if hit and hit[0] > time.monotonic():
-            return hit[1]
-    value = make()
-    with _cache_lock:
-        _cache[key] = (time.monotonic() + ttl, value)
-    return value
+    """The value for key, remade at most once per ttl seconds, by one caller at a time: whoever else asks while it
+    is being remade waits for that value instead of asking Dhan again (the page and the server's watcher both read
+    the option chain; two reads back to back would cost a 3 s gap each, and Dhan's limit)."""
+    while True:
+        with _cache_lock:
+            hit = _cache.get(key)
+            if hit and hit[0] > time.monotonic():
+                return hit[1]
+            making = _cache_making.get(key)
+            mine = making is None
+            if mine:
+                making = _cache_making[key] = threading.Event()
+        if not mine:
+            making.wait(30)  # the value is there now, or the maker failed: then whoever comes first remakes it
+            continue
+        try:
+            value = make()
+            with _cache_lock:
+                _cache[key] = (time.monotonic() + ttl, value)
+            return value
+        finally:
+            with _cache_lock:
+                _cache_making.pop(key, None)
+            making.set()
 
 
 def today_ist() -> date:
