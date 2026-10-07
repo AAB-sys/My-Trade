@@ -210,6 +210,47 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}}
+EXIT_BACK = IDEAS["P4"]["exitBack"]
+
+
+def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
+    """The candle verdict, as static/rules.js readOf gives it (the words there): carry or exit with the reason, from the
+    closed candles around the call's level, measured against the gap to the target. Same code twice so the watcher's
+    rows carry what the page would say; check_rule.py keeps the two the same."""
+    if t.get("entry") is None and t.get("how") != "pending":
+        return None
+    gap = abs(t["target"] - t["level"])
+    sig = next((b for b in bars if b["time"] == t["signalTime"]), None)
+    if not gap or sig is None:
+        return None
+
+    def toward(p):
+        return (p - t["level"] if t["side"] == "CE" else t["level"] - p) / gap
+
+    depth, body = round2(toward(sig["close"])), round2(abs(sig["close"] - sig["open"]) / gap)
+    back, retest, exit_at, exit_price = 0, False, None, None
+    for b in bars:
+        if b["time"] <= t["signalTime"] or end_of(b, seconds) > now:
+            continue
+        if t.get("exitTime") is not None and b["time"] > t["exitTime"]:
+            break
+        went = t["level"] - b["close"] if t["side"] == "CE" else b["close"] - t["level"]
+        back = max(back, went / gap)
+        if exit_at is None and went >= EXIT_BACK * gap:
+            exit_at, exit_price = b["time"], b["close"]
+        touched = (b["low"] <= t["level"] + 0.2 * gap and b["close"] > t["level"]) if t["side"] == "CE" else (b["high"] >= t["level"] - 0.2 * gap and b["close"] < t["level"])
+        if touched:
+            retest = True
+    back = round2(back)
+    strength = "strong" if depth >= 0.5 or body >= 1 else "fair" if depth >= 0.25 or body >= 0.5 else "weak"
+    word = "exit" if exit_at is not None else "carry"
+    level = "the level" if t.get("ratio") is None else f"the {t['ratio'] * 100:.1f}% level"
+    good, bad = ("above", "below") if t["side"] == "CE" else ("below", "above")
+    held = t.get("kind") == "held"
+    size = ({"strong": "strong bounce", "fair": "bounce", "weak": "small bounce"} if held else {"strong": "big candle", "fair": "candle", "weak": "small candle"})[strength]
+    why = (f"price closed {bad} {level}" if word == "exit" else f"price came back to {level} and held" if retest
+           else f"{size} {'off' if held else 'through'} {level}, holding {good} it")
+    return {"depth": depth, "body": body, "back": back, "retest": retest, "strength": strength, "word": word, "why": why, "exitAt": exit_at, "exitPrice": exit_price}
 
 
 def ideas_of(keys) -> dict:

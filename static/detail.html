@@ -115,20 +115,16 @@
   #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
   #paper td.up { color: var(--up); }
   #paper td.down { color: var(--down); }
-  /* the "What now" cell: the one thing to read on a row */
-  #paper td.st { text-align: left; font-weight: 600; }
-  #paper td.st.wait { color: var(--ink-2); }
-  #paper td.st.hold { color: var(--ink); }
-  #paper td.st.hold small, #paper td.st.sold small, #paper td.st.done small { font-weight: 400; color: var(--muted); }
-  #paper td.st.sell { color: #fff; background: var(--down); padding-left: 8px; border-radius: 4px; }
-  #paper td.st.sold { color: var(--down); }
-  #paper td.st.done { color: var(--muted); font-weight: 500; }
-  #paper td.st.done.up { color: var(--up); }
-  /* "Candles say": carry or exit, from the closed candles around the call's level, with the reason under it */
-  #paper td.cand { text-align: left; font-weight: 600; }
-  #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
-  #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
-  #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
+  /* the header row stays in view while the page scrolls (owner's ask, 7 October): on a wide screen the table has no scroll
+     box of its own, so the header sticks to the top of the window; on a narrow screen the table slides sideways and
+     scrolls inside a box of its own, the header stuck to the box's top */
+  #paper thead th { position: sticky; top: 0; background: var(--page); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
+  #paper-box .scroll { overflow: visible; }
+  @media (max-width: 1099px) { #paper-box .scroll { overflow: auto; max-height: 80vh; } }
+  #paper td.entry.wait { color: var(--ink-2); }
+  #paper td.target small { display: block; color: var(--muted); }
+  #paper td.target small.up { color: var(--up); }
+  #paper td.prem small.sell { color: var(--down); font-weight: 600; }
   #paper td.call { text-align: left; }
   #paper tr.ended td { color: var(--ink-2); }
   #paper tr.ended td.up { color: var(--up); } #paper tr.ended td.down { color: var(--down); }
@@ -287,7 +283,7 @@
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>What now</th><th>Candles say</th><th>Call</th><th>Signal</th><th>Index: entry → target</th><th>Now / exit</th><th>Points</th><th class="opt">Premium: paid → now</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -553,7 +549,7 @@
     table.classList.toggle("no-options", !(state.dhan && state.dhan.configured));
     drawFeedNote();
     // in time order, the newest call at the top, open or finished alike (the owner's ask, 7 October: an open call
-    // listed above a later one read as if it had been given later); an open call shows by its HOLD or SELL cell
+    // listed above a later one read as if it had been given later); a finished row is greyed, its target cell says how it ended
     const rows = trades.slice().sort((a, b) => b.signalTime - a.signalTime);
     table.querySelector("tbody").replaceChildren(...rows.map(t => {
       const tr = document.createElement("tr");
@@ -573,9 +569,10 @@
   async function recordCalls(trades) {
     const session = currentSession();
     if (state.simulated || !trades.length || !session || session === "all" || !isToday(session)) return;
-    const rows = trades.map(t => { const r = optionRecords[callKey(t)]; return {
+    const rows = trades.map(t => { const r = optionRecords[callKey(t)], cr = candleRead(t); return {
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
+      candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
     const shape = rows.map(r => `${r.signal_time}${r.side}${r.how}${r.sold_at ?? ""}${r.contract}`).join(",");
@@ -587,51 +584,62 @@
     } catch (err) { lastShape = ""; }  // the next draw tries again
   }
 
-  // One row reads left to right: when, what to do now, what the candles say (carry or exit), the call, the level that
-  // gave it, the index at entry and the target, where the index is now (or ended), the points, and the option's premium
-  // paid and now.
+  // One row reads left to right, in the owner's format of 7 October: the time, the call with its contract, the signal,
+  // the entry (the strike number bought; the index at entry only where there is no strike), the target level (with
+  // "hit" or "not reached" once the call has ended) and the premium paid and now. The candle verdict is not on the table
+  // (owner's ask, 7 October evening): it goes with every recorded call and into the CSV, for the research engine.
   function rowCells(t, r) {
-    const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
-    const entry = t.entry != null ? fmt.format(t.entry) : "next open";
-    const now = t.exit != null ? fmt.format(t.exit) : t.last != null ? fmt.format(t.last) : "—";
-    return `<td>${istTime(t.signalTime, withDate())}</td>` + statusCell(t, r) + candleCell(t)
-      + `<td class="call">Buy ${t.side}${r ? ` · ${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}` : ""}</td>`
-      + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td><td>${entry} → ${fmt.format(t.target)}${t.aimed ? " <small>one level on</small>" : ""}</td><td>${now}</td>`
-      + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td>` + premiumCell(t, r);
+    const strike = strikeOf(t, r);
+    return `<td>${callTime(t.signalTime)}</td>`
+      + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
+      + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
+      + entryCell(t, strike) + targetCell(t) + premiumCell(t, r);
+  }
+  const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
+
+  // The strike bought (the owner's choice, one strike in the money: a CE the first strike below the index at entry, a PE the
+  // first above, dhan.itm_strike): the server's record names it once the call has been seen entering; before that, and for
+  // a call no page saw enter, the page works it out the same way from the index at entry on the chain's strike step.
+  // Without a strike step (an index with no option chain here) there is no strike.
+  const STRIKE_STEP = { "NIFTY 50": 50, "NIFTY BANK": 100 };
+  function strikeOf(t, r) {
+    if (r) return Math.round(r.strike);
+    const step = STRIKE_STEP[name];
+    if (!step || t.entry == null) return null;
+    const k = t.entry / step, on = Number.isInteger(k);  // exactly on a strike: the next one below (CE) or above (PE), as the server does
+    return (t.side === "CE" ? (on ? k - 1 : Math.floor(k)) : (on ? k + 1 : Math.ceil(k))) * step;
   }
 
-  // "What now", in the owner's words: enter, hold, sell now, sold, target hit, closed at the day's end (or on the candles,
-  // should idea P4 ever reach this page)
-  function statusCell(t, r) {
-    const soldNote = r && r.sold ? ` <small>sold earlier at ${fmt.format(r.sold.premium)}</small>` : "";
-    if (t.how === "pending") return `<td class="st wait">Enter at the next open</td>`;
-    if (t.how === "target") return `<td class="st done up">Target hit${soldNote}</td>`;
-    if (t.how === "day end") return `<td class="st done">Closed at day end${soldNote}</td>`;
-    if (t.how === "candle") return `<td class="st done">Closed by EXIT${soldNote}</td>`;
-    if (r && r.sold) return `<td class="st sold">SOLD at ${fmt.format(r.sold.premium)} <small>premium fell ${Math.round((1 - r.sell_below / r.premium_paid) * 100)}%</small></td>`;
-    if (r && r.premium_now <= r.sell_below) return `<td class="st sell">SELL NOW · premium ${fmt.format(r.premium_now)}</td>`;
-    return `<td class="st hold">HOLD${r ? ` <small>sell if below ${fmt.format(r.sell_below)}</small>` : ""}</td>`;
+  // "Call Entry": the strike number of the contract bought (the owner's word: the same number as in the call); the index
+  // price the call entered at only where there is no strike
+  function entryCell(t, strike) {
+    if (t.entry == null) return `<td class="entry wait">next open</td>`;
+    return `<td class="entry">${strike != null ? strike : fmt.format(t.entry)}</td>`;
   }
 
-  // "Candles say" (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): one word for every open call, CARRY or EXIT,
-  // from the closed candles around the level that gave the call, whichever level that is, with the reason in words under
-  // it; on a finished call, what the word was and when, so the owner can judge it against the points. Information for the
-  // owner's eyes: it changes nothing about the call (the Study page's P4 is the same exit, acted on)
-  function candleCell(t) {
+  // "Call Target": the next level in the call's direction, and how the call ended once it has
+  function targetCell(t) {
+    const note = t.how === "target" ? `<small class="up">hit</small>` : t.how === "day end" ? "<small>not reached, day end</small>"
+      : t.how === "candle" ? "<small>not reached, closed by EXIT</small>" : t.aimed ? "<small>one level on</small>" : "";
+    return `<td class="target">${fmt.format(t.target)}${note}</td>`;
+  }
+
+  // The candle verdict (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): CARRY or EXIT with its reason, for the
+  // research engine: the page sends it with every call it records (the server's watcher does the same with rule.read_of),
+  // and the CSV download carries it. Not on the table (owner's ask, the same evening). It changes nothing about a call
+  function candleRead(t) {
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
-    if (!rd) return `<td class="cand">—</td>`;
-    if (t.exit == null) return `<td class="cand ${rd.word}">${rd.word === "exit" ? "EXIT" : "CARRY"}<small>${rd.why}</small></td>`;
-    if (rd.exitAt == null) return `<td class="cand carry">CARRY the whole time<small>${rd.why}</small></td>`;
-    const then = Math.round((t.side === "CE" ? rd.exitPrice - t.entry : t.entry - rd.exitPrice) * 100) / 100;  // the call's points at that candle's close
-    return `<td class="cand exit">Said EXIT at ${istTime(rd.exitAt, withDate())}<small>${rd.why} · ${signed.format(then)} at that time, ${signed.format(t.points)} at the end</small></td>`;
+    return rd ? { say: rd.word, exitAt: rd.exitAt, why: rd.why } : null;
   }
 
-  // paid → now while the call is open; paid → at exit once it has ended. A finished call with no record was never seen
-  // open by a page (no page open at its entry, so no premium could be recorded then): the cell says so instead of a dash
+  // paid → now while the call is open; paid → at exit once it has ended, with the Sell mark (LOGIC.md, "Exit by premium"):
+  // SELL NOW while the premium sits below the mark, "sold at" once the server has marked it sold. A finished call with no
+  // record was never seen open by a page (no page open at its entry, so no premium could be recorded then): the cell says so
   function premiumCell(t, r) {
     if (!r) return `<td class="opt prem">${t.exit != null ? "<small>not seen at entry</small>" : "—"}</td>`;
     const change = Math.round((r.premium_now - r.premium_paid) / r.premium_paid * 100);
-    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)${t.exit != null ? " at exit" : ""}</small></td>`;
+    const mark = r.sold ? ` <small class="sell">sold at ${fmt.format(r.sold.premium)}</small>` : t.exit == null && r.premium_now <= r.sell_below ? ` <small class="sell">SELL NOW</small>` : "";
+    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)${t.exit != null ? " at exit" : ""}</small>${mark}</td>`;
   }
 
   // ---- the option behind each call: recorded by the server from Dhan (see LOGIC.md, "Exit by premium")
@@ -647,8 +655,8 @@
   // calls with two targets, and the record's end and Sell mark belong to one of them (the server's watcher works in its own setting)
   const expiryLabel = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
 
-  // A premium from Dhan's feed (or the once-a-second poll) for one call: the row's "What now" and premium cells change
-  // in place, tick by tick, the way the index price does (see main.py push_premium)
+  // A premium from Dhan's feed (or the once-a-second poll) for one call: the row's premium cell changes in place, tick by
+  // tick, the way the index price does (see main.py push_premium)
   function applyPremium(p) {
     const r = optionRecords[p.key];
     if (!r) return;  // the record arrives with the next refresh; the premium comes again with the next tick
@@ -657,8 +665,7 @@
     const t = lastPaper.trades.find(x => callKey(x) === p.key);
     if (!tr || !t) return;
     const fresh = document.createElement("tr");
-    fresh.innerHTML = statusCell(t, r) + premiumCell(t, r);
-    tr.querySelector("td.st").replaceWith(fresh.children[0]);
+    fresh.innerHTML = premiumCell(t, r);
     tr.querySelector("td.prem").replaceWith(fresh.children[0]);
   }
 
@@ -1116,11 +1123,12 @@
   document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
     const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
     const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by",
-                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium"];
+                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium", "candles_say", "exit_said_at_ist", "candles_why"];
     const rows = lastPaper.trades.map(t => {
-      const r = optionRecords[callKey(t)];
+      const r = optionRecords[callKey(t)], cr = candleRead(t);
       return [stamp(t.signalTime), (t.ratio * 100).toFixed(1) + "%", t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how,
-              r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : ""];
+              r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : "",
+              cr ? cr.say : "", cr && cr.exitAt ? stamp(cr.exitAt) : "", cr ? `"${cr.why}"` : ""];  // the reason holds a comma, so it is quoted
     });
     const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
     const a = document.createElement("a");

@@ -61,7 +61,8 @@ _lock = threading.Lock()
 # by the setting that gave it and the call itself, and writes them out as the day's CSV.
 CALL_FIELDS = ("date", "index", "time_frame", "levels", "signal_mode", "first_seen_ist", "signal_time_ist", "level_pct", "level_price", "kind",
                "option_side", "entry_time_ist", "index_at_entry", "target", "exit_time_ist", "index_at_exit", "points", "ended_by",
-               "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium")
+               "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium",
+               "candles_say", "exit_said_at_ist", "candles_why")  # the candle verdict (rules.js readOf / rule.read_of), 7 October: off the table, in the CSV
 live_calls: dict = {}  # date -> {key: row}
 _calls_lock = threading.Lock()
 _calls_version = 0
@@ -85,7 +86,7 @@ def _num(value):
         return ""
 
 
-HURRY = ("ended_by", "contract", "sold_at_premium")  # with a new row: the only changes that hurry the partial copy (a call entered, ended, got
+HURRY = ("ended_by", "contract", "sold_at_premium", "candles_say")  # with a new row: the only changes that hurry the partial copy (a call entered, ended, got
 # its contract or its Sell mark). Everything else in a row can drift on every resend without anything having happened: the points
 # and the premium move with the price, and the level, target and entry shift by a few paise when Dhan's own candle replaces the
 # one built from the ticks (7 October: those drifts kept the partial copy going every two minutes instead of every ten)
@@ -112,7 +113,9 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                         "index_at_entry": _num(c.get("entry")), "target": _num(c.get("target")), "exit_time_ist": _stamp(c.get("exit_time")) if c.get("exit_time") else "",
                         "index_at_exit": _num(c.get("exit")), "points": _num(c.get("points")), "ended_by": str(c.get("how") or "")[:12],
                         "contract": str(c.get("contract") or "")[:40], "premium_paid": _num(c.get("premium_paid")), "premium_now": _num(c.get("premium_now")),
-                        "sell_below": _num(c.get("sell_below")), "sold_at_premium": _num(c.get("sold_at"))})
+                        "sell_below": _num(c.get("sell_below")), "sold_at_premium": _num(c.get("sold_at")),
+                        "candles_say": str(c.get("candles_say") or "")[:5], "exit_said_at_ist": _stamp(c.get("exit_said_at")) if c.get("exit_said_at") else "",
+                        "candles_why": str(c.get("candles_why") or "")[:60]})
             day[key] = row
             if before is None or tuple(row.get(k) for k in HURRY) != before:
                 changed = True

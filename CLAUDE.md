@@ -132,8 +132,9 @@ their own logic. Read this before touching the code.
   the dashboard sockets (`dash_subs`) once a second, `applyLive` redraws the
   tile in place; the footer says which tiles are Dhan's and which Yahoo's.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
-  (`readOf()`: the candle verdict of 7 October, CARRY or EXIT in the "Candles say"
-  cell with the reason, for whichever level gave the call; changes no call. Idea
+  (`readOf()`: the candle verdict of 7 October, CARRY or EXIT with the reason, for
+  whichever level gave the call, sent with every recorded call into the calls CSV;
+  `rule.read_of` is its Python twin for the watcher; not on the table; changes no call. Idea
   P4 is the same exit acted on, `exitBack` in `paperTrades`, Study page only)
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
