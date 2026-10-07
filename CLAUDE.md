@@ -69,7 +69,11 @@ their own logic. Read this before touching the code.
 - `dhan.py` - the owner's broker API (DhanHQ v2) as a data source: settings from
   `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. Real-time candles,
   quotes and the option chain for `INDEX_IDS` (NIFTY 50, NIFTY BANK), with small
-  caches for Dhan's rate limits; the record of each paper call's option (strike
+  caches for Dhan's rate limits and every request paced to them in `call()`
+  (`_pace`: market-feed requests 1.2 s apart, option chain 3.1 s; on 7 October
+  the once-a-second poll and the page's quote in the same second got the quote
+  refused and the page thrown to Yahoo); `fetch_detail` takes the live price
+  the server holds, so it needs no quote request while ticks flow; the record of each paper call's option (strike
   one in the money, nearest expiry, premium paid, premium now, the Sell mark) in
   `paper_calls.json`, with the contract's security id from Dhan's instrument list
   (`option_ids()`, a CSV at `DHAN_SCRIP_MASTER_URL`) so the feed and the poll in

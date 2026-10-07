@@ -95,11 +95,14 @@ store = {
                    "Dhan: not set up. Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to .env or the host's environment."),
         "at": None,
         "stream": "",  # the tick-by-tick stream's state, in plain words
+        "poll": "",  # the once-a-second price request's state (the fallback behind the stream), in plain words
+        "stream_tick": None,  # when the last index price came over the stream
         "token": None,  # the last token check (token_forever): ok, valid_till, checked_at, problem
         "tiles": False,  # whether the dashboard's NIFTY 50 and NIFTY BANK tiles carry Dhan's live price right now
     },
 }
 stream_at = 0.0  # when the last tick came over the stream; the one-a-second polling steps in while it is quiet
+started_at = None  # when this server process came up (set in lifespan): a restart is the usual reason a page lost its ticks
 
 
 def dhan_status(active: bool, text: str) -> None:
@@ -309,11 +312,23 @@ def in_tick_hours() -> bool:
     return now.weekday() < 5 and (9, 0) <= (now.hour, now.minute) < (15, 45)
 
 
+def live_price(name: str, within: float = 10) -> float | None:
+    """The index's live price from the stream or the poll, if it came within the last few seconds, else None."""
+    entry = live.get(name) or {}
+    try:
+        age = (datetime.now(dhan.IST) - datetime.fromisoformat(entry["time"])).total_seconds()
+    except (KeyError, TypeError, ValueError):
+        return None
+    return entry.get("last") if 0 <= age <= within else None
+
+
 def fold_tick(name: str, last: float, now: float, via: str) -> None:
     """One last price into the index's live entry and the candle of every size forming now. A candle that
     just closed is kept (the last 48 of each size), so the detail answer carries it the second it closes."""
     entry = live.setdefault(name, {"bars": {}, "closed": {}})
     entry.update(last=last, time=now_ist(), via=via)
+    if not dhan.in_session({"time": now}):  # the pre-open (09:00 to 09:15) and after the close: the price moves, but the
+        return                               # session's candles run from 09:15 to 15:30 (the owner's logic; the saved days are the same)
     for key, spec in INTERVALS.items():
         bucket = bucket_start(now, spec["bar_seconds"])
         bar = entry["bars"].get(key)
@@ -377,30 +392,45 @@ async def tick_forever() -> None:
     """The fallback behind the stream: while an index page is open on Dhan during market hours and the
     stream has been quiet for a few seconds, the last price every TICK_SECONDS, one request for all
     watched indices and the option contracts behind their open calls, folded into the candle forming
-    now (the premiums into their records) and pushed to those pages."""
+    now (the premiums into their records) and pushed to those pages. Whatever goes wrong is said in
+    store["dhan"]["poll"] (the page and /health show it) and the loop carries on: a loop that died
+    quietly would leave every page standing still with nothing said."""
     while True:
-        names = sorted(set(live_subs.values()))
-        if not (DHAN_ON and names and in_tick_hours()) or time.time() - stream_at < 5:
-            await asyncio.sleep(1)
-            continue
-        options = dhan.open_options(names)
         try:
-            prices, premiums = await asyncio.to_thread(dhan.last_prices, names, list(options))
-        except Exception as exc:
-            dhan_status(False, dhan_reason(exc))
-            await asyncio.sleep(10)
-            continue
-        now = time.time()
-        for name, last in prices.items():
-            fold_tick(name, last, now, "poll")
-            await push_tick(name)
-        for sid, premium in premiums.items():
-            rec = dhan.note_premium(options[sid], premium)
-            if rec:
-                await push_premium(rec)
-        if premiums:
-            dhan.save_records()
-        await asyncio.sleep(TICK_SECONDS)
+            names = sorted(set(live_subs.values()))
+            if not (DHAN_ON and names and in_tick_hours()) or time.time() - stream_at < 5:
+                await asyncio.sleep(1)
+                continue
+            options = dhan.open_options(names)
+            try:
+                prices, premiums = await asyncio.to_thread(dhan.last_prices, names, list(options))
+            except Exception as exc:
+                reason = dhan_reason(exc)
+                dhan_status(False, reason)
+                store["dhan"]["poll"] = f"Poll: off since {now_ist()[11:19]} IST, {reason} Trying again in 10 s."
+                log.warning("Dhan poll: %s", exc)
+                await asyncio.sleep(10)
+                continue
+            now = time.time()
+            if prices:
+                store["dhan"]["poll"] = f"Poll: prices once a second from Dhan, last at {now_ist()[11:19]} IST."
+            else:
+                store["dhan"]["poll"] = f"Poll: Dhan answered at {now_ist()[11:19]} IST without a price for {', '.join(names)}."
+                log.warning("Dhan poll: no price for %s in the answer", names)
+            for name, last in prices.items():
+                fold_tick(name, last, now, "poll")
+                await push_tick(name)
+            for sid, premium in premiums.items():
+                rec = dhan.note_premium(options[sid], premium)
+                if rec:
+                    await push_premium(rec)
+            if premiums:
+                dhan.save_records()
+            await asyncio.sleep(TICK_SECONDS)
+        except Exception as exc:  # anything else: said, and tried again, never a dead loop
+            store["dhan"]["poll"] = f"Poll: failed at {now_ist()[11:19]} IST ({type(exc).__name__}: {str(exc)[:100]}). Trying again in 5 s."
+            log.exception("Dhan poll loop: %s", exc)
+            await asyncio.sleep(5)
 
 
 class FeedClosed(Exception):
@@ -480,6 +510,7 @@ async def stream_forever() -> None:
                         if segment == dhan.SEGMENT and sid in by_id:
                             fold_tick(by_id[sid], last, now, "stream")
                             stream_at = now
+                            store["dhan"]["stream_tick"] = live[by_id[sid]]["time"]
                             await push_tick(by_id[sid])
                         elif segment == dhan.OPTION_SEGMENT and sid in options:
                             rec = dhan.note_premium(options[sid], last)
@@ -536,6 +567,8 @@ async def warm_option_ids() -> None:
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
+    global started_at
+    started_at = now_ist()
     # Dhan calls, the detail payload and the records run in worker threads; the default pool (a handful
     # on a small host) ran dry on 6 October and every page stalled, so it is given room
     asyncio.get_running_loop().set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=16, thread_name_prefix="work"))
@@ -581,7 +614,16 @@ def known_index(name: str) -> str:
 def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
     day's session was saved. No secret in here: dates, and a problem said in plain words."""
-    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7], "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary()}
+    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7], "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(),
+            "feed": feed_state()}
+
+
+def feed_state() -> dict:
+    """The live feed's state in plain words, no secret in it: for /health and the index page's line under the price."""
+    d = store["dhan"]
+    return {"server_time": now_ist(), "started_at": started_at, "tick_hours": in_tick_hours(), "watching": sorted(set(live_subs.values())),
+            "status": d["status"], "stream": d["stream"], "stream_tick": d["stream_tick"], "poll": d["poll"], "tiles": d["tiles"],
+            "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()}}
 
 
 @app.get("/login")
@@ -677,14 +719,26 @@ async def index_detail(
             payload = cached[1]
         else:
             try:
-                payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES)
+                try:
+                    payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES, live_price(key))
+                except dhan.DhanError as exc:
+                    if exc.kind != "rate":
+                        raise
+                    await asyncio.sleep(1.5)  # Dhan's one-a-second rule: the next second is ours; one more try before anything else
+                    payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES, live_price(key))
                 dhan_status(True, "Dhan: real-time candles and quotes from your account")
                 payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
-                detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload)
+                detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload, now_ist()[11:19])
             except Exception as exc:
-                payload = None
-                dhan_status(False, dhan_reason(exc) + f" Prices from {PROVIDER}, about 15 minutes delayed, meanwhile.")
-                log.warning("Dhan detail failed for %s, falling back to %s: %s", key, PROVIDER, exc)
+                # One refused request (Dhan's rate limit, a slow answer) must not throw the page onto Yahoo's delayed
+                # prices: the last Dhan answer is served again, the live ticks keep moving the price and the candle
+                # forming now, and the reason is said. Only a token or subscription problem means Dhan is really gone.
+                stale = detail_cache.get(("dhan", key, range_key, interval_key))
+                keep = stale is not None and getattr(exc, "kind", "other") not in ("token", "subscription", "config")
+                payload = stale[1] if keep else None
+                dhan_status(False, dhan_reason(exc) + (f" The last Dhan answer (from {stale[2]} IST) is shown meanwhile, the live price still moves."
+                                                      if keep else f" Prices from {PROVIDER}, about 15 minutes delayed, meanwhile."))
+                log.warning("Dhan detail failed for %s (%s): %s", key, "last answer kept" if keep else f"falling back to {PROVIDER}", exc)
         if payload is not None:  # the candles from the ticks and the server's clock are added fresh to every answer, cached or not
             return {**payload, "candles": with_live_candles(payload["candles"], key, interval_key), "now": now_ist()}
 

@@ -89,6 +89,7 @@
   #delta.flat { color: var(--muted); }
   #asof { flex-basis: 100%; font-size: 12px; color: var(--muted); }
   #asof.closed { color: var(--ink-2); }
+  #live-note { flex-basis: 100%; font-size: 13px; color: #b42318; }
 
   /* the figures, in three groups: the previous session, today, the year */
   .summary { display: grid; grid-template-columns: 4fr 3fr 2fr; gap: 8px; margin-bottom: 18px; }
@@ -206,6 +207,7 @@
     <span id="last"></span>
     <span id="delta"></span>
     <span id="asof"></span>
+    <span id="live-note" hidden></span>
   </div>
 
   <section class="summary" id="summary" aria-label="Summary"></section>
@@ -308,7 +310,7 @@
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
-  const clock = () => new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const clock = () => new Date(serverNow() * 1000).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" });  // the server's clock, IST
   const istTime = (epoch, withDate) => new Date(epoch * 1000).toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", ...(withDate ? { day: "2-digit", month: "short" } : {}),
   });
@@ -648,6 +650,7 @@
       if (state.feed !== "dhan" && d.status) problems.push(d.status);
       if (state.feed === "dhan" && state.optionStatus && !/live from your account/.test(state.optionStatus)) problems.push(state.optionStatus);
       if (d.stream && !/connected/.test(d.stream)) problems.push(d.stream);
+      if (d.poll && /^Poll: (off|failed)/.test(d.poll)) problems.push(d.poll);
     }
     if (!problems.length) return;
     el.hidden = false;
@@ -837,7 +840,7 @@
   // ---- live ticks from Dhan: the price and the candle forming now move every second (see main.py tick_forever)
   function applyTick(t) {
     if (t.name !== name || state.feed !== "dhan" || !state.summary) return;
-    lastSeen = Date.now();
+    lastSeen = lastTickAt = Date.now();
     if (t.time) learnClock(t.time);
     const s = state.summary;
     s.last = t.last; s.time = t.time; s.open = true;
@@ -850,6 +853,7 @@
       renderSummary(s);
     } else renderHero(s);
     document.getElementById("status").textContent = (t.via === "stream" ? "Live · stream " : "Live · tick ") + clock();
+    drawLiveNote();
     if (state.dhan) {  // the stream's state, from the ticks themselves; the server's fuller reason comes with the next refresh
       if (t.via === "stream") state.dhan.stream = "Stream: tick-by-tick from Dhan, connected.";
       else if ((state.dhan.stream || "").startsWith("Stream: tick-by-tick")) state.dhan.stream = "Stream: quiet, prices once a second meanwhile.";
@@ -927,6 +931,8 @@
   }
 
   let lastSeen = Date.now();  // the last tick or refresh that reached the page
+  let lastTickAt = 0;         // the last live price that reached the page (a refresh is not one)
+  let lastKick = Date.now();  // the last time the page reconnected on its own
   let loadAbort = null;        // the refresh in flight: the newest wins, a hung one is dropped after 20 s
   async function load() {
     const status = document.getElementById("status");
@@ -954,6 +960,7 @@
       state.pollMs = Math.max(1000, data.poll_seconds * 1000);
       status.className = "";
       status.textContent = "Live · updated " + clock();
+      drawLiveNote();
       document.getElementById("mode").className = data.simulated ? "on" : "";
       document.getElementById("footer").textContent = data.simulated
         ? `Simulated prices, ${INTERVAL_NAMES[data.interval]} bars built from the simulator's ticks. Not real market data.`
@@ -990,11 +997,47 @@
   // reconnect, and a refresh is forced. A connection that dies without saying so (a laptop asleep, a phone
   // changing network) no longer leaves the page standing still.
   setInterval(() => {
-    if (Date.now() - lastSeen < Math.max(45000, state.pollMs * 2)) return;
-    lastSeen = Date.now();
+    const limit = Math.max(45000, state.pollMs * 2);
+    const since = ticksExpected() ? Math.max(lastTickAt, lastKick) : lastSeen;  // on Dhan in market hours a refresh does not count: the live price must move
+    if (Date.now() - since < limit) return;
+    lastSeen = lastKick = Date.now();
     if (liveWs && liveWs.readyState === WebSocket.OPEN) liveWs.close();
     load();
   }, 15000);
+
+  // The line under the price: on Dhan in market hours the price comes every second. When none has come for
+  // ten seconds, say so where the owner looks, with the server's own words for the stream and the poll
+  // (the restart after a merge, a token refused, Dhan's rate limit, a connection down), until it moves again.
+  const DHAN_TICK_HOURS = [9 * 3600, 15 * 3600 + 45 * 60];  // as main.py in_tick_hours: 09:00 to 15:45 IST, Monday to Friday
+  function dhanExpected() {  // a Dhan index, Dhan set up on the server, in its tick hours: the price should move every second
+    if (state.simulated || !DHAN_INDICES.includes(name) || !state.dhan || !state.dhan.configured) return false;
+    const t = serverNow(), day = Math.floor((t + 19800) / 86400), weekday = (day + 4) % 7, secs = (t + 19800) % 86400;  // 1970-01-01 was a Thursday
+    return weekday >= 1 && weekday <= 5 && secs >= DHAN_TICK_HOURS[0] && secs < DHAN_TICK_HOURS[1];
+  }
+  const ticksExpected = () => dhanExpected() && state.feed === "dhan";
+  function drawLiveNote() {
+    const el = document.getElementById("live-note");
+    if (!dhanExpected()) { el.hidden = true; return; }
+    const d = state.dhan || {};
+    if (state.feed !== "dhan") {  // the refresh came from Yahoo: delayed prices, and the live ticks are not applied
+      el.hidden = false;
+      el.textContent = `Not on Dhan now, so this is Yahoo's price, about 15 minutes behind. ${d.status || ""}`;
+      return;
+    }
+    const quiet = (Date.now() - Math.max(lastTickAt, pageOpened)) / 1000;
+    if (quiet < 10) { el.hidden = true; return; }
+    const why = [];
+    if (!liveWs || liveWs.readyState !== WebSocket.OPEN) why.push("this page's connection to the server is down, reconnecting.");
+    if (d.status && !d.active) why.push(d.status);
+    if (d.stream && !/connected/.test(d.stream)) why.push(d.stream);
+    else if (d.stream) why.push("the stream is connected but silent");
+    if (d.poll && !/once a second from Dhan/.test(d.poll)) why.push(d.poll);
+    if (!d.stream && !d.poll) why.push("the server has not started its live feed (it may have just restarted)");
+    el.hidden = false;
+    el.textContent = `No live price for ${Math.round(quiet)} s. ${why.join(" ")} The refresh every ${Math.round(state.pollMs / 1000)} s still runs.`;
+  }
+  const pageOpened = Date.now();
+  setInterval(drawLiveNote, 1000);
 
   // ---- controls
   document.getElementById("logout").addEventListener("click", () => {
