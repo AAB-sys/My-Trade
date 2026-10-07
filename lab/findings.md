@@ -169,3 +169,52 @@ Decided by the owner (7 October evening): P5, carry on a quarter again and again
 switch beside P1 to P4; the day's calls CSV records the carry read for every call (`carry_deep`, `beyond_level`,
 `beyond_reached`) so the nightly round keeps counting it on the real days; the live page is unchanged. Six days
 with trends in them: a sideways day will show more reversals, which is what the switch is there to count.
+## Round 4, 7 October evening: wicks, rejections, retests, momentum candles (`lab/candles.js`)
+
+The owner's questions: does a wick longer than the body mean a turn, or does the move carry on; and how do retests
+hold or fail. Counted over the six saved days, both indices, 5-minute candles, today-so-far levels. The script runs
+in every nightly round from now on, so these counts grow with the days.
+
+**A long wick by itself says nothing.** A candle whose far-side wick (it pushed on and was pushed back) is longer than
+its body: the next candle closed the same way 43% (wick 1 to 2 times the body, 119 candles) and 55% (over twice, 157
+candles); with a short wick 48% of 588. Three candles on, 51% to 53% in every group. A coin toss in every row. The
+near-side wick is the same story. Only at a level does a wick mean something: a wick through a level with the close
+back on the near side (280 cases) was followed by a move halfway back to the level before it 62% of the time, and
+the level was crossed within six candles anyway 37%; a longer wick did not sharpen that (59%, 57%).
+
+**Retests: 249 after a cross, 143 held (the retest candle closed on the crossing side), 106 failed.**
+
+| A held retest carried on to the next level before any close back across | count |
+|---|---|
+| all held retests | 82 of 143 (57%) |
+| the retest candle closed a quarter or more of the way to the next level | 60 of 84 (71%) |
+| the retest candle closed under a quarter of the way | 22 of 59 (37%) |
+| the retest candle closed the way of the cross (green after an up-cross) | 55 of 81 (68%) |
+| the retest candle closed against the cross | 27 of 62 (44%) |
+| deep close AND closed the way of the cross | 51 of 69 (74%) |
+| shallow close AND closed against the cross | 18 of 47 (38%) |
+| the retest candle had a rejection wick toward the level | 36 of 71 (51%); without one 46 of 72 (64%) |
+| the wick touched the level itself | 40 of 78 (51%); came close but did not touch 42 of 65 (65%) |
+| before 13:00 | 58 of 88 (66%); 13:00 or later 24 of 55 (44%) |
+| by the level: 23.6% | 28 of 59 (47%); 38.2% 56%; 50% 70%; 61.8% 67%; 78.6% 73% |
+
+| A failed retest went on to the level before it within six candles | count |
+|---|---|
+| all failed retests | 71 of 106 (67%) |
+| closed back by a quarter of the gap or more | 53 of 67 (79%); by less 18 of 39 (46%) |
+| the crossing candle had closed past halfway, and the retest still failed | 26 of 27 (96%) |
+| the crossing candle had closed under halfway | 45 of 79 (57%) |
+
+What the retests say, in words: the retest candle's own close is the tell, not its wick. A retest candle that closes
+a quarter of the way on and in the direction of the cross carries on three times in four; one that closes shallow
+and against the cross, one time in three. A rejection wick at the level is not a plus, and a retest that only comes
+near the level holds better than one that touches it. Retests of the inner levels (50%, 61.8%, 78.6%) hold better
+than retests of 23.6%. A retest that fails after a deep cross almost always runs back to the level before it (26 of
+27): when a strong cross is undone, the move is over.
+
+**Momentum candles** (a body twice the day's average so far): the next candle closed the same way 54% of the time
+with a tight far-side wick (48 candles), three candles on 46%. The move is in the candle itself; it does not promise
+the next one. That is the case for P5, which rides the candle that reached the target by its close rather than
+betting on the one after.
+
+Nothing proposed from this round: the retest facts are the same facts P3 and P5 already use (the depth of a close).
