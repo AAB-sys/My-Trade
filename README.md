@@ -79,7 +79,7 @@ premiums for NIFTY 50 and NIFTY BANK, come from the owner's Dhan account through
 DhanHQ's API, under its Data API subscription; every other index, and every Dhan
 failure, falls back to Yahoo. On the dashboard, the top row is NIFTY 50, NIFTY
 BANK and SENSEX, and those tiles follow Dhan's live price in market hours
-(marked "Dhan · live"); the other tiles are Yahoo's, about 15 minutes delayed,
+(marked "Dhan · live", moving every second); the other tiles are Yahoo's, about 15 minutes delayed,
 and the footer says which is which. `/health`'s `feed.ids` is null, or what
 Dhan's instrument list says differs from the index ids the code uses.
 The index page says which feed it is on; while it is open during market hours

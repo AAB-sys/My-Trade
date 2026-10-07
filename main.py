@@ -123,6 +123,7 @@ def dhan_reason(exc: Exception) -> str:
         return "Dhan: its rate limit was hit; trying again shortly."
     return f"Dhan: answered something unexpected ({said[:160]})."
 clients: set[WebSocket] = set()
+dash_subs: set = set()  # the dashboard pages' sockets: they get the Dhan tiles' live price once a second (live_forever)
 detail_cache: dict = {}  # (index name, range) -> (fetched at, payload)
 live: dict = {}          # index name -> {"last", "time", "bars": {interval key: the candle forming now, built from ticks}}
 live_subs: dict = {}     # websocket -> the index name whose ticks it wants (an index page on Dhan)
@@ -322,6 +323,35 @@ def in_tick_hours() -> bool:
         return True
     now = datetime.now(dhan.IST)
     return now.weekday() < 5 and (9, 0) <= (now.hour, now.minute) < (15, 45)
+
+
+def live_now() -> dict:
+    """The latest live price of each index on Dhan that came within the last few seconds: what the dashboard's tiles move on."""
+    return {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")}
+            for name, e in live.items() if name in dhan.QUOTE_IDS and live_price(name) is not None}
+
+
+async def live_forever() -> None:
+    """The dashboard's Dhan tiles move every second (owner's ask, 7 October): once a second, the latest live price of each
+    index on Dhan that moved since, to every dashboard page, which redraws the tile in place. The index pages get their
+    own ticks (push_tick); the tiles used to move only with the refresh every POLL_SECONDS."""
+    sent: dict = {}
+    while True:
+        await asyncio.sleep(1)
+        try:
+            if not (DHAN_ON and dash_subs and in_tick_hours()):
+                continue
+            moved = {name: t for name, t in live_now().items() if sent.get(name) != (t["last"], t["time"])}
+            if not moved:
+                continue
+            sent.update({name: (t["last"], t["time"]) for name, t in moved.items()})
+            for ws in list(dash_subs):
+                try:
+                    await ws.send_json({"live": moved})
+                except Exception:
+                    dash_subs.discard(ws)
+        except Exception as exc:
+            log.warning("live tiles: %s", exc)
 
 
 def live_price(name: str, within: float = 10) -> float | None:
@@ -707,6 +737,7 @@ async def lifespan(app: FastAPI):
         tasks.append(asyncio.create_task(warm_option_ids()))
         tasks.append(asyncio.create_task(token_forever()))
         tasks.append(asyncio.create_task(calls_forever()))
+        tasks.append(asyncio.create_task(live_forever()))
     yield
     for task in tasks:
         task.cancel()
@@ -1030,16 +1061,21 @@ async def stream(ws: WebSocket):
     wanted = ws.query_params.get("live", "").upper()
     if DHAN_ON and wanted in dhan.QUOTE_IDS:  # an index page on Dhan: it gets the live ticks of its index
         live_subs[ws] = wanted
+    elif not wanted:  # the dashboard: its Dhan tiles get the live price once a second
+        dash_subs.add(ws)
     try:
         await ws.send_json({**store, "page": page_id})
         if wanted in live:
             await ws.send_json({"tick": {"name": wanted, **live[wanted]}})
+        if ws in dash_subs and DHAN_ON and (snapshot := live_now()):
+            await ws.send_json({"live": snapshot})  # the tiles move at once, not a second later
         while True:
             await ws.receive_text()  # keeps the connection open; the pages never send anything useful
     except WebSocketDisconnect:
         pass
     finally:
         clients.discard(ws)
+        dash_subs.discard(ws)
         live_subs.pop(ws, None)
         token, page_id = ws_pages.pop(ws, (None, None))
         page = logins.get(token, {}).get("pages", {}).get(page_id)

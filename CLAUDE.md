@@ -119,7 +119,9 @@ their own logic. Read this before touching the code.
   each tile links to `/index/{name}` in a new tab. The top row is NIFTY 50,
   NIFTY BANK, SENSEX (`PINNED`). In market hours those three tiles carry Dhan's
   last price (`with_dhan_prices()` in `main.py`, `source: "dhan"`, "Dhan · live"
-  on the tile); the footer says which tiles are Dhan's and which Yahoo's.
+  on the tile) and move every second: `live_forever` sends `{"live": {...}}` to
+  the dashboard sockets (`dash_subs`) once a second, `applyLive` redraws the
+  tile in place; the footer says which tiles are Dhan's and which Yahoo's.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
