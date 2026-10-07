@@ -50,3 +50,67 @@ Decided by the owner (6 October): P1 and P2 go on the Study page as switches, sc
 rule on every saved day; either moves to the live index page only after about 20 saved days still
 show it ahead, and only when the owner says so; the lab lives in the repository; nothing is built
 without the owner's confirmation. The live index page is unchanged.
+
+## Round 2: 7 October 2026, six days (29 Sep to 7 Oct): the retest question
+
+The owner's two screenshots of 7 October: NIFTY 50 fell from the 100% level to the 61.8%/50% zone, hovered there
+(a retest?), fell on to the 0% level and bounced. Two questions: how to tell a retest that holds from a bounce,
+and whether a fall through a level will carry on to the next. Candles and today's-range levels only, 5-minute candles.
+
+**Every time a candle closed through a level** (310 crosses, both indices), what came first: the next level
+("continued") or a candle closing back across the level crossed ("came back")?
+
+| After a candle closes through a level | Continued | Came back |
+|---|---|---|
+| All crosses | 53% | 43% |
+| Close under a quarter of the way to the next level | 32% | 62% |
+| Close a quarter to half of the way | 53% | 44% |
+| Close past halfway | 80% | 18% |
+| Crossing candle's body under half the gap | 30% | 67% |
+| Body a whole gap or more | 74% | 23% |
+| A retest that held before the outcome | 48% | 48% |
+| No retest | 55% | 41% |
+| Cross in the 09:00 hour | 73% | 27% |
+| Cross at 13:00 or 14:00 | 45% | 54% |
+
+The retest by itself tells nothing; the depth of the close through the level, and the body, do.
+
+**The owner's rule's own calls** (previous-day levels, both signals, both indices, 5 and 15 minutes: 238 calls):
+
+| | Calls | Won | Reached the target | Net points | Per call |
+|---|---|---|---|---|---|
+| Signal closed under a quarter of the way | 134 | 67% | 62% | +1,149 | +8.6 |
+| Signal closed a quarter to half | 61 | 80% | 79% | +700 | +11.5 |
+| Signal closed past halfway | 43 | 93% | 93% | +931 | +21.6 |
+| Signal body under half the gap | 116 | 69% | 64% | +340 | +2.9 |
+| Signal body a whole gap or more | 40 | 85% | 85% | +962 | +24.0 |
+| Never closed back a quarter of the gap | 142 | 92% | 87% | +7,628 | +53.7 |
+| Closed back a quarter to half | 10 | 80% | 80% | +680 | +68.0 |
+| Closed back half to a whole gap | 26 | 73% | 73% | +671 | +25.8 |
+| Closed back a whole gap or more | 60 | 35% | 33% | −6,199 | −103.3 |
+
+**Ideas replayed** (net points; the rule's own are +316 / +148 / +2,164 / +153 on NIFTY 50 5m, NIFTY 50 15m, NIFTY BANK 5m, NIFTY BANK 15m):
+
+| Idea | NIFTY 50, 5 min | NIFTY 50, 15 min | NIFTY BANK, 5 min | NIFTY BANK, 15 min |
+|---|---|---|---|---|
+| Crossed only when the close is past halfway | +228 (40 calls, 31W 9L) | +304 (24, 22W 2L) | +1,898 (48, 42W 6L) | +1,282 (24, 21W 3L) |
+| Crossed only when the close is a quarter of the way | +259 (49, 38W 11L) | +214 (27) | +2,731 (61, 55W 6L) | +1,104 (35) |
+| A shallow cross waits for a close past halfway | +245 | +304 | +1,630 | +1,062 |
+| Crossed only with a body of half the gap | +55 | +125 | +2,867 | +1,168 |
+| Exit when a candle closes back by a quarter of the gap | +92 | +165 | +559 | −1,316 |
+| Exit when a candle closes back by half the gap | +80 | +123 | +3 | −1,450 |
+| Exit when a candle closes back by a whole gap | +201 | +279 | −202 | −1,020 |
+| Depth past halfway + exit on a quarter reclaim | +145 | +261 | +350 | −301 |
+
+What the days said:
+
+- The depth of a signal candle's close is a quality mark: past halfway, nine calls in ten won; under a
+  quarter, two in three. The body says the same. A gate on crossed signals at a quarter of the way is ahead
+  of the rule in net on three boards of four and in points per call on all four, with far fewer calls: a
+  candidate for the Study page (P3) if the owner confirms.
+- No exit on a reclaim beat holding, at a quarter, half or a whole gap, except on NIFTY 50 15-minute.
+  Calls that went back a whole gap won one in three, and their loss was mostly already there by then; on
+  NIFTY BANK such calls came back often enough that cutting them cost more. The no-stop decision stands.
+- Built (7 October, owner's ask): the candle read on the index page, under "What now": the signal's
+  strength (depth, body) and how far a candle has gone back across the level (carry / watch / weak), and
+  "retest held". Information only; it ends no call. The ideas above stay in the replay for the nightly rounds.

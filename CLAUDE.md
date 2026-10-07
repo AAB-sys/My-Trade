@@ -129,6 +129,7 @@ their own logic. Read this before touching the code.
   the dashboard sockets (`dash_subs`) once a second, `applyLive` redraws the
   tile in place; the footer says which tiles are Dhan's and which Yahoo's.
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
+  (`readOf()`: the candle read of 7 October, information under "What now", changes no call)
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
   under test (`IDEAS`, `ideasOf`: options of `paperTrades` that are off unless

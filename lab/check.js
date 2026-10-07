@@ -32,6 +32,25 @@ const IST = 19800, t0 = Math.floor((Date.now() / 1000 + IST) / 86400) * 86400 - 
   console.log("entry past the target: aims one level on, or no call");
   assert(got("both").length === 4 && R.round2(R.replayDay({ bars, move: "prev", previous: prevDay, seconds: 300, signal: "both" }).trades.reduce((s, x) => s + x.points, 0)) === 20.6, "both: four calls, net +20.60");
   console.log("hand-made day checks passed");
+  // the candle read (7 October): a CE call at 161.8 toward 176.4 (gap 14.6) from a candle closing at 170 (56% of the way: strong);
+  // then candles closing at 165 (fine), 158 (back 26%: watch) and 147 (back a whole gap: weak); a touch at 163 that closes above is a retest held
+  {
+    const call = { side: "CE", level: 161.8, target: 176.4, signalTime: t0 + 300, entry: 170.5, entryTime: t0 + 600, how: "open", exit: null };
+    const day = [bar(0, 160, 161, 158, 160), bar(1, 166, 171, 161, 170), bar(2, 170.5, 172, 163, 165), bar(3, 165, 166, 157, 158), bar(4, 158, 159, 146, 147)];
+    const rd = (n, extra) => R.readOf({ trade: { ...call, ...extra }, bars: day.slice(0, n), seconds: 300, now: Number.POSITIVE_INFINITY });
+    const a = rd(2); assert(a.depth === 0.56 && a.body === 0.27 && a.strength === "strong" && a.word === "carry" && a.back === 0 && !a.retest, "strong signal, carry: " + JSON.stringify(a));
+    const b2 = rd(3); assert(b2.word === "carry" && b2.retest && b2.back === 0, "a touch that closes above the level is a retest held: " + JSON.stringify(b2));
+    const c = rd(4); assert(c.word === "watch" && c.back === 0.26, "back a quarter: watch: " + JSON.stringify(c));
+    const dd = rd(5); assert(dd.word === "weak" && dd.back === 1.01, "back a whole gap: weak: " + JSON.stringify(dd));
+    const weak = R.readOf({ trade: { ...call, signalTime: t0 + 300 }, bars: [bar(0, 160, 161, 158, 160), bar(1, 162, 164, 161, 163)], seconds: 300, now: Number.POSITIVE_INFINITY });
+    assert(weak.depth === 0.08 && weak.strength === "weak" && weak.word === "watch", "a shallow signal reads weak, watch: " + JSON.stringify(weak));
+    const ended = R.readOf({ trade: { ...call, exit: 176.4, exitTime: t0 + 600, how: "target" }, bars: day, seconds: 300, now: Number.POSITIVE_INFINITY });
+    assert(ended.back === 0 && ended.strength === "strong", "a finished call reads up to its exit only: " + JSON.stringify(ended));
+    assert(R.readOf({ trade: { ...call, entry: null, how: "pending" }, bars: day.slice(0, 2), seconds: 300, now: Number.POSITIVE_INFINITY }).word === "carry", "a pending call reads from its signal");
+    const notYet = R.readOf({ trade: call, bars: day, seconds: 300, now: day[3].time + 299 });  // the 158 candle has not closed yet
+    assert(notYet.word === "carry" && notYet.back === 0, "only closed candles count: " + JSON.stringify(notYet));
+    console.log("candle read checks passed");
+  }
 }
 
 const mk = (ohlc, shift = 0) => ohlc.map(([open, high, low, close], i) => ({ time: t0 + i * 300, open: open + shift, high: high + shift, low: low + shift, close: close + shift }));

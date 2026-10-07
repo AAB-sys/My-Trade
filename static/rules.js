@@ -193,6 +193,39 @@
     return out;
   }
 
-  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay,
+  // ---- The candle read (owner's ask, 7 October; LOGIC.md, layer 3): what the closed candles say about a call, for the
+  // owner's eyes. Nothing here changes a call, its target, its end or its points. Everything is measured against the gap
+  // from the call's level to its target:
+  //   depth    how far the signal candle closed past the level toward the target (0.55 = 55% of the way)
+  //   body     the signal candle's body against that gap
+  //   back     how far a later closed candle has gone back across the level, at most (1 = a whole gap)
+  //   retest   a later candle came back to within a fifth of the gap of the level and closed on the call's side
+  //   strength strong: depth past halfway or a body of a whole gap; fair: a quarter of the way or a body of half the gap; weak: less
+  //   word     weak: back a whole gap or more; watch: back a quarter or more, or a weak signal; carry: the rest
+  // On the six saved days of 29 Sep to 7 Oct (your rule, both indices, 5 and 15 minutes): signals closed past halfway won
+  // 93%, under a quarter 67%; calls never closed back a quarter won 89%, back a quarter to a whole gap 73-80%, back a
+  // whole gap or more 35%. Exiting at any of those reclaims still cost points against holding, so the read advises, it
+  // does not end a call.
+  function readOf({ trade: t, bars, seconds, now }) {
+    if (t.entry == null && t.how !== "pending") return null;
+    const gap = Math.abs(t.target - t.level);
+    const sig = bars.find(b => b.time === t.signalTime);
+    if (!gap || !sig) return null;
+    const toward = p => (t.side === "CE" ? p - t.level : t.level - p) / gap;
+    const depth = round2(toward(sig.close)), body = round2(Math.abs(sig.close - sig.open) / gap);
+    let back = 0, retest = false;
+    for (const b of bars) {
+      if (b.time <= t.signalTime || endOf(b, seconds) > now) continue;
+      if (t.exitTime != null && b.time > t.exitTime) break;
+      back = Math.max(back, -toward(b.close));
+      if (t.side === "CE" ? b.low <= t.level + 0.2 * gap && b.close > t.level : b.high >= t.level - 0.2 * gap && b.close < t.level) retest = true;
+    }
+    back = round2(back);
+    const strength = depth >= 0.5 || body >= 1 ? "strong" : depth >= 0.25 || body >= 0.5 ? "fair" : "weak";
+    const word = back >= 1 ? "weak" : back >= 0.25 || strength === "weak" ? "watch" : "carry";
+    return { depth, body, back, retest, strength, word };
+  }
+
+  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);
