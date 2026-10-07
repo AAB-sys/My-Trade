@@ -138,7 +138,7 @@
     P1: { key: "P1", name: "Close open calls at 15:00", ideas: { closeAt: 15 * 3600 } },
     P2: { key: "P2", name: "No new calls after 14:00", ideas: { noNewAfter: 14 * 3600 } },
     P3: { key: "P3", name: "Crossed signals only a quarter of the way to the next level", ideas: { minDepth: 0.25 } },
-    P4: { key: "P4", name: "Exit when a candle closes back a quarter of the gap across the level", ideas: { exitBack: 0.25 } },  // the owner's rule of 7 October, acted on
+    P4: { key: "P4", name: "Exit when a candle closes on the wrong side of the level", ideas: { exitBack: 0.25 } },  // the owner's rule of 7 October, acted on: a close a quarter of the gap past the level
   };
   const ideasOf = (keys) => Object.assign({}, ...keys.map(k => IDEAS[k].ideas));
 
@@ -240,10 +240,14 @@
     back = round2(back);
     const strength = depth >= 0.5 || body >= 1 ? "strong" : depth >= 0.25 || body >= 0.5 ? "fair" : "weak";
     const word = exitAt != null ? "exit" : "carry";
-    const level = t.ratio == null ? "the level" : (t.ratio * 100).toFixed(1) + "%";
-    const why = word === "exit" ? `a candle closed back ${t.side === "CE" ? "below" : "above"} ${level}`
-      : retest ? `retest held at ${level}`
-      : `${strength === "weak" ? "shallow" : strength} ${t.kind === "held" ? "hold at" : "cross of"} ${level}, nothing closed back${strength === "weak" ? " yet" : ""}`;
+    // the reason in the plainest words (owner's ask): "price closed below the 61.8% level", "price came back to the 61.8% level
+    // and held", "big candle through the 50.0% level, holding above it", "small bounce off the 78.6% level, holding below it"
+    const level = t.ratio == null ? "the level" : `the ${(t.ratio * 100).toFixed(1)}% level`;
+    const good = t.side === "CE" ? "above" : "below", bad = t.side === "CE" ? "below" : "above";
+    const size = t.kind === "held" ? { strong: "strong bounce", fair: "bounce", weak: "small bounce" }[strength] : { strong: "big candle", fair: "candle", weak: "small candle" }[strength];
+    const why = word === "exit" ? `price closed ${bad} ${level}`
+      : retest ? `price came back to ${level} and held`
+      : `${size} ${t.kind === "held" ? "off" : "through"} ${level}, holding ${good} it`;
     return { depth, body, back, retest, strength, word, why, exitAt, exitPrice };
   }
 
