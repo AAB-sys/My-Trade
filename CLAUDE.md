@@ -111,9 +111,11 @@ their own logic. Read this before touching the code.
   saved and pushed, or when the token is refused or expires before the next
   trading day's close. The owner does not look after the saving (6 October);
   Claude does; the token is the one thing only the owner can renew.
-- `study.py` - layer 4: the record of each session's candles only
+- `study.py` - layer 4: the record of each session's candles
   (`data/sessions/<date>.json`, git-ignored; written after the close and every
-  few minutes during it; no premiums, no calls, the owner's choice) and its copy
+  few minutes during it) and of every call the index page suggested that day
+  (`<date>-calls.csv`, from `record_calls()`, fed by the page's `POST
+  /calls/{name}`; the owner's ask of 7 October) and their copy
   on the `data` branch of the owner's repository through the GitHub API
   (`GITHUB_DATA_TOKEN`; the branch holds data only and is never merged into
   `main`); `study_forever()` runs it, `pull_missing()` fetches the days a fresh
@@ -149,6 +151,13 @@ laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `study.py`, `lab/
 `.github/workflows/wake.yml`, the docs. An
 **Android app** pull request touches `android/` and `.github/workflows/android.yml`
 only. Say in the title which kind it is when it is not obvious.
+
+One pull request at a time, each against `main`, never one built on top of
+another's branch (7 October: #70 was based on #69's branch; merged after #69, it
+landed in that dead branch and not on the site, and had to be opened again as
+#71). When a change needs an earlier one, wait for its merge and branch from
+`main`. Never push to a merged pull request's branch either; start a fresh
+branch from `main`.
 
 ## Phases
 
