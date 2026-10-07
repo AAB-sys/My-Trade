@@ -90,6 +90,29 @@ def profile() -> dict:
     return call("GET", "/profile")
 
 
+def token_check() -> dict:
+    """Whether Dhan accepts the token now, and until when it is valid, from Dhan's profile answer ("tokenValidity",
+    a date and time as dd/mm/yyyy HH:MM, IST). No secret in the answer: a yes or no, a time, and a plain reason."""
+    now = datetime.now(IST).isoformat(timespec="seconds")
+    if not configured():
+        return {"ok": False, "valid_till": None, "checked_at": now, "problem": "DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN are not both set"}
+    try:
+        body = profile()
+    except DhanError as exc:
+        return {"ok": False, "valid_till": None, "checked_at": now,
+                "problem": "the token was refused, it has probably expired" if exc.kind == "token" else exc.message}
+    who = body.get("data") if isinstance(body.get("data"), dict) else body
+    raw = str(who.get("tokenValidity") or "").strip()
+    valid_till = None
+    for fmt in ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M:%S"):
+        try:
+            valid_till = datetime.strptime(raw, fmt).replace(tzinfo=IST).isoformat(timespec="seconds")
+            break
+        except ValueError:
+            continue
+    return {"ok": True, "valid_till": valid_till or (raw or None), "checked_at": now, "problem": None}
+
+
 def expiries(name: str) -> list[str]:
     """The option expiry dates of an index, soonest first, as YYYY-MM-DD."""
     body = call("POST", "/optionchain/expirylist", {"UnderlyingScrip": INDEX_IDS[name], "UnderlyingSeg": SEGMENT})

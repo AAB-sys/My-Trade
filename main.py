@@ -95,6 +95,7 @@ store = {
                    "Dhan: not set up. Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to .env or the host's environment."),
         "at": None,
         "stream": "",  # the tick-by-tick stream's state, in plain words
+        "token": None,  # the last token check (token_forever): ok, valid_till, checked_at, problem
     },
 }
 stream_at = 0.0  # when the last tick came over the stream; the one-a-second polling steps in while it is quiet
@@ -473,6 +474,23 @@ async def stream_forever() -> None:
         wait = min(wait * 2, 30)
 
 
+TOKEN_CHECK_SECONDS = float(os.environ.get("DHAN_TOKEN_CHECK_SECONDS", "1800"))
+
+
+async def token_forever() -> None:
+    """Asks Dhan whether the token is good and until when, at start and every half hour (one small request), so
+    /health and the wake-up check can say "the token expires at ..." or "the token was refused" without a login.
+    The owner does not look after the saving (6 October), and the token is the one thing only they can renew."""
+    while True:
+        try:
+            store["dhan"]["token"] = await asyncio.to_thread(dhan.token_check)
+            if not store["dhan"]["token"]["ok"]:
+                log.warning("Dhan token: %s", store["dhan"]["token"]["problem"])
+        except Exception as exc:
+            store["dhan"]["token"] = {"ok": False, "valid_till": None, "checked_at": now_ist(), "problem": f"{type(exc).__name__}: {str(exc)[:120]}"}
+        await asyncio.sleep(TOKEN_CHECK_SECONDS)
+
+
 async def warm_option_ids() -> None:
     """Starts the read of Dhan's instrument list at start (it runs in its own thread), so the first call of
     the day finds its contract's id at once, and logs how it went."""
@@ -499,6 +517,7 @@ async def lifespan(app: FastAPI):
              asyncio.create_task(study.study_forever(DHAN_ON))]
     if DHAN_ON:
         tasks.append(asyncio.create_task(warm_option_ids()))
+        tasks.append(asyncio.create_task(token_forever()))
     yield
     for task in tasks:
         task.cancel()
@@ -534,7 +553,7 @@ def known_index(name: str) -> str:
 def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
     day's session was saved. No secret in here: dates, and a problem said in plain words."""
-    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7], "dhan": DHAN_ON, "study": study.summary()}
+    return {"status": "ok", "commit": os.environ.get("RENDER_GIT_COMMIT", "")[:7], "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary()}
 
 
 @app.get("/login")

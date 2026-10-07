@@ -11,7 +11,7 @@ dashboard that shows them and updates the moment they change.
 | POST   | `/login`          | `{"password": "..."}` | sets the login cookie, or 401                          |
 | POST   | `/logout`         | nothing       | clears the login cookie                                       |
 | POST   | `/alive`          | the tab note and page id (headers) | "still here" from an open page: the latest snapshot plus the page's id |
-| GET    | `/health`         | nothing       | `{"status": "ok", ...}` - open, for the host's health checks and the wake-up workflow: the commit, and under `study` the latest saved day and any saving problem |
+| GET    | `/health`         | nothing       | `{"status": "ok", ...}` - open, for the host's health checks and the wake-up workflow: the commit, under `token` whether Dhan accepts the token and until when, under `study` the latest saved day and any saving problem |
 | GET    | `/`               | nothing       | the dashboard page                                            |
 | GET    | `/index/{name}`   | an index name | the detail page for that index (summary + chart)              |
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
@@ -153,9 +153,14 @@ says, without a login and without any secret, the latest day with its final
 copy, whether today was checked and found without a session (a holiday), and
 any problem in plain words. The one thing the server cannot do by itself is
 renew the Dhan access token: with an expired token there are no candles to
-save. Dhan's token page may offer a validity longer than a day; the longest
-offered means fewer renewals. A day missed for a bad token is saved at the next
-wake with a good one, for up to a week back.
+save. So the server asks Dhan every half hour whether the token is good and
+until when (`token_forever()`, one small request), `/health` says it under
+`token` (a yes or no, the time it is valid till, a plain reason; never the
+token itself), and the workflow's runs turn red with the reason when the token
+is refused or will have expired before the next trading day's close. Dhan's
+token page may offer a validity longer than a day; the longest offered means
+fewer renewals. A day missed for a bad token is saved at the next wake with a
+good one, for up to a week back.
 
 The first save creates the `data` branch (data only; never merge it into
 `main`): on the repository page, open the branch drop-down and pick `data` to

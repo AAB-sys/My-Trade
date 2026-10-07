@@ -103,8 +103,11 @@ their own logic. Read this before touching the code.
 - `.github/workflows/wake.yml` - website side: wakes the sleeping host after the
   close (15:42 IST) so the server saves the day, and at 16:10 reads `/health`
   (`study.summary()`: the latest complete day, the day checked without a
-  session, any problem) and fails the run when the day is not saved and pushed.
-  The owner does not look after the saving (6 October); Claude does.
+  session, any problem; `token`: `dhan.token_check()` every half hour, whether
+  Dhan accepts the token and until when) and fails the run when the day is not
+  saved and pushed, or when the token is refused or expires before the next
+  trading day's close. The owner does not look after the saving (6 October);
+  Claude does; the token is the one thing only the owner can renew.
 - `study.py` - layer 4: the record of each session's candles only
   (`data/sessions/<date>.json`, git-ignored; written after the close and every
   few minutes during it; no premiums, no calls, the owner's choice) and its copy
