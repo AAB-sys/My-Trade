@@ -63,9 +63,9 @@ function run(bars, previous, o, higher) {
       if (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target) { end(x, x.target, bar, "target"); return false; }
       if (o.stopShare) { const stop = x.side === "CE" ? x.entry - o.stopShare * (x.target - x.entry) : x.entry + o.stopShare * (x.entry - x.target);
         if (x.side === "CE" ? bar.low <= stop : bar.high >= stop) { end(x, stop, bar, "stop"); return false; } }
-      if (o.closeBack && (x.side === "CE" ? bar.close < x.level : bar.close > x.level)) { end(x, bar.close, bar, "closed back"); return false; }
+      if (o.closeBack && (x.side === "CE" ? bar.close < x.level : bar.close > x.level)) { end(x, bar.close, bar, "candle"); return false; }
       if (o.closeBackShare) { const gap = Math.abs(x.target - x.level), back = x.side === "CE" ? x.level - bar.close : bar.close - x.level;
-        if (gap > 0 && back >= o.closeBackShare * gap) { end(x, bar.close, bar, "closed back"); return false; } }
+        if (gap > 0 && back >= o.closeBackShare * gap) { end(x, bar.close, bar, "candle"); return false; } }  // idea P4 at a quarter (Rules.paperTrades exitBack)
       return true;
     });
     if (o.closeAt && clockEnd >= o.closeAt) { open.forEach(x => end(x, bar.close, bar, "time")); open = []; }
@@ -159,12 +159,15 @@ const IDEAS = [
   ["today-so-far levels + P3", { levels: "today", minDepth: 0.25 }],
   ["a shallow cross waits for a close past halfway", { minDepth: 0.5, waitDeeper: true }],
   ["crossed only with a body of half the gap", { minBody: 0.5 }],
-  ["exit when a candle closes back across the level by a quarter of the gap", { closeBackShare: 0.25 }],
+  ["P4 exit when a candle closes back a quarter of the gap", { closeBackShare: 0.25 }],  // the owner's rule, 7 October evening
+  ["P3 + P4", { minDepth: 0.25, closeBackShare: 0.25 }],
+  ["P1 + P2 + P3 + P4", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25, closeBackShare: 0.25 }],
+  ["today-so-far levels + P4", { levels: "today", closeBackShare: 0.25 }],
+  ["today-so-far levels + P3 + P4", { levels: "today", minDepth: 0.25, closeBackShare: 0.25 }],
   ["exit when a candle closes back by half the gap", { closeBackShare: 0.5 }],
   ["exit when a candle closes back by a whole gap", { closeBackShare: 1 }],
   ["depth past halfway + exit on a quarter reclaim", { minDepth: 0.5, closeBackShare: 0.25 }],
   ["today-so-far levels + depth past halfway", { levels: "today", minDepth: 0.5 }],
-  ["today-so-far levels + exit on a quarter reclaim", { levels: "today", closeBackShare: 0.25 }],
   ["today-so-far levels + depth past halfway + quarter reclaim", { levels: "today", minDepth: 0.5, closeBackShare: 0.25 }],
 ];
 console.log(`${DAYS.length} finished days: ${DAYS[0].date} to ${DAYS[DAYS.length - 1].date}; ${LIVE.length} calls suggested live on the index page in ${new Set(LIVE.map(c => c.date)).size} of them`);

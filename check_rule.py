@@ -86,7 +86,8 @@ def main() -> int:
     folder = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "data" / "sessions"
     jobs = []
     IDEAS = [None, {"closeAt": 15 * 3600}, {"noNewAfter": 14 * 3600}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600},
-             {"minDepth": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25}]
+             {"minDepth": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25},
+             {"exitBack": 0.25}, {"minDepth": 0.25, "exitBack": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25, "exitBack": 0.25}]
     # 1. the saved days, replayed in every setting
     days = saved_days(folder) if folder.exists() else []
     for d in days:

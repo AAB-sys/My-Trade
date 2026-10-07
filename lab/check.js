@@ -32,24 +32,33 @@ const IST = 19800, t0 = Math.floor((Date.now() / 1000 + IST) / 86400) * 86400 - 
   console.log("entry past the target: aims one level on, or no call");
   assert(got("both").length === 4 && R.round2(R.replayDay({ bars, move: "prev", previous: prevDay, seconds: 300, signal: "both" }).trades.reduce((s, x) => s + x.points, 0)) === 20.6, "both: four calls, net +20.60");
   console.log("hand-made day checks passed");
-  // the candle read (7 October): a CE call at 161.8 toward 176.4 (gap 14.6) from a candle closing at 170 (56% of the way: strong);
-  // then candles closing at 165 (fine), 158 (back 26%: watch) and 147 (back a whole gap: weak); a touch at 163 that closes above is a retest held
+  // the candle verdict (7 October): a CE call at 161.8 toward 176.4 (gap 14.6) from a candle closing at 170 (56% of the way: strong);
+  // then candles closing at 165 (carry), 158 (back 26%: exit) and 147 (back a whole gap); a touch at 163 that closes above is a retest held
   {
-    const call = { side: "CE", level: 161.8, target: 176.4, signalTime: t0 + 300, entry: 170.5, entryTime: t0 + 600, how: "open", exit: null };
+    const call = { side: "CE", level: 161.8, ratio: 0.618, kind: "crossed", target: 176.4, signalTime: t0 + 300, entry: 170.5, entryTime: t0 + 600, how: "open", exit: null };
     const day = [bar(0, 160, 161, 158, 160), bar(1, 166, 171, 161, 170), bar(2, 170.5, 172, 163, 165), bar(3, 165, 166, 157, 158), bar(4, 158, 159, 146, 147)];
     const rd = (n, extra) => R.readOf({ trade: { ...call, ...extra }, bars: day.slice(0, n), seconds: 300, now: Number.POSITIVE_INFINITY });
-    const a = rd(2); assert(a.depth === 0.56 && a.body === 0.27 && a.strength === "strong" && a.word === "carry" && a.back === 0 && !a.retest, "strong signal, carry: " + JSON.stringify(a));
-    const b2 = rd(3); assert(b2.word === "carry" && b2.retest && b2.back === 0, "a touch that closes above the level is a retest held: " + JSON.stringify(b2));
-    const c = rd(4); assert(c.word === "watch" && c.back === 0.26, "back a quarter: watch: " + JSON.stringify(c));
-    const dd = rd(5); assert(dd.word === "weak" && dd.back === 1.01, "back a whole gap: weak: " + JSON.stringify(dd));
+    const a = rd(2); assert(a.depth === 0.56 && a.body === 0.27 && a.strength === "strong" && a.word === "carry" && a.back === 0 && !a.retest && a.exitAt == null && a.why === "strong cross of 61.8%, nothing closed back", "strong signal, carry: " + JSON.stringify(a));
+    const b2 = rd(3); assert(b2.word === "carry" && b2.retest && b2.back === 0 && b2.why === "retest held at 61.8%", "a touch that closes above the level is a retest held: " + JSON.stringify(b2));
+    const c = rd(4); assert(c.word === "exit" && c.back === 0.26 && c.exitAt === day[3].time && c.exitPrice === 158 && c.why === "a candle closed back below 61.8%", "back a quarter: exit: " + JSON.stringify(c));
+    const dd = rd(5); assert(dd.word === "exit" && dd.back === 1.01 && dd.exitAt === day[3].time && dd.exitPrice === 158, "the first candle back a quarter is the exit, whatever came after: " + JSON.stringify(dd));
     const weak = R.readOf({ trade: { ...call, signalTime: t0 + 300 }, bars: [bar(0, 160, 161, 158, 160), bar(1, 162, 164, 161, 163)], seconds: 300, now: Number.POSITIVE_INFINITY });
-    assert(weak.depth === 0.08 && weak.strength === "weak" && weak.word === "watch", "a shallow signal reads weak, watch: " + JSON.stringify(weak));
+    assert(weak.depth === 0.08 && weak.strength === "weak" && weak.word === "carry" && weak.why === "shallow cross of 61.8%, nothing closed back yet", "a shallow signal still carries until a candle closes back: " + JSON.stringify(weak));
     const ended = R.readOf({ trade: { ...call, exit: 176.4, exitTime: t0 + 600, how: "target" }, bars: day, seconds: 300, now: Number.POSITIVE_INFINITY });
-    assert(ended.back === 0 && ended.strength === "strong", "a finished call reads up to its exit only: " + JSON.stringify(ended));
+    assert(ended.back === 0 && ended.strength === "strong" && ended.exitAt == null && ended.word === "carry", "a finished call reads up to its exit only: " + JSON.stringify(ended));
+    const endedLate = R.readOf({ trade: { ...call, exit: 147, exitTime: t0 + 4 * 300, how: "day end" }, bars: day, seconds: 300, now: Number.POSITIVE_INFINITY });
+    assert(endedLate.word === "exit" && endedLate.exitAt === day[3].time, "a finished call keeps when the verdict said exit: " + JSON.stringify(endedLate));
     assert(R.readOf({ trade: { ...call, entry: null, how: "pending" }, bars: day.slice(0, 2), seconds: 300, now: Number.POSITIVE_INFINITY }).word === "carry", "a pending call reads from its signal");
     const notYet = R.readOf({ trade: call, bars: day, seconds: 300, now: day[3].time + 299 });  // the 158 candle has not closed yet
-    assert(notYet.word === "carry" && notYet.back === 0, "only closed candles count: " + JSON.stringify(notYet));
-    console.log("candle read checks passed");
+    assert(notYet.word === "carry" && notYet.back === 0 && notYet.exitAt == null, "only closed candles count: " + JSON.stringify(notYet));
+    // a PE call from a hold at 78.6% (176.4 toward 161.8): a candle closing at 181 is back 32% above the level: exit, worded for that level
+    const pe = R.readOf({ trade: { side: "PE", level: 176.4, ratio: 0.786, kind: "held", target: 161.8, signalTime: t0 + 300, entry: 174, entryTime: t0 + 600, how: "open", exit: null },
+                          bars: [bar(0, 178, 179, 177, 178), bar(1, 177, 177.5, 176, 174.5), bar(2, 174, 182, 173, 181)], seconds: 300, now: Number.POSITIVE_INFINITY });
+    assert(pe.word === "exit" && pe.exitPrice === 181 && pe.why === "a candle closed back above 78.6%", "a PE call exits on a close back above its level: " + JSON.stringify(pe));
+    const peHold = R.readOf({ trade: { side: "PE", level: 176.4, ratio: 0.786, kind: "held", target: 161.8, signalTime: t0 + 300, entry: 174, entryTime: t0 + 600, how: "open", exit: null },
+                              bars: [bar(0, 178, 179, 177, 178), bar(1, 177, 177.5, 176, 174.5), bar(2, 173, 173.4, 172, 173)], seconds: 300, now: Number.POSITIVE_INFINITY });  // a high of 173.4 stays more than a fifth of the gap under 176.4: no retest
+    assert(peHold.word === "carry" && peHold.why === "shallow hold at 78.6%, nothing closed back yet", "a held signal is worded as a hold: " + JSON.stringify(peHold));
+    console.log("candle verdict checks passed");
   }
 }
 
@@ -128,6 +137,23 @@ console.log("rules unit checks passed");
     const heldOnly = R.paperTrades({ bars: retake, levelsAt: () => lv, now: Infinity, seconds: 300, dayCandles: false, signal: "held", ideas: R.ideasOf(["P3"]) }).trades;
     assert(JSON.stringify(heldOnly) === JSON.stringify(R.paperTrades({ bars: retake, levelsAt: () => lv, now: Infinity, seconds: 300, dayCandles: false, signal: "held" }).trades), "P3 touches no held signal");
     console.log("P3 unit checks passed");
+  }
+  // P4 (7 October, the owner's rule): a closed candle that goes back across the call's level by a quarter of the gap ends the call at its
+  // close. The verdict's day above: the CE call from the candle closing at 170 ends at 158 (back 26%) under P4, at the day end at 147 without
+  {
+    const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+    const lv = R.levelsOf(R.moveOfDay(prev));
+    const day = [bar(0, 160, 161, 158, 160), bar(1, 166, 171, 161, 170), bar(2, 170.5, 172, 163, 165), bar(3, 165, 166, 157, 158), bar(4, 158, 159, 146, 147)];
+    const under = (ideas, now = Infinity) => R.paperTrades({ bars: day, levelsAt: () => lv, now, seconds: 300, dayCandles: false, signal: "crossed", ideas }).trades;
+    const plain = under(), p4 = under(R.ideasOf(["P4"]));
+    assert(plain[0].side === "CE" && plain[0].how === "day end" && plain[0].exit === 147 && plain[0].points === -23.5, "without P4 the call runs to the day end: " + JSON.stringify(plain[0]));
+    assert(p4[0].how === "candle" && p4[0].exit === 158 && p4[0].exitTime === day[3].time && p4[0].points === -12.5, "P4: the call ends at the close of the candle back a quarter: " + JSON.stringify(p4[0]));
+    assert(p4.length === plain.length && p4[1].how === plain[1].how && p4[1].points === plain[1].points, "P4 touches no other call: " + JSON.stringify([p4, plain]));
+    const verdict = R.readOf({ trade: plain[0], bars: day, seconds: 300, now: Infinity });
+    assert(verdict.exitAt === p4[0].exitTime && verdict.exitPrice === p4[0].exit, "the verdict on the index page and P4 name the same candle");
+    const forming = under(R.ideasOf(["P4"]), day[3].time + 200);  // the 158 candle is still forming: no exit yet
+    assert(forming[0].how === "open" && forming[0].exit == null, "P4 waits for the candle to close: " + JSON.stringify(forming[0]));
+    console.log("P4 unit checks passed");
   }
   console.log("ideas unit checks passed");
 }

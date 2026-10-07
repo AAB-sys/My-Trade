@@ -124,10 +124,11 @@
   #paper td.st.sold { color: var(--down); }
   #paper td.st.done { color: var(--muted); font-weight: 500; }
   #paper td.st.done.up { color: var(--up); }
-  #paper td.st small.read { display: block; font-weight: 400; color: var(--muted); }  /* the candle read, under the owner's word */
-  #paper td.st small.read.carry { color: var(--up); }
-  #paper td.st small.read.watch { color: #b7791f; }
-  #paper td.st small.read.weak { color: var(--down); }
+  /* "Candles say": carry or exit, from the closed candles around the call's level, with the reason under it */
+  #paper td.cand { text-align: left; font-weight: 600; }
+  #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
+  #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
+  #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
   #paper td.call { text-align: left; }
   #paper tr.ended td { color: var(--ink-2); }
   #paper tr.ended td.up { color: var(--up); } #paper tr.ended td.down { color: var(--down); }
@@ -286,7 +287,7 @@
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>What now</th><th>Call</th><th>Signal</th><th>Index: entry → target</th><th>Now / exit</th><th>Points</th><th class="opt">Premium: paid → now</th></tr></thead>
+        <thead><tr><th>Time</th><th>What now</th><th>Candles say</th><th>Call</th><th>Signal</th><th>Index: entry → target</th><th>Now / exit</th><th>Points</th><th class="opt">Premium: paid → now</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -515,7 +516,7 @@
   //   every signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const HOW = { target: "Target", "day end": "Day end", candle: "Candle", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
@@ -586,41 +587,43 @@
     } catch (err) { lastShape = ""; }  // the next draw tries again
   }
 
-  // One row reads left to right: when, what to do now, the call, the level that gave it, the index at entry and
-  // the target, where the index is now (or ended), the points, and the option's premium paid and now.
+  // One row reads left to right: when, what to do now, what the candles say (carry or exit), the call, the level that
+  // gave it, the index at entry and the target, where the index is now (or ended), the points, and the option's premium
+  // paid and now.
   function rowCells(t, r) {
     const cls = t.points > 0 ? "up" : t.points < 0 ? "down" : "";
     const entry = t.entry != null ? fmt.format(t.entry) : "next open";
     const now = t.exit != null ? fmt.format(t.exit) : t.last != null ? fmt.format(t.last) : "—";
-    return `<td>${istTime(t.signalTime, withDate())}</td>` + statusCell(t, r)
+    return `<td>${istTime(t.signalTime, withDate())}</td>` + statusCell(t, r) + candleCell(t)
       + `<td class="call">Buy ${t.side}${r ? ` · ${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}` : ""}</td>`
       + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td><td>${entry} → ${fmt.format(t.target)}${t.aimed ? " <small>one level on</small>" : ""}</td><td>${now}</td>`
       + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td>` + premiumCell(t, r);
   }
 
-  // "What now", in the owner's words: enter, hold, sell now, sold, target hit, closed at the day's end
+  // "What now", in the owner's words: enter, hold, sell now, sold, target hit, closed at the day's end (or on the candles,
+  // should idea P4 ever reach this page)
   function statusCell(t, r) {
     const soldNote = r && r.sold ? ` <small>sold earlier at ${fmt.format(r.sold.premium)}</small>` : "";
-    const read = readNote(t);
-    if (t.how === "pending") return `<td class="st wait">Enter at the next open${read}</td>`;
-    if (t.how === "target") return `<td class="st done up">Target hit${soldNote}${read}</td>`;
-    if (t.how === "day end") return `<td class="st done">Closed at day end${soldNote}${read}</td>`;
-    if (r && r.sold) return `<td class="st sold">SOLD at ${fmt.format(r.sold.premium)} <small>premium fell ${Math.round((1 - r.sell_below / r.premium_paid) * 100)}%</small>${read}</td>`;
-    if (r && r.premium_now <= r.sell_below) return `<td class="st sell">SELL NOW · premium ${fmt.format(r.premium_now)}${read}</td>`;
-    return `<td class="st hold">HOLD${r ? ` <small>sell if below ${fmt.format(r.sell_below)}</small>` : ""}${read}</td>`;
+    if (t.how === "pending") return `<td class="st wait">Enter at the next open</td>`;
+    if (t.how === "target") return `<td class="st done up">Target hit${soldNote}</td>`;
+    if (t.how === "day end") return `<td class="st done">Closed at day end${soldNote}</td>`;
+    if (t.how === "candle") return `<td class="st done">Closed on the candles${soldNote}</td>`;
+    if (r && r.sold) return `<td class="st sold">SOLD at ${fmt.format(r.sold.premium)} <small>premium fell ${Math.round((1 - r.sell_below / r.premium_paid) * 100)}%</small></td>`;
+    if (r && r.premium_now <= r.sell_below) return `<td class="st sell">SELL NOW · premium ${fmt.format(r.premium_now)}</td>`;
+    return `<td class="st hold">HOLD${r ? ` <small>sell if below ${fmt.format(r.sell_below)}</small>` : ""}</td>`;
   }
 
-  // The candle read under the owner's word (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): how strong the signal
-  // candle was, and how far a later candle has gone back across the level. Information for the owner's eyes: it changes
-  // nothing about the call
-  function readNote(t) {
+  // "Candles say" (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): one word for every open call, CARRY or EXIT,
+  // from the closed candles around the level that gave the call, whichever level that is, with the reason in words under
+  // it; on a finished call, what the word was and when, so the owner can judge it against the points. Information for the
+  // owner's eyes: it changes nothing about the call (the Study page's P4 is the same exit, acted on)
+  function candleCell(t) {
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
-    if (!rd) return "";
-    const pct = x => Math.round(x * 100) + "%";
-    const signal = `${rd.strength} signal, closed ${pct(rd.depth)} of the way` + (rd.body >= 1 ? ", body a whole gap" : "");
-    if (t.exit != null) return `<small class="read">${signal}</small>`;
-    const since = rd.back >= 1 ? "back a whole gap across the level" : rd.back >= 0.25 ? `back ${pct(rd.back)} across the level` : rd.retest ? "retest held" : "";
-    return `<small class="read ${rd.word}">Candles: ${rd.word} · ${signal}${since ? ", " + since : ""}</small>`;
+    if (!rd) return `<td class="cand">—</td>`;
+    if (t.exit == null) return `<td class="cand ${rd.word}">${rd.word === "exit" ? "EXIT" : "CARRY"}<small>${rd.why}</small></td>`;
+    if (rd.exitAt == null) return `<td class="cand carry">Carry all the way<small>${rd.why}</small></td>`;
+    const then = Math.round((t.side === "CE" ? rd.exitPrice - t.entry : t.entry - rd.exitPrice) * 100) / 100;  // the call's points at that candle's close
+    return `<td class="cand exit">Exit said at ${istTime(rd.exitAt, withDate())}<small>${rd.why} · ${signed.format(then)} then, ${signed.format(t.points)} at the end</small></td>`;
   }
 
   // paid → now while the call is open; paid → at exit once it has ended. A finished call with no record was never seen
