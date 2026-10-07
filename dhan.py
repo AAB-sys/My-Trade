@@ -828,6 +828,23 @@ def end_call(key: str, how: str) -> dict | None:
         return dict(rec) if rec else None
 
 
+def end_day(day: str) -> int:
+    """Nothing carries overnight (LOGIC.md): once the day's final copy is saved, every record of that day still open is
+    marked ended at the day end. The page and the watcher mark the calls they see; a record neither matches any more
+    (on 7 October: those made under the call keys of earlier versions, and the page's held-mode calls after the page
+    had moved on) would otherwise stay open for ever. Returns how many were marked."""
+    marked = 0
+    with _records_lock:
+        for rec in _records.values():
+            if not rec["ended"] and rec["paid_at"][:10] == day:
+                rec["ended"] = {"how": "day end", "at": datetime.now(IST).isoformat(timespec="seconds")}
+                marked += 1
+        if marked:
+            _save_records()
+            _changed()
+    return marked
+
+
 def deep_checks() -> list:
     """After status() passes: the candles, the daily bars and the option chain, each as one plain sentence."""
     steps = []

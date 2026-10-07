@@ -96,7 +96,8 @@ their own logic. Read this before touching the code.
   one in the money, nearest expiry, premium paid, premium now, the Sell mark) in
   `paper_calls.json` (and on the data branch as `records/<date>.json`, pushed by
   `study.py` when `records_version()` moves and pulled at start, so a restart
-  keeps the premium paid), with the contract's security id from Dhan's instrument list
+  keeps the premium paid; `end_day()` at the day's final save marks every record
+  of the day still open as ended, nothing carries overnight), with the contract's security id from Dhan's instrument list
   (`option_ids()`, a CSV at `DHAN_SCRIP_MASTER_URL`) so the feed and the poll in
   `main.py` carry its premium tick by tick (`note_premium`, `open_options`); `status()`/`deep_checks()` in plain words for
   `check_dhan.py`/`check_dhan.bat`. `main.py` serves NIFTY 50/NIFTY BANK details
