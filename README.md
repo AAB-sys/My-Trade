@@ -76,6 +76,9 @@ it is on.
 Real-time candles, quotes and option premiums for NIFTY 50 and NIFTY BANK come
 from the owner's Dhan account through DhanHQ's API, under its Data API
 subscription; every other index, and every Dhan failure, falls back to Yahoo.
+On the dashboard, the NIFTY 50 and NIFTY BANK tiles follow Dhan's live price in
+market hours (marked "Dhan · live"); the other tiles are Yahoo's, about 15
+minutes delayed, and the footer says which is which.
 The index page says which feed it is on; while it is open during market hours
 the price and the candle forming now move tick by tick: the server holds one
 connection to Dhan's market feed (`wss://api-feed.dhan.co`, ticker packets for
