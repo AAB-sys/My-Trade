@@ -78,9 +78,10 @@ Real-time candles and quotes for NIFTY 50, NIFTY BANK and SENSEX, and option
 premiums for NIFTY 50 and NIFTY BANK, come from the owner's Dhan account through
 DhanHQ's API, under its Data API subscription; every other index, and every Dhan
 failure, falls back to Yahoo. On the dashboard, the top row is NIFTY 50, NIFTY
-BANK and SENSEX, and those tiles follow Dhan at all hours, measuring the day's
-change against Dhan's previous close exactly as their pages do (in market hours
-marked "Dhan · live" and moving every second, after the close "Dhan · closed");
+BANK and SENSEX, and those tiles show exactly what their pages' headers show,
+at all hours, from the same computation (in market hours marked "Dhan · live"
+and moving every second, after the close "Dhan · closed"; `/health`'s
+`feed.tiles_problem` says if an index's figures could not be read);
 the other tiles are Yahoo's, about 15 minutes delayed,
 and the footer says which is which. `/health`'s `feed.ids` is null, or what
 Dhan's instrument list says differs from the index ids the code uses.

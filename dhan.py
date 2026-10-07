@@ -374,17 +374,6 @@ def previous_day(name: str, all_candles: list) -> dict | None:
     return before[-1] if before else None
 
 
-def previous_close(name: str) -> float | None:
-    """The last session's close before today, as the index page measures the day's change (previous_day: Dhan's daily
-    bar, or the session built from the candles when the list lags). The dashboard's tiles measure against it too, so
-    a tile and its page always agree: Yahoo's previous close, used for the tiles until 7 October, was another day's
-    and gave the change the wrong sign. Refreshed at most every minute."""
-    def make():
-        previous = previous_day(name, intraday(name, 5))
-        return previous["close"] if previous else None
-    return cached(("previous_close", name), 60, make)
-
-
 def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, ranges: dict, last_price: float | None = None) -> dict:
     """The index page's detail, in the same shape as the Yahoo one, from Dhan in real time. With last_price given
     (the live price the server already holds from the stream or the poll) no quote request is made: that request
