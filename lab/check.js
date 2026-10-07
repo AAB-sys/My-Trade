@@ -16,6 +16,20 @@ const IST = 19800, t0 = Math.floor((Date.now() / 1000 + IST) / 86400) * 86400 - 
   const got = (signal) => R.replayDay({ bars, move: "prev", previous: prevDay, seconds: 300, signal }).trades.map(x => [x.side, x.level, x.entry, x.target, x.exit, x.points, x.how].join("|"));
   assert(got("held").join(" / ") === "CE|161.8|166|176.4|176.4|10.4|target / PE|176.4|174|161.8|161.8|12.2|target", "held: " + got("held").join(" / "));
   assert(got("crossed").join(" / ") === "PE|161.8|160|150|164|-4|day end / CE|161.8|162|176.4|164|2|day end", "crossed: " + got("crossed").join(" / "));
+  // the entry already past the target (owner's decision, 7 October): a candle holds 161.8 and closes above 176.4, the next
+  // opens at 180: the call aims at 200, the level beyond the entry; opening beyond the last level (200) there is no call at all
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const levels = R.levelsOf({ low: 100, high: 200, up: true });
+  const beyondDay = (openNext) => R.paperTrades({ bars: [bar(0, 170, 171, 169, 170), bar(1, 170, 178, 161.8, 177.5), bar(2, openNext, openNext + 1, openNext - 1, openNext),
+    bar(3, openNext, openNext + 1, openNext - 1, openNext)], levelsAt: () => levels, now: Number.POSITIVE_INFINITY, seconds: 300, dayCandles: false, signal: "held" }).trades;
+  const b1 = beyondDay(180);
+  assert(b1.length === 1 && b1[0].side === "CE" && b1[0].level === 161.8 && b1[0].entry === 180 && b1[0].target === 200 && b1[0].aimed === "beyond", "aim one level on: " + JSON.stringify(b1));
+  const b2 = beyondDay(201);
+  assert(b2.length === 0, "no level left beyond the entry: no call: " + JSON.stringify(b2));
+  const b3 = R.paperTrades({ bars: [bar(0, 170, 171, 169, 170), bar(1, 170, 172, 161.8, 170), bar(2, 171, 172, 170, 171), bar(3, 171, 172, 170, 171)],
+    levelsAt: () => levels, now: Number.POSITIVE_INFINITY, seconds: 300, dayCandles: false, signal: "held" }).trades;
+  assert(b3.length === 1 && b3[0].target === 176.4 && !b3[0].aimed, "an entry short of the target keeps it: " + JSON.stringify(b3));
+  console.log("entry past the target: aims one level on, or no call");
   assert(got("both").length === 4 && R.round2(R.replayDay({ bars, move: "prev", previous: prevDay, seconds: 300, signal: "both" }).trades.reduce((s, x) => s + x.points, 0)) === 20.6, "both: four calls, net +20.60");
   console.log("hand-made day checks passed");
 }

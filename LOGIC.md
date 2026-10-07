@@ -97,9 +97,10 @@ left to right: the time, **what to do now** in plain words (*Enter at the next
 open*, *HOLD* with the sell line, *SELL NOW*, *SOLD at* a premium, *Target hit*,
 *Closed at day end*), the call with its contract, the level that gave it, the
 index at entry and the target, the index now (or at the exit), the points, and
-the premium paid and now. Open calls sit at the top, finished ones below, each
-newest first; one line keeps the score (owner's ask, 7 October: the list must say
-what is happening and what action is needed). Paper only: nothing is sent anywhere, and
+the premium paid and now. The list is in time order, the newest call at the
+top, open or finished alike (owner's ask, 7 October: an open call listed above a
+later one read as if it had been given later); one line keeps the score (owner's
+ask, 7 October: the list must say what is happening and what action is needed). Paper only: nothing is sent anywhere, and
 the list is worked out afresh from the candles every minute. **Download CSV**
 saves it as a file for the owner's own record, one session at a time.
 
@@ -132,6 +133,14 @@ The rule, in the order it is applied:
    day's last candle, and its loss is whatever the day does. A signal pointing
    outward from the 0% or 100% level has no next level, so it gives no call
    **(owner to decide)**.
+   **Entry already past the target** (owner's decision, 7 October): when the
+   next candle opens at or past the target, because the signal candle itself ran
+   through the next level, the call aims one level further, at the first level
+   beyond the entry price, and the list marks it "one level on". With no level
+   left beyond the entry there is no call. Until 7 October such a call "hit" a
+   target below its entry the moment it entered and lost at once (the 10:00
+   call of 7 October: held 0.0% at 22,578, entered at 22,610.60, target 23.6% at
+   22,605.32, −5.28). The research engine replays every saved day the same way.
 6. **Day end** - a call still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal on the day's last candle has no
    candle left to enter on, so it gives nothing. While today is still running the

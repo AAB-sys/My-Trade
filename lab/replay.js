@@ -40,7 +40,15 @@ function run(bars, previous, o, higher) {
   for (let i = 1; i < bars.length; i++) {
     const bar = bars[i], prev = bars[i - 1].close, levels = levelsAt(i), clockEnd = tod(bar.time) + sec;
     if (!levels || (o.levels === "open30" && tod(bar.time) < hm(9, 45)) || (o.levels === "open15" && tod(bar.time) < hm(9, 30))) continue;
-    if (ready) { const x = { ...ready, entry: bar.open, entryTime: bar.time, how: "open", adv: 0, fav: 0 }; trades.push(x); open.push(x); ready = null; }
+    if (ready) {  // the entry: already at or past the target, the call aims at the first level beyond the entry, or does not enter (owner, 7 October)
+      let target = ready.target, aimed = null;
+      if (ready.side === "CE" ? bar.open >= target : bar.open <= target) {
+        const beyond = ready.side === "CE" ? ready.prices.find(p => p > bar.open) : ready.prices.slice().reverse().find(p => p < bar.open);
+        target = beyond == null ? null : beyond; aimed = "beyond";
+      }
+      if (target != null) { const x = { ...ready, target, aimed, entry: bar.open, entryTime: bar.time, how: "open", adv: 0, fav: 0 }; trades.push(x); open.push(x); }
+      ready = null;
+    }
     open = open.filter(x => {
       x.fav = Math.max(x.fav, x.side === "CE" ? bar.high - x.entry : x.entry - bar.low); x.adv = Math.max(x.adv, x.side === "CE" ? x.entry - bar.low : bar.high - x.entry);
       if (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target) { end(x, x.target, bar, "target"); return false; }
@@ -73,7 +81,7 @@ function run(bars, previous, o, higher) {
       if (ok && o.sideOnDay === "with") ok = (side === "CE") === (bar.close >= bars[0].open);
       if (ok && o.agree && higher) { const done = higher.filter(b => b.time + o.higherSec <= bar.time + sec); const c = done[done.length - 1]; ok = !!c && (side === "CE" ? c.close > at.price : c.close < at.price); }
       if (ok && o.minNeed) ok = Math.abs(next.price - bar.close) >= o.minNeed;
-      if (ok) sig = { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close };
+      if (ok) sig = { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close, prices: levels.map(l => l.price) };
     }
     if (sig) { ready = sig; used[sig.ratio + sig.side] = true; }
   }
