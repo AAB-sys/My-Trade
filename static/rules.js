@@ -77,15 +77,18 @@
   //              are untouched: closeAt (seconds since midnight IST: every open call ends at the close of the first candle
   //              closing at or after it, and no call opens after it), noNewAfter (a signal candle closing after it gives no call),
   //              minDepth (idea P3, 7 October: a crossed signal counts only when its candle closed at least this share of the
-  //              way from the level to the next one; a shallower cross gives no call and leaves the level free to call later)
+  //              way from the level to the next one; a shallower cross gives no call and leaves the level free to call later),
+  //              exitBack (idea P4, 7 October, the owner's rule: a closed candle that goes back across the call's level by this
+  //              share of the gap to the target ends the call at its close, "candle"; the same measure as readOf's verdict below)
   function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal, ideas }) {
-    const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth;
+    const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const clockEnd = (b) => (b.time + IST_OFFSET) % 86400 + seconds;  // when the candle closes, in seconds since midnight IST
     const closed = bars.filter(b => endOf(b, seconds) <= now);
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
     const gain = (t, price) => round2(t.side === "CE" ? price - t.entry : t.entry - price);  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
     const reaches = (t, bar) => t.side === "CE" ? bar.high >= t.target : bar.low <= t.target;
+    const backAcross = (t, close) => t.side === "CE" ? t.level - close : close - t.level;  // how far a close went back across the call's level, in points
     const newDay = (a, b) => !dayCandles && dayOf(a.time) !== dayOf(b.time);
     const trades = [];
     const used = {};  // level ratio + side -> true while that level has given a call that way
@@ -98,6 +101,7 @@
       }
       if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
       open = open.filter(t => { if (reaches(t, bar)) { end(t, t.target, bar, "target"); return false; } return true; });
+      if (exitBack) open = open.filter(t => { if (backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       const levels = levelsAt(i);
       levels.forEach(l => { if (bar.close < l.price) used[l.ratio + "CE"] = false; if (bar.close > l.price) used[l.ratio + "PE"] = false; });  // closed back across: the level may call again
@@ -134,6 +138,7 @@
     P1: { key: "P1", name: "Close open calls at 15:00", ideas: { closeAt: 15 * 3600 } },
     P2: { key: "P2", name: "No new calls after 14:00", ideas: { noNewAfter: 14 * 3600 } },
     P3: { key: "P3", name: "Crossed signals only a quarter of the way to the next level", ideas: { minDepth: 0.25 } },
+    P4: { key: "P4", name: "Exit when a candle closes back a quarter of the gap across the level", ideas: { exitBack: 0.25 } },  // the owner's rule of 7 October, acted on
   };
   const ideasOf = (keys) => Object.assign({}, ...keys.map(k => IDEAS[k].ideas));
 
@@ -197,19 +202,25 @@
     return out;
   }
 
-  // ---- The candle read (owner's ask, 7 October; LOGIC.md, layer 3): what the closed candles say about a call, for the
-  // owner's eyes. Nothing here changes a call, its target, its end or its points. Everything is measured against the gap
+  // ---- The candle verdict (owner's ask, 7 October, from two screenshots of a fall through the levels and a retest;
+  // LOGIC.md, layer 3): what the closed candles say about a call, in one word, carry or exit, for whichever level gave the
+  // call (0% to 100% alike). Information for the owner's eyes on the index page: nothing here changes a call, its target,
+  // its end or its points; idea P4 on the Study page is the same exit, acted on. Everything is measured against the gap
   // from the call's level to its target:
-  //   depth    how far the signal candle closed past the level toward the target (0.55 = 55% of the way)
-  //   body     the signal candle's body against that gap
-  //   back     how far a later closed candle has gone back across the level, at most (1 = a whole gap)
-  //   retest   a later candle came back to within a fifth of the gap of the level and closed on the call's side
-  //   strength strong: depth past halfway or a body of a whole gap; fair: a quarter of the way or a body of half the gap; weak: less
-  //   word     weak: back a whole gap or more; watch: back a quarter or more, or a weak signal; carry: the rest
-  // On the six saved days of 29 Sep to 7 Oct (your rule, both indices, 5 and 15 minutes): signals closed past halfway won
-  // 93%, under a quarter 67%; calls never closed back a quarter won 89%, back a quarter to a whole gap 73-80%, back a
-  // whole gap or more 35%. Exiting at any of those reclaims still cost points against holding, so the read advises, it
-  // does not end a call.
+  //   depth     how far the signal candle closed past the level toward the target (0.55 = 55% of the way)
+  //   body      the signal candle's body against that gap
+  //   back      how far a later closed candle has gone back across the level, at most (1 = a whole gap)
+  //   retest    a later candle came back to within a fifth of the gap of the level and closed on the call's side
+  //   strength  strong: depth past halfway or a body of a whole gap; fair: a quarter of the way or a body of half the gap; weak: less
+  //   word      exit: a later candle closed back across the level by a quarter of the gap or more (EXIT_BACK). The owner's
+  //             rule: a retest that holds means carry on, a candle closing back across the level means get out. The quarter
+  //             tells the two apart: on the six saved days a close back of less than a quarter reverted two times in three
+  //             (noise, the retest of the owner's first screenshot), one past a quarter did not. carry: the rest
+  //   exitAt, exitPrice   the first such candle, its time and its close; on a finished call too, so the row can say what the
+  //             verdict said and when
+  //   why       the reason, in words, with the level's name
+  // Only closed candles count, as everywhere in this layer, up to the call's end.
+  const EXIT_BACK = IDEAS.P4.ideas.exitBack;
   function readOf({ trade: t, bars, seconds, now }) {
     if (t.entry == null && t.how !== "pending") return null;
     const gap = Math.abs(t.target - t.level);
@@ -217,17 +228,23 @@
     if (!gap || !sig) return null;
     const toward = p => (t.side === "CE" ? p - t.level : t.level - p) / gap;
     const depth = round2(toward(sig.close)), body = round2(Math.abs(sig.close - sig.open) / gap);
-    let back = 0, retest = false;
+    let back = 0, retest = false, exitAt = null, exitPrice = null;
     for (const b of bars) {
       if (b.time <= t.signalTime || endOf(b, seconds) > now) continue;
       if (t.exitTime != null && b.time > t.exitTime) break;
-      back = Math.max(back, -toward(b.close));
+      const went = t.side === "CE" ? t.level - b.close : b.close - t.level;  // back across the level, in points, as paperTrades measures idea P4
+      back = Math.max(back, went / gap);
+      if (exitAt == null && went >= EXIT_BACK * gap) { exitAt = b.time; exitPrice = b.close; }
       if (t.side === "CE" ? b.low <= t.level + 0.2 * gap && b.close > t.level : b.high >= t.level - 0.2 * gap && b.close < t.level) retest = true;
     }
     back = round2(back);
     const strength = depth >= 0.5 || body >= 1 ? "strong" : depth >= 0.25 || body >= 0.5 ? "fair" : "weak";
-    const word = back >= 1 ? "weak" : back >= 0.25 || strength === "weak" ? "watch" : "carry";
-    return { depth, body, back, retest, strength, word };
+    const word = exitAt != null ? "exit" : "carry";
+    const level = t.ratio == null ? "the level" : (t.ratio * 100).toFixed(1) + "%";
+    const why = word === "exit" ? `a candle closed back ${t.side === "CE" ? "below" : "above"} ${level}`
+      : retest ? `retest held at ${level}`
+      : `${strength === "weak" ? "shallow" : strength} ${t.kind === "held" ? "hold at" : "cross of"} ${level}, nothing closed back${strength === "weak" ? " yet" : ""}`;
+    return { depth, body, back, retest, strength, word, why, exitAt, exitPrice };
   }
 
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf,

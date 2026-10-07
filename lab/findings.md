@@ -118,3 +118,12 @@ What the days said:
 Decided by the owner (7 October): P3, a crossed signal only a quarter of the way to the next level, goes on
 the Study page as a switch beside P1 and P2, scored against the rule on every saved day. The live index page
 is unchanged; P3 moves there only after about 20 saved days still show it ahead, and only when the owner says so.
+
+Decided by the owner (7 October, evening): the candle read gives way to a verdict in its own cell on the index page,
+"Candles say": CARRY or EXIT, for whichever level gave the call, with the reason in words (a retest that holds means
+carry on; a candle closing back across the level by a quarter of the gap means get out; a strong cross carries); a
+finished call says what the verdict said and when, with the points then and at the end. The same exit, acted on, is
+P4 on the Study page beside P1 to P3. On the six days it is ahead of the rule on NIFTY 50 15-minute only (+165
+against +148) and behind on the other three boards (+92 against +316, +559 against +2,164, −1,316 against +153),
+while its worst call is far smaller (−58 against −178, −184 against −523, −338 against −569): it cuts the big losers
+and the winners that came back alike. It stays a switch until the days say otherwise.

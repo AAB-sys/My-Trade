@@ -299,8 +299,10 @@ The app is ready to run on a platform that deploys from GitHub:
   moment the signal candle closes, buy a CE or a PE, entry at the next price, the next level as
   target and no stop, one call per level and direction until the index closes
   back across it, closed at the day's end), listed one row each with "what now"
-  first (enter, hold, sell now, sold, target hit, closed at day end), scored,
-  and downloadable as a CSV file.
+  first (enter, hold, sell now, sold, target hit, closed at day end), then what
+  the candles say (CARRY or EXIT, from the closed candles around the call's
+  level, with the reason; on a finished call, what the verdict said and when),
+  scored, and downloadable as a CSV file.
   Nothing else is drawn on the chart, and nothing is sent anywhere.
 - `static/detail.html` is the detail page: the previous session's and today's figures,
   the 52-week range, and a chart with a Line/Candles switch and three drop-downs:
