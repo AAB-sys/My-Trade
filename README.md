@@ -120,7 +120,8 @@ Only data is read; nothing here can place an order. `DHAN_POLL_SECONDS` (default
 are the setting the server watches the calls in by itself, every `WATCH_SECONDS`
 (5) in market hours, so a call entering with no page open is still recorded
 (`rule.py` is the page's rule in Python; `python3 check_rule.py` proves the two
-give the same calls);
+give the same calls); with the watcher on, the live feed runs all session whether
+or not a page is open;
 `DHAN_TICK_SECONDS` (default 1) how often the live price is read while an index
 page is open in market hours and the stream is quiet; `SELL_SHARE` (default 0.65) is the sell point as a
 share of the premium paid.
