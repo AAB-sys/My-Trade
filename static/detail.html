@@ -547,8 +547,9 @@
     table.hidden = !trades.length;
     table.classList.toggle("no-options", !(state.dhan && state.dhan.configured));
     drawFeedNote();
-    // the open calls first (the ones that need an eye), then the finished ones, each newest first
-    const rows = [...trades.filter(t => t.exit == null).reverse(), ...trades.filter(t => t.exit != null).reverse()];
+    // in time order, the newest call at the top, open or finished alike (the owner's ask, 7 October: an open call
+    // listed above a later one read as if it had been given later); an open call shows by its HOLD or SELL cell
+    const rows = trades.slice().sort((a, b) => b.signalTime - a.signalTime);
     table.querySelector("tbody").replaceChildren(...rows.map(t => {
       const tr = document.createElement("tr");
       tr.dataset.key = callKey(t);  // so a live premium finds its row
