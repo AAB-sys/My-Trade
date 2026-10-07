@@ -109,7 +109,7 @@
 
     <h2>Your rule against the ideas under test</h2>
     <div class="note">The setting picked above, scored on the same days under your rule as it is and under each idea. These ideas live on this page only; the index page does not use them.</div>
-    <div class="scroll"><table id="ideas"><thead><tr><th>Rule</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th><th>Per call</th><th>Ended by the clock</th><th>Ended by EXIT</th><th>Day-end calls</th><th>Worst call</th><th>Days ahead</th></tr></thead><tbody></tbody></table></div>
+    <div class="scroll"><table id="ideas"><thead><tr><th>Rule</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th><th>Per call</th><th>Ended by the clock</th><th>Ended by EXIT</th><th>Carried on</th><th>Day-end calls</th><th>Worst call</th><th>Days ahead</th></tr></thead><tbody></tbody></table></div>
 
     <h2>Every setting, side by side</h2>
     <div class="note">The same days under every time frame, levels and signal. The best net is marked; the setting picked above is in bold.</div>
@@ -222,11 +222,9 @@
   // ---- your rule against the ideas under test, on the picked setting: always from the rule as it is, whatever the boxes say
   function drawIdeas(dayCount) {
     const { index, interval, move, signal } = state;
-    const keysAll = Object.keys(Rules.IDEAS), sets = [[]];  // the rule, then every mix of the ideas: each alone, each pair, each three, all together
-    for (let size = 1; size <= keysAll.length; size++) {
-      const grow = (from, picked) => { if (picked.length === size) { sets.push(picked); return; } for (let i = from; i < keysAll.length; i++) grow(i + 1, [...picked, keysAll[i]]); };
-      grow(0, []);
-    }
+    const keysAll = Object.keys(Rules.IDEAS), sets = [[], ...keysAll.map(k => [k])];  // the rule, each idea alone, each pair, all together
+    keysAll.forEach((a, i) => keysAll.slice(i + 1).forEach(b => sets.push([a, b])));
+    if (keysAll.length > 2) sets.push(keysAll);
     const base = allTrades(index, interval, move, signal, []);
     const byDay = (L) => { const m = {}; L.forEach(t => m[t.date] = Rules.round2((m[t.date] || 0) + t.points)); return m; };
     const baseDays = byDay(base);
@@ -238,7 +236,7 @@
       tr.className = keys.join("+") === state.ideas.join("+") ? "picked" : "";
       tr.innerHTML = cell(!keys.length ? "Your rule as it is" : keys.length === 1 ? `${keys[0]}: ${Rules.IDEAS[keys[0]].name.toLowerCase()}` : keys.join(" + "))  // a mix by its keys: the boxes above spell them out
         + cell(s.calls) + cell(s.won) + cell(s.lost) + cell(pct(s.won, s.calls)) + num(s.net) + num(s.avg)
-        + cell(L.filter(t => t.how === "time").length) + cell(L.filter(t => t.how === "candle").length) + cell(L.filter(t => t.how === "day end").length) + num(worst)
+        + cell(L.filter(t => t.how === "time").length) + cell(L.filter(t => t.how === "candle").length) + cell(L.filter(t => t.carried).length) + cell(L.filter(t => t.how === "day end").length) + num(worst)
         + cell(ahead == null ? "—" : `${ahead} of ${dayCount}`);
       return tr;
     }));

@@ -62,7 +62,8 @@ _lock = threading.Lock()
 CALL_FIELDS = ("date", "index", "time_frame", "levels", "signal_mode", "first_seen_ist", "signal_time_ist", "level_pct", "level_price", "kind",
                "option_side", "entry_time_ist", "index_at_entry", "target", "exit_time_ist", "index_at_exit", "points", "ended_by",
                "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium",
-               "candles_say", "exit_said_at_ist", "candles_why")  # the candle verdict (rules.js readOf / rule.read_of), 7 October: off the table, in the CSV
+               "candles_say", "exit_said_at_ist", "candles_why",  # the candle verdict (rules.js readOf / rule.read_of), 7 October: off the table, in the CSV
+               "carry_deep", "beyond_level", "beyond_reached")  # the carry read (idea P5's question, rules.js carryOf / rule.carry_of), 7 October evening
 live_calls: dict = {}  # date -> {key: row}
 _calls_lock = threading.Lock()
 _calls_version = 0
@@ -115,7 +116,8 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                         "contract": str(c.get("contract") or "")[:40], "premium_paid": _num(c.get("premium_paid")), "premium_now": _num(c.get("premium_now")),
                         "sell_below": _num(c.get("sell_below")), "sold_at_premium": _num(c.get("sold_at")),
                         "candles_say": str(c.get("candles_say") or "")[:5], "exit_said_at_ist": _stamp(c.get("exit_said_at")) if c.get("exit_said_at") else "",
-                        "candles_why": str(c.get("candles_why") or "")[:60]})
+                        "candles_why": str(c.get("candles_why") or "")[:60],
+                        "carry_deep": str(c.get("carry_deep") or "")[:3], "beyond_level": _num(c.get("beyond_level")), "beyond_reached": str(c.get("beyond_reached") or "")[:3]})
             day[key] = row
             if before is None or tuple(row.get(k) for k in HURRY) != before:
                 changed = True

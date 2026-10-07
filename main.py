@@ -654,6 +654,7 @@ def watch_index(name: str) -> dict:
     for t in trades:
         call_key = rule.call_key(name, key, t, WATCH_LEVELS)
         read = rule.read_of(t, bars, seconds, now)  # the candle verdict, for the day's calls CSV (the research engine's), as the page gives it
+        carry = rule.carry_of(t, bars, seconds, now)  # and the carry read (idea P5's question), the same way
         rec = dhan.record_of(call_key)
         if t["how"] == "open" and rec is None and time.monotonic() >= watch_retry.get(call_key, 0):  # entered, and no record yet: the option and its premium, now
             try:
@@ -668,6 +669,8 @@ def watch_index(name: str) -> dict:
                      "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
                      "points": t.get("points"), "how": t["how"],
                      "candles_say": read["word"] if read else "", "exit_said_at": read["exitAt"] if read else None, "candles_why": read["why"] if read else "",
+                     "carry_deep": ("yes" if carry["deep"] else "no") if carry else "", "beyond_level": carry["beyond"] if carry else None,
+                     "beyond_reached": ("yes" if carry["reached"] else "no") if carry else "",
                      "contract": f"{round(rec['strike'])} {rec['side']} {rec['expiry']}" if rec else "", "premium_paid": rec["premium_paid"] if rec else None,
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None})

@@ -303,7 +303,9 @@ The app is ready to run on a platform that deploys from GitHub:
   target (with "hit" or "not reached" once ended) and premium paid -> now, under
   a header row that stays in view; scored, and downloadable as a CSV file. The
   candle verdict (CARRY or EXIT with its reason) is not on the table: it goes
-  with every call into the day's calls CSV for the research engine.
+  with every call into the day's calls CSV for the research engine, and so
+  does the carry read (did the candle that reached the target close a quarter
+  into the next gap, and was the level beyond reached).
   Nothing else is drawn on the chart, and nothing is sent anywhere.
 - `static/detail.html` is the detail page: the previous session's and today's figures,
   the 52-week range, and a chart with a Line/Candles switch and three drop-downs:
