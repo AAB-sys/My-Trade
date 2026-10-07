@@ -22,8 +22,8 @@ behind the calls) are never read by the research at all. They are information fo
 `findings.md` is the log of the rounds done by hand. The owner's instruction of 6 October: the
 research also runs on its own, without waiting for a signal. A scheduled routine (a Claude session
 started after each trading day's close) pulls the saved days from the `data` branch, runs the lab,
-and posts the round as a comment on the repository's **Research log** issue: the scoreboard of P1
-and P2 against the owner's rule, anything new tested with its numbers, and a proposal only when an
+and posts the round as a comment on the repository's **Research log** issue: the scoreboard of P1,
+P2 and P3 against the owner's rule, anything new tested with its numbers, and a proposal only when an
 idea has earned one. A proposal becomes a pull request the owner merges or not; that merge is the
 confirmation. The routine never touches the index page, and never opens a request for it.
 The rule of the road (6 October): Claude may propose ideas from the saved candles; a proposal

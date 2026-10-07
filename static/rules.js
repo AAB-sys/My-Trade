@@ -75,9 +75,11 @@
   //              gives a call, open calls or not
   //   ideas      the ideas under test (LOGIC.md, layer 5), each off unless asked for; the index page never asks, so its calls
   //              are untouched: closeAt (seconds since midnight IST: every open call ends at the close of the first candle
-  //              closing at or after it, and no call opens after it), noNewAfter (a signal candle closing after it gives no call)
+  //              closing at or after it, and no call opens after it), noNewAfter (a signal candle closing after it gives no call),
+  //              minDepth (idea P3, 7 October: a crossed signal counts only when its candle closed at least this share of the
+  //              way from the level to the next one; a shallower cross gives no call and leaves the level free to call later)
   function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal, ideas }) {
-    const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter;
+    const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth;
     const clockEnd = (b) => (b.time + IST_OFFSET) % 86400 + seconds;  // when the candle closes, in seconds since midnight IST
     const closed = bars.filter(b => endOf(b, seconds) <= now);
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
@@ -101,7 +103,8 @@
       levels.forEach(l => { if (bar.close < l.price) used[l.ratio + "CE"] = false; if (bar.close > l.price) used[l.ratio + "PE"] = false; });  // closed back across: the level may call again
       const sig = signalAt(bar, prevBar.close, levels, used, signal);  // the call, at the signal candle's close
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
-      if (sig && !late) { ready = sig; used[sig.ratio + sig.side] = true; }
+      const shallow = !!sig && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
+      if (sig && !late && !shallow) { ready = sig; used[sig.ratio + sig.side] = true; }
     }
     const last = closed[closed.length - 1];
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
@@ -130,6 +133,7 @@
   const IDEAS = {
     P1: { key: "P1", name: "Close open calls at 15:00", ideas: { closeAt: 15 * 3600 } },
     P2: { key: "P2", name: "No new calls after 14:00", ideas: { noNewAfter: 14 * 3600 } },
+    P3: { key: "P3", name: "Crossed signals only a quarter of the way to the next level", ideas: { minDepth: 0.25 } },
   };
   const ideasOf = (keys) => Object.assign({}, ...keys.map(k => IDEAS[k].ideas));
 

@@ -350,6 +350,16 @@ Under test since 6 October (confirmed by the owner for the Study page):
 - **P2: no new calls after 14:00.** A signal candle that closes after 14:00
   gives no call. The reason: a call needs time to reach its target, and the
   calls entered after 14:00 were mostly the day-end losers.
+- **P3: crossed signals only a quarter of the way to the next level** (owner's
+  decision, 7 October, from the retest study of round 2). A crossed signal
+  counts only when its candle closed at least a quarter of the way from the
+  level it crossed to the next level; a shallower cross gives no call, and the
+  level stays free to call later (a hold there, or a deeper cross after a close
+  back). Held signals are untouched. The reason: on the six saved days a cross
+  closing under a quarter of the way came back across the level two times in
+  three, and the rule's calls from such signals won 64%, against 78% from a
+  quarter to half and 94% past halfway; the gate was ahead of the rule in net on
+  three boards of four and in points per call on all four, with far fewer calls.
 
 Tested and set aside on the same five days (`lab/findings.md` has the numbers):
 ending a call when a candle closes back across its level (it cut about half the

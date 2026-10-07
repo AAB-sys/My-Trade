@@ -114,3 +114,7 @@ What the days said:
 - Built (7 October, owner's ask): the candle read on the index page, under "What now": the signal's
   strength (depth, body) and how far a candle has gone back across the level (carry / watch / weak), and
   "retest held". Information only; it ends no call. The ideas above stay in the replay for the nightly rounds.
+
+Decided by the owner (7 October): P3, a crossed signal only a quarter of the way to the next level, goes on
+the Study page as a switch beside P1 and P2, scored against the rule on every saved day. The live index page
+is unchanged; P3 moves there only after about 20 saved days still show it ahead, and only when the owner says so.

@@ -85,7 +85,8 @@ def random_day(rnd: random.Random, t0: int, n: int, start: float) -> list:
 def main() -> int:
     folder = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "data" / "sessions"
     jobs = []
-    IDEAS = [None, {"closeAt": 15 * 3600}, {"noNewAfter": 14 * 3600}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600}]
+    IDEAS = [None, {"closeAt": 15 * 3600}, {"noNewAfter": 14 * 3600}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600},
+             {"minDepth": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25}]
     # 1. the saved days, replayed in every setting
     days = saved_days(folder) if folder.exists() else []
     for d in days:
@@ -127,7 +128,7 @@ def main() -> int:
         prev = {"open": 22500, "high": 22500 + rnd.uniform(50, 400), "low": 22500 - rnd.uniform(50, 400), "close": 22500 + rnd.uniform(-150, 150)}
         for move in ("prev", "today"):
             for signal in ("held", "crossed", "both"):
-                jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": 300, "signal": signal, "ideas": IDEAS[k % 4], "what": f"random {k} {move} {signal}"})
+                jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": 300, "signal": signal, "ideas": IDEAS[k % len(IDEAS)], "what": f"random {k} {move} {signal}"})
         cut = rnd.randrange(2, len(bars))
         shown = bars[:cut + 1]
         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of(shown)), "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live"})
