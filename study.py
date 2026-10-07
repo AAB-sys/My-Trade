@@ -238,7 +238,7 @@ def saved_days() -> list:
     return out
 
 
-def summary() -> dict:
+def summary() -> dict:  # the state in a few plain fields
     """For /health, which the wake-up check reads without a login: the latest day with its final copy (from the files, so
     a fresh host answers right after it fetched them), the day checked and found without a session, and any problem."""
     complete = [d["date"] for d in saved_days() if d["complete"]]
@@ -307,9 +307,12 @@ def blob_sha(data: bytes) -> str:
 
 
 def push(path: Path) -> None:
-    """One file onto the data branch, created from nothing (no code in it) the first time."""
-    rel = f"sessions/{path.name}"
-    data = path.read_bytes()
+    """One day's file onto the data branch."""
+    push_bytes(f"sessions/{path.name}", path.read_bytes(), f"Session {path.stem}")
+
+
+def push_bytes(rel: str, data: bytes, message: str) -> None:
+    """One file onto the data branch, created from nothing (no code in it) the first time; unchanged, nothing is sent."""
     try:
         with _github() as http:
             found = http.get(f"/repos/{REPO}/contents/{rel}", params={"ref": BRANCH})
@@ -327,7 +330,7 @@ def push(path: Path) -> None:
                 sha = None
             else:
                 raise _why(found, "reading the data branch")
-            body = {"message": f"Session {path.stem}", "content": base64.b64encode(data).decode(), "branch": BRANCH}
+            body = {"message": message, "content": base64.b64encode(data).decode(), "branch": BRANCH}
             if sha:
                 body["sha"] = sha
             put = http.put(f"/repos/{REPO}/contents/{rel}", json=body)
@@ -377,6 +380,32 @@ def pull_missing() -> int:
     return got
 
 
+def push_records(day: date) -> bool:
+    """The options behind the day's calls (dhan.py's records: contract, premium paid, sell line, Sell mark, end) onto the
+    data branch as records/<date>.json, so a restart does not lose them (7 October: every restart emptied the disk, and a
+    call open across one got "paid" from the moment the page sent it again). Returns whether there was anything."""
+    text = dhan.records_text(day.isoformat())
+    if text is None:
+        return False
+    push_bytes(f"records/{day.isoformat()}.json", text.encode(), f"Options behind the calls of {day.isoformat()}")
+    state["records_pushed_at"] = now_ist()
+    return True
+
+
+def pull_records(day: date) -> int:
+    """At start: the day's records from the data branch, for the calls still open across a restart. Returns how many."""
+    try:
+        with _github() as http:
+            one = http.get(f"/repos/{REPO}/contents/records/{day.isoformat()}.json", params={"ref": BRANCH})
+            if one.status_code == 404:
+                return 0
+            if one.status_code != 200:
+                raise _why(one, "reading the day's records")
+            return dhan.restore_records(base64.b64decode(one.json()["content"]).decode())
+    except httpx.HTTPError as exc:
+        raise StudyError(f"GitHub could not be reached ({type(exc).__name__}) when looking for the day's records") from exc
+
+
 # ---------------------------------------------------------------- the loop
 
 def catch_up(days_back: int = 7) -> None:
@@ -408,10 +437,22 @@ async def study_forever(dhan_on: bool) -> None:
             log.warning("study: %s", exc)
     if not dhan_on:
         return  # nothing to record without the owner's own feed
+    if TOKEN:
+        try:
+            back = await asyncio.to_thread(pull_records, dhan.today_ist())
+            if back:
+                log.info("study: %d call records of today fetched from GitHub", back)
+        except StudyError as exc:
+            state["problem"] = str(exc)
+            log.warning("study: %s", exc)
     partial_at, caught_up, seen = 0.0, 0.0, calls_version()
+    records_seen = dhan.records_version()
     while True:
         try:
             now = datetime.now(dhan.IST)
+            if TOKEN and dhan.records_version() != records_seen:  # a call entered, got its contract, its Sell mark or its end: the records go up
+                records_seen = dhan.records_version()
+                await asyncio.to_thread(push_records, now.date())
             if in_session(now):
                 changed = calls_version() != seen  # the page told of a call: the partial copy goes sooner, so a restart loses little
                 if time.monotonic() - partial_at >= (120 if changed else PARTIAL_SECONDS):
