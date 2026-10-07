@@ -101,7 +101,8 @@ store = {
         "poll": "",  # the once-a-second price request's state (the fallback behind the stream), in plain words
         "stream_tick": None,  # when the last index price came over the stream
         "token": None,  # the last token check (token_forever): ok, valid_till, checked_at, problem
-        "tiles": False,  # whether the dashboard's NIFTY 50, NIFTY BANK and SENSEX tiles carry Dhan's price right now (at all hours, 7 October)
+        "tiles": False,  # whether the dashboard's NIFTY 50, NIFTY BANK and SENSEX tiles carry Dhan's figures right now (at all hours, 7 October)
+        "tiles_problem": None,  # why an index's figures could not be read for its tile just now (its last figures stay on the tile)
     },
 }
 stream_at = 0.0  # when the last tick came over the stream; the one-a-second polling steps in while it is quiet
@@ -271,35 +272,45 @@ async def broadcast(payload: dict) -> None:
             clients.discard(ws)
 
 
-def with_dhan_prices(quotes: list, prices: dict, closes: dict | None = None) -> list:
-    """The dashboard's tiles: the quotes of the indices Dhan covers carry Dhan's last price in place of Yahoo's
-    (about 15 minutes behind), the change against Dhan's previous close (closes: the same one the index page uses,
-    so the tile and the page agree; Yahoo's, used until 7 October, was another day's and gave the wrong sign),
-    and say so (source: dhan; live: whether the price moves every second now, or stands at the close)."""
+tile_cache: dict = {}  # index -> the figures last read for its tile: kept when a read fails, so a tile never falls back to Yahoo once Dhan has answered
+
+
+def dhan_tiles(names: list) -> tuple:
+    """For the dashboard's tiles: each index's figures exactly as its own page's header shows them, from the same
+    computation (dhan.fetch_detail's summary: Dhan's last price, the live one while the feed runs, else the last trade;
+    the change against Dhan's previous close; the time the price is from). Until 7 October the tile was put together on
+    its own, from a separate price request and Yahoo's quote, and read differently from the page, with the wrong sign
+    after the close. Returns ({index: figures}, the problem, if an index could not be read: its last figures stay)."""
+    tiles, problem = {}, None
+    today = dhan.today_ist()
+    for name in names:
+        fetch = lambda last: dhan.fetch_detail(name, "today", "5m", INTERVALS, RANGES, last)["summary"]
+        try:
+            try:
+                s = fetch(live_price(name))
+            except dhan.DhanError as exc:  # no quote from Dhan just now (after hours, or refused): today's last candle, as the page shows after the close
+                todays = [b for b in dhan.intraday(name, 5) if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
+                if not todays or exc.kind in ("token", "subscription", "config"):
+                    raise
+                s = fetch(todays[-1]["close"])
+            tile_cache[name] = {"level": s["last"], "change": s["change"], "change_percent": s["change_percent"],
+                                "previous_close": s["previous_close"], "time": s["time"]}
+        except Exception as exc:
+            problem = f"{name}: {dhan_reason(exc)}"
+            log.warning("Dhan tiles: %s", problem)
+        if name in tile_cache:
+            tiles[name] = tile_cache[name]
+    return tiles, problem
+
+
+def with_dhan_prices(quotes: list, tiles: dict) -> list:
+    """The dashboard's tiles: the quotes of the indices Dhan covers carry the figures their pages show (dhan_tiles) in
+    place of Yahoo's, and say so (source: dhan; live: whether the price moves every second now, or stands at the close)."""
     out = []
     for q in quotes:
-        last = prices.get(q["name"])
-        if last is None:
-            out.append(q)
-            continue
-        previous_close = (closes or {}).get(q["name"]) or round(q["level"] - q["change"], 2)
-        change = round(last - previous_close, 2)
-        out.append({**q, "level": last, "change": change, "change_percent": round(change / previous_close * 100, 2) if previous_close else 0.0,
-                    "previous_close": previous_close, "time": now_ist(), "source": "dhan", "live": in_tick_hours()})
+        t = tiles.get(q["name"])
+        out.append({**q, **t, "source": "dhan", "live": in_tick_hours()} if t else q)
     return out
-
-
-def dhan_tile_prices(names: list) -> tuple:
-    """For the tiles: Dhan's last price of each index, and its previous close (None for an index whose close could not
-    be read just now: the tile then measures against Yahoo's, as before)."""
-    prices, _ = dhan.last_prices(names)
-    closes = {}
-    for name in names:
-        try:
-            closes[name] = dhan.previous_close(name)
-        except Exception as exc:
-            log.warning("Dhan tiles: no previous close for %s: %s", name, exc)
-    return prices, closes
 
 
 async def refresh_forever() -> None:
@@ -307,14 +318,14 @@ async def refresh_forever() -> None:
         try:
             result = await asyncio.to_thread(fetch_all)
             reason = result.get("reason") or ""
-            if result["quotes"] and DHAN_ON:  # the tiles of the Dhan indices follow the owner's own feed, at all hours (the close after hours)
+            if result["quotes"] and DHAN_ON:  # the tiles of the Dhan indices show what their pages show, at all hours
                 try:
                     names = [q["name"] for q in result["quotes"] if q["name"] in dhan.QUOTE_IDS]
-                    prices, closes = await asyncio.to_thread(dhan_tile_prices, names)
-                    result["quotes"] = with_dhan_prices(result["quotes"], prices, closes)
-                    store["dhan"]["tiles"] = bool(prices)
+                    tiles, problem = await asyncio.to_thread(dhan_tiles, names)
+                    result["quotes"] = with_dhan_prices(result["quotes"], tiles)
+                    store["dhan"]["tiles"], store["dhan"]["tiles_problem"] = bool(tiles), problem
                 except Exception as exc:
-                    store["dhan"]["tiles"] = False
+                    store["dhan"]["tiles_problem"] = f"{type(exc).__name__}: {str(exc)[:120]}"
                     log.warning("Dhan tiles: %s", exc)
             if result["quotes"]:
                 if result["failed"]:
@@ -797,6 +808,7 @@ def feed_state() -> dict:
     d = store["dhan"]
     return {"server_time": now_ist(), "started_at": started_at, "tick_hours": in_tick_hours(), "watching": sorted(set(live_subs.values())),
             "status": d["status"], "stream": d["stream"], "stream_tick": d["stream_tick"], "poll": d["poll"], "tiles": d["tiles"],
+            "tiles_problem": d["tiles_problem"],
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
             "watch": {"setting": f"{WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}", **watch_state},
             "ids": dhan.id_problem()}  # null, or what Dhan's instrument list says differs from the index ids this code uses

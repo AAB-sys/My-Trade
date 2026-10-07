@@ -1,3 +1,4 @@
+import os
 import random
 import time
 from collections import Counter
@@ -7,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 IST = timezone(timedelta(hours=5, minutes=30))
-YAHOO_URL = "https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+YAHOO_URL = os.environ.get("YAHOO_API_BASE", "https://query1.finance.yahoo.com") + "/v8/finance/chart/{ticker}"  # the base is overridden only by tests
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 MAX_WORKERS = 4
 RETRIES = 3
