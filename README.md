@@ -115,7 +115,9 @@ log in again) and into `.env` if the laptop runs it. **Every merge on GitHub
 restarts Render too**, which stops the live price for a minute or two, so merge
 after 15:30 unless the change is the fix you are waiting for. A page left open
 reloads itself once the server is up with the new code (every answer carries
-the commit the server runs), so what you see is always the merged version.
+the commit the server runs), and the pages and their script files are served
+"no-cache" (the browser checks for a newer copy on every load), so what you see
+is always the merged version.
 Dhan allows one quote request a second: the server spaces its requests out
 (`dhan.py`), and `/health` shows the live feed's state (`feed`: the stream, the
 poll, who is watching, the last price and when) with no login. `check_dhan.bat` (or

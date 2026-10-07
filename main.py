@@ -1111,4 +1111,15 @@ async def stream(ws: WebSocket):
             page["dropped_at"] = time.time()  # the page may come back, or report in, for a while
 
 
-app.mount("/static", StaticFiles(directory=STATIC), name="static")
+class NoCacheStatic(StaticFiles):
+    """The static files (the shared rule engine static/rules.js above all) are served with Cache-Control: no-cache, like the
+    pages: the browser asks every time whether its copy is still the current one (a cheap 304 when it is), so a page that
+    reloads after a merge never runs the new page with an old copy of the script. On 7 October a tab did exactly that
+    after #91 ("Rules.readOf is not a function") because the script had been cached for a while."""
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/static", NoCacheStatic(directory=STATIC), name="static")

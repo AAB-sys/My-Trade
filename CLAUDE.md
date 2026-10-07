@@ -118,7 +118,9 @@ their own logic. Read this before touching the code.
   and prints the addresses to use.
 - Every answer from the server (`store`, `/alive`) carries `commit` (Render's
   `RENDER_GIT_COMMIT`); both pages reload themselves when it changes
-  (`newDeploy()`), at most once a minute, so a merge reaches an open tab.
+  (`newDeploy()`), at most once a minute, so a merge reaches an open tab. The
+  pages and `/static` (`NoCacheStatic`) are served `Cache-Control: no-cache`, so
+  the reload never pairs a new page with a cached old `rules.js` (7 October).
 - `static/index.html` - the dashboard: opens `/ws`, redraws on each message;
   each tile links to `/index/{name}` in a new tab. The top row is NIFTY 50,
   NIFTY BANK, SENSEX (`PINNED`). Those three tiles show exactly what their
