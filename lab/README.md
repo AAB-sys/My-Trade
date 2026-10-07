@@ -31,3 +31,7 @@ goes to the owner with the numbers; nothing is built until the owner confirms; a
 goes to the Study page first, as a switch scored against the owner's rule on every saved day, and
 to the live index page only after about 20 saved days still show it ahead, and only when the
 owner says so.
+
+- `candles.js <folder> [5m|15m]`: the candle studies of 7 October (wicks against bodies, rejection wicks at levels,
+  retests that held and failed and what told them apart, momentum candles), counted over every saved day. Run by the
+  nightly round; `findings.md` round 4 has the first counts.
