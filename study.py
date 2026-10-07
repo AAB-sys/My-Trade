@@ -1,9 +1,13 @@
 """The record of each trading session, and its copy on GitHub (LOGIC.md, "The record and the study").
 
 After every session the server writes the day to data/sessions/<date>.json: the minute candles of each index
-on Dhan (1, 5, 15 and 30 minutes) and the day's and the previous day's four figures. Candles only, by the
-owner's choice (6 October): no premiums, no calls. During the session a partial copy is written every few
-minutes, so the study page can show today so far. The study page runs the owner's rules over every saved day.
+on Dhan (1, 5, 15 and 30 minutes) and the day's and the previous day's four figures. Beside it, by the owner's
+ask of 7 October, data/sessions/<date>-calls.csv: every call the index page suggested that day, each and every
+one, as the page showed it (the setting it ran in, the level, the side, entry, target, exit, points, how it
+ended, and the option's premiums as shown); the page sends its list as it draws it (record_calls). During the
+session a partial copy of both is written every few minutes, so the study page can show today so far and a
+restart loses little. The study page and the lab run the owner's rules over every saved day and read the
+calls back.
 
 The host's files do not last, so each file is also pushed to a branch of the owner's own repository, which
 needs one more secret in the host's environment, never in the repo:
@@ -14,6 +18,8 @@ Without it the days are kept on this server only. Nothing else is sent anywhere.
 """
 import asyncio
 import base64
+import csv
+import io
 import hashlib
 import json
 import logging
@@ -32,6 +38,7 @@ log = logging.getLogger("my-trade.study")
 BASE = Path(__file__).resolve().parent
 DATA_DIR = Path(os.environ.get("STUDY_DIR", BASE / "data"))
 SESSIONS = DATA_DIR / "sessions"
+CALLS = DATA_DIR / "calls"  # the calls the index page suggested, as it sends them, one working file a day
 TOKEN = os.environ.get("GITHUB_DATA_TOKEN", "").strip()
 REPO = os.environ.get("GITHUB_DATA_REPO", os.environ.get("RENDER_GIT_REPO_SLUG", "AAB-sys/my-trade")).strip()  # owner/name
 BRANCH = os.environ.get("GITHUB_DATA_BRANCH", "data").strip()
@@ -47,6 +54,89 @@ BRANCH_README = ("# My-Trade: the record of each trading session\n\n"
 state = {"github": bool(TOKEN), "repo": REPO, "branch": BRANCH, "problem": None, "saved_at": None, "pushed_at": None, "last": None,
          "checked": None}  # checked: the day the final save was tried and Dhan had no candle for it (a holiday)
 _lock = threading.Lock()
+
+# ---------------------------------------------------------------- the calls the index page suggested
+# The page works the calls out from the candles and tells the server the list it shows (POST /calls/{name}) each
+# time it draws it; the server keeps the latest state of every call it has ever been told about that day, keyed
+# by the setting that gave it and the call itself, and writes them out as the day's CSV.
+CALL_FIELDS = ("date", "index", "time_frame", "levels", "signal_mode", "first_seen_ist", "signal_time_ist", "level_pct", "level_price", "kind",
+               "option_side", "entry_time_ist", "index_at_entry", "target", "exit_time_ist", "index_at_exit", "points", "ended_by",
+               "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium")
+live_calls: dict = {}  # date -> {key: row}
+_calls_lock = threading.Lock()
+_calls_version = 0
+
+
+def calls_version() -> int:
+    return _calls_version
+
+
+def _stamp(epoch) -> str:
+    try:
+        return datetime.fromtimestamp(float(epoch), dhan.IST).strftime("%Y-%m-%d %H:%M")
+    except (TypeError, ValueError, OverflowError):
+        return ""
+
+
+def _num(value):
+    try:
+        return round(float(value), 2) if value is not None and value != "" else ""
+    except (TypeError, ValueError):
+        return ""
+
+
+def record_calls(index: str, interval: str, levels: str, signal: str, session: str, calls: list) -> int:
+    """The list the page shows for one setting of one index, merged in; returns how many rows are new."""
+    global _calls_version
+    now = now_ist()
+    new = 0
+    with _calls_lock:
+        day = live_calls.setdefault(session, {})
+        for c in calls:
+            if not isinstance(c, dict) or c.get("signal_time") is None:
+                continue
+            key = f"{index}|{interval}|{levels}|{signal}|{c.get('signal_time')}|{c.get('level')}|{c.get('side')}"
+            row = day.get(key)
+            if row is None:
+                row = {"date": session, "index": index, "time_frame": interval, "levels": levels, "signal_mode": signal, "first_seen_ist": now[:16].replace("T", " ")}
+                new += 1
+            row.update({"signal_time_ist": _stamp(c.get("signal_time")), "level_pct": f"{float(c.get('ratio') or 0) * 100:.1f}%", "level_price": _num(c.get("level")),
+                        "kind": str(c.get("kind") or "")[:10], "option_side": str(c.get("side") or "")[:2], "entry_time_ist": _stamp(c.get("entry_time")) if c.get("entry_time") else "",
+                        "index_at_entry": _num(c.get("entry")), "target": _num(c.get("target")), "exit_time_ist": _stamp(c.get("exit_time")) if c.get("exit_time") else "",
+                        "index_at_exit": _num(c.get("exit")), "points": _num(c.get("points")), "ended_by": str(c.get("how") or "")[:12],
+                        "contract": str(c.get("contract") or "")[:40], "premium_paid": _num(c.get("premium_paid")), "premium_now": _num(c.get("premium_now")),
+                        "sell_below": _num(c.get("sell_below")), "sold_at_premium": _num(c.get("sold_at"))})
+            day[key] = row
+        _calls_version += 1
+        try:
+            CALLS.mkdir(parents=True, exist_ok=True)
+            (CALLS / f"{session}.json").write_text(json.dumps(list(day.values()), indent=1))
+        except OSError:
+            pass
+    return new
+
+
+def calls_csv(day: date) -> str | None:
+    """The day's calls as CSV text, in the order they were first seen, or None when there are none."""
+    with _calls_lock:
+        rows = list(live_calls.get(day.isoformat(), {}).values())
+    if not rows:
+        return None
+    rows.sort(key=lambda r: (r["first_seen_ist"], r["signal_time_ist"]))
+    out = io.StringIO()
+    writer = csv.DictWriter(out, fieldnames=CALL_FIELDS, extrasaction="ignore", lineterminator="\n")  # plain line ends, as the rest of the record
+    writer.writeheader()
+    writer.writerows(rows)
+    return out.getvalue()
+
+
+def calls_count(day_iso: str) -> int:
+    """How many calls the day's CSV holds (the file, so a fresh host counts what it fetched)."""
+    path = SESSIONS / f"{day_iso}-calls.csv"
+    try:
+        return max(0, sum(1 for _ in path.open()) - 1)
+    except OSError:
+        return 0
 
 
 class StudyError(Exception):
@@ -142,7 +232,7 @@ def saved_days() -> list:
         try:
             data = json.loads(path.read_text())
             out.append({"date": data["date"], "complete": bool(data.get("complete")), "saved_at": data.get("saved_at"),
-                        "indices": sorted(data.get("indices", {}))})
+                        "indices": sorted(data.get("indices", {})), "live_calls": calls_count(data["date"])})
         except (OSError, ValueError, KeyError):
             continue
     return out
@@ -173,14 +263,21 @@ def save_day(day: date, complete: bool) -> dict | None:
             data["saved_at"] = old.get("saved_at", data["saved_at"])  # nothing new: the file, and GitHub, are left as they are
         SESSIONS.mkdir(parents=True, exist_ok=True)
         path_of(day).write_text(to_text(data))
+        files = [path_of(day)]
+        text = calls_csv(day)  # the calls the page suggested that day, beside the candles
+        if text is not None:
+            calls_path = SESSIONS / f"{day.isoformat()}-calls.csv"
+            calls_path.write_text(text)
+            files.append(calls_path)
         state.update(saved_at=now_ist(), last=day.isoformat(), problem=None)
         if TOKEN:
-            try:
-                push(path_of(day))
-                state.update(problem=None, pushed_at=now_ist())
-            except StudyError as exc:
-                state["problem"] = str(exc)
-                log.warning("study: %s", exc)
+            for path in files:
+                try:
+                    push(path)
+                    state.update(problem=None, pushed_at=now_ist())
+                except StudyError as exc:
+                    state["problem"] = str(exc)
+                    log.warning("study: %s", exc)
         return data
 
 
@@ -268,7 +365,7 @@ def pull_missing() -> int:
             SESSIONS.mkdir(parents=True, exist_ok=True)
             for item in listing.json():
                 name = item.get("name", "")
-                if not name.endswith(".json") or (SESSIONS / name).exists():
+                if not (name.endswith(".json") or name.endswith(".csv")) or (SESSIONS / name).exists():
                     continue
                 one = http.get(f"/repos/{REPO}/contents/sessions/{name}", params={"ref": BRANCH})
                 if one.status_code != 200:
@@ -311,13 +408,15 @@ async def study_forever(dhan_on: bool) -> None:
             log.warning("study: %s", exc)
     if not dhan_on:
         return  # nothing to record without the owner's own feed
-    partial_at, caught_up = 0.0, 0.0
+    partial_at, caught_up, seen = 0.0, 0.0, calls_version()
     while True:
         try:
             now = datetime.now(dhan.IST)
-            if in_session(now) and time.monotonic() - partial_at >= PARTIAL_SECONDS:
-                partial_at = time.monotonic()
-                await asyncio.to_thread(save_day, now.date(), False)
+            if in_session(now):
+                changed = calls_version() != seen  # the page told of a call: the partial copy goes sooner, so a restart loses little
+                if time.monotonic() - partial_at >= (120 if changed else PARTIAL_SECONDS):
+                    partial_at, seen = time.monotonic(), calls_version()
+                    await asyncio.to_thread(save_day, now.date(), False)
             if time.monotonic() - caught_up >= 3600 or ((now.hour, now.minute) >= save_time() and now.weekday() < 5 and not is_complete(now.date())):
                 caught_up = time.monotonic()
                 await asyncio.to_thread(catch_up)

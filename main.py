@@ -781,6 +781,26 @@ def study_day(day: str):
     return data
 
 
+LEVEL_MODES, SIGNAL_MODES = ("off", "prev", "today", "shown"), ("off", "held", "crossed", "both")
+
+
+@app.post("/calls/{name}")
+async def calls_record(name: str, request: Request):
+    """The index page tells the server the calls it shows for today's session (every call, as drawn), so the day's
+    record carries each and every call that was suggested (study.record_calls, the owner's ask of 7 October)."""
+    key = known_index(name)
+    body = await request.json()
+    interval, levels, signal = str(body.get("interval", "")), str(body.get("levels", "")), str(body.get("signal", ""))
+    try:
+        session = datetime.strptime(str(body.get("session", "")), "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="session must be YYYY-MM-DD")
+    calls = body.get("calls")
+    if interval not in INTERVALS or levels not in LEVEL_MODES or signal not in SIGNAL_MODES or not isinstance(calls, list) or len(calls) > 500:
+        raise HTTPException(status_code=400, detail="interval, levels, signal and a list of at most 500 calls are required")
+    return {"new": study.record_calls(key, interval, levels, signal, session, calls), "recorded": len(calls)}
+
+
 @app.post("/study/save")
 async def study_save():
     """Saves today now (a partial copy during the session, the final one after it), and says how it went."""

@@ -11,8 +11,15 @@ const fs = require("fs"), path = require("path");
 require(path.join(__dirname, "..", "static", "rules.js"));
 const R = globalThis.Rules;
 const folder = process.argv[2] || path.join(__dirname, "..", "data", "sessions");
-const DAYS = fs.readdirSync(folder).filter(f => f.endsWith(".json")).sort().map(f => JSON.parse(fs.readFileSync(path.join(folder, f), "utf8"))).filter(d => d.complete);
+const DAYS = fs.readdirSync(folder).filter(f => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().map(f => JSON.parse(fs.readFileSync(path.join(folder, f), "utf8"))).filter(d => d.complete);
 if (!DAYS.length) { console.log("no finished day in " + folder); process.exit(1); }
+// the calls the index page suggested live, one CSV a day beside the candles (<date>-calls.csv), the owner's ask of 7 October
+function readCsv(file) {
+  const [head, ...lines] = fs.readFileSync(file, "utf8").trim().split(/\r?\n/);
+  const cols = head.split(",");
+  return lines.filter(Boolean).map(line => { const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(c => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"')); return Object.fromEntries(cols.map((k, i) => [k, cells[i] ?? ""])); });
+}
+const LIVE = [].concat(...fs.readdirSync(folder).filter(f => /^\d{4}-\d{2}-\d{2}-calls\.csv$/.test(f)).sort().map(f => readCsv(path.join(folder, f))));
 const SEC = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 }, IST = 19800;
 const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h, m) => h * 3600 + m * 60;
 
@@ -112,7 +119,29 @@ const IDEAS = [
   ["only with the day's direction so far", { sideOnDay: "with" }],
   ["today-so-far levels + P1 + P2", { levels: "today", closeAt: hm(15, 0), noNewAfter: hm(14, 0) }],
 ];
-console.log(`${DAYS.length} finished days: ${DAYS[0].date} to ${DAYS[DAYS.length - 1].date}`);
+console.log(`${DAYS.length} finished days: ${DAYS[0].date} to ${DAYS[DAYS.length - 1].date}; ${LIVE.length} calls suggested live on the index page in ${new Set(LIVE.map(c => c.date)).size} of them`);
+// the live calls: what the page suggested, setting by setting, by the page's own points; and whether the replay gives the same call
+// (the same signal time and side under the same setting), which is the test of the live page's timing and levels
+if (LIVE.length) {
+  const groups = {};
+  LIVE.forEach(c => (groups[`${c.index}|${c.time_frame}|${c.levels}|${c.signal_mode}`] = groups[`${c.index}|${c.time_frame}|${c.levels}|${c.signal_mode}`] || []).push(c));
+  console.log("\n==== the calls the index page suggested live (its own points; finished ones only in the counts)");
+  Object.keys(groups).sort().forEach(key => {
+    const [index, interval, levels, signal] = key.split("|"), list = groups[key];
+    const done = list.filter(c => c.ended_by === "target" || c.ended_by === "day end");
+    const net = r2(done.reduce((s, c) => s + (parseFloat(c.points) || 0), 0)), won = done.filter(c => parseFloat(c.points) > 0).length;
+    let matched = 0, replayable = 0;
+    if (SEC[interval] && (levels === "prev" || levels === "today") && signal !== "off") {
+      list.forEach(c => { const day = DAYS.find(d => d.date === c.date); const ix = day && day.indices[index]; if (!ix) return;
+        replayable++;
+        const t = R.replayDay({ bars: ix.candles[interval], move: levels, previous: ix.previous, seconds: SEC[interval], signal }).trades;
+        const stamp = e => new Date(e * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 16);
+        if (t.some(x => stamp(x.signalTime) === c.signal_time_ist && x.side === c.option_side)) matched++; });
+    }
+    console.log(`${index}, ${interval}, ${levels} levels, ${signal}: ${list.length} calls on ${new Set(list.map(c => c.date)).size} day(s); finished ${done.length}, won ${won}, net ${net}`
+      + (replayable ? `; the replay gives the same call for ${matched} of ${replayable}` : ""));
+  });
+}
 for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", "15m"]) {
   // the self-check: the base line must equal the page's engine
   const mine = tally(all(index, interval, {}));
