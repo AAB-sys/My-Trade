@@ -98,7 +98,7 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
         for c in calls:
             if not isinstance(c, dict) or c.get("signal_time") is None:
                 continue
-            key = f"{index}|{interval}|{levels}|{signal}|{c.get('signal_time')}|{c.get('level')}|{c.get('side')}"
+            key = f"{index}|{interval}|{levels}|{signal}|{c.get('signal_time')}|{c.get('side')}"  # the signal candle and the side name the call; the level's price can move a little (today-so-far levels after a restart) and is data, not identity
             row = day.get(key)
             if row is None:
                 row = {"date": session, "index": index, "time_frame": interval, "levels": levels, "signal_mode": signal, "first_seen_ist": now[:16].replace("T", " ")}

@@ -618,7 +618,8 @@
   let lastRecordsJson = "";
   const registered = new Set(), endedSent = new Set();
   let syncing = false;
-  const callKey = (t) => `${state.interval}|${t.signalTime}|${t.level}|${t.side}`;
+  const callKey = (t) => `${state.interval}|${t.signalTime}|${t.side}`;  // one candle, one call: the signal candle and the side name it; the level's
+  // price is left out (7 October: "today so far" levels moved a few points across a restart, so the same call got a second record and a second "paid")
   const expiryLabel = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
 
   // A premium from Dhan's feed (or the once-a-second poll) for one call: the row's "What now" and premium cells change
