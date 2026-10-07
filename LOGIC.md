@@ -146,7 +146,10 @@ The rule, in the order it is applied:
    22,605.32, −5.28). The research engine replays every saved day the same way.
 6. **Day end** - a call still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal on the day's last candle has no
-   candle left to enter on, so it gives nothing. While today is still running the
+   candle left to enter on, so it gives nothing. The day's final save (15:40)
+   marks any record of the day still open as ended at the day end, whoever made
+   it (7 October: records under the call keys of earlier versions, which no page
+   or watcher matched any more, had stayed open). While today is still running the
    call shows as "Still open" with its points at the live price.
 7. **Every signal gives a call** - whether or not earlier calls are
    still open (owner's decision, 4 October). Several calls can run at once, each

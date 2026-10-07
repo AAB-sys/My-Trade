@@ -426,8 +426,12 @@ def catch_up(days_back: int = 7) -> None:
         day = today - timedelta(days=back)
         if day.weekday() >= 5 or is_complete(day) or (day == today and (now.hour, now.minute) < save_time()):
             continue
-        if save_day(day, complete=True) is None and day == today:
-            state["checked"] = today.isoformat()  # looked, and Dhan had no candle for today: a holiday, nothing to save
+        if save_day(day, complete=True) is None:
+            if day == today:
+                state["checked"] = today.isoformat()  # looked, and Dhan had no candle for today: a holiday, nothing to save
+            continue
+        if ended := dhan.end_day(day.isoformat()):  # the day is saved: nothing carries overnight, whoever made the record
+            log.info("study: %d record(s) of %s still open at the final save, marked ended at the day end", ended, day.isoformat())
 
 
 def in_session(now: datetime) -> bool:
