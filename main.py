@@ -141,6 +141,7 @@ live_subs: dict = {}     # websocket -> the index name whose ticks it wants (an 
 #   itself for its first page; used up when the new page gets its id.
 # Kept in memory, so a server restart ends every login.
 logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "dropped_at", "last_beat"}}, "handover_until"}
+revoked: set[str] = set()  # tokens logged out on this server: never revived from the cookie
 ws_pages: dict[WebSocket, tuple[str, str]] = {}  # socket -> (token, page id)
 PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
 PAGE_EXACT = ("/study", "/study/")  # pages too; everything else under /study/ is data and needs the note
@@ -179,7 +180,15 @@ def find_login(token):
         return None
     entry = logins.get(token)
     if entry is None:
-        return None
+        if token in revoked:
+            return None  # logged out on this server: stays out
+        # A restart emptied the logins (every merge restarts Render, and on 7 October each one logged the owner out and
+        # left the calls that entered meanwhile without their premium). A cookie still signed with SESSION_SECRET and in
+        # date is trusted again: the login is revived with a handover open, its tab note is adopted from the first data
+        # request, and its pages get their ids back through /alive. Only with SESSION_SECRET set in the host's
+        # environment; a random secret (none set) makes every old cookie invalid, as before.
+        entry = logins[token] = {"tab": "", "pages": {}, "handover_until": time.time() + GRACE_SECONDS}
+        log.info("login revived after a restart")
     now = time.time()
     for page_id, page in list(entry["pages"].items()):
         if now - page["last_beat"] >= DROP_SECONDS:
@@ -215,6 +224,8 @@ def logged_in(connection) -> bool:
         return False
     now = time.time()
     tab = connection.headers.get("x-tab") or connection.query_params.get("tab") or ""
+    if not entry["tab"] and tab:
+        entry["tab"] = tab  # a login revived after a restart: the first tab to report in is its tab
     if not hmac.compare_digest(tab, entry["tab"]):
         entry["handover_until"] = 0  # the page just served was this tab, opened anew, not a reload
         if not any(page_open(p, now) for p in entry["pages"].values()):
@@ -660,6 +671,8 @@ async def login(request: Request):
 async def logout(request: Request):
     token = request.cookies.get(COOKIE)
     logins.pop(token, None)
+    if token:
+        revoked.add(token)  # never revived from the cookie after this, on this server
     for ws, (ws_token, _) in list(ws_pages.items()):  # every open page on this login, in any tab
         if ws_token == token:
             with contextlib.suppress(Exception):

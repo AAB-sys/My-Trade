@@ -56,7 +56,7 @@ Copy `.env.example` to `.env` and edit it. The server reads it on startup.
 | `DATA_PROVIDER` | `yahoo` (default), `demo` | Real prices from Yahoo Finance, or a simulated random walk for testing |
 | `POLL_SECONDS`  | a number         | How often the server refreshes. Defaults: 60 for yahoo, 1 for demo |
 | `DASHBOARD_PASSWORD` | any text    | Turns the login on. Unset = open (the dashboard shows a warning). Required before hosting |
-| `SESSION_SECRET` | a long random string | Signs the login cookie. Optional: a restart ends every login anyway |
+| `SESSION_SECRET` | a long random string | Signs the login cookie. With it set, a login survives a server restart (every merge is one): the page carries on by itself. Without it, every restart logs you out |
 | `HOST`          | `127.0.0.1` (default), `0.0.0.0` | Read by `start.bat`. `0.0.0.0` lets other devices on the same network open the dashboard |
 | `PORT`          | a number, default `8000` | Read by `start.bat` |
 
@@ -231,8 +231,10 @@ true:
   (`DASHBOARD_DROP_SECONDS`) is gone; a login with no page left and no handover
   open is over.
 
-So closing the browser, closing the last tab, or a server restart (every merge
-restarts Render) all mean logging in again. A page left in the background, on the laptop or the phone, is
+So closing the browser or closing the last tab means logging in again. A server
+restart (every merge restarts Render) no longer does, when `SESSION_SECRET` is set:
+the cookie is still signed and in date, so the login is revived and the page
+carries on by itself within seconds (7 October). **Log out** ends it for good. A page left in the background, on the laptop or the phone, is
 still logged in when you come back to it within 4 hours. A browser that is never closed is logged out after 30 days anyway. The
 **Log out** button in the page header ends the login at once, in every tab. A
 wrong password waits a second before answering, which makes guessing slow.

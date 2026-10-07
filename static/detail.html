@@ -282,7 +282,7 @@
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>What now</th><th>Call</th><th>Signal at</th><th>Index: entry → target</th><th>Index now</th><th>Points</th><th class="opt">Premium: paid → now</th></tr></thead>
+        <thead><tr><th>Time</th><th>What now</th><th>Call</th><th>Signal</th><th>Index: entry → target</th><th>Now / exit</th><th>Points</th><th class="opt">Premium: paid → now</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -590,8 +590,8 @@
     const now = t.exit != null ? fmt.format(t.exit) : t.last != null ? fmt.format(t.last) : "—";
     return `<td>${istTime(t.signalTime, withDate())}</td>` + statusCell(t, r)
       + `<td class="call">Buy ${t.side}${r ? ` · ${Math.round(r.strike)} ${r.side} ${expiryLabel(r.expiry)}` : ""}</td>`
-      + `<td>${pctOf(t)} (${fmt.format(t.level)}) ${t.kind}</td><td>${entry} → ${fmt.format(t.target)}${t.aimed ? " <small>one level on</small>" : ""}</td><td>${now}</td>`
-      + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td>` + premiumCell(r);
+      + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td><td>${entry} → ${fmt.format(t.target)}${t.aimed ? " <small>one level on</small>" : ""}</td><td>${now}</td>`
+      + `<td class="${cls}">${t.points == null ? "—" : signed.format(t.points)}</td>` + premiumCell(t, r);
   }
 
   // "What now", in the owner's words: enter, hold, sell now, sold, target hit, closed at the day's end
@@ -605,10 +605,12 @@
     return `<td class="st hold">HOLD${r ? ` <small>sell if below ${fmt.format(r.sell_below)}</small>` : ""}</td>`;
   }
 
-  function premiumCell(r) {
-    if (!r) return `<td class="opt prem">—</td>`;
+  // paid → now while the call is open; paid → at exit once it has ended. A finished call with no record was never seen
+  // open by a page (no page open at its entry, so no premium could be recorded then): the cell says so instead of a dash
+  function premiumCell(t, r) {
+    if (!r) return `<td class="opt prem">${t.exit != null ? "<small>not seen at entry</small>" : "—"}</td>`;
     const change = Math.round((r.premium_now - r.premium_paid) / r.premium_paid * 100);
-    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)</small></td>`;
+    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)${t.exit != null ? " at exit" : ""}</small></td>`;
   }
 
   // ---- the option behind each call: recorded by the server from Dhan (see LOGIC.md, "Exit by premium")
@@ -632,7 +634,7 @@
     const t = lastPaper.trades.find(x => callKey(x) === p.key);
     if (!tr || !t) return;
     const fresh = document.createElement("tr");
-    fresh.innerHTML = statusCell(t, r) + premiumCell(r);
+    fresh.innerHTML = statusCell(t, r) + premiumCell(t, r);
     tr.querySelector("td.st").replaceWith(fresh.children[0]);
     tr.querySelector("td.prem").replaceWith(fresh.children[0]);
   }
