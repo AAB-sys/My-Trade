@@ -159,7 +159,7 @@ const IDEAS = [
   ["today-so-far levels + P3", { levels: "today", minDepth: 0.25 }],
   ["a shallow cross waits for a close past halfway", { minDepth: 0.5, waitDeeper: true }],
   ["crossed only with a body of half the gap", { minBody: 0.5 }],
-  ["P4 exit when a candle closes back a quarter of the gap", { closeBackShare: 0.25 }],  // the owner's rule, 7 October evening
+  ["P4 exit when a candle closes on the wrong side of the level", { closeBackShare: 0.25 }],  // the owner's rule, 7 October evening: a quarter of the gap past it
   ["P3 + P4", { minDepth: 0.25, closeBackShare: 0.25 }],
   ["P1 + P2 + P3 + P4", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25, closeBackShare: 0.25 }],
   ["today-so-far levels + P4", { levels: "today", closeBackShare: 0.25 }],

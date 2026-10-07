@@ -516,7 +516,7 @@
   //   every signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", candle: "Candle", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
@@ -607,7 +607,7 @@
     if (t.how === "pending") return `<td class="st wait">Enter at the next open</td>`;
     if (t.how === "target") return `<td class="st done up">Target hit${soldNote}</td>`;
     if (t.how === "day end") return `<td class="st done">Closed at day end${soldNote}</td>`;
-    if (t.how === "candle") return `<td class="st done">Closed on the candles${soldNote}</td>`;
+    if (t.how === "candle") return `<td class="st done">Closed by EXIT${soldNote}</td>`;
     if (r && r.sold) return `<td class="st sold">SOLD at ${fmt.format(r.sold.premium)} <small>premium fell ${Math.round((1 - r.sell_below / r.premium_paid) * 100)}%</small></td>`;
     if (r && r.premium_now <= r.sell_below) return `<td class="st sell">SELL NOW · premium ${fmt.format(r.premium_now)}</td>`;
     return `<td class="st hold">HOLD${r ? ` <small>sell if below ${fmt.format(r.sell_below)}</small>` : ""}</td>`;
@@ -621,9 +621,9 @@
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
     if (!rd) return `<td class="cand">—</td>`;
     if (t.exit == null) return `<td class="cand ${rd.word}">${rd.word === "exit" ? "EXIT" : "CARRY"}<small>${rd.why}</small></td>`;
-    if (rd.exitAt == null) return `<td class="cand carry">Carry all the way<small>${rd.why}</small></td>`;
+    if (rd.exitAt == null) return `<td class="cand carry">CARRY the whole time<small>${rd.why}</small></td>`;
     const then = Math.round((t.side === "CE" ? rd.exitPrice - t.entry : t.entry - rd.exitPrice) * 100) / 100;  // the call's points at that candle's close
-    return `<td class="cand exit">Exit said at ${istTime(rd.exitAt, withDate())}<small>${rd.why} · ${signed.format(then)} then, ${signed.format(t.points)} at the end</small></td>`;
+    return `<td class="cand exit">Said EXIT at ${istTime(rd.exitAt, withDate())}<small>${rd.why} · ${signed.format(then)} at that time, ${signed.format(t.points)} at the end</small></td>`;
   }
 
   // paid → now while the call is open; paid → at exit once it has ended. A finished call with no record was never seen

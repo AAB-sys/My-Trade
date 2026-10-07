@@ -150,32 +150,38 @@ The rule, in the order it is applied:
    marks any record of the day still open as ended at the day end, whoever made
    it (7 October: records under the call keys of earlier versions, which no page
    or watcher matched any more, had stayed open).
-7. **The candle verdict** (owner's ask, 7 October, from two screenshots of a fall
-   through the levels and a retest; made plain the same evening) - a "Candles
-   say" cell on every call row: one word, CARRY or EXIT, from the closed candles
-   around the level that gave the call, whichever Fibonacci level that is (0% to
-   100% alike), with the reason in words under it. It changes nothing: not the
-   call, its target, its end or its points. The owner's rule: a retest that
-   holds means carry on; a candle closing back across the level means get out; a
-   strong cross carries to the next level. Everything is measured against the
-   gap from the call's level to its target. EXIT when a closed candle after the
-   signal has gone back across the level by a quarter of the gap or more (the
-   first such candle is the one named); CARRY otherwise, with the reason:
-   "retest held at 61.8%" when a candle came back to within a fifth of the gap
-   of the level and closed on the call's side, else the signal's strength
-   ("strong cross of 61.8%, nothing closed back": strong when the signal candle
-   closed past halfway to the target or had a body of a whole gap, fair when a
-   quarter of the way or a body of half the gap, shallow otherwise). The quarter
-   is what tells a retest from a turn: on the six saved days, 29 Sep to 7 Oct, a
-   close back of less than a quarter of the gap reverted two times in three
-   (noise, the retest of the owner's first screenshot), a close back past a
-   quarter did not; calls never closed back a quarter won 89%, back a whole gap
-   or more 35%. A finished call's cell says what the verdict said and when
-   ("Exit said at 12:40", with the call's points then and at the end), so the
-   owner can judge the verdict against the result. Only closed candles count, as
-   everywhere in this layer. The same exit, acted on, is idea P4 on the Study
-   page (layer 5). While today is still running the call shows as "Still open"
-   with its points at the live price.
+7. **Candles say: CARRY or EXIT** (owner's ask, 7 October, from two screenshots
+   of a fall through the levels and a retest; made plain the same evening) - a
+   "Candles say" cell on every call row: one word, CARRY or EXIT, from the
+   closed candles around the level that gave the call, whichever Fibonacci
+   level that is (0% to 100% alike), with the reason under it in plain words.
+   It changes nothing: not the call, its target, its end or its points. The
+   owner's rule: price coming back to the level and holding means carry on; a
+   candle closing on the wrong side of the level means get out; a big candle
+   through the level carries to the next one. The words on the page:
+   - EXIT, "price closed below the 61.8% level" (for a CE call; "above" for a
+     PE call): a closed candle after the signal ended on the wrong side of the
+     level, at least a quarter of the way toward the target's distance. A
+     smaller close on the wrong side does not count: that is a retest, not a
+     turn (the owner's first screenshot, and the six saved days: a close back
+     of less than a quarter reverted two times in three, a bigger one did not).
+     The first such candle is the one named.
+   - CARRY, "price came back to the 61.8% level and held": a candle came back
+     to within a fifth of the gap of the level and closed on the call's side.
+   - CARRY, "big candle through the 61.8% level, holding above it" (or
+     "candle", or "small candle"; for a held signal "strong bounce off", "bounce
+     off", "small bounce off"): the signal candle's size, measured as before -
+     big when it closed past halfway to the target or had a body of a whole
+     gap, plain when a quarter of the way or a body of half the gap, small
+     otherwise - and no candle has closed on the wrong side since.
+   A finished call's cell says what the word was and when ("Said EXIT at
+   12:40", with the call's points at that time and at the end, or "CARRY the
+   whole time"), so the owner can judge the word against the result. Only
+   closed candles count, as everywhere in this layer. The numbers behind it
+   (`lab/findings.md`, round 2): calls never closed back a quarter won 89%,
+   back a whole gap or more 35%. The same exit, acted on, is idea P4 on the
+   Study page (layer 5). While today is still running the call shows as "Still
+   open" with its points at the live price.
 7. **Every signal gives a call** - whether or not earlier calls are
    still open (owner's decision, 4 October). Several calls can run at once, each
    to its own exit.
@@ -366,12 +372,12 @@ Under test since 6 October (confirmed by the owner for the Study page):
   three, and the rule's calls from such signals won 64%, against 78% from a
   quarter to half and 94% past halfway; the gate was ahead of the rule in net on
   three boards of four and in points per call on all four, with far fewer calls.
-- **P4: exit when a candle closes back a quarter of the gap across the level**
-  (the owner's rule, 7 October evening: the candle verdict of layer 3, acted
-  on). A call ends at the close of the first closed candle that goes back across
+- **P4: exit when a candle closes on the wrong side of the level** (the
+  owner's rule, 7 October evening: the EXIT word of layer 3, acted on). A call
+  ends at the close of the first closed candle that ends on the wrong side of
   the call's level by a quarter or more of the gap to the target ("candle" in
-  the records); the target is checked first on the same candle, and the candle
-  forming now never counts. On the six saved days this exit was ahead of the
+  the records, "Closed by EXIT" on a page); the target is checked first on the
+  same candle, and the candle forming now never counts. On the six saved days this exit was ahead of the
   rule on one board of four (NIFTY 50, 15 minutes) and behind on three, with
   far smaller worst calls (`lab/findings.md`, round 2); it lives here as a
   switch so the owner sees it scored against the rule as the days come in,
