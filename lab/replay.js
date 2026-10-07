@@ -154,7 +154,9 @@ const IDEAS = [
   ["today-so-far levels + P1 + P2", { levels: "today", closeAt: hm(15, 0), noNewAfter: hm(14, 0) }],
   // 7 October, from the owner's two screenshots: the depth of the close past a level tells a cross from a bounce
   ["crossed only when the close is past halfway to the next level", { minDepth: 0.5 }],
-  ["crossed only when the close is a quarter of the way", { minDepth: 0.25 }],
+  ["P3 crossed only a quarter of the way to the next level", { minDepth: 0.25 }],
+  ["P1 + P2 + P3", { closeAt: hm(15, 0), noNewAfter: hm(14, 0), minDepth: 0.25 }],
+  ["today-so-far levels + P3", { levels: "today", minDepth: 0.25 }],
   ["a shallow cross waits for a close past halfway", { minDepth: 0.5, waitDeeper: true }],
   ["crossed only with a body of half the gap", { minBody: 0.5 }],
   ["exit when a candle closes back across the level by a quarter of the gap", { closeBackShare: 0.25 }],

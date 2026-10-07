@@ -222,8 +222,9 @@
   // ---- your rule against the ideas under test, on the picked setting: always from the rule as it is, whatever the boxes say
   function drawIdeas(dayCount) {
     const { index, interval, move, signal } = state;
-    const sets = [[], ...Object.keys(Rules.IDEAS).map(k => [k])];
-    if (Object.keys(Rules.IDEAS).length > 1) sets.push(Object.keys(Rules.IDEAS));
+    const keysAll = Object.keys(Rules.IDEAS), sets = [[], ...keysAll.map(k => [k])];  // the rule, each idea alone, each pair, all together
+    keysAll.forEach((a, i) => keysAll.slice(i + 1).forEach(b => sets.push([a, b])));
+    if (keysAll.length > 2) sets.push(keysAll);
     const base = allTrades(index, interval, move, signal, []);
     const byDay = (L) => { const m = {}; L.forEach(t => m[t.date] = Rules.round2((m[t.date] || 0) + t.points)); return m; };
     const baseDays = byDay(base);

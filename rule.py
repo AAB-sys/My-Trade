@@ -105,6 +105,7 @@ def enter_at(sig: dict, bar: dict):
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None) -> dict:
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
+    min_depth = (ideas or {}).get("minDepth")  # idea P3 (7 October): a crossed signal must close this share of the way to the next level
 
     def clock_end(b):
         return (b["time"] + IST_OFFSET) % 86400 + seconds
@@ -156,7 +157,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 used[(l["ratio"], "PE")] = False
         sig = signal_at(bar, prev_bar["close"], levels, used, signal)
         late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
-        if sig and not late:
+        shallow = bool(sig) and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
+        if sig and not late and not shallow:
             ready = sig
             used[(sig["ratio"], sig["side"])] = True
     last = closed[-1] if closed else None
@@ -197,7 +199,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas)
 
 
-IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}}
+IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}}
 
 
 def ideas_of(keys) -> dict:
