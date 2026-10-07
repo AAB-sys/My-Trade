@@ -101,7 +101,12 @@ repo:
 
 The token lasts 24 hours, so each trading morning: generate a new one on the
 Dhan website, paste it into Render's Environment (Render restarts the dashboard;
-log in again) and into `.env` if the laptop runs it. `check_dhan.bat` (or
+log in again) and into `.env` if the laptop runs it. **Every merge on GitHub
+restarts Render too**, which logs you out and stops the live price for a minute
+or two, so merge after 15:30 unless the change is the fix you are waiting for.
+Dhan allows one quote request a second: the server spaces its requests out
+(`dhan.py`), and `/health` shows the live feed's state (`feed`: the stream, the
+poll, who is watching, the last price and when) with no login. `check_dhan.bat` (or
 `python check_dhan.py`) checks the settings, the token, the subscription, a
 price, the candles and the option chain, and says in plain words what to fix.
 Only data is read; nothing here can place an order. `DHAN_POLL_SECONDS` (default
@@ -220,8 +225,8 @@ true:
   (`DASHBOARD_DROP_SECONDS`) is gone; a login with no page left and no handover
   open is over.
 
-So closing the browser, closing the last tab, or a server restart all mean
-logging in again. A page left in the background, on the laptop or the phone, is
+So closing the browser, closing the last tab, or a server restart (every merge
+restarts Render) all mean logging in again. A page left in the background, on the laptop or the phone, is
 still logged in when you come back to it within 4 hours. A browser that is never closed is logged out after 30 days anyway. The
 **Log out** button in the page header ends the login at once, in every tab. A
 wrong password waits a second before answering, which makes guessing slow.

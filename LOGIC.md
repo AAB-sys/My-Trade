@@ -177,6 +177,17 @@ own feed (one price a second if that feed is quiet); the closed candles, and so
 the signals, are judged when the next candle begins. Only NIFTY 50 and NIFTY BANK
 are on Dhan so far; the other indices stay on Yahoo and have no options.
 
+The session's candles run from 09:15 to 15:30 and nothing else is a candle
+(7 October): the pre-open prices from 09:00 move the price at the top of the
+page, but make no candle and never enter "today so far". The change next to the
+price is always against the previous session's close, the one the card shows.
+When the live price stops, a red line under the price says for how long and why,
+in the server's own words (a restart, a token refused, Dhan's limit, a dropped
+connection); the page never stands still without saying so. A refused request is
+not a reason to leave Dhan: the last Dhan answer is kept and the live price
+keeps moving. The page goes to Yahoo's delayed prices only when the token is
+refused or the subscription is gone, and says so under the price.
+
 **Not decided yet (owner to decide)**: whether to trade real money on any of
 this, at what size, and with what daily limit. The score line over many days is
 the evidence for that choice.

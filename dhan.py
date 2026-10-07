@@ -52,6 +52,26 @@ def configured() -> bool:
     return bool(client_id and token)
 
 
+# Dhan allows one market-feed request a second (ltp, ohlc, quote) and asks for a gap between option-chain
+# requests. The server has several callers of those: the once-a-second price poll, the index page's quote,
+# the dashboard's tiles. Two of them in the same second and Dhan refuses the second one ("too many
+# requests"); on 7 October that is what kept throwing the index page back to Yahoo's delayed prices
+# while the live ticks were ignored. So every request takes its turn here, spaced out, whoever asks.
+_pace_lock = threading.Lock()
+_pace_next = {"feed": 0.0, "chain": 0.0, "other": 0.0}
+PACE_SECONDS = {"feed": 1.2, "chain": 3.1, "other": 0.35}  # a little over the limit's second: the gap is measured where Dhan sees it, not where it is sent
+
+
+def _pace(path: str) -> None:
+    """Waits for this request's turn, so Dhan's rate limits are kept whoever asks."""
+    group = "feed" if path.startswith("/marketfeed") else "chain" if path.startswith("/optionchain") else "other"
+    with _pace_lock:
+        wait = _pace_next[group] - time.monotonic()
+        if wait > 0:
+            time.sleep(wait)
+        _pace_next[group] = time.monotonic() + PACE_SECONDS[group]
+
+
 def call(method: str, path: str, payload: dict | None = None) -> dict:
     """One request to Dhan; raises DhanError with a plain reason when it refuses."""
     client_id, token = settings()
@@ -60,6 +80,7 @@ def call(method: str, path: str, payload: dict | None = None) -> dict:
     headers = {"access-token": token, "client-id": client_id, "Accept": "application/json"}
     if payload is not None:
         payload = {**payload, "dhanClientId": client_id}
+    _pace(path)
     try:
         response = httpx.request(method, BASE + path, json=payload, headers=headers, timeout=15)
     except httpx.HTTPError as exc:
@@ -292,8 +313,10 @@ def quote(name: str) -> dict:
     return cached(("quote", name), 3, make)
 
 
-def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, ranges: dict) -> dict:
-    """The index page's detail, in the same shape as the Yahoo one, from Dhan in real time."""
+def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, ranges: dict, last_price: float | None = None) -> dict:
+    """The index page's detail, in the same shape as the Yahoo one, from Dhan in real time. With last_price given
+    (the live price the server already holds from the stream or the poll) no quote request is made: that request
+    shares Dhan's one-a-second allowance with the price poll."""
     seconds = intervals[interval_key]["bar_seconds"]
     minutes = 5 if seconds >= 86400 else seconds // 60  # day candles come from the daily list; 5-minute candles fill in today
     all_candles = intraday(name, minutes)
@@ -326,15 +349,13 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     previous_days = [d for d in days if bar_date(d) < today]
     previous = previous_days[-1] if previous_days else None
     todays = [b for b in all_candles if bar_date(b) == today]
-    q = quote(name)
+    q = {"last_price": last_price} if last_price else quote(name)
     last = float(q.get("last_price") or (todays[-1]["close"] if todays else (previous["close"] if previous else 0)))
     previous_close = previous["close"] if previous else last
-    # The change is the day's: against the previous session's close while today trades. Before the open,
-    # on a holiday or at the weekend the last price is that close itself, so the change shown is the last
-    # session's, against the close before it (as the dashboard tiles show it)
-    reference = previous_days[-2] if not todays and len(previous_days) >= 2 else previous
-    reference_close = reference["close"] if reference else last
-    change = round(last - reference_close, 2)
+    # The change is always against the previous session's close: the same close the card shows, and the same
+    # sum the page does on every tick. (Until 7 October, before the first candle of the day it was taken against
+    # the close before that one, so the pre-open and the first minutes showed a change against the wrong day.)
+    change = round(last - previous_close, 2)
     stamp, open_now = last_trade_time(all_candles, minutes)
     summary = {
         "previous_open": previous["open"] if previous else None,
@@ -346,7 +367,7 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
         "today_low": min(b["low"] for b in todays) if todays else None,
         "last": round(last, 2),
         "change": change,
-        "change_percent": round(change / reference_close * 100, 2) if reference_close else 0.0,
+        "change_percent": round(change / previous_close * 100, 2) if previous_close else 0.0,
         "week52_high": max((d["high"] for d in year), default=None),
         "week52_low": min((d["low"] for d in year), default=None),
         "time": stamp,
