@@ -152,6 +152,13 @@ laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `study.py`, `lab/
 **Android app** pull request touches `android/` and `.github/workflows/android.yml`
 only. Say in the title which kind it is when it is not obvious.
 
+One pull request at a time, each against `main`, never one built on top of
+another's branch (7 October: #70 was based on #69's branch; merged after #69, it
+landed in that dead branch and not on the site, and had to be opened again as
+#71). When a change needs an earlier one, wait for its merge and branch from
+`main`. Never push to a merged pull request's branch either; start a fresh
+branch from `main`.
+
 ## Phases
 
 1. API - done. 2. Dashboard - done. 3a. Streaming plumbing - done.
