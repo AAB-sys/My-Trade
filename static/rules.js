@@ -111,7 +111,13 @@
   //              day's levels the lines never move, so the target is the one set at the entry, as before. With "today so far"
   //              every new low or high moves the lines: until then the target stayed where the line stood at the signal, and the
   //              table showed numbers no line on the chart had any more (12:15 call: 22,385.21 while the 23.6% line read 22,380.55)
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas }) {
+  //   holdBreaks the owner's exit rule "Hold Through a Level Break" (8 October night): a call given by a CROSSED signal is held
+  //              through its target and sold only (A) at the close of a candle that closes back across the line it broke ("back",
+  //              at that close), (B) when a later candle opens beyond the previous close (lower for a PE, higher for a CE) and then
+  //              comes back to the open of the signal candle C1, where the break began ("retouch", at that price, tick by tick;
+  //              only when C1 opened on the far side of the line), or (C) at the day end. While such a call is held, no new call
+  //              that way is given: the same trade continues. Bounce (held) calls keep their target. No idea P4 to P7 on it
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -140,7 +146,16 @@
       return true;
     };
     const backAcross = (t, close) => t.side === "CE" ? t.level - close : close - t.level;  // how far a close went back across the call's level, in points
-    const settle = (t, bar) => {  // the target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target
+    const retouch = (t, bar, prevClose) => {  // exit B: the candle opened beyond the previous close and came back to C1's open
+      const armed = t.side === "PE" ? t.c1Open >= t.level : t.c1Open <= t.level;  // C1 began on the far side of the line it broke
+      return armed && (t.side === "PE" ? bar.open < prevClose && bar.high >= t.c1Open : bar.open > prevClose && bar.low <= t.c1Open);
+    };
+    const settle = (t, bar, prevClose) => {  // the target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target
+      if (t.hold) {  // a held break: exit B, then exit A at the close; the target does not end it
+        if (retouch(t, bar, prevClose)) { end(t, t.c1Open, bar, "retouch"); return false; }
+        if (t.side === "PE" ? bar.close > t.level : bar.close < t.level) { end(t, bar.close, bar, "back"); return false; }
+        return true;
+      }
       while (reaches(t, bar)) {
         const beyond = carryOn != null && t.ladder.length ? t.ladder[0] : null;
         if (beyond != null && (t.side === "CE" ? bar.close - t.target : t.target - bar.close) >= carryOn * Math.abs(beyond - t.target)) {
@@ -162,15 +177,17 @@
       }
       if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
       const levels = levelsAt(i), lines = linesAt(i);
-      open.forEach(t => { follow(t, lines); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
-      if (stopShare) open = open.filter(t => { if (touchesStop(t, bar) && stopFirst(t, bar)) { end(t, t.stop, bar, "stop"); return false; } return true; });  // ideas P6, P7
-      open = open.filter(t => settle(t, bar));
-      if (exitBack) open = open.filter(t => { if (backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
+      open.forEach(t => { follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      if (stopShare) open = open.filter(t => { if (!t.hold && touchesStop(t, bar) && stopFirst(t, bar)) { end(t, t.stop, bar, "stop"); return false; } return true; });  // ideas P6, P7
+      open = open.filter(t => settle(t, bar, prevBar.close));
+      if (exitBack) open = open.filter(t => { if (!t.hold && backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
-      const sig = signalAt(bar, prevBar.close, levels, used, signal);  // the call, at the signal candle's close
+      let sig = signalAt(bar, prevBar.close, levels, used, signal);  // the call, at the signal candle's close
+      if (sig && holdBreaks && open.some(t => t.hold && t.side === sig.side)) sig = null;  // a held break that way: the same trade continues, no new call
+      if (sig && holdBreaks && sig.kind === "crossed") { sig.hold = true; sig.c1Open = bar.open; }  // C1, the signal candle: its open is where the break began
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
-      const shallow = !!sig && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
+      const shallow = !!sig && !sig.hold && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
       if (sig && !late && !shallow) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
     }
     const last = closed[closed.length - 1];
@@ -178,9 +195,10 @@
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
       if (ready) { const t = enterAt(ready, forming); if (t) { trades.push(t); open.push(t); } ready = null; }
       const lines = linesAt(closed.length);  // the lines as the chart draws them now, with the forming candle in the day's range
-      open.forEach(t => { follow(t, lines); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
-      if (stopShare) open = open.filter(t => { if (touchesStop(t, forming)) { end(t, t.stop, forming, "stop"); return false; } return true; });  // ideas P6, P7, tick by tick
-      open = open.filter(t => { if (!reaches(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
+      open.forEach(t => { follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      if (stopShare) open = open.filter(t => { if (!t.hold && touchesStop(t, forming)) { end(t, t.stop, forming, "stop"); return false; } return true; });  // ideas P6, P7, tick by tick
+      open = open.filter(t => { if (t.hold) { if (retouch(t, forming, last.close)) { end(t, t.c1Open, forming, "retouch"); return false; } return true; }  // exit B tick by tick; exit A waits for the close
+                                if (!reaches(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
                                 end(t, t.target, forming, "target"); return false; });
       open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at
     } else {
@@ -192,12 +210,12 @@
 
   // A finished day replayed: every candle has closed, so the clock is set past the day's end. "Previous day" levels
   // stand still; "today so far" levels are the ones the page draws while each candle forms: the day's range up to the
-  // candle before it (todayLevelsAt)
+  // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page
   function replayDay({ bars, move, previous, seconds, signal, ideas }) {
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null;
     if (move === "prev" && !fixed) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : todayLevelsAt(bars), targetsAt = move === "prev" ? null : todayLinesAt(bars);
-    return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas });
+    return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true });
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -295,6 +313,13 @@
   const EXIT_BACK = IDEAS.P4.ideas.exitBack;
   function readOf({ trade: t, bars, seconds, now }) {
     if (t.entry == null && t.how !== "pending") return null;
+    if (t.hold) {  // a held break (holdBreaks): the verdict is the owner's exit rule itself
+      const name = t.ratio == null ? "the level" : `the ${(t.ratio * 100).toFixed(1)}% level`, pe = t.side === "PE";
+      const word = t.how === "back" || t.how === "retouch" ? "exit" : "carry";
+      const why = t.how === "back" ? `price closed back ${pe ? "above" : "below"} ${name}` : t.how === "retouch" ? "price came back to where the break began"
+        : `price stays ${pe ? "below" : "above"} ${name}`;
+      return { depth: null, body: null, back: null, retest: false, strength: null, word, why, exitAt: word === "exit" ? t.exitTime : null, exitPrice: word === "exit" ? t.exit : null };
+    }
     const gap = Math.abs(t.target - t.level);
     const sig = bars.find(b => b.time === t.signalTime);
     if (!gap || !sig) return null;

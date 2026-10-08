@@ -116,7 +116,11 @@ def enter_at(sig: dict, bar: dict):
 
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
 
-def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None) -> dict:
+def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
+                 hold_breaks: bool = False) -> dict:
+    """hold_breaks: the owner's exit rule "Hold Through a Level Break" (8 October night; see static/rules.js): a crossed call is held
+    through its target, sold on a close back across its line ("back"), on a return to the signal candle's open after a candle
+    opened beyond the previous close ("retouch"), or at the day end; no new call that way while it is held."""
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -158,7 +162,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         return True
 
     def set_stop(t):
-        if stop_share and t.get("stop") is None:
+        if stop_share and t.get("stop") is None and not t.get("hold"):
             t["stop"] = round2(t["entry"] - stop_share * (t["target"] - t["entry"]) if t["side"] == "CE" else t["entry"] + stop_share * (t["entry"] - t["target"]))
 
     def follow(t, levels):
@@ -170,8 +174,22 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if len(beyond) > k:  # no line that far out (the entry at the day's high): it stays
             t["target"], t["ladder"] = beyond[k], beyond[k + 1:]
 
-    def settle(t, bar):
+    def retouch(t, bar, prev_close):
+        """Exit B: the candle opened beyond the previous close and came back to the signal candle's open (C1 began on the far side)."""
+        if t["side"] == "PE":
+            return t["c1Open"] >= t["level"] and bar["open"] < prev_close and bar["high"] >= t["c1Open"]
+        return t["c1Open"] <= t["level"] and bar["open"] > prev_close and bar["low"] <= t["c1Open"]
+
+    def settle(t, bar, prev_close):
         """The target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target."""
+        if t.get("hold"):  # a held break: exit B, then exit A at the close; the target does not end it
+            if retouch(t, bar, prev_close):
+                end(t, t["c1Open"], bar, "retouch")
+                return False
+            if bar["close"] > t["level"] if t["side"] == "PE" else bar["close"] < t["level"]:
+                end(t, bar["close"], bar, "back")
+                return False
+            return True
         while reaches(t, bar):
             beyond = t["ladder"][0] if carry_on is not None and t["ladder"] else None
             if beyond is not None and (bar["close"] - t["target"] if t["side"] == "CE" else t["target"] - bar["close"]) >= carry_on * abs(beyond - t["target"]):
@@ -205,17 +223,17 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if stop_share:  # ideas P6, P7
             still = []
             for t in open_:
-                if touches_stop(t, bar) and stop_first(t, bar):
+                if not t.get("hold") and touches_stop(t, bar) and stop_first(t, bar):
                     end(t, t["stop"], bar, "stop")
                 else:
                     still.append(t)
             open_ = still
-        open_ = [t for t in open_ if settle(t, bar)]
+        open_ = [t for t in open_ if settle(t, bar, prev_bar["close"])]
         if exit_back:  # idea P4: the candle says exit, at its close
             still = []
             for t in open_:
                 back = t["level"] - bar["close"] if t["side"] == "CE" else bar["close"] - t["level"]
-                if back >= exit_back * abs(t["target"] - t["level"]):
+                if not t.get("hold") and back >= exit_back * abs(t["target"] - t["level"]):
                     end(t, bar["close"], bar, "candle")
                 else:
                     still.append(t)
@@ -228,8 +246,12 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             if (bar["close"] < price) if side == "CE" else (bar["close"] > price):
                 del used[(price, side)]
         sig = signal_at(bar, prev_bar["close"], levels, used, signal)
+        if sig and hold_breaks and any(t.get("hold") and t["side"] == sig["side"] for t in open_):
+            sig = None  # a held break that way: the same trade continues, no new call
+        if sig and hold_breaks and sig["kind"] == "crossed":
+            sig["hold"], sig["c1Open"] = True, bar["open"]  # C1, the signal candle: its open is where the break began
         late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
-        shallow = bool(sig) and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
+        shallow = bool(sig) and not sig.get("hold") and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
         if sig and not late and not shallow:
             ready = sig
             used[(sig["level"], sig["side"])] = True
@@ -249,14 +271,19 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if stop_share:  # ideas P6, P7, tick by tick
             still = []
             for t in open_:
-                if touches_stop(t, forming):
+                if not t.get("hold") and touches_stop(t, forming):
                     end(t, t["stop"], forming, "stop")
                 else:
                     still.append(t)
             open_ = still
         still = []
         for t in open_:
-            if reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close
+            if t.get("hold"):  # exit B tick by tick; exit A waits for the close
+                if retouch(t, forming, last["close"]):
+                    end(t, t["c1Open"], forming, "retouch")
+                else:
+                    still.append(t)
+            elif reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close
                 end(t, t["target"], forming, "target")
             else:
                 still.append(t)
@@ -280,7 +307,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     if move == "prev" and not fixed:
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars))
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True)
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},
@@ -316,6 +343,14 @@ def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
     rows carry what the page would say; check_rule.py keeps the two the same."""
     if t.get("entry") is None and t.get("how") != "pending":
         return None
+    if t.get("hold"):  # a held break: the verdict is the owner's exit rule itself
+        name = "the level" if t.get("ratio") is None else f"the {t['ratio'] * 100:.1f}% level"
+        pe, how = t["side"] == "PE", t.get("how")
+        word = "exit" if how in ("back", "retouch") else "carry"
+        why = (f"price closed back {'above' if pe else 'below'} {name}" if how == "back" else "price came back to where the break began" if how == "retouch"
+               else f"price stays {'below' if pe else 'above'} {name}")
+        return {"depth": None, "body": None, "back": None, "retest": False, "strength": None, "word": word, "why": why,
+                "exitAt": t.get("exitTime") if word == "exit" else None, "exitPrice": t.get("exit") if word == "exit" else None}
     gap = abs(t["target"] - t["level"])
     sig = next((b for b in bars if b["time"] == t["signalTime"]), None)
     if not gap or sig is None:

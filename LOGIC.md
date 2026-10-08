@@ -206,6 +206,25 @@ The rule, in the order it is applied:
    candles, both signals: the same 450 calls, 381 won instead of 370, net
    +6,014 points instead of +7,344 (targets come closer as the lines move, so
    more are reached, each for fewer points).
+   **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
+   candles): a call given by a *crossed* signal (the candle C1 broke a line L)
+   is not sold at its target. It is held, and the same trade continues while
+   the price keeps going: no new call that way while it is held. It is sold:
+   - **A, reclaim:** at the close of a candle that closes back across L (above
+     it for a PE, below it for a CE), at that close;
+   - **B, retouch:** when a later candle opens beyond the previous close (lower
+     for a PE, higher for a CE) and then comes back to C1's open, at C1's open,
+     tick by tick (only when C1 opened on the far side of L);
+   - **C, end of day:** at the day end (item 6).
+   The target column still shows the next line, for information. A bounce
+   (*held*) call keeps its target. The candle status of such a call is this
+   rule's own verdict. The ideas P3 to P7 of the Study page leave it alone.
+   On the seven saved days, *Today so far*, 5-minute candles, both signals:
+   NIFTY 50 123 calls, net +181 (it was 212 calls, -730); NIFTY BANK 115 calls,
+   +1,403 (it was 224, +2,193); 8 October NIFTY 50 -311 (it was -755), the
+   10:15 PE held from 22,461.30 to the close, +229.50. With *Previous day*
+   levels it does worse: NIFTY 50 -275 (it was +316), NIFTY BANK -194 (it was
+   +1,826).
 6. **Day end** - a call still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal on the day's last candle has no
    candle left to enter on, so it gives nothing. The day's final save (15:40)

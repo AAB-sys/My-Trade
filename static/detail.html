@@ -526,8 +526,12 @@
   //   every signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call (8 October evening: the
   //   seven lines only, the extra line beyond each end of that afternoon taken off)
+  //   a break  - the owner's exit rule "Hold Through a Level Break" (8 October night; Rules.paperTrades holdBreaks): a call
+  //             from a crossed signal is held through its target and sold on a close back across its line, on a return to
+  //             the signal candle's open after a candle opened further away, or at the day end; while it is held, no new
+  //             call that way. Not on day candles
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", retouch: "Came back", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
@@ -544,7 +548,7 @@
     const bars = sessionBars();
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
-                               dayCandles: state.interval === "1d", signal: state.signal });
+                               dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d" });
   }
 
   function drawPaper(levels) {
@@ -646,8 +650,15 @@
     return `<td class="entry">${strike != null ? strike : fmt.format(t.entry)}</td>`;
   }
 
-  // "Call Target": the next level in the call's direction, and how the call ended once it has
+  // "Call Target": the next level in the call's direction, and how the call ended once it has. A held break is not sold at
+  // its target: the note says what sells it, and once sold, what did
   function targetCell(t) {
+    if (t.hold) {
+      const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
+      const note = t.how === "back" ? `<small>sold: closed ${way} ${line}</small>` : t.how === "retouch" ? `<small>sold: came back to ${fmt.format(t.c1Open)}</small>`
+        : t.how === "day end" ? `<small${t.points > 0 ? ' class="up"' : ""}>held to the day end</small>` : t.entry == null ? "" : `<small>holding: sells on a close ${way} ${line}</small>`;
+      return `<td class="target">${fmt.format(t.target)}${note}</td>`;
+    }
     const note = t.how === "target" ? `<small class="up">hit</small>` : t.how === "day end" ? "<small>not reached, day end</small>"
       : t.how === "candle" ? "<small>not reached, closed by EXIT</small>" : t.aimed ? "<small>one level on</small>" : "";
     return `<td class="target">${fmt.format(t.target)}${note}</td>`;

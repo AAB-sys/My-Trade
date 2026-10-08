@@ -228,3 +228,8 @@ branch from `main`.
   when the price crosses 0% or 100%), and a call's target follows those lines: `Rules.todayLinesAt` / `rule.today_lines_at`,
   passed as `targetsAt` / `targets_at`. A call never changes after it is given; a target hit seen live stays a hit when
   the candle closes (its price can differ by a few points when the line moved on later in that candle).
+- The owner's exit rule "Hold Through a Level Break" (8 October night): `holdBreaks` / `hold_breaks`, passed by the index
+  page (not on day candles), the watcher and `replayDay`. A crossed call gets `hold: true` and `c1Open` (the signal
+  candle's open); it ends `"back"` (a close back across its line) or `"retouch"` (a candle opening beyond the previous
+  close, then back to `c1Open`, tick by tick), else at the day end; never at its target. While one is open, no new call
+  that way. The lab's `run()` mirrors it (`holdBreaks !== false`).

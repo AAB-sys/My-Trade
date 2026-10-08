@@ -40,7 +40,11 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 //   at least this share of the gap (7 October: the depth of the close past a level is what tells a cross from a bounce)
 //   carryOn: idea P5 (7 October evening): when the candle reaching the target closes at least this share of the next gap past it,
 //   the call carries on to the level beyond, again and again up the ladder of levels in force at the signal
+//   holdBreaks: the owner's exit rule for breaks (8 October night), on unless set to false: a crossed call is held through its
+//   target and sold on a close back across its line, on a return to the signal candle's open after a candle opened further
+//   away, or at the day end; no new call that way while it is held (as Rules.paperTrades)
 function run(bars, previous, o, higher) {
+  const holdBreaks = o.holdBreaks !== false;
   const sec = o.sec;
   const fixed = o.levels === "prev" ? (previous ? R.levelsOf(R.moveOfDay(previous)) : null) : null;
   const openRange = n => { const first = bars.filter(b => tod(b.time) < hm(9, 15) + n * 60); return first.length ? R.levelsOf(R.moveOf(first)) : null; };
@@ -64,6 +68,13 @@ function run(bars, previous, o, higher) {
       ready = null;
     }
     open = open.filter(x => {
+      if (x.hold) {  // a held break: exit B (back to C1's open after a candle opened further away), then exit A at the close
+        const pc = bars[i - 1].close, pe = x.side === "PE";
+        x.fav = Math.max(x.fav, pe ? x.entry - bar.low : bar.high - x.entry); x.adv = Math.max(x.adv, pe ? bar.high - x.entry : x.entry - bar.low);
+        if ((pe ? x.c1Open >= x.level && bar.open < pc && bar.high >= x.c1Open : x.c1Open <= x.level && bar.open > pc && bar.low <= x.c1Open)) { end(x, x.c1Open, bar, "retouch"); return false; }
+        if (pe ? bar.close > x.level : bar.close < x.level) { end(x, bar.close, bar, "back"); return false; }
+        return true;
+      }
       const past = x.side === "CE" ? Math.max(x.entry, x.level) : Math.min(x.entry, x.level), k = x.carried || 0;  // the target follows the lines, as Rules.paperTrades (8 October)
       const lines = o.levels === "today" ? todayLines(i) : levels;
       const beyond = x.side === "CE" ? lines.map(l => l.price).filter(p => p > past) : lines.map(l => l.price).filter(p => p < past).reverse();
@@ -111,8 +122,8 @@ function run(bars, previous, o, higher) {
       const kind = crossed(at.price) ? "crossed" : "held", side = bar.close > at.price ? "CE" : "PE";
       const k = levels.indexOf(at), next = side === "CE" ? levels[k + 1] : levels[k - 1];
       const late = (o.noNewAfter && clockEnd > o.noNewAfter) || (o.closeAt && clockEnd >= o.closeAt);
-      let ok = !!next && !late;
-      if (ok && kind === "crossed" && next) {  // the depth and the body of the crossing candle, against the gap to the next level
+      let ok = !!next && !late && !(holdBreaks && open.some(x => x.hold && x.side === side));  // a held break that way: the same trade continues
+      if (ok && kind === "crossed" && next && !holdBreaks) {  // the depth and the body of the crossing candle, against the gap to the next level
         const gap = Math.abs(next.price - at.price), depth = Math.abs(bar.close - at.price) / gap, body = Math.abs(bar.close - bar.open) / gap;
         if (o.minDepth && depth < o.minDepth) { ok = false; if (o.waitDeeper) shallow[at.ratio + side] = { ratio: at.ratio, side }; }
         if (ok && o.minBody && body < o.minBody) ok = false;
@@ -121,6 +132,7 @@ function run(bars, previous, o, higher) {
       if (ok && o.agree && higher) { const done = higher.filter(b => b.time + o.higherSec <= bar.time + sec); const c = done[done.length - 1]; ok = !!c && (side === "CE" ? c.close > at.price : c.close < at.price); }
       if (ok && o.minNeed) ok = Math.abs(next.price - bar.close) >= o.minNeed;
       if (ok) sig = { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close, prices: levels.map(l => l.price) };
+      if (sig && holdBreaks && kind === "crossed") { sig.hold = true; sig.c1Open = bar.open; }
     }
     if (sig) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
   }
@@ -201,7 +213,7 @@ if (LIVE.length) {
   console.log("\n==== the calls the index page suggested live (its own points; finished ones only in the counts)");
   Object.keys(groups).sort().forEach(key => {
     const [index, interval, levels, signal] = key.split("|"), list = groups[key];
-    const done = list.filter(c => c.ended_by === "target" || c.ended_by === "day end");
+    const done = list.filter(c => ["target", "day end", "back", "retouch"].includes(c.ended_by));
     const net = r2(done.reduce((s, c) => s + (parseFloat(c.points) || 0), 0)), won = done.filter(c => parseFloat(c.points) > 0).length;
     let matched = 0, replayable = 0;
     if (SEC[interval] && (levels === "prev" || levels === "today") && signal !== "off") {
@@ -219,8 +231,10 @@ for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", 
   // the self-check: the base line must equal the page's engine
   const mine = tally(all(index, interval, {}));
   const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both" }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
-  const same = mine.n === page.n && mine.net === page.net;
-  console.log(`\n==== ${index}, ${interval} candles ${same ? "(base line agrees with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify(page)}`);
+  const mineToday = tally(all(index, interval, { levels: "today" }));  // and the today-so-far line
+  const pageToday = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "today", previous: ix.previous, seconds: SEC[interval], signal: "both" }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
+  const same = mine.n === page.n && mine.net === page.net && mineToday.n === pageToday.n && mineToday.net === pageToday.net;
+  console.log(`\n==== ${index}, ${interval} candles ${same ? "(base lines agree with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify({ page, pageToday, mine, mineToday })}`);
   const base = all(index, interval, {});
   IDEAS.forEach(([name, opts], i) => console.log(row(name, tally(all(index, interval, opts), i ? base : null))));
   // the stops of the Study page (P6, P7; the owner's question of 8 October), by the page's own engine, a candle that touched both
