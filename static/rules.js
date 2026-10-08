@@ -31,13 +31,17 @@
   // ---- Layer 2, the judgement, inside layer 3's signal: a closed candle HELD a level (reached it and closed
   // back on the side it came from) or CROSSED one (closed on the other side of it from the previous close).
   // When one candle signals at several levels the one nearest its close counts: one candle, one call. A level
-  // that has given a call in a direction gives no more that way until the index closes back across it (used).
+  // that has given a call in a direction gives no more that way until the index closes back across it (used). The
+  // level is the line at its price (8 October): with "today so far" levels a ratio's line moves as the day's range grows,
+  // and a line at a new price is a new level. Until then the memory was kept by the ratio's name, so the 0% hold at 09:20
+  // blocked every later hold of the day's low that day, at lines up to 186 points lower, and could never be released
+  // (no close goes below the day's own low). With the previous day's levels the lines never move: nothing changes there.
   function signalAt(bar, prev, levels, used, signal) {
     const crossed = L => (prev < L && bar.close > L) || (prev > L && bar.close < L);
     const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
     const hits = levels.filter(l => {
       const kind = crossed(l.price) ? "crossed" : held(l.price) ? "held" : null;
-      return kind && (signal === "both" || signal === kind) && !used[l.ratio + (bar.close > l.price ? "CE" : "PE")];
+      return kind && (signal === "both" || signal === kind) && !used[l.price + "|" + (bar.close > l.price ? "CE" : "PE")];
     });
     if (!hits.length) return null;
     const at = hits.reduce((a, b) => Math.abs(b.price - bar.close) < Math.abs(a.price - bar.close) ? b : a);
@@ -106,7 +110,7 @@
     };
     const newDay = (a, b) => !dayCandles && dayOf(a.time) !== dayOf(b.time);
     const trades = [];
-    const used = {};  // level ratio + side -> true while that level has given a call that way
+    const used = {};  // "price|side" -> { price, side } while the line at that price has given a call that way
     let ready = null, open = [];
     for (let i = 1; i < closed.length; i++) {
       const bar = closed[i], prevBar = closed[i - 1];
@@ -119,11 +123,11 @@
       if (exitBack) open = open.filter(t => { if (backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       const levels = levelsAt(i);
-      levels.forEach(l => { if (bar.close < l.price) used[l.ratio + "CE"] = false; if (bar.close > l.price) used[l.ratio + "PE"] = false; });  // closed back across: the level may call again
+      for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
       const sig = signalAt(bar, prevBar.close, levels, used, signal);  // the call, at the signal candle's close
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
       const shallow = !!sig && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
-      if (sig && !late && !shallow) { ready = sig; used[sig.ratio + sig.side] = true; }
+      if (sig && !late && !shallow) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
     }
     const last = closed[closed.length - 1];
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end

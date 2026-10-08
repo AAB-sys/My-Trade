@@ -129,7 +129,13 @@ The rule, in the order it is applied:
    candle, one call **(owner to decide)**. A level that has given a call in a
    direction gives no more that way until the index has closed back across it
    (owner's decision, 4 October: no repeat calls while the index hovers at one
-   level).
+   level). The level is remembered by its price, not its name (8 October): with
+   *Today so far* the 0% line follows each new low, so on 8 October NIFTY 50's
+   first call at the day's low (09:20) blocked every later hold of a lower low,
+   up to 186 points lower, and the price could never close back across a line
+   that had moved, so the table went silent after 10:15. Now a line at a new
+   price may call once more; a line that stays put still calls once. With the
+   previous day's levels nothing changes, their lines never move.
 2. **The call comes at once** - the moment the signal candle closes, with no
    confirming candle (owner's decision, 6 October: the call must be there when
    the signal fires, not a candle later; from 4 to 6 October the next candle had

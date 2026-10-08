@@ -67,7 +67,7 @@ def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str):
     hits = []
     for l in levels:
         kind = "crossed" if crossed(l["price"]) else "held" if held(l["price"]) else None
-        if kind and (signal == "both" or signal == kind) and not used.get((l["ratio"], "CE" if bar["close"] > l["price"] else "PE")):
+        if kind and (signal == "both" or signal == kind) and not used.get((l["price"], "CE" if bar["close"] > l["price"] else "PE")):  # the line at its price (8 October)
             hits.append(l)
     if not hits:
         return None
@@ -169,17 +169,15 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 end(t, bar["close"], bar, "time")
             open_ = []
         levels = levels_at(i)
-        for l in levels:  # closed back across: the level may call again
-            if bar["close"] < l["price"]:
-                used[(l["ratio"], "CE")] = False
-            if bar["close"] > l["price"]:
-                used[(l["ratio"], "PE")] = False
+        for price, side in list(used):  # closed back across: the line may call again (kept by its price, 8 October)
+            if (bar["close"] < price) if side == "CE" else (bar["close"] > price):
+                del used[(price, side)]
         sig = signal_at(bar, prev_bar["close"], levels, used, signal)
         late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
         shallow = bool(sig) and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
         if sig and not late and not shallow:
             ready = sig
-            used[(sig["ratio"], sig["side"])] = True
+            used[(sig["level"], sig["side"])] = True
     last = closed[-1] if closed else None
     over = False if day_candles else (day_over(day_of(last["time"]), now) if last else True)
     if forming and last and not over and not new_day(forming, last):
