@@ -223,6 +223,6 @@ branch from `main`.
   the feed, segment byte 8), and its page has the premium column like NIFTY's.
 - "Today so far" calls (8 October): `paperTrades()` on the index page, `watch_index()` in main.py, `Rules.replayDay`
   and the lab's replay all use `Rules.todayLevelsAt(bars)` / `rule.today_levels_at(bars)`: candle i against the day's
-  range up to candle i-1, with a step beyond each end (`levelsWithSteps`, ratios -0.236 and 1.236: nine lines). The
-  chart draws the same lines (the closed candles' range), so they stand still while a candle forms. A call never
-  changes after it is given. `levelBehaviour` skips the two steps (its table is the seven ratios).
+  range up to candle i-1, the seven Fibonacci lines only (the extra line beyond each end was taken off on 8 October
+  evening, the owner's decision). The chart draws the same lines (the closed candles' range), so they stand still while
+  a candle forms. A call never changes after it is given.

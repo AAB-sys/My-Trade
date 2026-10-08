@@ -50,18 +50,10 @@ def move_of(bars: list):
     return {"high": max(b["high"] for b in bars), "low": min(b["low"] for b in bars), "up": bars[-1]["close"] >= bars[0]["open"]}
 
 
-STEP = 0.236  # "today so far": one more Fibonacci step beyond each end of the range (owner's decision, 8 October; see static/rules.js)
-
-
-def levels_with_steps(m: dict) -> list:
-    span = m["high"] - m["low"]
-    out = lambda r: round2(m["high"] - r * span if m["up"] else m["low"] + r * span)
-    return sorted([{"ratio": -STEP, "price": out(-STEP)}, *levels_of(m), {"ratio": 1 + STEP, "price": out(1 + STEP)}], key=lambda l: l["price"])
-
-
 def today_levels_at(bars: list):
-    """Candle i judged against the lines as they stood when it began: the day's range up to the candle before it (the first: its own)."""
-    return lambda i: levels_with_steps(move_of(bars[:max(1, i)]))
+    """Candle i judged against the lines as they stood when it began: the day's range up to the candle before it (the first:
+    its own). The seven Fibonacci lines only (owner's decision, 8 October evening; see static/rules.js)."""
+    return lambda i: levels_of(move_of(bars[:max(1, i)]))
 
 
 def move_of_day(d):
@@ -93,7 +85,7 @@ def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str):
     side = "CE" if bar["close"] > at["price"] else "PE"
     nxt = next((l for l in levels if l["price"] > at["price"]), None) if side == "CE" else next((l for l in reversed(levels) if l["price"] < at["price"]), None)
     if nxt is None:
-        return None  # a signal pointing outward from the outermost line has no next level
+        return None  # a signal pointing outward from the 0% or 100% level has no next level
     return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
             "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
             "prices": [l["price"] for l in levels]}

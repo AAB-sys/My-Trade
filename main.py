@@ -670,7 +670,7 @@ def watch_index(name: str) -> dict:
             return {"calls": 0, "open": 0}
         levels = rule.levels_of(rule.move_of_day(previous))
     else:
-        levels = None  # today so far: each candle against the lines as they stood when it began, with a step beyond each end, as the page and the Study page judge it (8 October)
+        levels = None  # today so far: each candle against the seven lines as they stood when it began, as the page and the Study page judge it (8 October)
     now = time.time()
     levels_at = (lambda i: levels) if levels is not None else rule.today_levels_at(bars)
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL)["trades"]

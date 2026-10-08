@@ -45,7 +45,7 @@ function run(bars, previous, o, higher) {
   const fixed = o.levels === "prev" ? (previous ? R.levelsOf(R.moveOfDay(previous)) : null) : null;
   const openRange = n => { const first = bars.filter(b => tod(b.time) < hm(9, 15) + n * 60); return first.length ? R.levelsOf(R.moveOf(first)) : null; };
   const opening = o.levels === "open30" ? openRange(30) : o.levels === "open15" ? openRange(15) : null;
-  const today = R.todayLevelsAt(bars);  // the lines as they stood when each candle began, a step beyond each end (8 October)
+  const today = R.todayLevelsAt(bars);  // the seven lines as they stood when each candle began (8 October)
   const levelsAt = i => o.levels === "prev" ? fixed : o.levels === "today" ? today(i) : opening;
   const trades = [], used = {}, crossedAgo = {}, shallow = {}; let ready = null, open = [];
   const gain = (x, p) => r2(x.side === "CE" ? p - x.entry : x.entry - p);
