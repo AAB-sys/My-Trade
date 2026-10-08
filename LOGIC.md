@@ -116,7 +116,13 @@ one, "CARRY the whole time" or "Said EXIT at" its time; off the table on 7
 October evening, back on 8 October as the owner's exit signal, and in the day's
 calls CSV all along). A finished row is greyed. A finished call that
 no page saw enter reads "not seen at entry" in the premium cell: no page was
-open at its entry, so no premium could be recorded then (7 October). The header
+open at its entry, so no premium could be recorded then (7 October). An open
+call whose option was first recorded more than two minutes after its entry (the
+server was restarting, or the rule changed during the session and the call
+appeared afterwards) says so under its premium: "paid: the price at 12:12 PM,
+not at entry" (8 October: the 10:35 NIFTY 50 call entered at 10:40 and showed
+118.65 paid, the price at 12:12; the same contract was 155.65 at 10:45). Its
+sell mark is 65% of that later price. The header
 row stays in view while the page scrolls (owner's ask, 7 October). The list is in time order, the newest call at the
 top, open or finished alike (owner's ask, 7 October: an open call listed above a
 later one read as if it had been given later); one line keeps the score (owner's
@@ -294,7 +300,14 @@ either looked (a server just started) still has no premium: nothing can be
 recorded after the fact, and its cell reads "not seen at entry". While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's
 own feed (one price a second if that feed is quiet); the closed candles, and so
-the signals, are judged when the next candle begins. NIFTY 50, NIFTY BANK and
+the signals, are judged when the next candle begins. Dhan's own copy of a
+candle wins over the one built from the ticks, except on the candle forming now
+and for a minute after a candle closes while the ticks are flowing: there the
+close is the last tick's, and the high and low the furthest of the two (8
+October: at 12:15:01 the server judged NIFTY BANK's 12:10 candle on Dhan's copy,
+asked for a few seconds before the candle ended, which closed at 54,853.20; the
+index fell to 54,826.30 in its last seconds, so the Buy CE it gave was gone from
+the rule moments later, its record and CSV row left behind). NIFTY 50, NIFTY BANK and
 SENSEX are on Dhan (SENSEX since 7 October, for its tile and its page: no
 options, no records, no watcher there); the other indices stay on Yahoo and have
 no options.
