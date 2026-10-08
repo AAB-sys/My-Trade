@@ -85,7 +85,9 @@ their own logic. Read this before touching the code.
   `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. Real-time candles,
   quotes for `QUOTE_IDS` (NIFTY 50, NIFTY BANK, SENSEX; the ids are checked
   against Dhan's instrument list once it is read, `id_problem()` on `/health`
-  as `feed.ids`) and the option chain for `INDEX_IDS` (NIFTY 50, NIFTY BANK), with small
+  as `feed.ids`) and the option chain for `OPTION_INDICES` (NIFTY 50, NIFTY BANK, and SENSEX on the BSE since
+  8 October; `OPTION_SEGMENTS` says each one's segment, NSE_FNO or BSE_FNO, and `open_options` keys the contracts
+  by (segment, security id) for the feed and the poll; `INDEX_IDS` stays the two whose days are saved), with small
   caches for Dhan's rate limits and every request paced to them in `call()`
   (`_pace`: market-feed requests 1.2 s apart, option chain 3.1 s; on 7 October
   the once-a-second poll and the page's quote in the same second got the quote
@@ -214,8 +216,9 @@ branch from `main`.
   `/health` says `keep_awake`.
 - `/health` says `memory_mb` (now and peak, from /proc): on 8 October the server stopped at about 09:50 with a page
   open and restarted at 10:00:26; the free plan has 512 MB, so the peak tells whether memory is the reason next time.
-- SENSEX on the index page: strikes by the one-strike-in-the-money rule on a 100-point step (`STRIKE_STEP`); the
-  server has no SENSEX option chain, so its page hides the premium column and says so in one line.
+- SENSEX on the index page: strikes by the one-strike-in-the-money rule on a 100-point step (`STRIKE_STEP`); since 8
+  October its options are followed like NIFTY's (BSE rows of the instrument list, Dhan's chain for id 51, BSE_FNO on
+  the feed, segment byte 8), and its page has the premium column like NIFTY's.
 - "Today so far" calls (8 October): `paperTrades()` on the index page, `watch_index()` in main.py, `Rules.replayDay`
   and the lab's replay all use `Rules.todayLevelsAt(bars)` / `rule.today_levels_at(bars)`: candle i against the day's
   range up to candle i-1, with a step beyond each end (`levelsWithSteps`, ratios -0.236 and 1.236: nine lines). The

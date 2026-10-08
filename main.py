@@ -70,7 +70,8 @@ else:
     raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use yahoo or demo.")
 
 # Dhan, the owner's broker API: real-time candles and quotes for the indices it covers (dhan.QUOTE_IDS) and
-# option premiums for the two with options (dhan.INDEX_IDS), when its two settings are present and the source is the real one.
+# option premiums for those with options (dhan.OPTION_INDICES: NIFTY 50, NIFTY BANK, and SENSEX on the BSE since 8 October),
+# when its two settings are present and the source is the real one.
 # Everything else, and every Dhan failure, falls back to the source above.
 DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
 DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
@@ -510,8 +511,8 @@ async def tick_forever() -> None:
             for name, last in prices.items():
                 fold_tick(name, last, now, "poll")
                 await push_tick(name)
-            for sid, premium in premiums.items():
-                for rec_key in options[sid]:
+            for option, premium in premiums.items():  # keyed (segment, security id), as dhan.open_options
+                for rec_key in options[option]:
                     rec = dhan.note_premium(rec_key, premium)
                     if rec:
                         await push_premium(rec)
@@ -528,7 +529,7 @@ class FeedClosed(Exception):
     """Dhan hung up on purpose (packet type 50), with a reason."""
 
 
-FEED_SEGMENTS = {0: dhan.SEGMENT, 2: dhan.OPTION_SEGMENT}  # the feed's segment byte: 0 is IDX_I, 2 is NSE_FNO
+FEED_SEGMENTS = {0: dhan.SEGMENT, 2: "NSE_FNO", 8: "BSE_FNO"}  # the feed's segment byte: 0 is IDX_I, 2 is NSE_FNO, 8 is BSE_FNO (SENSEX's options)
 
 
 def feed_packets(raw: bytes):
@@ -583,12 +584,11 @@ async def stream_forever() -> None:
                     now = time.time()
                     if now - checked >= 1:  # calls enter and end: subscribe to their contracts, drop the ended ones
                         checked = now
-                        wanted = dhan.open_options(list(by_id.values()))
+                        wanted = dhan.open_options(list(by_id.values()))  # {(segment, security id): record keys}
                         if set(wanted) != set(options):
-                            if new := [sid for sid in wanted if sid not in options]:
-                                await feed_subscribe(ws, 15, dhan.OPTION_SEGMENT, new)
-                            if gone := [sid for sid in options if sid not in wanted]:
-                                await feed_subscribe(ws, 16, dhan.OPTION_SEGMENT, gone)
+                            for code, keys in ((15, [k for k in wanted if k not in options]), (16, [k for k in options if k not in wanted])):
+                                for segment in sorted({s for s, _ in keys}):
+                                    await feed_subscribe(ws, code, segment, [sid for s, sid in keys if s == segment])
                         options = wanted
                     try:
                         raw = await asyncio.wait_for(ws.recv(), timeout=1)
@@ -603,9 +603,9 @@ async def stream_forever() -> None:
                             stream_at = now
                             store["dhan"]["stream_tick"] = live[by_id[sid]]["time"]
                             await push_tick(by_id[sid])
-                        elif segment == dhan.OPTION_SEGMENT and sid in options:
+                        elif (segment, sid) in options:
                             stream_at = now
-                            for rec_key in options[sid]:
+                            for rec_key in options[(segment, sid)]:
                                 rec = dhan.note_premium(rec_key, last)
                                 if rec:
                                     await push_premium(rec)
@@ -731,7 +731,7 @@ async def calls_forever() -> None:
             if DHAN_ON and in_tick_hours():
                 calls = open_now = without_id = 0
                 premiums = None
-                for name in dhan.INDEX_IDS:
+                for name in dhan.OPTION_INDICES:
                     got = await asyncio.to_thread(watch_index, name)
                     calls += got["calls"]
                     open_now += got["open"]
@@ -1031,7 +1031,7 @@ async def index_detail(
 @app.get("/options/{name}")
 async def options_state(name: str):
     key = known_index(name)
-    if not (DHAN_ON and key in dhan.INDEX_IDS):
+    if not (DHAN_ON and key in dhan.OPTION_INDICES):
         return {"active": False, "status": store["dhan"]["status"], "records": []}
     try:
         problem = await asyncio.to_thread(dhan.refresh_records, key)
@@ -1050,7 +1050,7 @@ async def options_state(name: str):
 @app.post("/options/{name}/calls")
 async def options_register(name: str, request: Request):
     key = known_index(name)
-    if not (DHAN_ON and key in dhan.INDEX_IDS):
+    if not (DHAN_ON and key in dhan.OPTION_INDICES):
         raise HTTPException(status_code=409, detail=store["dhan"]["status"])
     body = await request.json()
     call_key, side = str(body.get("key", ""))[:160], str(body.get("side", "")).upper()

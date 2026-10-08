@@ -31,8 +31,11 @@ SEGMENT = "IDX_I"                                  # Dhan's segment for an index
 INDEX_IDS = {"NIFTY 50": 13, "NIFTY BANK": 25}  # the indices with the owner's options: the chain, the records, the watcher
 QUOTE_IDS = {**INDEX_IDS, "SENSEX": 51}          # every index quoted live from Dhan: those two, and SENSEX for its tile and page (owner's ask, 7 October)
 LIST_NAMES = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY", "SENSEX": "SENSEX"}  # how Dhan's instrument list names the index rows themselves
-OPTION_SEGMENT = "NSE_FNO"                                   # where the indices' options trade
-UNDERLYING = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY"}  # how Dhan's instrument list names the options' underlying
+OPTION_INDICES = {**INDEX_IDS, "SENSEX": 51}  # the indices whose options the server follows: the chain, the records, the watcher (SENSEX since 8 October)
+OPTION_SEGMENTS = {"NIFTY 50": "NSE_FNO", "NIFTY BANK": "NSE_FNO", "SENSEX": "BSE_FNO"}  # where each index's options trade
+OPTION_SEGMENT = OPTION_SEGMENTS["NIFTY 50"]
+UNDERLYING = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY", "SENSEX": "SENSEX"}  # how Dhan's instrument list names the options' underlying
+OPTION_EXCHANGE = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE"}  # and on which exchange those options are listed
 SCRIP_MASTER_URL = os.environ.get("DHAN_SCRIP_MASTER_URL", "https://images.dhan.co/api-data/api-scrip-master.csv")     # Dhan's security ids of the indices with options
 IST = timezone(timedelta(hours=5, minutes=30))
 SELL_SHARE = float(os.environ.get("SELL_SHARE", "0.65"))  # the owner's rule (6 October): sell once the premium has fallen by 35% of what was paid, i.e. is at or below this share of it
@@ -163,7 +166,7 @@ def token_check() -> dict:
 
 def expiries(name: str) -> list[str]:
     """The option expiry dates of an index, soonest first, as YYYY-MM-DD."""
-    body = call("POST", "/optionchain/expirylist", {"UnderlyingScrip": INDEX_IDS[name], "UnderlyingSeg": SEGMENT})
+    body = call("POST", "/optionchain/expirylist", {"UnderlyingScrip": OPTION_INDICES[name], "UnderlyingSeg": SEGMENT})
     return sorted(str(d) for d in body.get("data", []))
 
 
@@ -172,18 +175,18 @@ def last_price(name: str) -> float:
 
 
 def last_prices(names: list, option_ids: list = ()) -> tuple:
-    """({index name: last price}, {option security id: premium}) in one request, not cached: this is the
-    live tick, for the indices and for the option contracts behind the open calls."""
+    """({index name: last price}, {(segment, option security id): premium}) in one request, not cached: this is the
+    live tick, for the indices and for the option contracts behind the open calls, each on its exchange's segment
+    (NSE_FNO for NIFTY's, BSE_FNO for SENSEX's)."""
     payload = {SEGMENT: [QUOTE_IDS[n] for n in names]}
-    if option_ids:
-        payload[OPTION_SEGMENT] = [int(i) for i in option_ids]
+    for segment, sid in option_ids:
+        payload.setdefault(segment, []).append(int(sid))
     body = call("POST", "/marketfeed/ltp", payload)
     try:
         data = body["data"]
         indices = data.get(SEGMENT) or {}
-        options = data.get(OPTION_SEGMENT) or {}
         return ({n: float(indices[str(QUOTE_IDS[n])]["last_price"]) for n in names if str(QUOTE_IDS[n]) in indices},
-                {int(i): float(options[str(i)]["last_price"]) for i in option_ids if str(i) in options})
+                {(segment, int(sid)): float(data[segment][str(sid)]["last_price"]) for segment, sid in option_ids if str(sid) in (data.get(segment) or {})})
     except (KeyError, TypeError, ValueError, AttributeError) as exc:
         raise DhanError("other", f"unexpected price answer from Dhan: {str(body)[:160]}") from exc
 
@@ -460,7 +463,8 @@ def _parse_expiry(text: str):
 
 def _read_option_ids() -> dict:
     """{(underlying, expiry iso, strike, side): security id} for the indices' options still to expire, read from
-    Dhan's instrument list (a large CSV; only the option rows of NIFTY and BANKNIFTY are kept)."""
+    Dhan's instrument list (a large CSV; only the option rows of NIFTY and BANKNIFTY on the NSE, and of SENSEX on
+    the BSE, are kept)."""
     found, columns = {}, None
     wanted = set(UNDERLYING.values())
     index_rows = set(LIST_NAMES.values())
@@ -490,10 +494,10 @@ def _read_option_ids() -> dict:
                         except ValueError:
                             pass
                     continue
-                if instrument.strip().upper() != "OPTIDX" or (exchange and exchange.strip().upper() != "NSE"):
+                if instrument.strip().upper() != "OPTIDX":
                     continue
-                underlying = symbol.strip().upper() or trading.strip().upper().split("-")[0]
-                if underlying not in wanted:
+                underlying = symbol.strip().upper() or trading.strip().upper().replace(" ", "-").split("-")[0]
+                if underlying not in wanted or (exchange and exchange.strip().upper() != OPTION_EXCHANGE[underlying]):
                     continue
                 when = _parse_expiry(expiry)
                 if not when or when < today:
@@ -587,7 +591,7 @@ def chain(name: str, expiry: str) -> dict:
         except DhanError as exc:
             return exc
     def read():
-        body = call("POST", "/optionchain", {"UnderlyingScrip": INDEX_IDS[name], "UnderlyingSeg": SEGMENT, "Expiry": expiry})
+        body = call("POST", "/optionchain", {"UnderlyingScrip": OPTION_INDICES[name], "UnderlyingSeg": SEGMENT, "Expiry": expiry})
         data = body.get("data") or {}
         strikes = {}
         for strike, sides in (data.get("oc") or {}).items():
@@ -746,14 +750,15 @@ def save_records() -> None:
 
 
 def open_options(names: list) -> dict:
-    """{security id: [record keys]} for today's open calls of the indices named, where the contract's id is known. One
-    contract may stand behind several records (the same call under two levels modes, the page's and the watcher's)."""
+    """{(segment, security id): [record keys]} for today's open calls of the indices named, where the contract's id is
+    known: the segment is the exchange's (NSE_FNO, or BSE_FNO for SENSEX), as the ids of two exchanges may be the same
+    number. One contract may stand behind several records (the same call under two levels modes)."""
     today = today_ist().isoformat()
     out: dict = {}
     with _records_lock:
         for r in _records.values():
             if r["index"] in names and not r["ended"] and r["paid_at"][:10] == today and r.get("security_id"):
-                out.setdefault(r["security_id"], []).append(r["key"])
+                out.setdefault((OPTION_SEGMENTS[r["index"]], r["security_id"]), []).append(r["key"])
     return out
 
 

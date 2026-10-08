@@ -75,7 +75,7 @@ it is on.
 ## Dhan: the owner's broker feed
 
 Real-time candles and quotes for NIFTY 50, NIFTY BANK and SENSEX, and option
-premiums for NIFTY 50 and NIFTY BANK, come from the owner's Dhan account through
+premiums for all three (SENSEX's on the BSE, since 8 October), come from the owner's Dhan account through
 DhanHQ's API, under its Data API subscription; every other index, and every Dhan
 failure, falls back to Yahoo. On the dashboard, the top row is NIFTY 50, NIFTY
 BANK and SENSEX, and those tiles show exactly what their pages' headers show,

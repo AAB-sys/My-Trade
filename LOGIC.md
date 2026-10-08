@@ -323,9 +323,12 @@ October: at 12:15:01 the server judged NIFTY BANK's 12:10 candle on Dhan's copy,
 asked for a few seconds before the candle ended, which closed at 54,853.20; the
 index fell to 54,826.30 in its last seconds, so the Buy CE it gave was gone from
 the rule moments later, its record and CSV row left behind). NIFTY 50, NIFTY BANK and
-SENSEX are on Dhan (SENSEX since 7 October, for its tile and its page: no
-options, no records, no watcher there); the other indices stay on Yahoo and have
-no options.
+SENSEX are on Dhan (SENSEX since 7 October for its tile and its page, and since
+8 October with its options too: SENSEX's options trade on the BSE, so its
+contracts come from the BSE rows of Dhan's instrument list, its premiums from
+Dhan's option chain for SENSEX and from the BSE_FNO segment of the feed and the
+poll; the same strike rule on its 100-point step, the same records, Sell mark and
+watcher as NIFTY's); the other indices stay on Yahoo and have no options.
 
 The session's candles run from 09:15 to 15:30 and nothing else is a candle
 (7 October): the pre-open prices from 09:00 move the price at the top of the
