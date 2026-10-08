@@ -331,3 +331,8 @@ The app is ready to run on a platform that deploys from GitHub:
      API access). Until then the data is Yahoo's, ~15 minutes delayed; only the
      delivery is instant.
 4. **Orders** - paper trading first, with hard limits, before anything real.
+
+**The server stays awake in market hours** (8 October). Render's free plan puts it to sleep after 15 minutes
+without an incoming request, so on a morning with no page open the watcher sleeps too and misses calls. From 08:45
+to 16:15 IST on weekdays the server now calls its own address every five minutes, and a GitHub workflow
+(`keepawake.yml`) knocks every ten minutes and wakes it before the open. Outside those hours it sleeps as before.

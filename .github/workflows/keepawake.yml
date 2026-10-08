@@ -1,0 +1,24 @@
+name: Keep the server awake in market hours
+
+# Render's free plan puts the server to sleep after 15 minutes without an incoming request. On 8 October no page was
+# open (the owner's laptop was away) and the server slept from about 09:38 to 10:00, so the watcher missed the calls that
+# entered then. The server now calls its own address in market hours (main.py, keep_awake_forever); this workflow wakes
+# it before the open and knocks every ten minutes as a backup, in case a knock of its own goes astray. It never fails:
+# a sleeping server answers the next knock. The repository is public, so these runs cost nothing.
+
+on:
+  schedule:
+    - cron: "*/10 3-10 * * 1-5"   # every ten minutes, 08:30 to 16:20 IST, Monday to Friday
+  workflow_dispatch:
+
+jobs:
+  knock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE: https://my-trade-hvny.onrender.com
+    steps:
+      - name: Knock
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 150 "$SITE/health" || true)
+          echo "the server answered: ${code:-nothing yet}"
