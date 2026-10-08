@@ -206,3 +206,11 @@ branch from `main`.
 1. API - done. 2. Dashboard - done. 3a. Streaming plumbing - done.
 3b. Licensed real-time feed - waiting on the owner's supplier choice.
 4. Orders - paper first, with hard limits, before anything real.
+
+- Keep-awake (8 October): Render's free plan sleeps after 15 minutes without an incoming request, and the watcher
+  sleeps with it. `keep_awake_forever` in main.py calls the server's own public address (`RENDER_EXTERNAL_URL`, set
+  by Render; `KEEP_AWAKE_URL` for tests) every `KEEP_AWAKE_SECONDS` (300) from 08:45 to 16:15 IST on weekdays;
+  `.github/workflows/keepawake.yml` knocks every ten minutes 08:30 to 16:20 IST, which also wakes it before the open.
+  `/health` says `keep_awake`.
+- SENSEX on the index page: strikes by the one-strike-in-the-money rule on a 100-point step (`STRIKE_STEP`); the
+  server has no SENSEX option chain, so its page hides the premium column and says so in one line.

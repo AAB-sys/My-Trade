@@ -546,7 +546,10 @@
       : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
       + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
     table.hidden = !trades.length;
-    table.classList.toggle("no-options", !(state.dhan && state.dhan.configured));
+    const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
+    table.classList.toggle("no-options", !withOptions);
+    if (!withOptions && STRIKE_STEP[name] && state.dhan && state.dhan.configured)  // SENSEX, 8 October: say why there is no premium column
+      note.textContent = `${name}: the strike follows your one-strike-in-the-money rule on its ${STRIKE_STEP[name]}-point step. Its option prices are not connected yet, so there is no premium column on this page.`;
     drawFeedNote();
     // in time order, the newest call at the top, open or finished alike (the owner's ask, 7 October: an open call
     // listed above a later one read as if it had been given later); a finished row is greyed, its target cell says how it ended
@@ -601,8 +604,9 @@
   // The strike bought (the owner's choice, one strike in the money: a CE the first strike below the index at entry, a PE the
   // first above, dhan.itm_strike): the server's record names it once the call has been seen entering; before that, and for
   // a call no page saw enter, the page works it out the same way from the index at entry on the chain's strike step.
-  // Without a strike step (an index with no option chain here) there is no strike.
-  const STRIKE_STEP = { "NIFTY 50": 50, "NIFTY BANK": 100 };
+  // SENSEX (8 October): its options trade on BSE in 100-point strikes; the server has no SENSEX option chain yet, so on
+  // its page the strike always comes from this rule and there is no expiry and no premium.
+  const STRIKE_STEP = { "NIFTY 50": 50, "NIFTY BANK": 100, "SENSEX": 100 };
   function strikeOf(t, r) {
     if (r) return Math.round(r.strike);
     const step = STRIKE_STEP[name];

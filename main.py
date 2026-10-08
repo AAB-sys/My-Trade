@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocket
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
+import httpx
 import websockets
 
 import dhan
@@ -75,6 +76,12 @@ DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
 DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
 TICK_SECONDS = float(os.environ.get("DHAN_TICK_SECONDS", "1"))   # the fallback: the last price once a second
 TICK_ALWAYS = os.environ.get("DHAN_TICK_ALWAYS") == "1"           # for tests: tick outside market hours too
+# Keep-awake (8 October): Render's free plan puts the server to sleep after 15 minutes without an incoming request, and
+# with no page open (the owner's laptop away that day) it slept from about 09:38 to 10:00: the watcher was asleep with it,
+# so the calls that entered then got no contract and no premium paid. In market hours the server now calls its own public
+# address every few minutes, which counts as an incoming request; .github/workflows/keepawake.yml wakes it in the morning.
+SELF_URL = os.environ.get("KEEP_AWAKE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")  # Render sets RENDER_EXTERNAL_URL itself
+KEEP_AWAKE_SECONDS = float(os.environ.get("KEEP_AWAKE_SECONDS", "300"))
 DHAN_FEED_URL = os.environ.get("DHAN_FEED_URL", "wss://api-feed.dhan.co")  # Dhan's tick-by-tick stream; overridden only by tests
 FEED_CODES = {805: "too many connections to Dhan's feed", 806: "the Data API is not subscribed", 807: "the token has expired",
               808: "the client id is wrong", 809: "Dhan refused the login"}
@@ -719,6 +726,32 @@ async def calls_forever() -> None:
         await asyncio.sleep(WATCH_SECONDS)
 
 
+def in_keep_awake_hours() -> bool:
+    """From before the open until after the day's save at 15:40 and the wake-up check, Monday to Friday, IST."""
+    if TICK_ALWAYS:
+        return True
+    now = datetime.now(dhan.IST)
+    return now.weekday() < 5 and (8, 45) <= (now.hour, now.minute) < (16, 15)
+
+
+keep_awake_state: dict = {"url": SELF_URL, "at": None, "status": None, "problem": None}
+
+
+async def keep_awake_forever() -> None:
+    """Calls this server's own public address every KEEP_AWAKE_SECONDS in market hours, so the free plan never puts it to
+    sleep while the watcher is recording calls (see SELF_URL). Outside those hours it lets the server sleep."""
+    async with httpx.AsyncClient(timeout=30, follow_redirects=False) as client:
+        while True:
+            if in_keep_awake_hours():
+                try:
+                    r = await client.get(SELF_URL.rstrip("/") + "/health")
+                    keep_awake_state.update(at=now_ist(), status=r.status_code, problem=None)
+                except Exception as exc:
+                    keep_awake_state.update(at=now_ist(), status=None, problem=f"{type(exc).__name__}: {str(exc)[:120]}")
+                    log.warning("keep-awake: %s", keep_awake_state["problem"])
+            await asyncio.sleep(KEEP_AWAKE_SECONDS)
+
+
 async def token_forever() -> None:
     """Asks Dhan whether the token is good and until when, at start and every half hour (one small request), so
     /health and the wake-up check can say "the token expires at ..." or "the token was refused" without a login.
@@ -770,6 +803,10 @@ async def lifespan(app: FastAPI):
         tasks.append(asyncio.create_task(token_forever()))
         tasks.append(asyncio.create_task(calls_forever()))
         tasks.append(asyncio.create_task(live_forever()))
+    if SELF_URL:
+        tasks.append(asyncio.create_task(keep_awake_forever()))
+    else:
+        log.info("keep-awake: no public address (RENDER_EXTERNAL_URL or KEEP_AWAKE_URL), so it is off")
     yield
     for task in tasks:
         task.cancel()
@@ -806,7 +843,7 @@ def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
     day's session was saved. No secret in here: dates, and a problem said in plain words."""
     return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(),
-            "feed": feed_state()}
+            "feed": feed_state(), "keep_awake": {k: v for k, v in keep_awake_state.items() if k != "url"} | {"on": bool(SELF_URL)}}
 
 
 def feed_state() -> dict:
