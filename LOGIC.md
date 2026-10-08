@@ -32,7 +32,15 @@ turn after a move. Whether that holds is for the owner's own record to show.
 - *Today so far* (default, owner's choice of 6 October): the session's own low to
   high so far, an up move when its last price is above its open **(owner to
   decide)**. Blank until it has traded. Built from the live candles: a tick that
-  makes a new high or low, or turns the move, redraws the lines at once.
+  makes a new high or low, or turns the move, redraws the lines at once. The
+  calls are judged differently from the lines (8 October): each candle against
+  the levels as they stood when it closed, the day's range up to that candle,
+  on the index page, in the server's watcher and on the Study page alike. Until
+  then the page and the watcher judged every earlier candle against the lines
+  of the moment, so each new high or low redrew the whole day's calls: on 8
+  October NIFTY 50 showed 22 different calls through the morning and 14 of them
+  later vanished, while calls the server had recorded at their entry dropped
+  off the table. A call, once given, now stays as it was given.
 - *Bars shown*: the lowest low and highest high among the candles on the chart;
   whichever came first says which way the move went.
 - *No levels*: hides them.
@@ -322,10 +330,8 @@ page over every saved day, for the index, time frame, levels and signal picked:
   frames, two kinds of levels, three signals) with the best net marked. Points
   are index points. *Today so far* levels are replayed as they stood when each
   candle closed, the day's range up to that candle, as the live page had drawn
-  them. (The index page's own list for a *past* day under *Today so far* judges
-  every candle with the day's final levels; the study's way is what the live
-  page would have fired at the time. **Owner to decide**: whether the index
-  page should do the same for past days.)
+  them; since 8 October the index page judges its calls the same way, today
+  and on a past day, so the two lists agree.
 - *Each day's pattern*: the gap at the open against the previous close, open to
   close, the range, when the high and the low came, where the close sat in the
   range, and whether a candle closed above the previous day's high or below its

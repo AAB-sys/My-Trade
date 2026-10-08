@@ -639,7 +639,8 @@ watch_retry: dict = {}  # call key -> when to try registering its option again, 
 
 def watch_index(name: str) -> dict:
     """One look at one index: the day's candles as the page has them (Dhan's, with the one forming now from the ticks), the
-    levels as the page draws them now, the rule, then the records and the day's calls brought up to date. Returns counts."""
+    levels (previous day's; or today so far, each candle against the day's range up to it, as the page judges it since
+    8 October), the rule, then the records and the day's calls brought up to date. Returns counts."""
     key, seconds = WATCH_INTERVAL, INTERVALS[WATCH_INTERVAL]["bar_seconds"]
     today = dhan.today_ist()
     minutes = seconds // 60
@@ -654,9 +655,10 @@ def watch_index(name: str) -> dict:
             return {"calls": 0, "open": 0}
         levels = rule.levels_of(rule.move_of_day(previous))
     else:
-        levels = rule.levels_of(rule.move_of(bars))
+        levels = None  # today so far: each candle against the day's range up to it, as the page and the Study page judge it (8 October)
     now = time.time()
-    trades = rule.paper_trades(bars, lambda i: levels, now, seconds, False, WATCH_SIGNAL)["trades"]
+    levels_at = (lambda i: levels) if levels is not None else (lambda i: rule.levels_of(rule.move_of(bars[:i + 1])))
+    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL)["trades"]
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, WATCH_LEVELS)

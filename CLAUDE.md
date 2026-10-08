@@ -216,3 +216,6 @@ branch from `main`.
   open and restarted at 10:00:26; the free plan has 512 MB, so the peak tells whether memory is the reason next time.
 - SENSEX on the index page: strikes by the one-strike-in-the-money rule on a 100-point step (`STRIKE_STEP`); the
   server has no SENSEX option chain, so its page hides the premium column and says so in one line.
+- "Today so far" calls (8 October): `paperTrades()` on the index page and `watch_index()` in main.py pass a
+  `levelsAt(i)` of the day's range up to candle i (as `Rules.replayDay` does), not the chart's current levels; the
+  lines on the chart still follow the day's range now. A call never changes after it is given.

@@ -518,8 +518,16 @@
 
   // The rule is Rules.paperTrades in /static/rules.js; this page hands it the session's candles, the levels on the
   // chart (which stand still within one run; the live page redraws them on a new high or low) and the server's clock
+  // "Today so far" levels (8 October): each candle is judged against the levels as they stood when it closed, the day's
+  // range up to that candle, exactly as the Study page replays a day (Rules.replayDay) and as the server's watcher records
+  // the calls. Until then every candle was judged against the levels of this moment, so each new high or low of the day
+  // redrew the whole morning's calls: calls recorded at their entry vanished from the table and others appeared afterwards,
+  // "not seen at entry". The lines on the chart still show the day's range now; a call, once given, stays as it was given.
   function paperTrades(levels) {
-    return Rules.paperTrades({ bars: sessionBars(), levelsAt: () => levels, now: serverNow(), seconds: SECONDS[state.interval],
+    const bars = sessionBars(), session = currentSession();
+    const causal = state.move === "today" && state.interval !== "1d" && session !== "all";
+    const levelsAt = causal ? (i) => levelsOf(Rules.moveOf(bars.slice(0, i + 1))) : () => levels;
+    return Rules.paperTrades({ bars, levelsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal });
   }
 
