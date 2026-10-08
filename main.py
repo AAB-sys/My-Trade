@@ -76,10 +76,10 @@ DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
 DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
 TICK_SECONDS = float(os.environ.get("DHAN_TICK_SECONDS", "1"))   # the fallback: the last price once a second
 TICK_ALWAYS = os.environ.get("DHAN_TICK_ALWAYS") == "1"           # for tests: tick outside market hours too
-# Keep-awake (8 October): Render's free plan puts the server to sleep after 15 minutes without an incoming request, and
-# with no page open (the owner's laptop away that day) it slept from about 09:38 to 10:00: the watcher was asleep with it,
-# so the calls that entered then got no contract and no premium paid. In market hours the server now calls its own public
-# address every few minutes, which counts as an incoming request; .github/workflows/keepawake.yml wakes it in the morning.
+# Keep-awake (8 October): Render's free plan puts the server to sleep after 15 minutes without an incoming request, and the
+# watcher that records the calls sleeps with it. That morning, with no page open, it slept from about 08:20 until a check
+# woke it at 09:21. In market hours the server now calls its own public address every few minutes, which counts as an
+# incoming request; .github/workflows/keepawake.yml knocks too and wakes it before the open.
 SELF_URL = os.environ.get("KEEP_AWAKE_URL") or os.environ.get("RENDER_EXTERNAL_URL", "")  # Render sets RENDER_EXTERNAL_URL itself
 KEEP_AWAKE_SECONDS = float(os.environ.get("KEEP_AWAKE_SECONDS", "300"))
 DHAN_FEED_URL = os.environ.get("DHAN_FEED_URL", "wss://api-feed.dhan.co")  # Dhan's tick-by-tick stream; overridden only by tests
@@ -838,11 +838,27 @@ def known_index(name: str) -> str:
 
 # ---------------------------------------------------------------- menu
 
+def memory_mb() -> dict:
+    """This process's memory now and at its peak, in MB (Linux), for /health. On 8 October the server stopped at about 09:50
+    with a page open and came back at 10:00:26 as a fresh start; the free plan has 512 MB, so the peak says whether
+    running out of memory is the likely reason when it happens again."""
+    out = {"now": None, "peak": None}
+    try:
+        for line in Path("/proc/self/status").read_text().splitlines():
+            if line.startswith("VmRSS:"):
+                out["now"] = round(int(line.split()[1]) / 1024)
+            elif line.startswith("VmHWM:"):
+                out["peak"] = round(int(line.split()[1]) / 1024)
+    except (OSError, ValueError, IndexError):
+        pass
+    return out
+
+
 @app.get("/health")
 def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
     day's session was saved. No secret in here: dates, and a problem said in plain words."""
-    return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(),
+    return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(), "memory_mb": memory_mb(),
             "feed": feed_state(), "keep_awake": {k: v for k, v in keep_awake_state.items() if k != "url"} | {"on": bool(SELF_URL)}}
 
 

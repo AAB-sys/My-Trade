@@ -212,5 +212,7 @@ branch from `main`.
   by Render; `KEEP_AWAKE_URL` for tests) every `KEEP_AWAKE_SECONDS` (300) from 08:45 to 16:15 IST on weekdays;
   `.github/workflows/keepawake.yml` knocks every ten minutes 08:30 to 16:20 IST, which also wakes it before the open.
   `/health` says `keep_awake`.
+- `/health` says `memory_mb` (now and peak, from /proc): on 8 October the server stopped at about 09:50 with a page
+  open and restarted at 10:00:26; the free plan has 512 MB, so the peak tells whether memory is the reason next time.
 - SENSEX on the index page: strikes by the one-strike-in-the-money rule on a 100-point step (`STRIKE_STEP`); the
   server has no SENSEX option chain, so its page hides the premium column and says so in one line.
