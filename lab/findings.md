@@ -218,3 +218,30 @@ the next one. That is the case for P5, which rides the candle that reached the t
 betting on the one after.
 
 Nothing proposed from this round: the retest facts are the same facts P3 and P5 already use (the depth of a close).
+
+## Round 5, 8 October evening: what to do with a call that goes wrong
+
+The owner's question after 8 October (NIFTY 50 fell all day; 11 of its 27 calls never reached their target and were held to
+the close for -1,082 points, the day -931). Seven days (29 Sep to 8 Oct), the live setting (today so far, 5-minute candles,
+both signals, the rule as of #105), the same calls under every option; only the exit changes. The stops are settled minute by
+minute (the first one-minute candle to touch the stop or the target; the stop when one minute touched both), which matters:
+on 5-minute candles alone a stop at half the distance reads +503 (target first) or -65 (stop first) on NIFTY 50.
+
+| Exit | NIFTY 50 net | worst call | worst day | days up | NIFTY BANK net | worst call | worst day | days up |
+|---|---|---|---|---|---|---|---|---|
+| none: held to the target or the close | -945 | -256 | -931 | 2/7 | +3,128 | -539 | -338 | 5/7 |
+| P4: exit when Candle status says EXIT | -431 | -88 | -253 | 3/7 | -116 | -194 | -621 | 4/7 |
+| a candle closes back across the level | -177 | -59 | -256 | 3/7 | -281 | -178 | -304 | 3/7 |
+| P6: stop at the target's distance | +179 | -90 | -162 | 4/7 | +279 | -175 | -357 | 3/7 |
+| P7: stop at half the target's distance | +198 | -45 | -60 | 5/7 | +165 | -88 | -197 | 4/7 |
+| stop at 1.5 times the target's distance | -190 | -135 | -306 | 4/7 | -777 | -263 | -500 | 2/7 |
+| only calls with the day's direction | -724 | -175 | -451 | 3/7 | -826 | -539 | -1,063 | 3/7 |
+| close every open call at 15:10 | -743 | -272 | -1,075 | 4/7 | +3,364 | -474 | -341 | 6/7 |
+
+No exit wins on both indices. NIFTY BANK's profit comes from calls that went against it and came back to the target later; a
+stop ends those early. NIFTY 50's loss is one one-way day; a stop caps it. Seven days are far too few to choose, so the owner
+put P6 and P7 on the Study page beside P4, the index page frozen, and the nightly round scores them on every new day.
+
+Also seen: on every saved day both indices stand still in Dhan's one-minute candles from 15:15 to about 15:28, then jump to the
+close. No candle after 15:10 can touch a line, so 15:05 is the last signal that can enter on a moving price.
+

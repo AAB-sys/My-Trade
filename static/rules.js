@@ -99,7 +99,12 @@
   //              share of the gap to the target ends the call at its close, "candle"; the same measure as readOf's verdict below),
   //              carryOn (idea P5, 7 October: when the candle that reaches the target closes at least this share of the next
   //              gap past it, the call carries on to the level beyond, again and again up the ladder; otherwise it ends at the
-  //              target as ever. The decision waits for that candle to close: on the candle forming now the call stays open)
+  //              target as ever. The decision waits for that candle to close: on the candle forming now the call stays open),
+  //              stopShare (ideas P6 and P7, 8 October evening, the owner's question "what to do with a call going wrong": a stop
+  //              fixed when the call enters, this share of the distance to its target on the other side of the entry; the call
+  //              ends there, "stop". A candle that reached both the stop and the target is settled by the day's one-minute
+  //              candles, minutes, when they are given (the first minute to touch either; the stop when one minute touched
+  //              both), else the stop is taken first, the careful way)
   //   the target follows the lines (owner's decision, 8 October): at every candle the call's target is the next line beyond
   //              both its entry and the level that gave it, in the call's direction, among the lines as they stand at that
   //              candle (the forming one: as the chart draws them now), and it is reached against that line. With the previous
@@ -109,6 +114,7 @@
   function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal, ideas }) {
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
+    const stopShare = ideas && ideas.stopShare, minutes = (ideas && ideas.minutes) || null;
     const clockEnd = (b) => (b.time + IST_OFFSET) % 86400 + seconds;  // when the candle closes, in seconds since midnight IST
     const closed = bars.filter(b => endOf(b, seconds) <= now);
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
@@ -121,6 +127,16 @@
       const beyond = t.side === "CE" ? prices.filter(p => p > past) : prices.filter(p => p < past).reverse();
       const k = t.carried || 0;
       if (beyond.length > k) { t.target = beyond[k]; t.ladder = beyond.slice(k + 1); }  // no line that far out (the entry at the day's high): it stays
+    };
+    const touchesStop = (t, bar) => t.stop != null && (t.side === "CE" ? bar.low <= t.stop : bar.high >= t.stop);
+    const stopFirst = (t, bar) => {  // the candle touched the stop: did the stop come before the target? (ideas P6, P7)
+      if (!reaches(t, bar) || !minutes) return true;
+      for (const m of minutes) {
+        if (m.time < bar.time || m.time >= bar.time + seconds) continue;
+        if (touchesStop(t, m)) return true;
+        if (reaches(t, m)) return false;
+      }
+      return true;
     };
     const backAcross = (t, close) => t.side === "CE" ? t.level - close : close - t.level;  // how far a close went back across the call's level, in points
     const settle = (t, bar) => {  // the target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target
@@ -145,7 +161,8 @@
       }
       if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
       const levels = levelsAt(i);
-      open.forEach(t => follow(t, levels));
+      open.forEach(t => { follow(t, levels); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      if (stopShare) open = open.filter(t => { if (touchesStop(t, bar) && stopFirst(t, bar)) { end(t, t.stop, bar, "stop"); return false; } return true; });  // ideas P6, P7
       open = open.filter(t => settle(t, bar));
       if (exitBack) open = open.filter(t => { if (backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
@@ -160,7 +177,8 @@
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
       if (ready) { const t = enterAt(ready, forming); if (t) { trades.push(t); open.push(t); } ready = null; }
       const levels = levelsAt(closed.length);  // the lines as the chart draws them now, with the forming candle in the day's range
-      open.forEach(t => follow(t, levels));
+      open.forEach(t => { follow(t, levels); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      if (stopShare) open = open.filter(t => { if (touchesStop(t, forming)) { end(t, t.stop, forming, "stop"); return false; } return true; });  // ideas P6, P7, tick by tick
       open = open.filter(t => { if (!reaches(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
                                 end(t, t.target, forming, "target"); return false; });
       open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at
@@ -188,6 +206,10 @@
     P3: { key: "P3", name: "Crossed signals only a quarter of the way to the next level", ideas: { minDepth: 0.25 } },
     P4: { key: "P4", name: "Exit when a candle closes on the wrong side of the level", ideas: { exitBack: 0.25 } },  // the owner's rule of 7 October, acted on: a close a quarter of the gap past the level
     P5: { key: "P5", name: "Carry on to the next level when the candle reaching the target closes a quarter into the next gap", ideas: { carryOn: 0.25 } },  // 7 October evening, from the carry study (lab/findings.md, round 3)
+    // 8 October evening, the owner's question after a falling day (NIFTY 50: 11 calls held to the close for -1,082 points): a stop.
+    // The two are one choice, so the page never runs both together
+    P6: { key: "P6", name: "Stop loss at the same distance as the target", ideas: { stopShare: 1 } },
+    P7: { key: "P7", name: "Stop loss at half the distance to the target", ideas: { stopShare: 0.5 } },
   };
   const ideasOf = (keys) => Object.assign({}, ...keys.map(k => IDEAS[k].ideas));
 

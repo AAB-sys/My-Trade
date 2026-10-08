@@ -139,7 +139,9 @@ their own logic. Read this before touching the code.
   `rule.read_of` is its Python twin for the watcher; on the table as Candle status (back on 8 October); changes no call;
   `carryOf()` / `rule.carry_of` the carry read of 7 October evening, idea P5's
   question, three more CSV columns; trades carry `ladder`, the levels beyond the target; the target follows the lines at every candle (8 October). Idea
-  P4 is the same exit acted on, `exitBack` in `paperTrades`, Study page only)
+  P4 is the same exit acted on, `exitBack` in `paperTrades`, Study page only; P6/P7 the stops of 8 October evening,
+  `stopShare` fixed at the entry, settled by `ideas.minutes` (the day's 1-minute candles) when a candle touched both,
+  stop first without them; the Study page passes the minutes and never runs P6 with P7)
   state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
   under test (`IDEAS`, `ideasOf`: options of `paperTrades` that are off unless

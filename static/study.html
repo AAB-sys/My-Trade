@@ -109,7 +109,7 @@
 
     <h2>Your rule against the ideas under test</h2>
     <div class="note">The setting picked above, scored on the same days under your rule as it is and under each idea. These ideas live on this page only; the index page does not use them.</div>
-    <div class="scroll"><table id="ideas"><thead><tr><th>Rule</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th><th>Per call</th><th>Ended by the clock</th><th>Ended by EXIT</th><th>Carried on</th><th>Day-end calls</th><th>Worst call</th><th>Days ahead</th></tr></thead><tbody></tbody></table></div>
+    <div class="scroll"><table id="ideas"><thead><tr><th>Rule</th><th>Calls</th><th>Won</th><th>Lost</th><th>Hit rate</th><th>Net points</th><th>Per call</th><th>Ended by the clock</th><th>Ended by EXIT</th><th>Ended by the stop</th><th>Carried on</th><th>Day-end calls</th><th>Worst call</th><th>Days ahead</th></tr></thead><tbody></tbody></table></div>
 
     <h2>Every setting, side by side</h2>
     <div class="note">The same days under every time frame, levels and signal. The best net is marked; the setting picked above is in bold.</div>
@@ -157,7 +157,8 @@
     const ix = file.indices && file.indices[index];
     const bars = ix && ix.candles && ix.candles[interval];
     if (!bars || !bars.length) return [];
-    return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal, ideas: Rules.ideasOf(keys || []) }).trades
+    const ideas = { ...Rules.ideasOf(keys || []), minutes: ix.candles["1m"] };  // the one-minute candles settle a candle that touched both a stop and the target (P6, P7)
+    return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal, ideas }).trades
       .filter(t => t.exit != null).map(t => ({ ...t, date: file.date, bars, previous: ix.previous }));  // on a finished day every call has ended
   }
   const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];
@@ -223,8 +224,8 @@
   function drawIdeas(dayCount) {
     const { index, interval, move, signal } = state;
     const keysAll = Object.keys(Rules.IDEAS), sets = [[], ...keysAll.map(k => [k])];  // the rule, each idea alone, each pair, all together
-    keysAll.forEach((a, i) => keysAll.slice(i + 1).forEach(b => sets.push([a, b])));
-    if (keysAll.length > 2) sets.push(keysAll);
+    keysAll.forEach((a, i) => keysAll.slice(i + 1).forEach(b => { if (!(a === "P6" && b === "P7")) sets.push([a, b]); }));  // the two stops are one choice
+    if (keysAll.length > 2) sets.push(keysAll.filter(k => k !== "P6"));  // all together, with the closer stop
     const base = allTrades(index, interval, move, signal, []);
     const byDay = (L) => { const m = {}; L.forEach(t => m[t.date] = Rules.round2((m[t.date] || 0) + t.points)); return m; };
     const baseDays = byDay(base);
@@ -236,7 +237,7 @@
       tr.className = keys.join("+") === state.ideas.join("+") ? "picked" : "";
       tr.innerHTML = cell(!keys.length ? "Your rule as it is" : keys.length === 1 ? `${keys[0]}: ${Rules.IDEAS[keys[0]].name.toLowerCase()}` : keys.join(" + "))  // a mix by its keys: the boxes above spell them out
         + cell(s.calls) + cell(s.won) + cell(s.lost) + cell(pct(s.won, s.calls)) + num(s.net) + num(s.avg)
-        + cell(L.filter(t => t.how === "time").length) + cell(L.filter(t => t.how === "candle").length) + cell(L.filter(t => t.carried).length) + cell(L.filter(t => t.how === "day end").length) + num(worst)
+        + cell(L.filter(t => t.how === "time").length) + cell(L.filter(t => t.how === "candle").length) + cell(L.filter(t => t.how === "stop").length) + cell(L.filter(t => t.carried).length) + cell(L.filter(t => t.how === "day end").length) + num(worst)
         + cell(ahead == null ? "—" : `${ahead} of ${dayCount}`);
       return tr;
     }));
@@ -432,6 +433,8 @@
     const label = document.createElement("label"); label.className = "idea";
     const box = document.createElement("input"); box.type = "checkbox"; box.id = "idea-" + idea.key; box.checked = state.ideas.includes(idea.key);
     box.addEventListener("change", () => {
+      const other = { P6: "P7", P7: "P6" }[idea.key];  // the two stops are one choice: ticking one unticks the other
+      if (box.checked && other && el("idea-" + other)) el("idea-" + other).checked = false;
       state.ideas = Object.keys(Rules.IDEAS).filter(k => el("idea-" + k).checked);
       try { localStorage.setItem("study-ideas", JSON.stringify(state.ideas)); } catch (e) {}
       if (state.days.length) draw();

@@ -31,7 +31,8 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 // One day under one set of options. The owner's rule with no option set equals Rules.paperTrades (checked below).
 //   levels: prev | today | open30 | open15     signal: held | crossed | both | retest
 //   closeAt, noNewAfter: as in Rules (ideas P1 and P2)   onlyRatios: [..]   closeBack: exit when a candle closes back across the level
-//   stopShare: exit when against by this share of the distance to the target   agree: the last closed candle of the higher frame must
+//   stopShare: exit when against by this share of the distance to the target, the stop fixed at the entry (8 October; in a
+//   candle that touched both, the stop first here: the minute-settled figures are the "stops" rows below, from Rules)   agree: the last closed candle of the higher frame must
 //   sit on the call's side of the level   sideOnDay: "with" takes CE only on a day up so far, PE only on a day down   minNeed: least distance to the target
 //   minDepth: a crossed signal counts only when its candle closed at least this share of the way from the level to the next one
 //   (waitDeeper: a shallower cross waits, and the first later candle closing that deep gives the call)   minBody: a crossed
@@ -72,8 +73,8 @@ function run(bars, previous, o, higher) {
         if (beyond != null && (x.side === "CE" ? bar.close - x.target : x.target - bar.close) >= o.carryOn * Math.abs(beyond - x.target)) { x.carried = (x.carried || 0) + 1; x.target = beyond; x.ladder = x.ladder.slice(1); continue; }
         end(x, x.target, bar, "target"); return false;
       }
-      if (o.stopShare) { const stop = x.side === "CE" ? x.entry - o.stopShare * (x.target - x.entry) : x.entry + o.stopShare * (x.entry - x.target);
-        if (x.side === "CE" ? bar.low <= stop : bar.high >= stop) { end(x, stop, bar, "stop"); return false; } }
+      if (o.stopShare) { if (x.stop == null) x.stop = r2(x.side === "CE" ? x.entry - o.stopShare * (x.target - x.entry) : x.entry + o.stopShare * (x.entry - x.target));
+        if (x.side === "CE" ? bar.low <= x.stop : bar.high >= x.stop) { end(x, x.stop, bar, "stop"); return false; } }
       if (o.closeBack && (x.side === "CE" ? bar.close < x.level : bar.close > x.level)) { end(x, bar.close, bar, "candle"); return false; }
       if (o.closeBackShare) { const gap = Math.abs(x.target - x.level), back = x.side === "CE" ? x.level - bar.close : bar.close - x.level;
         if (gap > 0 && back >= o.closeBackShare * gap) { end(x, bar.close, bar, "candle"); return false; } }  // idea P4 at a quarter (Rules.paperTrades exitBack)
@@ -221,4 +222,14 @@ for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", 
   console.log(`\n==== ${index}, ${interval} candles ${same ? "(base line agrees with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify(page)}`);
   const base = all(index, interval, {});
   IDEAS.forEach(([name, opts], i) => console.log(row(name, tally(all(index, interval, opts), i ? base : null))));
+  // the stops of the Study page (P6, P7; the owner's question of 8 October), by the page's own engine, a candle that touched both
+  // the stop and the target settled by the one-minute candles, on both levels modes and both signals
+  const viaRules = (move, ideas) => DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix || (move === "prev" && !ix.previous)) return [];
+    return R.replayDay({ bars: ix.candles[interval], move, previous: ix.previous, seconds: SEC[interval], signal: "both", ideas: ideas && { ...ideas, minutes: ix.candles["1m"] } })
+      .trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); });
+  for (const move of ["today", "prev"]) {
+    const rule = viaRules(move, null);
+    console.log(row(`stops, ${move} levels: your rule`, tally(rule)));
+    ["P4", "P6", "P7"].forEach(k => console.log(row(`stops, ${move} levels: ${k} ${R.IDEAS[k].name.toLowerCase()}`.slice(0, 46), tally(viaRules(move, R.IDEAS[k].ideas), rule))));
+  }
 }
