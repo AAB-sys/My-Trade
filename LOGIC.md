@@ -124,11 +124,14 @@ ratio and price), **Call Entry** (the strike number of the contract, the same
 number as in the call; the index price at entry until the contract is known:
 no Dhan, or no page open at the entry), **Call Target** (the next level in the
 call's direction, on the lines as the chart draws them now, item 5; once the
-call has ended, *hit* or *not reached, day end* under it), **Premium Paid ->
+call has ended, *target hit, sold* or *sold at day end* under it; a held break,
+item 5, says *hold* or *target passed, continue* and what sells it, then how it
+was sold), **Premium Paid ->
 Now** (at exit once the call has ended; *SELL NOW* while the premium sits below
 the sell mark, *sold at* once marked sold), **Candle status** (the candle
-verdict of item 7: CARRY or EXIT with its reason on an open call; on a finished
-one, "CARRY the whole time" or "Said EXIT at" its time; off the table on 7
+verdict of item 7: HOLD or SELL with its reason on an open call; on a finished
+one, "HOLD the whole time" or "said SELL at" its time; the owner's plain words of 8
+October night: buy, hold, continue, sell, where it said CARRY and EXIT; off the table on 7
 October evening, back on 8 October as the owner's exit signal, and in the day's
 calls CSV all along). A finished row is greyed. A finished call that
 no page saw enter reads "not seen at entry" in the premium cell: no page was

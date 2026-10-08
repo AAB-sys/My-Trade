@@ -316,7 +316,7 @@
     if (t.hold) {  // a held break (holdBreaks): the verdict is the owner's exit rule itself
       const name = t.ratio == null ? "the level" : `the ${(t.ratio * 100).toFixed(1)}% level`, pe = t.side === "PE";
       const word = t.how === "back" || t.how === "retouch" ? "exit" : "carry";
-      const why = t.how === "back" ? `price closed back ${pe ? "above" : "below"} ${name}` : t.how === "retouch" ? "price came back to where the break began"
+      const why = t.how === "back" ? `price closed back ${pe ? "above" : "below"} ${name}` : t.how === "retouch" ? `price came back to where the ${pe ? "fall" : "rise"} started`
         : `price stays ${pe ? "below" : "above"} ${name}`;
       return { depth: null, body: null, back: null, retest: false, strength: null, word, why, exitAt: word === "exit" ? t.exitTime : null, exitPrice: word === "exit" ? t.exit : null };
     }

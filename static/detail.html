@@ -646,21 +646,23 @@
   // "Call Entry": the strike number of the contract bought (the owner's word: the same number as in the call); the index
   // price the call entered at only where there is no strike
   function entryCell(t, strike) {
-    if (t.entry == null) return `<td class="entry wait">next open</td>`;
+    if (t.entry == null) return `<td class="entry wait">buy at next open</td>`;
     return `<td class="entry">${strike != null ? strike : fmt.format(t.entry)}</td>`;
   }
 
-  // "Call Target": the next level in the call's direction, and how the call ended once it has. A held break is not sold at
-  // its target: the note says what sells it, and once sold, what did
+  // "Call Target": the next level in the call's direction, and how the call ended once it has, in the owner's plain words
+  // (8 October night: buy, hold, continue, sell). A held break is not sold at its target: once the price has gone past it,
+  // the call continues; the note says what sells it, and once sold, what did
   function targetCell(t) {
     if (t.hold) {
       const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
-      const note = t.how === "back" ? `<small>sold: closed ${way} ${line}</small>` : t.how === "retouch" ? `<small>sold: came back to ${fmt.format(t.c1Open)}</small>`
-        : t.how === "day end" ? `<small${t.points > 0 ? ' class="up"' : ""}>held to the day end</small>` : t.entry == null ? "" : `<small>holding: sells on a close ${way} ${line}</small>`;
-      return `<td class="target">${fmt.format(t.target)}${note}</td>`;
+      const past = t.entry != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));
+      const note = t.how === "back" ? `sold: a candle closed ${way} ${line}` : t.how === "retouch" ? `sold: price came back to ${fmt.format(t.c1Open)}`
+        : t.how === "day end" ? "sold at day end" : t.entry == null ? "" : `${past ? "target passed, continue" : "hold"} · sell if a candle closes ${way} ${line}`;
+      return `<td class="target">${fmt.format(t.target)}${note ? `<small${t.exit != null && t.points > 0 ? ' class="up"' : ""}>${note}</small>` : ""}</td>`;
     }
-    const note = t.how === "target" ? `<small class="up">hit</small>` : t.how === "day end" ? "<small>not reached, day end</small>"
-      : t.how === "candle" ? "<small>not reached, closed by EXIT</small>" : t.aimed ? "<small>one level on</small>" : "";
+    const note = t.how === "target" ? `<small class="up">target hit, sold</small>` : t.how === "day end" ? "<small>sold at day end</small>"
+      : t.how === "candle" ? "<small>sold on SELL</small>" : t.aimed ? "<small>next line</small>" : "";
     return `<td class="target">${fmt.format(t.target)}${note}</td>`;
   }
 
@@ -672,14 +674,15 @@
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
     return rd ? { say: rd.word, exitAt: rd.exitAt, why: rd.why } : null;
   }
-  // "Candle status": one word for every open call, CARRY or EXIT, with the reason in words under it; on a finished call,
-  // what the word was and when, so the owner can judge it against the result
+  // "Candle status": one word for every open call, HOLD or SELL (the owner's plain words, 8 October night; CARRY and EXIT
+  // until then), with the reason in words under it; on a finished call, what the word was and when, so the owner can judge
+  // it against the result
   function candleCell(t) {
     const rd = candleRead(t);
     if (!rd) return `<td class="cand">—</td>`;
-    if (t.exit == null) return `<td class="cand ${rd.say}">${rd.say === "exit" ? "EXIT" : "CARRY"}<small>${rd.why}</small></td>`;
-    if (rd.exitAt == null) return `<td class="cand carry">CARRY the whole time<small>${rd.why}</small></td>`;
-    return `<td class="cand exit">Said EXIT at ${callTime(rd.exitAt)}<small>${rd.why}</small></td>`;
+    if (t.exit == null) return `<td class="cand ${rd.say}">${rd.say === "exit" ? "SELL" : "HOLD"}<small>${rd.why}</small></td>`;
+    if (rd.exitAt == null) return `<td class="cand carry">HOLD the whole time<small>${rd.why}</small></td>`;
+    return `<td class="cand exit">said SELL at ${callTime(rd.exitAt)}<small>${rd.why}</small></td>`;
   }
   // The carry read (idea P5's question, 7 October evening; Rules.carryOf): at the candle that reached the target, did the
   // close go a quarter into the next gap, and was the level beyond reached later. For the CSV and the research engine only
