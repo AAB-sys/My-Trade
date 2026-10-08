@@ -87,14 +87,17 @@
   "index_at_entry": 22504.6,
   "premium_paid": 136.05,
   "paid_at": "2026-10-08T09:35:03+05:30",
-  "premium_now": 49.75,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 46.45,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 88.43,
   "sold": {
    "premium": 88.2,
    "at": "2026-10-08T11:25:28+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44612
  },
  {
@@ -457,14 +460,17 @@
   "index_at_entry": 22466.3,
   "premium_paid": 123.2,
   "paid_at": "2026-10-08T10:40:41+05:30",
-  "premium_now": 62.7,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 57.95,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 80.08,
   "sold": {
    "premium": 80.05,
    "at": "2026-10-08T12:33:37+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44608
  },
  {
@@ -574,14 +580,17 @@
   "index_at_entry": 22458.55,
   "premium_paid": 119.3,
   "paid_at": "2026-10-08T11:21:31+05:30",
-  "premium_now": 62.7,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 57.95,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 77.55,
   "sold": {
    "premium": 77.3,
    "at": "2026-10-08T12:56:35+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44608
  },
  {
@@ -612,14 +621,17 @@
   "index_at_entry": 22445.7,
   "premium_paid": 136.35,
   "paid_at": "2026-10-08T11:22:57+05:30",
-  "premium_now": 77.5,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 72.0,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 88.63,
   "sold": {
    "premium": 88.1,
    "at": "2026-10-08T13:20:54+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44602
  },
  {
@@ -631,14 +643,17 @@
   "index_at_entry": 22444.85,
   "premium_paid": 136.35,
   "paid_at": "2026-10-08T11:23:00+05:30",
-  "premium_now": 77.5,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 72.0,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 88.63,
   "sold": {
    "premium": 88.1,
    "at": "2026-10-08T13:20:54+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44602
  },
  {
@@ -650,14 +665,17 @@
   "index_at_entry": 22399.15,
   "premium_paid": 164.1,
   "paid_at": "2026-10-08T11:25:03+05:30",
-  "premium_now": 96.65,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 90.5,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 106.67,
   "sold": {
    "premium": 106.2,
    "at": "2026-10-08T13:20:56+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44600
  },
  {
@@ -726,14 +744,17 @@
   "index_at_entry": 22338.15,
   "premium_paid": 164.3,
   "paid_at": "2026-10-08T11:30:03+05:30",
-  "premium_now": 118.0,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 111.85,
+  "now_at": "2026-10-08T15:40:01+05:30",
   "sell_below": 106.8,
   "sold": {
    "premium": 106.5,
    "at": "2026-10-08T15:06:14+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44598
  },
  {
@@ -764,14 +785,17 @@
   "index_at_entry": 22437.1,
   "premium_paid": 122.05,
   "paid_at": "2026-10-08T11:34:14+05:30",
-  "premium_now": 77.5,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 72.0,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 79.33,
   "sold": {
    "premium": 78.7,
    "at": "2026-10-08T14:11:39+05:30"
   },
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44602
  },
  {
@@ -783,11 +807,14 @@
   "index_at_entry": 22340.6,
   "premium_paid": 133.75,
   "paid_at": "2026-10-08T11:34:15+05:30",
-  "premium_now": 190.95,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 206.05,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 86.94,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44601
  },
  {
@@ -894,11 +921,14 @@
   "index_at_entry": 54834.7,
   "premium_paid": 898.3,
   "paid_at": "2026-10-08T12:15:01+05:30",
-  "premium_now": 760.85,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 735.0,
+  "now_at": "2026-10-08T15:40:08+05:30",
   "sell_below": 583.89,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 49433
  },
  {
@@ -910,11 +940,14 @@
   "index_at_entry": 22324.85,
   "premium_paid": 158.45,
   "paid_at": "2026-10-08T12:20:01+05:30",
-  "premium_now": 118.0,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 111.85,
+  "now_at": "2026-10-08T15:40:01+05:30",
   "sell_below": 102.99,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44598
  },
  {
@@ -945,11 +978,14 @@
   "index_at_entry": 22313.25,
   "premium_paid": 152.9,
   "paid_at": "2026-10-08T12:25:01+05:30",
-  "premium_now": 118.0,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 111.85,
+  "now_at": "2026-10-08T15:40:01+05:30",
   "sell_below": 99.39,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44598
  },
  {
@@ -980,11 +1016,14 @@
   "index_at_entry": 22293.5,
   "premium_paid": 171.8,
   "paid_at": "2026-10-08T12:35:03+05:30",
-  "premium_now": 143.25,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 135.35,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 111.67,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44596
  },
  {
@@ -1015,11 +1054,14 @@
   "index_at_entry": 22275.7,
   "premium_paid": 166.2,
   "paid_at": "2026-10-08T12:40:01+05:30",
-  "premium_now": 143.25,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 135.35,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 108.03,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44596
  },
  {
@@ -1050,11 +1092,14 @@
   "index_at_entry": 22266.95,
   "premium_paid": 167.45,
   "paid_at": "2026-10-08T13:00:03+05:30",
-  "premium_now": 143.25,
-  "now_at": "2026-10-08T15:30:12+05:30",
+  "premium_now": 135.35,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 108.84,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44596
  },
  {
@@ -1123,11 +1168,14 @@
   "index_at_entry": 22243.65,
   "premium_paid": 186.0,
   "paid_at": "2026-10-08T13:20:00+05:30",
-  "premium_now": 171.5,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 160.05,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 120.9,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44592
  },
  {
@@ -1291,11 +1339,14 @@
   "index_at_entry": 54552.05,
   "premium_paid": 977.55,
   "paid_at": "2026-10-08T13:50:02+05:30",
-  "premium_now": 926.65,
-  "now_at": "2026-10-08T15:30:07+05:30",
+  "premium_now": 898.2,
+  "now_at": "2026-10-08T15:40:08+05:30",
   "sell_below": 635.41,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 49425
  },
  {
@@ -1326,11 +1377,14 @@
   "index_at_entry": 22212.1,
   "premium_paid": 172.05,
   "paid_at": "2026-10-08T14:05:03+05:30",
-  "premium_now": 171.5,
-  "now_at": "2026-10-08T15:30:11+05:30",
+  "premium_now": 160.05,
+  "now_at": "2026-10-08T15:40:00+05:30",
   "sell_below": 111.83,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 44592
  },
  {
@@ -1342,11 +1396,14 @@
   "index_at_entry": 54444.9,
   "premium_paid": 956.2,
   "paid_at": "2026-10-08T14:05:06+05:30",
-  "premium_now": 984.8,
-  "now_at": "2026-10-08T15:30:10+05:30",
+  "premium_now": 950.95,
+  "now_at": "2026-10-08T15:40:08+05:30",
   "sell_below": 621.53,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 49423
  },
  {
@@ -1377,11 +1434,14 @@
   "index_at_entry": 54428.45,
   "premium_paid": 925.6,
   "paid_at": "2026-10-08T14:10:09+05:30",
-  "premium_now": 984.8,
-  "now_at": "2026-10-08T15:30:10+05:30",
+  "premium_now": 950.95,
+  "now_at": "2026-10-08T15:40:08+05:30",
   "sell_below": 601.64,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-10-08T15:40:11+05:30"
+  },
   "security_id": 49423
  },
  {
