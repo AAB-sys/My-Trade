@@ -347,7 +347,7 @@ def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
         name = "the level" if t.get("ratio") is None else f"the {t['ratio'] * 100:.1f}% level"
         pe, how = t["side"] == "PE", t.get("how")
         word = "exit" if how in ("back", "retouch") else "carry"
-        why = (f"price closed back {'above' if pe else 'below'} {name}" if how == "back" else "price came back to where the break began" if how == "retouch"
+        why = (f"price closed back {'above' if pe else 'below'} {name}" if how == "back" else f"price came back to where the {'fall' if pe else 'rise'} started" if how == "retouch"
                else f"price stays {'below' if pe else 'above'} {name}")
         return {"depth": None, "body": None, "back": None, "retest": False, "strength": None, "word": word, "why": why,
                 "exitAt": t.get("exitTime") if word == "exit" else None, "exitPrice": t.get("exit") if word == "exit" else None}

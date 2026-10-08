@@ -305,7 +305,7 @@ The app is ready to run on a platform that deploys from GitHub:
   format: time, call with its contract, signal, call entry (the strike), call
   target (the next line on the chart in the call's direction, following the lines
   as they move; with "hit" or "not reached" once ended), premium paid -> now and
-  candle status (the candle verdict, CARRY or EXIT with its reason), under
+  candle status (the candle verdict, HOLD or SELL with its reason), under
   a header row that stays in view; scored, and downloadable as a CSV file. The
   candle verdict also goes with every call into the day's calls CSV for the
   research engine, and so does the carry read (did the candle that reached the target close a quarter
