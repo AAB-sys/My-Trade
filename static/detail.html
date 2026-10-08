@@ -525,9 +525,11 @@
   //             (not on day candles, where a day is one candle: there a call runs on until its target)
   //   every signal gives a call, whether or not earlier calls are still open;
   //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call (8 October evening: the
-  //   seven lines only, the extra line beyond each end of that afternoon taken off)
+  //   seven lines only, the extra line beyond each end of that afternoon taken off); except with "today so far" levels on
+  //   one session: a close below the day's earlier low is a Buy PE with no target, held until a candle closes back above
+  //   that low or the day ends, and a close above the earlier high a Buy CE the same way (owner's "option 3", 8 October evening)
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
@@ -544,7 +546,7 @@
     const bars = sessionBars();
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
-                               dayCandles: state.interval === "1d", signal: state.signal });
+                               dayCandles: state.interval === "1d", signal: state.signal, rideBreaks: judgedToday() });
   }
 
   function drawPaper(levels) {
@@ -620,7 +622,8 @@
     const strike = strikeOf(t, r);
     return `<td>${callTime(t.signalTime)}</td>`
       + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
-      + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
+      + (t.ride ? `<td>Broke the day's ${t.side === "PE" ? "low" : "high"} · ${fmt.format(t.level)}</td>`
+                : `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td>`)
       + entryCell(t, strike) + targetCell(t) + premiumCell(t, r) + candleCell(t);
   }
   const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
@@ -646,8 +649,15 @@
     return `<td class="entry">${strike != null ? strike : fmt.format(t.entry)}</td>`;
   }
 
-  // "Call Target": the next level in the call's direction, and how the call ended once it has
+  // "Call Target": the next level in the call's direction, and how the call ended once it has. A break of the day's low or
+  // high has no target: the cell says when it is sold instead
   function targetCell(t) {
+    if (t.ride) {
+      const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
+      const note = t.how === "back" ? `closed back ${way} ${line}` : t.how === "day end" ? "held to the day end"
+        : `held till a candle closes back ${way} ${line}`;
+      return `<td class="target">No target<small${t.how === "day end" && t.points > 0 ? ' class="up"' : ""}>${note}</small></td>`;
+    }
     const note = t.how === "target" ? `<small class="up">hit</small>` : t.how === "day end" ? "<small>not reached, day end</small>"
       : t.how === "candle" ? "<small>not reached, closed by EXIT</small>" : t.aimed ? "<small>one level on</small>" : "";
     return `<td class="target">${fmt.format(t.target)}${note}</td>`;

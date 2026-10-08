@@ -53,6 +53,9 @@ function run(bars, previous, o, higher) {
   for (let i = 1; i < bars.length; i++) {
     const bar = bars[i], prev = bars[i - 1].close, levels = levelsAt(i), clockEnd = tod(bar.time) + sec;
     if (!levels || (o.levels === "open30" && tod(bar.time) < hm(9, 45)) || (o.levels === "open15" && tod(bar.time) < hm(9, 30))) continue;
+    if (ready && ready.ride) {  // a break of the day's low or high (option 3, 8 October evening): no target, as Rules.paperTrades
+      const x = { ...ready, target: null, aimed: null, ladder: [], entry: bar.open, entryTime: bar.time, how: "open", adv: 0, fav: 0 }; delete x.prices; trades.push(x); open.push(x); ready = null;
+    }
     if (ready) {  // the entry: already at or past the target, the call aims at the first level beyond the entry, or does not enter (owner, 7 October)
       let target = ready.target, aimed = null;
       if (ready.side === "CE" ? bar.open >= target : bar.open <= target) {
@@ -64,6 +67,11 @@ function run(bars, previous, o, higher) {
       ready = null;
     }
     open = open.filter(x => {
+      if (x.ride) {  // held until a candle closes back across the broken low or high
+        x.fav = Math.max(x.fav, x.side === "CE" ? bar.high - x.entry : x.entry - bar.low); x.adv = Math.max(x.adv, x.side === "CE" ? x.entry - bar.low : bar.high - x.entry);
+        if (x.side === "PE" ? bar.close > x.level : bar.close < x.level) { end(x, bar.close, bar, "back"); return false; }
+        return true;
+      }
       const past = x.side === "CE" ? Math.max(x.entry, x.level) : Math.min(x.entry, x.level), k = x.carried || 0;  // the target follows the lines, as Rules.paperTrades (8 October)
       const lines = o.levels === "today" ? todayLines(i) : levels;
       const beyond = x.side === "CE" ? lines.map(l => l.price).filter(p => p > past) : lines.map(l => l.price).filter(p => p < past).reverse();
@@ -111,7 +119,8 @@ function run(bars, previous, o, higher) {
       const kind = crossed(at.price) ? "crossed" : "held", side = bar.close > at.price ? "CE" : "PE";
       const k = levels.indexOf(at), next = side === "CE" ? levels[k + 1] : levels[k - 1];
       const late = (o.noNewAfter && clockEnd > o.noNewAfter) || (o.closeAt && clockEnd >= o.closeAt);
-      let ok = !!next && !late;
+      const ride = !next && o.levels === "today" && kind === "crossed" && !open.some(x => x.ride && x.side === side);  // a break call, one that way at a time
+      let ok = (!!next || ride) && !late;
       if (ok && kind === "crossed" && next) {  // the depth and the body of the crossing candle, against the gap to the next level
         const gap = Math.abs(next.price - at.price), depth = Math.abs(bar.close - at.price) / gap, body = Math.abs(bar.close - bar.open) / gap;
         if (o.minDepth && depth < o.minDepth) { ok = false; if (o.waitDeeper) shallow[at.ratio + side] = { ratio: at.ratio, side }; }
@@ -119,8 +128,8 @@ function run(bars, previous, o, higher) {
       }
       if (ok && o.sideOnDay === "with") ok = (side === "CE") === (bar.close >= bars[0].open);
       if (ok && o.agree && higher) { const done = higher.filter(b => b.time + o.higherSec <= bar.time + sec); const c = done[done.length - 1]; ok = !!c && (side === "CE" ? c.close > at.price : c.close < at.price); }
-      if (ok && o.minNeed) ok = Math.abs(next.price - bar.close) >= o.minNeed;
-      if (ok) sig = { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close, prices: levels.map(l => l.price) };
+      if (ok && o.minNeed && next) ok = Math.abs(next.price - bar.close) >= o.minNeed;
+      if (ok) sig = { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next ? next.price : null, ride: !next, close: bar.close, prices: levels.map(l => l.price) };
     }
     if (sig) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
   }
@@ -201,7 +210,7 @@ if (LIVE.length) {
   console.log("\n==== the calls the index page suggested live (its own points; finished ones only in the counts)");
   Object.keys(groups).sort().forEach(key => {
     const [index, interval, levels, signal] = key.split("|"), list = groups[key];
-    const done = list.filter(c => c.ended_by === "target" || c.ended_by === "day end");
+    const done = list.filter(c => c.ended_by === "target" || c.ended_by === "day end" || c.ended_by === "back");  // back: a break call closed back across its line
     const net = r2(done.reduce((s, c) => s + (parseFloat(c.points) || 0), 0)), won = done.filter(c => parseFloat(c.points) > 0).length;
     let matched = 0, replayable = 0;
     if (SEC[interval] && (levels === "prev" || levels === "today") && signal !== "off") {
@@ -219,8 +228,10 @@ for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", 
   // the self-check: the base line must equal the page's engine
   const mine = tally(all(index, interval, {}));
   const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both" }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
-  const same = mine.n === page.n && mine.net === page.net;
-  console.log(`\n==== ${index}, ${interval} candles ${same ? "(base line agrees with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify(page)}`);
+  const mineToday = tally(all(index, interval, { levels: "today" }));  // and the today-so-far line, with the break calls (option 3)
+  const pageToday = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "today", previous: ix.previous, seconds: SEC[interval], signal: "both" }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
+  const same = mine.n === page.n && mine.net === page.net && mineToday.n === pageToday.n && mineToday.net === pageToday.net;
+  console.log(`\n==== ${index}, ${interval} candles ${same ? "(base lines agree with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify({ page, pageToday })}`);
   const base = all(index, interval, {});
   IDEAS.forEach(([name, opts], i) => console.log(row(name, tally(all(index, interval, opts), i ? base : null))));
   // the stops of the Study page (P6, P7; the owner's question of 8 October), by the page's own engine, a candle that touched both

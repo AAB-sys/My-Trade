@@ -188,3 +188,29 @@ console.log("rules unit checks passed");
   }
   console.log("ideas unit checks passed");
 }
+
+// ---- the break of the day's low or high (option 3, owner's decision of 8 October evening), "today so far" only: the day
+// 98 to 102 by 09:20; 09:25 closes 96, below the day's low 98: Buy PE, no target, in at 09:30's open 95.5; 09:30 makes a new
+// low (its own break of 95 is no second call: one held that way already); 09:35 closes 94.5, still below 98; 09:40 closes
+// 98.5, back above 98: out at that close, 95.5 - 98.5 = -3. Without 09:40 the call runs to the day's end at 94.5: +1
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const day = [bar(0, 100, 102, 98, 100), bar(1, 100, 100.3, 99.8, 100.2), bar(2, 99, 100, 95, 96), bar(3, 95.5, 96, 93, 94), bar(4, 94, 94.8, 93.5, 94.5), bar(5, 94.5, 99, 94.4, 98.5)];
+  const r = R.replayDay({ bars: day, move: "today", previous: null, seconds: 300, signal: "both" }).trades;
+  assert(r.length === 1 && r[0].ride && r[0].side === "PE" && r[0].level === 98 && r[0].target === null && r[0].entry === 95.5 && r[0].how === "back" && r[0].exit === 98.5 && r[0].exitTime === t0 + 5 * 300 && r[0].points === -3,
+         "break of the low: Buy PE, out on the close back above it: " + JSON.stringify(r));
+  const e = R.replayDay({ bars: day.slice(0, 5), move: "today", previous: null, seconds: 300, signal: "both" }).trades;
+  assert(e.length === 1 && e[0].how === "day end" && e[0].exit === 94.5 && e[0].points === 1, "held to the day's end: " + JSON.stringify(e));
+  const live = R.paperTrades({ bars: day, levelsAt: R.todayLevelsAt(day), targetsAt: R.todayLinesAt(day), now: day[5].time + 100, seconds: 300, dayCandles: false, signal: "both", rideBreaks: true }).trades;
+  assert(live.length === 1 && live[0].how === "open" && live[0].last === 98.5, "the candle forming now back above the low: still open, decided at its close: " + JSON.stringify(live));
+  const off = R.paperTrades({ bars: day, levelsAt: R.todayLevelsAt(day), now: Infinity, seconds: 300, dayCandles: false, signal: "both" }).trades;
+  assert(off.length === 0, "without rideBreaks a close beyond the low gives no call: " + JSON.stringify(off));
+  const said = R.readOf({ trade: r[0], bars: day, seconds: 300, now: Infinity }), open = R.readOf({ trade: live[0], bars: day, seconds: 300, now: day[5].time + 100 });
+  assert(said.word === "exit" && said.why === "price closed back above the day's low it broke" && said.exitAt === t0 + 5 * 300 && open.word === "carry" && open.why === "price stays below the day's low it broke",
+         "the candle verdict on a break call: " + JSON.stringify([said, open]));
+  // the mirror: the day's high broken upward is a Buy CE, out on a close back below it
+  const up = day.map(b => ({ time: b.time, open: 200 - b.open, high: 200 - b.low, low: 200 - b.high, close: 200 - b.close }));
+  const u = R.replayDay({ bars: up, move: "today", previous: null, seconds: 300, signal: "both" }).trades;
+  assert(u.length === 1 && u[0].ride && u[0].side === "CE" && u[0].level === 102 && u[0].entry === 104.5 && u[0].how === "back" && u[0].exit === 101.5 && u[0].points === -3, "break of the high: Buy CE: " + JSON.stringify(u));
+  console.log("break of the day's low or high checks passed");
+}
