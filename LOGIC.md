@@ -31,17 +31,30 @@ turn after a move. Whether that holds is for the owner's own record to show.
   **(owner to decide)**.
 - *Today so far* (default, owner's choice of 6 October): the session's own low to
   high so far, an up move when its last price is above its open **(owner to
-  decide)**. Blank until it has traded. Built from the live candles: a tick that
-  makes a new high or low, or turns the move, redraws the lines at once. The
-  calls are judged differently from the lines (8 October): each candle against
-  the levels as they stood when it closed, the day's range up to that candle,
-  on the index page, in the server's watcher and on the Study page alike. Until
-  then the page and the watcher judged every earlier candle against the lines
-  of the moment, so each new high or low redrew the whole day's calls: on 8
-  October NIFTY 50 showed 22 different calls through the morning and 14 of them
-  later vanished, while calls the server had recorded at their entry dropped
-  off the table. A call, once given, now stays as it was given; only its
-  target follows the lines (item 5, owner's decision of the same afternoon).
+  decide)**. Blank until it has traded. **Each candle is judged against the
+  lines as they stood when it began** (owner's decision, 8 October afternoon):
+  the day's range up to the candle before it (the day's first candle: its own),
+  with **one more Fibonacci step beyond each end**, 23.6% of the range below the
+  low and above the high (named -23.6% and 123.6%: nine lines). The chart draws
+  exactly those lines, so while a candle forms they stand still, and a new low
+  shows as the price below the 0% line until the candle closes; then the lines
+  move to the new range. A candle that closes below the day's earlier low has
+  crossed the 0% line: a **Buy PE**, aiming at the step below (above the earlier
+  high: a Buy CE, aiming at the step above). The same on the index page, in the
+  server's watcher and on the Study page. The reason: from the morning of 8
+  October until then each candle was judged with its own high and low in the
+  range, so every candle that made a new low "held" the 0% line it drew itself:
+  18 of NIFTY 50's 23 calls that day were Buy CE at 0.0%, all the way down, and
+  a break below the low could never give a PE (the line moved with the price,
+  and no line lay below it). On the six saved days, 5-minute candles, both
+  signals: 449 calls instead of 450, net +2,732 points instead of +6,014 (the
+  bounces at each new low had paid on those mostly sideways days); on 8 October
+  to 14:10, NIFTY 50: 24 calls, 10 CE and 14 PE, instead of 19 CE and 4 PE.
+  Before the morning of 8 October the page and the watcher judged every earlier
+  candle against the lines of the moment, so each new high or low redrew the
+  whole day's calls: NIFTY 50 showed 22 different calls through that morning and
+  14 of them later vanished. A call, once given, stays as it was given; only its
+  target follows the lines (item 5).
 - *Bars shown*: the lowest low and highest high among the candles on the chart;
   whichever came first says which way the move went.
 - *No levels*: hides them.
@@ -163,8 +176,10 @@ The rule, in the order it is applied:
    too, tick by tick. **No stop** (owner's decision,
    5 October): a call that goes the wrong way is held, to the target or to the
    day's last candle, and its loss is whatever the day does. A signal pointing
-   outward from the 0% or 100% level has no next level, so it gives no call
-   **(owner to decide)**.
+   outward from the outermost line has no next level, so it gives no call: with
+   the previous day's levels that is the 0% or 100% line; with *Today so far*
+   the steps beyond them (owner's decision, 8 October: a close below the day's
+   earlier low is a Buy PE to the step below, see Levels).
    **Entry already past the target** (owner's decision, 7 October): when the
    next candle opens at or past the target, because the signal candle itself ran
    through the next level, the call aims one level further, at the first level

@@ -484,7 +484,10 @@
       return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
     }
     if (state.move === "today") {
-      const mv = Rules.moveOf(sessionBars());
+      // one session's candles (8 October afternoon): the lines the candle forming now is judged against, the day's range up to
+      // the candle before it, so a new low or high shows as the price beyond the 0% or 100% line until the candle closes
+      const all = sessionBars(), closed = all.filter(b => endOf(b) <= serverNow());
+      const mv = Rules.moveOf(judgedToday() ? (closed.length ? closed : all.slice(0, 1)) : all);
       if (!mv) return null;
       return { ...mv, what: key === "all" ? "days shown" : isToday(key) ? "today so far" : dayLabel(key) };
     }
@@ -495,6 +498,10 @@
   }
 
   const levelsOf = Rules.levelsOf;
+  // "Today so far" on one session's intraday candles: each candle judged against the lines as they stood when it began, with
+  // a step beyond each end (Rules.todayLevelsAt); a day candle or several sessions shown keep the plain lines of the range shown
+  const judgedToday = () => state.move === "today" && state.interval !== "1d" && currentSession() !== "all";
+  const linesOf = (m) => judgedToday() ? Rules.levelsWithSteps(m) : levelsOf(m);
 
   // ---- Layer 2 of the owner's logic, held and crossed (see LOGIC.md), is judged inside the paper
   // calls below; its own table came off the page on 6 October (owner's choice).
@@ -517,7 +524,8 @@
   //   day end - a call still open at the day's last candle ends at its close; nothing carries overnight
   //             (not on day candles, where a day is one candle: there a call runs on until its target)
   //   every signal gives a call, whether or not earlier calls are still open;
-  //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call
+  //   a signal pointing outward from the outermost line has no next level, so it gives no call (previous day: 0% and 100%;
+  //   today so far: the steps beyond them, so a close below the day's earlier low is a Buy PE to the step below, 8 October)
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
   const HOW = { target: "Target", "day end": "Day end", candle: "Exit", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
@@ -525,15 +533,15 @@
 
   // The rule is Rules.paperTrades in /static/rules.js; this page hands it the session's candles, the levels on the
   // chart (which stand still within one run; the live page redraws them on a new high or low) and the server's clock
-  // "Today so far" levels (8 October): each candle is judged against the levels as they stood when it closed, the day's
-  // range up to that candle, exactly as the Study page replays a day (Rules.replayDay) and as the server's watcher records
-  // the calls. Until then every candle was judged against the levels of this moment, so each new high or low of the day
-  // redrew the whole morning's calls: calls recorded at their entry vanished from the table and others appeared afterwards,
-  // "not seen at entry". The lines on the chart still show the day's range now; a call, once given, stays as it was given.
+  // "Today so far" levels (8 October): each candle is judged against the levels as they stood when it began (the day's range
+  // up to the candle before it, with a step beyond each end), exactly as the Study page replays a day (Rules.replayDay) and
+  // as the server's watcher records the calls. Until that morning every candle was judged against the levels of this
+  // moment, so each new high or low of the day redrew the whole morning's calls; from then until the afternoon each candle
+  // was judged with its own high and low in the range, so every candle making a new low "held" the 0% line it drew itself
+  // (Buy CE after Buy CE on a falling day). The chart shows the lines the forming candle is judged against.
   function paperTrades(levels) {
-    const bars = sessionBars(), session = currentSession();
-    const causal = state.move === "today" && state.interval !== "1d" && session !== "all";
-    const levelsAt = causal ? (i) => levelsOf(Rules.moveOf(bars.slice(0, i + 1))) : () => levels;
+    const bars = sessionBars();
+    const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels;
     return Rules.paperTrades({ bars, levelsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal });
   }
@@ -770,7 +778,7 @@
     const note = document.getElementById("levels-note");
     drawSessions();
     const m = theMove();
-    const levels = m ? levelsOf(m) : [];
+    const levels = m ? linesOf(m) : [];
     drawPaper(levels);
     const key = JSON.stringify([state.move, currentSession(), levels]);
     if (series && key !== lastLevelsKey) {

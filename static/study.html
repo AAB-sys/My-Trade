@@ -163,7 +163,7 @@
   const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];
     return ix && ix.candles[interval] && ix.candles[interval].length ? { date: d.date, complete: d.complete, bars: ix.candles[interval], previous: ix.previous } : null; }).filter(Boolean);  // oldest first
   const levelsFor = (move, previous) => move === "prev" ? (previous ? (() => { const fixed = Rules.levelsOf(Rules.moveOfDay(previous)); return () => fixed; })() : null)
-    : (bars) => (i) => Rules.levelsOf(Rules.moveOf(bars.slice(0, i + 1)));
+    : (bars) => Rules.todayLevelsAt(bars);  // today so far: as the rule judges each candle (8 October)
   const allTrades = (index, interval, move, signal, keys = state.ideas) => state.days.flatMap(d => state.files[d.date] ? replay(state.files[d.date], index, interval, move, signal, keys) : []);
   function tally(trades) {
     const won = trades.filter(t => t.points > 0).length, lost = trades.filter(t => t.points < 0).length;
