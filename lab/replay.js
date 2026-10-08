@@ -62,6 +62,9 @@ function run(bars, previous, o, higher) {
       ready = null;
     }
     open = open.filter(x => {
+      const past = x.side === "CE" ? Math.max(x.entry, x.level) : Math.min(x.entry, x.level), k = x.carried || 0;  // the target follows the lines, as Rules.paperTrades (8 October)
+      const beyond = x.side === "CE" ? levels.map(l => l.price).filter(p => p > past) : levels.map(l => l.price).filter(p => p < past).reverse();
+      if (beyond.length > k) { x.target = beyond[k]; x.ladder = beyond.slice(k + 1); }
       x.fav = Math.max(x.fav, x.side === "CE" ? bar.high - x.entry : x.entry - bar.low); x.adv = Math.max(x.adv, x.side === "CE" ? x.entry - bar.low : bar.high - x.entry);
       while (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target) {  // the target reached: idea P5 may carry on to the level beyond
         const beyond = o.carryOn != null && x.ladder.length ? x.ladder[0] : null;

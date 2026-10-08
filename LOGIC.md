@@ -40,7 +40,8 @@ turn after a move. Whether that holds is for the owner's own record to show.
   of the moment, so each new high or low redrew the whole day's calls: on 8
   October NIFTY 50 showed 22 different calls through the morning and 14 of them
   later vanished, while calls the server had recorded at their entry dropped
-  off the table. A call, once given, now stays as it was given.
+  off the table. A call, once given, now stays as it was given; only its
+  target follows the lines (item 5, owner's decision of the same afternoon).
 - *Bars shown*: the lowest low and highest high among the candles on the chart;
   whichever came first says which way the move went.
 - *No levels*: hides them.
@@ -106,11 +107,14 @@ left to right, in the owner's format of 7 October evening: **Time** (9:15 AM),
 ratio and price), **Call Entry** (the strike number of the contract, the same
 number as in the call; the index price at entry until the contract is known:
 no Dhan, or no page open at the entry), **Call Target** (the next level in the
-call's direction; once the call has ended, *hit* or *not reached, day end*
-under it), **Premium Paid -> Now** (at exit once the call has ended; *SELL NOW*
-while the premium sits below the sell mark, *sold at* once marked sold). The
-candle verdict of item 7 is not on the table (owner's ask, 7 October evening):
-it goes with every call into the day's calls CSV. A finished row is greyed. A finished call that
+call's direction, on the lines as the chart draws them now, item 5; once the
+call has ended, *hit* or *not reached, day end* under it), **Premium Paid ->
+Now** (at exit once the call has ended; *SELL NOW* while the premium sits below
+the sell mark, *sold at* once marked sold), **Candle status** (the candle
+verdict of item 7: CARRY or EXIT with its reason on an open call; on a finished
+one, "CARRY the whole time" or "Said EXIT at" its time; off the table on 7
+October evening, back on 8 October as the owner's exit signal, and in the day's
+calls CSV all along). A finished row is greyed. A finished call that
 no page saw enter reads "not seen at entry" in the premium cell: no page was
 open at its entry, so no premium could be recorded then (7 October). The header
 row stays in view while the page scrolls (owner's ask, 7 October). The list is in time order, the newest call at the
@@ -163,6 +167,19 @@ The rule, in the order it is applied:
    target below its entry the moment it entered and lost at once (the 10:00
    call of 7 October: held 0.0% at 22,578, entered at 22,610.60, target 23.6% at
    22,605.32, −5.28). The research engine replays every saved day the same way.
+   **The target follows the lines** (owner's decision, 8 October): at every
+   candle the target is the next line beyond both the entry and the level that
+   gave the call, in the call's direction, among the lines as they stand at that
+   candle (on the candle forming now, as the chart draws them), and the call
+   ends when the price reaches that line. With the previous day's levels the
+   lines never move, so nothing changes there (the six saved days: all 432 day
+   and setting combinations the same). With *Today so far* every new low or high
+   moves the lines, and until then the target stayed where its line stood at
+   the signal: on 8 October the 12:15 call showed 22,385.21 while the chart's
+   23.6% line read 22,380.55. On the six saved days, *Today so far*, 5-minute
+   candles, both signals: the same 450 calls, 381 won instead of 370, net
+   +6,014 points instead of +7,344 (targets come closer as the lines move, so
+   more are reached, each for fewer points).
 6. **Day end** - a call still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal on the day's last candle has no
    candle left to enter on, so it gives nothing. The day's final save (15:40)
@@ -193,8 +210,9 @@ The rule, in the order it is applied:
      big when it closed past halfway to the target or had a body of a whole
      gap, plain when a quarter of the way or a body of half the gap, small
      otherwise - and no candle has closed on the wrong side since.
-   The verdict is not on the table (owner's ask, 7 October evening): it goes
-   with every call into the day's calls CSV for the research engine, as
+   The verdict is on the table as **Candle status** (off it on 7 October
+   evening, back on 8 October as the owner's exit signal), and it goes with
+   every call into the day's calls CSV for the research engine, as
    `candles_say` (carry or exit), `exit_said_at_ist` (the first candle that said
    exit) and `candles_why` (the reason), from the page and from the server's
    watcher alike (`rule.read_of`, the same code in Python, kept the same by
