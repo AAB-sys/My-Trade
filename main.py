@@ -674,6 +674,8 @@ def watch_index(name: str) -> dict:
                 log.warning("watch: %s %s: %s", name, call_key, exc)
         elif t.get("exit") is not None and rec and not rec["ended"]:
             rec = dhan.end_call(call_key, t["how"]) or rec
+        elif t["how"] == "open" and rec and rec["ended"] and rec["ended"].get("how") != "day end":
+            rec = dhan.reopen_call(call_key) or rec  # still open by the rule: its premium is followed again (8 October)
         rows.append({"signal_time": t["signalTime"], "level": t["level"], "ratio": t["ratio"], "kind": t["kind"], "side": t["side"],
                      "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
                      "points": t.get("points"), "how": t["how"],

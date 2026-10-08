@@ -266,7 +266,12 @@ from Dhan's instrument list (then they ride the stream and the poll), and the
 option chain for a record the feed has not touched in the last few seconds.
 Until 7 October only an open page asked for this, so an index nobody had open
 kept every premium at the value paid and no Sell mark could come (NIFTY BANK,
-that afternoon). A call that entered and ended before
+that afternoon). A record marked ended while the watcher's own call by that
+name is still open is opened again, and its premium is followed again (8
+October: the rule changed twice during that session, and two NIFTY 50 calls of
+the new rule had the names of calls of the old one that had reached their
+targets, so their premium stood still on the table); only the day end stays
+final. A call that entered and ended before
 either looked (a server just started) still has no premium: nothing can be
 recorded after the fact, and its cell reads "not seen at entry". While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's
