@@ -76,7 +76,7 @@ function run(bars, previous, o, higher) {
       return true;
     });
     if (o.closeAt && clockEnd >= o.closeAt) { open.forEach(x => end(x, bar.close, bar, "time")); open = []; }
-    levels.forEach(l => { if (bar.close < l.price) used[l.ratio + "CE"] = false; if (bar.close > l.price) used[l.ratio + "PE"] = false; });
+    for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // the line at its price, as Rules.paperTrades (8 October)
     const crossed = L => (prev < L && bar.close > L) || (prev > L && bar.close < L);
     const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
     const hits = levels.filter(l => {
@@ -84,7 +84,7 @@ function run(bars, previous, o, higher) {
       const kind = crossed(l.price) ? "crossed" : held(l.price) ? "held" : null;
       if (!kind) return false;
       const side = bar.close > l.price ? "CE" : "PE";
-      if (used[l.ratio + side]) return false;
+      if (used[l.price + "|" + side]) return false;
       if (o.signal === "retest") return kind === "held" && crossedAgo[l.ratio + side] != null && i - crossedAgo[l.ratio + side] <= (o.retestWithin || 6);
       return o.signal === "both" || o.signal === kind;
     });
@@ -97,7 +97,7 @@ function run(bars, previous, o, higher) {
         const l = levels.find(x => x.ratio === w.ratio), k = l ? levels.indexOf(l) : -1, next = k < 0 ? null : (w.side === "CE" ? levels[k + 1] : levels[k - 1]);
         const onSide = l && (w.side === "CE" ? bar.close > l.price : bar.close < l.price);
         if (!onSide) { delete shallow[key]; continue; }
-        if (next && !used[key] && Math.abs(bar.close - l.price) >= o.minDepth * Math.abs(next.price - l.price)) { hits.push(l); delete shallow[key]; break; }
+        if (next && !used[l.price + "|" + w.side] && Math.abs(bar.close - l.price) >= o.minDepth * Math.abs(next.price - l.price)) { hits.push(l); delete shallow[key]; break; }
       }
     }
     if (hits.length) {
@@ -116,7 +116,7 @@ function run(bars, previous, o, higher) {
       if (ok && o.minNeed) ok = Math.abs(next.price - bar.close) >= o.minNeed;
       if (ok) sig = { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close, prices: levels.map(l => l.price) };
     }
-    if (sig) { ready = sig; used[sig.ratio + sig.side] = true; }
+    if (sig) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
   }
   const last = bars[bars.length - 1];
   open.forEach(x => end(x, last.close, last, "day end"));

@@ -297,7 +297,7 @@ The app is ready to run on a platform that deploys from GitHub:
   second, whether a closed candle held or crossed a level, is the signal of its
   third, the paper trades that rule would have given on those candles (a Held/Crossed/Both switch, the call the
   moment the signal candle closes, buy a CE or a PE, entry at the next price, the next level as
-  target and no stop, one call per level and direction until the index closes
+  target and no stop, one call per level (by its price) and direction until the index closes
   back across it, closed at the day's end), listed one row each in the owner's
   format: time, call with its contract, signal, call entry (the strike), call
   target (with "hit" or "not reached" once ended) and premium paid -> now, under
