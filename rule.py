@@ -124,6 +124,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     min_depth = (ideas or {}).get("minDepth")  # idea P3 (7 October): a crossed signal must close this share of the way to the next level
     exit_back = (ideas or {}).get("exitBack")  # idea P4 (7 October, the owner's rule): a candle closing back across the level by this share of the gap ends the call
     carry_on = (ideas or {}).get("carryOn")  # idea P5 (7 October evening): at the target, a close this share into the next gap carries the call on to the level beyond
+    stop_share = (ideas or {}).get("stopShare")  # ideas P6, P7 (8 October evening): a stop fixed at the entry, this share of the target's distance away
+    minutes = (ideas or {}).get("minutes")  # the day's one-minute candles, to settle a candle that touched both the stop and the target
 
     def clock_end(b):
         return (b["time"] + IST_OFFSET) % 86400 + seconds
@@ -139,6 +141,26 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
     def reaches(t, bar):
         return bar["high"] >= t["target"] if t["side"] == "CE" else bar["low"] <= t["target"]
+
+    def touches_stop(t, bar):
+        return t.get("stop") is not None and (bar["low"] <= t["stop"] if t["side"] == "CE" else bar["high"] >= t["stop"])
+
+    def stop_first(t, bar):
+        """The candle touched the stop: did the stop come before the target? The first minute to touch either; the stop when unsure."""
+        if not reaches(t, bar) or not minutes:
+            return True
+        for m in minutes:
+            if m["time"] < bar["time"] or m["time"] >= bar["time"] + seconds:
+                continue
+            if touches_stop(t, m):
+                return True
+            if reaches(t, m):
+                return False
+        return True
+
+    def set_stop(t):
+        if stop_share and t.get("stop") is None:
+            t["stop"] = round2(t["entry"] - stop_share * (t["target"] - t["entry"]) if t["side"] == "CE" else t["entry"] + stop_share * (t["entry"] - t["target"]))
 
     def follow(t, levels):
         """The target on the lines as they stand (owner's decision, 8 October; see static/rules.js), the ladder beyond it for idea P5."""
@@ -180,6 +202,15 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         levels = levels_at(i)
         for t in open_:
             follow(t, levels)
+            set_stop(t)
+        if stop_share:  # ideas P6, P7
+            still = []
+            for t in open_:
+                if touches_stop(t, bar) and stop_first(t, bar):
+                    end(t, t["stop"], bar, "stop")
+                else:
+                    still.append(t)
+            open_ = still
         open_ = [t for t in open_ if settle(t, bar)]
         if exit_back:  # idea P4: the candle says exit, at its close
             still = []
@@ -215,6 +246,15 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         levels = levels_at(len(closed))  # the lines as the chart draws them now, with the forming candle in the day's range
         for t in open_:
             follow(t, levels)
+            set_stop(t)
+        if stop_share:  # ideas P6, P7, tick by tick
+            still = []
+            for t in open_:
+                if touches_stop(t, forming):
+                    end(t, t["stop"], forming, "stop")
+                else:
+                    still.append(t)
+            open_ = still
         still = []
         for t in open_:
             if reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close
@@ -244,7 +284,8 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas)
 
 
-IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25}}
+IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},
+         "P6": {"stopShare": 1}, "P7": {"stopShare": 0.5}}
 EXIT_BACK = IDEAS["P4"]["exitBack"]
 CARRY_ON = IDEAS["P5"]["carryOn"]
 

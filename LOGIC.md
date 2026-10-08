@@ -479,6 +479,20 @@ Under test since 6 October (confirmed by the owner for the Study page):
   level", taken to every level. The carry read of layer 3 (`carry_deep`,
   `beyond_level`, `beyond_reached` in the day's calls CSV) lets the nightly
   round keep counting it on the real days.
+- **P6: stop loss at the same distance as the target** and **P7: stop loss at
+  half the distance to the target** (the owner's choice, 8 October evening,
+  after a falling day on which NIFTY 50's calls held to the close lost 1,082
+  points: test them on the Study page first, the index page unchanged). The
+  stop is fixed when the call enters, on the other side of the entry from the
+  target; the call ends there ("Ended by the stop"). A candle that touched both
+  the stop and the target is settled by the day's one-minute candles (the first
+  minute to touch either; the stop when one minute touched both). The two are
+  one choice: ticking one unticks the other, and the table never runs them
+  together. On the seven saved days, today so far, 5-minute candles, both
+  signals (`lab/findings.md`, round 5): NIFTY 50 -945 points without a stop,
+  +179 with P6, +198 with P7 (worst day -931, -162, -60); NIFTY BANK +3,128
+  without, +279 with P6, +165 with P7 (worst call -539, -175, -88). A stop
+  caps the losses and gives up most of the profit of calls that came back.
 
 Tested and set aside on the same five days (`lab/findings.md` has the numbers):
 ending a call when a candle closes back across its level (it cut about half the

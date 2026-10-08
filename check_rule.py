@@ -96,7 +96,8 @@ def main() -> int:
              {"minDepth": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25},
              {"exitBack": 0.25}, {"minDepth": 0.25, "exitBack": 0.25}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25, "exitBack": 0.25},
              {"carryOn": 0.25}, {"carryOn": 0}, {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "carryOn": 0.25},
-             {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25, "exitBack": 0.25, "carryOn": 0.25}]
+             {"closeAt": 15 * 3600, "noNewAfter": 14 * 3600, "minDepth": 0.25, "exitBack": 0.25, "carryOn": 0.25},
+             {"stopShare": 1}, {"stopShare": 0.5}, {"stopShare": 0.5, "exitBack": 0.25, "carryOn": 0.25}]  # the stops, ideas P6 and P7 (8 October)
     # 1. the saved days, replayed in every setting
     days = saved_days(folder) if folder.exists() else []
     for d in days:
@@ -111,6 +112,10 @@ def main() -> int:
                     for signal in ("held", "crossed", "both"):
                         for ideas in IDEAS:
                             jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "ideas": ideas, "what": f"{d['date']} {name} {key} {move} {signal}"})
+                        if candles.get("1m"):  # the stops settled by the day's one-minute candles, as the Study page runs them
+                            for share in (1, 0.5):
+                                jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal,
+                                             "ideas": {"stopShare": share, "minutes": candles["1m"]}, "what": f"{d['date']} {name} {key} {move} {signal} stop {share} by minutes"})
                 # 2. the same day live, at several moments, with the levels as the page has them then (today so far, current)
                 bars5 = candles["5m"]
                 for cut in (3, 7, 20, 41, 60, len(bars5) - 1):
