@@ -8,8 +8,8 @@
   "index_at_entry": 22516.8,
   "premium_paid": 144.55,
   "paid_at": "2026-10-08T09:25:01+05:30",
-  "premium_now": 142.65,
-  "now_at": "2026-10-08T09:25:21+05:30",
+  "premium_now": 137.35,
+  "now_at": "2026-10-08T09:29:58+05:30",
   "sell_below": 93.96,
   "sold": null,
   "ended": null,
@@ -24,11 +24,14 @@
   "index_at_entry": 54852.45,
   "premium_paid": 909.5,
   "paid_at": "2026-10-08T09:25:05+05:30",
-  "premium_now": 898.4,
-  "now_at": "2026-10-08T09:25:21+05:30",
+  "premium_now": 915.9,
+  "now_at": "2026-10-08T09:29:41+05:30",
   "sell_below": 591.18,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "target",
+   "at": "2026-10-08T09:29:41+05:30"
+  },
   "security_id": 49433
  }
 ]
