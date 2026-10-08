@@ -24,6 +24,18 @@
     if (!bars.length) return null;
     return { high: Math.max(...bars.map(b => b.high)), low: Math.min(...bars.map(b => b.low)), up: bars[bars.length - 1].close >= bars[0].open };
   }
+  // "Today so far" (owner's decision, 8 October afternoon): candle i is judged against the lines as they stood when it began,
+  // the day's range up to the candle before it (the day's first candle: its own), with one more Fibonacci step beyond each
+  // end, 23.6% of the range below the low and above the high (named -23.6% and 123.6%). A candle that makes a new low can
+  // no longer "hold" the 0% line it draws itself (on 8 October 18 of NIFTY 50's 23 calls were such holds, Buy CE after Buy
+  // CE all the way down); one that closes below the earlier low has crossed the 0% line, a Buy PE aiming at the step below
+  // (above the earlier high: a Buy CE aiming at the step above). Until then a break outward from 0% or 100% gave no call.
+  const STEP = 0.236;
+  function levelsWithSteps(m) {
+    const span = m.high - m.low, out = (r) => round2(m.up ? m.high - r * span : m.low + r * span);
+    return [{ ratio: -STEP, price: out(-STEP) }, ...levelsOf(m), { ratio: 1 + STEP, price: out(1 + STEP) }].sort((a, b) => a.price - b.price);
+  }
+  const todayLevelsAt = (bars) => (i) => levelsWithSteps(moveOf(bars.slice(0, Math.max(1, i))));
   function moveOfDay(d) {  // "previous day": only the day's four figures are known, so it is an up move when it closed above its open
     return d ? { high: d.high, low: d.low, up: d.close >= d.open } : null;
   }
@@ -48,7 +60,7 @@
     const kind = crossed(at.price) ? "crossed" : "held";
     const side = bar.close > at.price ? "CE" : "PE";
     const next = side === "CE" ? levels.find(l => l.price > at.price) : levels.slice().reverse().find(l => l.price < at.price);
-    if (!next) return null;  // a signal pointing outward from the 0% or 100% level has no next level
+    if (!next) return null;  // a signal pointing outward from the outermost line (previous day: 0% or 100%; today: the steps beyond them) has no next level
     return { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close,
              range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending",
              prices: levels.map(l => l.price) };  // the levels in force at the signal, for the entry's check below
@@ -160,12 +172,12 @@
   }
 
   // A finished day replayed: every candle has closed, so the clock is set past the day's end. "Previous day" levels
-  // stand still; "today so far" levels are the ones the page had drawn when each candle closed, the day's range up
-  // to that candle (the live page redraws them with every new high or low)
+  // stand still; "today so far" levels are the ones the page draws while each candle forms: the day's range up to the
+  // candle before it, with a step beyond each end (todayLevelsAt)
   function replayDay({ bars, move, previous, seconds, signal, ideas }) {
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null;
     if (move === "prev" && !fixed) return { trades: [], closed: 0 };
-    const levelsAt = move === "prev" ? () => fixed : (i) => levelsOf(moveOf(bars.slice(0, i + 1)));
+    const levelsAt = move === "prev" ? () => fixed : todayLevelsAt(bars);
     return paperTrades({ bars, levelsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas });
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
@@ -220,6 +232,7 @@
       const bar = bars[i], prev = bars[i - 1].close, levels = levelsAt(i);
       levels.forEach((l, k) => {
         const L = l.price, row = out[l.ratio];
+        if (!row) return;  // the steps beyond the range (-23.6%, 123.6%) are not in the table
         if (bar.low <= L && bar.high >= L) row.touched++;
         const crossed = (prev < L && bar.close > L) || (prev > L && bar.close < L);
         const held = !crossed && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
@@ -307,6 +320,6 @@
     return { deep, beyond, reached: reachedAt != null, reachedAt };
   }
 
-  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
+  root.Rules = { RATIOS, STEP, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, levelsWithSteps, todayLevelsAt, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);
