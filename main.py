@@ -427,19 +427,34 @@ def tick_candles(name: str, key: str) -> list:
     return bars
 
 
+CLOSE_FROM_TICKS_SECONDS = 60  # how long after a candle closes its close is the last tick's rather than Dhan's copy (8 October)
+
+
 def with_live_candles(candles: list, name: str, key: str) -> list:
     """Dhan's chart answer ends with a bar stamped at the latest trade's minute rather than at a candle
     boundary (seen at 18:45 after hours, and during the day), and the candle that just closed can take a
     while to appear in it. So: bars off the candle boundaries are dropped, and today's candles built from
     the ticks fill in what the answer lacks, the one forming now and any just closed. Dhan's own candle
-    wins where both have one. On 6 October this is what made the calls late: the page judged a candle
-    only once Dhan's list carried it, minutes after it had closed."""
+    wins where both have one, except on the candle forming now and one closed within the last minute
+    while the ticks are flowing: there Dhan's copy (asked for at most every 10 s) can be from before the
+    candle's last seconds, so the close is the last tick's, and the high and low the furthest of the two.
+    On 8 October at 12:15:01 the server judged NIFTY BANK's 12:10 candle on Dhan's copy, which still closed
+    at 54,853.20; the index fell to 54,826.30 in the candle's last seconds, so the call it gave (Buy CE,
+    crossed 38.2%) was gone from the rule a few seconds later, its record and CSV row left behind. On 6
+    October the other way round was what made the calls late: the page judged a candle only once Dhan's
+    list carried it, minutes after it had closed."""
     secs = INTERVALS[key]["bar_seconds"]
     by_time = {b["time"]: b for b in candles if bucket_start(b["time"], secs) == b["time"]}
     today = datetime.now(dhan.IST).date()
+    flowing, now = live_price(name) is not None, time.time()
     for b in tick_candles(name, key):
-        if b["time"] not in by_time and datetime.fromtimestamp(b["time"], dhan.IST).date() == today:
+        if datetime.fromtimestamp(b["time"], dhan.IST).date() != today:
+            continue
+        mine = by_time.get(b["time"])
+        if mine is None:
             by_time[b["time"]] = dict(b)
+        elif flowing and b["time"] + secs > now - CLOSE_FROM_TICKS_SECONDS:  # forming now, or closed within the last minute
+            by_time[b["time"]] = {**mine, "high": max(mine["high"], b["high"]), "low": min(mine["low"], b["low"]), "close": b["close"]}
     return [by_time[t] for t in sorted(by_time)]
 
 
