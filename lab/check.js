@@ -8,14 +8,15 @@ const IST = 19800, t0 = Math.floor((Date.now() / 1000 + IST) / 86400) * 86400 - 
 
 // ---- the owner's rule on the hand-made day of the index page's own checks (previous day 100 -> 200, closing 190):
 // held gives the 09:20 CE (161.8, entry 166, target 176.4, reached) and the 09:30 PE (176.4, entry 174, target 161.8, reached);
-// crossed gives the 09:40 PE (161.8, entry 160, target 150, day end at 164) and the 09:45 CE (161.8, entry 162, target 176.4, day end)
+// crossed gives the 09:40 PE (161.8, entry 160, target 150; held as a break, sold when 09:45 closes back above 161.8, at 162) and the
+// 09:45 CE (161.8, entry 162, target 176.4, held to the day end at 164)
 {
   const ohlc = [[170,172,168,170],[170,171,160,165],[166,170,164,168],[168,177,167,175],[174,176,165,166],[166,167,158,160],[160,163,159,162],[162,165,161,164]];
   const bars = ohlc.map(([open, high, low, close], i) => ({ time: t0 + i * 300, open, high, low, close }));
   const prevDay = { open: 100, high: 200, low: 100, close: 190 };
   const got = (signal) => R.replayDay({ bars, move: "prev", previous: prevDay, seconds: 300, signal }).trades.map(x => [x.side, x.level, x.entry, x.target, x.exit, x.points, x.how].join("|"));
   assert(got("held").join(" / ") === "CE|161.8|166|176.4|176.4|10.4|target / PE|176.4|174|161.8|161.8|12.2|target", "held: " + got("held").join(" / "));
-  assert(got("crossed").join(" / ") === "PE|161.8|160|150|164|-4|day end / CE|161.8|162|176.4|164|2|day end", "crossed: " + got("crossed").join(" / "));
+  assert(got("crossed").join(" / ") === "PE|161.8|160|150|162|-2|back / CE|161.8|162|176.4|164|2|day end", "crossed: " + got("crossed").join(" / "));
   // the entry already past the target (owner's decision, 7 October): a candle holds 161.8 and closes above 176.4, the next
   // opens at 180: the call aims at 200, the level beyond the entry; opening beyond the last level (200) there is no call at all
   const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
@@ -30,7 +31,7 @@ const IST = 19800, t0 = Math.floor((Date.now() / 1000 + IST) / 86400) * 86400 - 
     levelsAt: () => levels, now: Number.POSITIVE_INFINITY, seconds: 300, dayCandles: false, signal: "held" }).trades;
   assert(b3.length === 1 && b3[0].target === 176.4 && !b3[0].aimed, "an entry short of the target keeps it: " + JSON.stringify(b3));
   console.log("entry past the target: aims one level on, or no call");
-  assert(got("both").length === 4 && R.round2(R.replayDay({ bars, move: "prev", previous: prevDay, seconds: 300, signal: "both" }).trades.reduce((s, x) => s + x.points, 0)) === 20.6, "both: four calls, net +20.60");
+  assert(got("both").length === 4 && R.round2(R.replayDay({ bars, move: "prev", previous: prevDay, seconds: 300, signal: "both" }).trades.reduce((s, x) => s + x.points, 0)) === 22.6, "both: four calls, net +22.60");
   console.log("hand-made day checks passed");
   // the candle verdict (7 October): a CE call at 161.8 toward 176.4 (gap 14.6) from a candle closing at 170 (56% of the way: strong);
   // then candles closing at 165 (carry), 158 (back 26%: exit) and 147 (back a whole gap); a touch at 163 that closes above is a retest held
@@ -187,4 +188,45 @@ console.log("rules unit checks passed");
     console.log("P5 unit checks passed");
   }
   console.log("ideas unit checks passed");
+}
+
+// ---- the owner's exit rule "Hold Through a Level Break" (8 October night), on the previous day's levels 100 to 200 (lines 100,
+// 121.4, 138.2, 150, 161.8, 176.4, 200). C1 (09:20) opens 166, above 161.8, and closes 160 below it: Buy PE, target 150, in at
+// 09:25's open 159
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const lv = R.levelsOf(R.moveOfDay({ open: 100, high: 200, low: 100, close: 190 }));
+  const run = (bars, hold = true, now = Infinity) => R.paperTrades({ bars, levelsAt: () => lv, now, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: hold }).trades;
+  const head = [bar(0, 170, 171, 168, 170), bar(1, 166, 167, 158, 160)];
+  // a. the ride: 09:25 opens 159 below C1's close and falls to 150, the target, but is held; 09:30 crosses 150 (no new PE: the same
+  // trade continues); 09:35 opens 141 above 09:30's close 140; nothing closes back above 161.8: sold at the day end, 159 - 139 = +20
+  const ride = [...head, bar(2, 159, 161, 150, 151), bar(3, 150, 152, 139, 140), bar(4, 141, 149, 140, 145), bar(5, 144, 146, 138, 139)];
+  const a = run(ride);
+  assert(a.length === 1 && a[0].hold && a[0].c1Open === 166 && a[0].entry === 159 && a[0].how === "day end" && a[0].exit === 139 && a[0].points === 20, "held through the target to the day end: " + JSON.stringify(a));
+  const a0 = run(ride, false);
+  assert(a0.length === 2 && a0[0].how === "target" && a0[0].points === 9, "without the rule: sold at the target 150, and 09:30 gives a second PE: " + JSON.stringify(a0));
+  // b. exit B: 09:25 opens 159, below C1's close 160, and comes back up to 166, C1's open: sold there, 159 - 166 = -7
+  const b = run([...head, bar(2, 159, 166.5, 157, 161), bar(3, 161, 162, 160, 161)]);
+  assert(b.length === 1 && b[0].how === "retouch" && b[0].exit === 166 && b[0].exitTime === t0 + 600 && b[0].points === -7, "exit B, back to C1's open: " + JSON.stringify(b));
+  const bLive = run([...head, bar(2, 159, 166.5, 157, 161)], true, t0 + 600 + 100);  // tick by tick, on the candle forming now
+  assert(bLive.length === 1 && bLive[0].how === "retouch" && bLive[0].exit === 166, "exit B on the forming candle: " + JSON.stringify(bLive));
+  // the same move up to 166, but 09:25 opened 160.5, above C1's close: no exit B, and the close 161 is below 161.8: held
+  const bNot = run([...head, bar(2, 160.5, 166.5, 157, 161), bar(3, 161, 161.5, 160, 161)], true, t0 + 900 + 100);
+  assert(bNot.length === 1 && bNot[0].how === "open", "no exit B without the lower open: " + JSON.stringify(bNot));
+  // c. exit A: 09:25 closes 162.5, back above 161.8: sold at that close, 159 - 162.5 = -3.5; it waits for the close on the forming candle
+  const c = run([...head, bar(2, 159, 163, 158, 162.5), bar(3, 162.5, 163, 162, 162.5)]);
+  assert(c.length === 2 && c[0].how === "back" && c[0].exit === 162.5 && c[0].points === -3.5 && c[1].side === "CE" && c[1].kind === "crossed",
+         "exit A, closed back above the line (and that close crosses 161.8 upward: a Buy CE): " + JSON.stringify(c));
+  const cLive = run([...head, bar(2, 159, 163, 158, 162.5)], true, t0 + 600 + 100);
+  assert(cLive.length === 1 && cLive[0].how === "open" && cLive[0].last === 162.5, "exit A waits for the close: " + JSON.stringify(cLive));
+  // the words of the candle status
+  const said = (t, now = Infinity) => { const r = R.readOf({ trade: t, bars: ride, seconds: 300, now }); return r.word + ": " + r.why; };
+  assert(said(c[0]) === "exit: price closed back above the 38.2% level" && said(b[0]) === "exit: price came back to where the break began" && said(cLive[0]) === "carry: price stays below the 38.2% level",
+         "the candle status of a held break: " + [said(c[0]), said(b[0]), said(cLive[0])].join(" | "));
+  // d. the mirror, a CE (every price p as 300 - p): C1 opens 134, closes 140 above 138.2; 09:25 opens 141 above it and comes down to 134
+  const flip = (b) => ({ time: b.time, open: 300 - b.open, high: 300 - b.low, low: 300 - b.high, close: 300 - b.close });
+  const lvUp = R.levelsOf(R.moveOfDay({ open: 200, high: 200, low: 100, close: 110 }));
+  const d = R.paperTrades({ bars: [...head, bar(2, 159, 166.5, 157, 161), bar(3, 161, 162, 160, 161)].map(flip), levelsAt: () => lvUp, now: Infinity, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: true }).trades;
+  assert(d.length === 1 && d[0].side === "CE" && d[0].level === 138.2 && d[0].entry === 141 && d[0].how === "retouch" && d[0].exit === 134 && d[0].points === -7, "the CE mirror: " + JSON.stringify(d));
+  console.log("hold through a level break checks passed");
 }

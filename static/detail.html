@@ -484,10 +484,10 @@
       return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
     }
     if (state.move === "today") {
-      // one session's candles (8 October afternoon): the lines the candle forming now is judged against, the day's range up to
-      // the candle before it, so a new low or high shows as the price beyond the 0% or 100% line until the candle closes
-      const all = sessionBars(), closed = all.filter(b => endOf(b) <= serverNow());
-      const mv = Rules.moveOf(judgedToday() ? (closed.length ? closed : all.slice(0, 1)) : all);
+      // the day's range so far, the candle forming now included: when the price breaks the 0% or 100% line the 7 lines are
+      // worked out again at once from the live price (owner's decision, 8 October evening; that afternoon they stood still
+      // while a candle formed). A candle is still judged against the lines as they were when it began (Rules.todayLevelsAt)
+      const mv = Rules.moveOf(sessionBars());
       if (!mv) return null;
       return { ...mv, what: key === "all" ? "days shown" : isToday(key) ? "today so far" : dayLabel(key) };
     }
@@ -498,10 +498,10 @@
   }
 
   const levelsOf = Rules.levelsOf;
-  // "Today so far" on one session's intraday candles: each candle judged against the lines as they stood when it began, with
-  // a step beyond each end (Rules.todayLevelsAt); a day candle or several sessions shown keep the plain lines of the range shown
+  // "Today so far" on one session's intraday candles: each candle judged against the seven lines as they stood when it began
+  // (Rules.todayLevelsAt), a call's target on the lines the chart draws (Rules.todayLinesAt); a day candle or several
+  // sessions shown keep the lines of the whole range shown
   const judgedToday = () => state.move === "today" && state.interval !== "1d" && currentSession() !== "all";
-  const linesOf = (m) => judgedToday() ? Rules.levelsWithSteps(m) : levelsOf(m);
 
   // ---- Layer 2 of the owner's logic, held and crossed (see LOGIC.md), is judged inside the paper
   // calls below; its own table came off the page on 6 October (owner's choice).
@@ -524,26 +524,31 @@
   //   day end - a call still open at the day's last candle ends at its close; nothing carries overnight
   //             (not on day candles, where a day is one candle: there a call runs on until its target)
   //   every signal gives a call, whether or not earlier calls are still open;
-  //   a signal pointing outward from the outermost line has no next level, so it gives no call (previous day: 0% and 100%;
-  //   today so far: the steps beyond them, so a close below the day's earlier low is a Buy PE to the step below, 8 October)
+  //   a signal pointing outward from the 0% or 100% level has no next level, so it gives no call (8 October evening: the
+  //   seven lines only, the extra line beyond each end of that afternoon taken off)
+  //   a break  - the owner's exit rule "Hold Through a Level Break" (8 October night; Rules.paperTrades holdBreaks): a call
+  //             from a crossed signal is held through its target and sold on a close back across its line, on a return to
+  //             the signal candle's open after a candle opened further away, or at the day end; while it is held, no new
+  //             call that way. Not on day candles
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", retouch: "Came back", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
   // The rule is Rules.paperTrades in /static/rules.js; this page hands it the session's candles, the levels on the
   // chart (which stand still within one run; the live page redraws them on a new high or low) and the server's clock
   // "Today so far" levels (8 October): each candle is judged against the levels as they stood when it began (the day's range
-  // up to the candle before it, with a step beyond each end), exactly as the Study page replays a day (Rules.replayDay) and
+  // up to the candle before it), exactly as the Study page replays a day (Rules.replayDay) and
   // as the server's watcher records the calls. Until that morning every candle was judged against the levels of this
   // moment, so each new high or low of the day redrew the whole morning's calls; from then until the afternoon each candle
   // was judged with its own high and low in the range, so every candle making a new low "held" the 0% line it drew itself
-  // (Buy CE after Buy CE on a falling day). The chart shows the lines the forming candle is judged against.
+  // (Buy CE after Buy CE on a falling day). The chart shows the day's range with the candle forming now, worked out again
+  // at once on a new high or low; a call's target follows those lines.
   function paperTrades(levels) {
     const bars = sessionBars();
-    const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels;
-    return Rules.paperTrades({ bars, levelsAt, now: serverNow(), seconds: SECONDS[state.interval],
-                               dayCandles: state.interval === "1d", signal: state.signal });
+    const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
+    return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
+                               dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d" });
   }
 
   function drawPaper(levels) {
@@ -645,8 +650,15 @@
     return `<td class="entry">${strike != null ? strike : fmt.format(t.entry)}</td>`;
   }
 
-  // "Call Target": the next level in the call's direction, and how the call ended once it has
+  // "Call Target": the next level in the call's direction, and how the call ended once it has. A held break is not sold at
+  // its target: the note says what sells it, and once sold, what did
   function targetCell(t) {
+    if (t.hold) {
+      const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
+      const note = t.how === "back" ? `<small>sold: closed ${way} ${line}</small>` : t.how === "retouch" ? `<small>sold: came back to ${fmt.format(t.c1Open)}</small>`
+        : t.how === "day end" ? `<small${t.points > 0 ? ' class="up"' : ""}>held to the day end</small>` : t.entry == null ? "" : `<small>holding: sells on a close ${way} ${line}</small>`;
+      return `<td class="target">${fmt.format(t.target)}${note}</td>`;
+    }
     const note = t.how === "target" ? `<small class="up">hit</small>` : t.how === "day end" ? "<small>not reached, day end</small>"
       : t.how === "candle" ? "<small>not reached, closed by EXIT</small>" : t.aimed ? "<small>one level on</small>" : "";
     return `<td class="target">${fmt.format(t.target)}${note}</td>`;
@@ -778,7 +790,7 @@
     const note = document.getElementById("levels-note");
     drawSessions();
     const m = theMove();
-    const levels = m ? linesOf(m) : [];
+    const levels = m ? levelsOf(m) : [];
     drawPaper(levels);
     const key = JSON.stringify([state.move, currentSession(), levels]);
     if (series && key !== lastLevelsKey) {

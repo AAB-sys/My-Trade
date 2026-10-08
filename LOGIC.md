@@ -33,23 +33,26 @@ turn after a move. Whether that holds is for the owner's own record to show.
   high so far, an up move when its last price is above its open **(owner to
   decide)**. Blank until it has traded. **Each candle is judged against the
   lines as they stood when it began** (owner's decision, 8 October afternoon):
-  the day's range up to the candle before it (the day's first candle: its own),
-  with **one more Fibonacci step beyond each end**, 23.6% of the range below the
-  low and above the high (named -23.6% and 123.6%: nine lines). The chart draws
-  exactly those lines, so while a candle forms they stand still, and a new low
-  shows as the price below the 0% line until the candle closes; then the lines
-  move to the new range. A candle that closes below the day's earlier low has
-  crossed the 0% line: a **Buy PE**, aiming at the step below (above the earlier
-  high: a Buy CE, aiming at the step above). The same on the index page, in the
-  server's watcher and on the Study page. The reason: from the morning of 8
+  the day's range up to the candle before it (the day's first candle: its own).
+  **The chart works the 7 lines out again at once from the live price whenever
+  the price crosses the 0% or 100% line** (owner's decision, 8 October evening:
+  "the Fibonacci levels should be recalculated when 0% and 100% are crossed,
+  that is the whole crux"), and a call's target follows the lines the chart
+  draws (item 5). The same on the index page, in the server's watcher and on the
+  Study page. The reason: from the morning of 8
   October until then each candle was judged with its own high and low in the
   range, so every candle that made a new low "held" the 0% line it drew itself:
-  18 of NIFTY 50's 23 calls that day were Buy CE at 0.0%, all the way down, and
-  a break below the low could never give a PE (the line moved with the price,
-  and no line lay below it). On the six saved days, 5-minute candles, both
-  signals: 449 calls instead of 450, net +2,732 points instead of +6,014 (the
-  bounces at each new low had paid on those mostly sideways days); on 8 October
-  to 14:10, NIFTY 50: 24 calls, 10 CE and 14 PE, instead of 19 CE and 4 PE.
+  18 of NIFTY 50's 23 calls that day were Buy CE at 0.0%, all the way down.
+  **The seven lines only** (owner's decision, 8 October evening: "all the charts
+  always work on the Fibonacci basic 7 levels only"). That afternoon an extra
+  line had been drawn one step beyond each end (23.6% of the range below the low
+  and above the high), so that a close below the day's earlier low gave a Buy PE
+  aiming at it; it was taken off the same evening, so such a close is outward
+  from the 0% line again and gives no call. On the seven saved days, 5-minute
+  candles, both signals, the targets on the chart's lines: NIFTY 50 212 calls,
+  net -730 (it was 263 calls, -945); NIFTY BANK 224 calls, +2,193 (it was 258,
+  +3,128); on 8 October NIFTY 50 14 calls, 11 CE and 3 PE, -755 (it was 27, 12
+  CE and 15 PE, -931).
   Before the morning of 8 October the page and the watcher judged every earlier
   candle against the lines of the moment, so each new high or low redrew the
   whole day's calls: NIFTY 50 showed 22 different calls through that morning and
@@ -176,10 +179,9 @@ The rule, in the order it is applied:
    too, tick by tick. **No stop** (owner's decision,
    5 October): a call that goes the wrong way is held, to the target or to the
    day's last candle, and its loss is whatever the day does. A signal pointing
-   outward from the outermost line has no next level, so it gives no call: with
-   the previous day's levels that is the 0% or 100% line; with *Today so far*
-   the steps beyond them (owner's decision, 8 October: a close below the day's
-   earlier low is a Buy PE to the step below, see Levels).
+   outward from the 0% or 100% level has no next level, so it gives no call
+   **(owner to decide)**; the seven lines only (owner's decision, 8 October
+   evening, see Levels).
    **Entry already past the target** (owner's decision, 7 October): when the
    next candle opens at or past the target, because the signal candle itself ran
    through the next level, the call aims one level further, at the first level
@@ -190,9 +192,12 @@ The rule, in the order it is applied:
    22,605.32, −5.28). The research engine replays every saved day the same way.
    **The target follows the lines** (owner's decision, 8 October): at every
    candle the target is the next line beyond both the entry and the level that
-   gave the call, in the call's direction, among the lines as they stand at that
-   candle (on the candle forming now, as the chart draws them), and the call
-   ends when the price reaches that line. With the previous day's levels the
+   gave the call, in the call's direction, among the lines the chart draws
+   during that candle (the day's range with that candle in it, worked out again
+   when the price crosses 0% or 100%), and the call ends when the price reaches
+   that line. A hit seen live stays a hit when the candle closes; its price can
+   differ by a few points when the line moved on later in the same candle (on
+   8 October, 4 of NIFTY 50's 5 live hits and 7 of NIFTY BANK's 32). With the previous day's levels the
    lines never move, so nothing changes there (the six saved days: all 432 day
    and setting combinations the same). With *Today so far* every new low or high
    moves the lines, and until then the target stayed where its line stood at
@@ -201,6 +206,25 @@ The rule, in the order it is applied:
    candles, both signals: the same 450 calls, 381 won instead of 370, net
    +6,014 points instead of +7,344 (targets come closer as the lines move, so
    more are reached, each for fewer points).
+   **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
+   candles): a call given by a *crossed* signal (the candle C1 broke a line L)
+   is not sold at its target. It is held, and the same trade continues while
+   the price keeps going: no new call that way while it is held. It is sold:
+   - **A, reclaim:** at the close of a candle that closes back across L (above
+     it for a PE, below it for a CE), at that close;
+   - **B, retouch:** when a later candle opens beyond the previous close (lower
+     for a PE, higher for a CE) and then comes back to C1's open, at C1's open,
+     tick by tick (only when C1 opened on the far side of L);
+   - **C, end of day:** at the day end (item 6).
+   The target column still shows the next line, for information. A bounce
+   (*held*) call keeps its target. The candle status of such a call is this
+   rule's own verdict. The ideas P3 to P7 of the Study page leave it alone.
+   On the seven saved days, *Today so far*, 5-minute candles, both signals:
+   NIFTY 50 123 calls, net +181 (it was 212 calls, -730); NIFTY BANK 115 calls,
+   +1,403 (it was 224, +2,193); 8 October NIFTY 50 -311 (it was -755), the
+   10:15 PE held from 22,461.30 to the close, +229.50. With *Previous day*
+   levels it does worse: NIFTY 50 -275 (it was +316), NIFTY BANK -194 (it was
+   +1,826).
 6. **Day end** - a call still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal on the day's last candle has no
    candle left to enter on, so it gives nothing. The day's final save (15:40)
