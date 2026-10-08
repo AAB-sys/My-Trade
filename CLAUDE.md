@@ -228,8 +228,3 @@ branch from `main`.
   when the price crosses 0% or 100%), and a call's target follows those lines: `Rules.todayLinesAt` / `rule.today_lines_at`,
   passed as `targetsAt` / `targets_at`. A call never changes after it is given; a target hit seen live stays a hit when
   the candle closes (its price can differ by a few points when the line moved on later in that candle).
-- Break calls ("option 3", 8 October evening, the owner's decision): with "today so far", a close beyond the day's
-  earlier low or high gives a call with `ride: true` and `target: null` (`rideBreaks` / `ride_breaks`, passed by the
-  index page, the watcher and `replayDay` only for today so far). It ends `"back"` at the close of a candle that closes
-  back across the broken line, else at the day end; one open each way at a time; no follow, stop, P4 or P5 on it.
-  Anything that reads `t.target` must allow null (the page's target cell, the Study page's learning facts, the CSVs).

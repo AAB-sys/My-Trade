@@ -184,8 +184,7 @@
     const daysWithBars = state.days.filter(d => { const f = state.files[d.date]; return f && f.indices[index] && f.indices[index].candles[interval] && f.indices[index].candles[interval].length; });  // each carries live_calls: the calls the index page suggested that day, in any setting (the day's CSV on the data branch)
     el("setting-note").textContent = `${index}, ${NAMES.interval[interval]} candles, ${NAMES.move[move]} levels, ${NAMES.signal[signal]} signal`
       + (state.ideas.length ? `, with ${state.ideas.join(" and ")} on` : "") + `: ${daysWithBars.length} day${daysWithBars.length === 1 ? "" : "s"} replayed`
-      + (move === "today" ? ". Today-so-far levels are replayed as they stood when each candle closed, the day's range up to that candle."
-         + " A close below the day's low (or above its high) is a break call: Buy PE (CE), no target, sold when a candle closes back across it or at the day end." : ".");
+      + (move === "today" ? ". Today-so-far levels are replayed as they stood when each candle closed, the day's range up to that candle." : ".");
     el("tiles").replaceChildren(...[["Calls", s.calls, ""], ["Won", s.won, ""], ["Lost", s.lost, ""], ["Hit rate", pct(s.won, s.calls), ""],
       ["Net points", signed.format(s.net), cls(s.net)], ["Per call", signed.format(s.avg), cls(s.avg)]].map(([k, v, c]) => {
       const d = document.createElement("div"); d.className = "tile"; d.innerHTML = `<div class="k">${k}</div><div class="v ${c}">${v}</div>`; return d; }));
@@ -194,7 +193,7 @@
     const byDay = group(trades, t => t.date);
     el("days").querySelector("tbody").replaceChildren(...daysWithBars.map(d => {
       const list = byDay[d.date] || [], t = tally(list), tr = document.createElement("tr");
-      const words = list.map(c => `${istTime(c.signalTime)} ${c.side} ${c.ride ? `broke the ${c.side === "PE" ? "low" : "high"}` : `${(c.ratio * 100).toFixed(1)}% ${c.kind}`} ${signed.format(c.points)}`).join(", ");
+      const words = list.map(c => `${istTime(c.signalTime)} ${c.side} ${(c.ratio * 100).toFixed(1)}% ${c.kind} ${signed.format(c.points)}`).join(", ");
       tr.innerHTML = cell(dayLabel(d.date) + (d.complete ? "" : " (partial)")) + cell(t.calls) + cell(t.won) + cell(t.lost) + num(t.net) + cell(d.live_calls || 0) + `<td class="l">${words || "—"}</td>`;
       return tr;
     }));
@@ -314,7 +313,7 @@
     ["lower levels (nearer 0%)", "higher levels (nearer 100%)", t => t.ratio],
     ["PE calls", "CE calls", t => t.side === "CE" ? 1 : 0],
     ["held signals", "crossed signals", t => t.kind === "crossed" ? 1 : 0],
-    ["nearer targets", "farther targets", t => t.target == null ? 0 : Math.abs(t.target - t.entry) / t.entry * 100],  // a break call has no target
+    ["nearer targets", "farther targets", t => Math.abs(t.target - t.entry) / t.entry * 100],
     ["small signal candles", "big signal candles", t => (t.range || 0) / t.close * 100],
     ["days that opened lower", "days that opened higher", t => candleFacts(t).gapPct],
     ["days going down so far", "days going up so far", t => candleFacts(t).dayUp],

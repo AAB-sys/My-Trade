@@ -47,26 +47,12 @@ turn after a move. Whether that holds is for the owner's own record to show.
   always work on the Fibonacci basic 7 levels only"). That afternoon an extra
   line had been drawn one step beyond each end (23.6% of the range below the low
   and above the high), so that a close below the day's earlier low gave a Buy PE
-  aiming at it; it was taken off the same evening. On the seven saved days,
-  5-minute candles, both signals, the targets on the chart's lines: NIFTY 50 212
-  calls, net -730 (it was 263 calls, -945); NIFTY BANK 224 calls, +2,193 (it was
-  258, +3,128); on 8 October NIFTY 50 14 calls, 11 CE and 3 PE, -755 (it was 27,
-  12 CE and 15 PE, -931).
-  **A break of the day's low or high is a call of its own** (owner's decision,
-  8 October evening, "option 3"; *Today so far* only): a candle that closes
-  below the day's earlier low (the lowest line as it stood when the candle
-  began) is a Buy PE with no target, held while the price keeps making new lows
-  and sold when a 5-minute candle closes back above the low it broke, or at the
-  day end; a close above the earlier high is a Buy CE the same way, sold when a
-  candle closes back below that high. One such call each way at a time: a new
-  low while a break PE is held is no second call. No stop and no idea of the
-  Study page applies to it (P1 and P2, the clock, do). On the seven saved days,
-  5-minute candles, both signals: NIFTY 50 22 break calls (13 CE, 9 PE), 3 in
-  profit, net +23, so the day's calls 234, net -707 (without them 212, -730);
-  8 October alone one break PE at 09:20, held to the close, +287. NIFTY BANK 17
-  break calls (9 CE, 8 PE), none in profit, net -1,278, so 241 calls, +916
-  (without them 224, +2,193). 15-minute candles: NIFTY 50 14 break calls, +2;
-  NIFTY BANK 12, -1,224.
+  aiming at it; it was taken off the same evening, so such a close is outward
+  from the 0% line again and gives no call. On the seven saved days, 5-minute
+  candles, both signals, the targets on the chart's lines: NIFTY 50 212 calls,
+  net -730 (it was 263 calls, -945); NIFTY BANK 224 calls, +2,193 (it was 258,
+  +3,128); on 8 October NIFTY 50 14 calls, 11 CE and 3 PE, -755 (it was 27, 12
+  CE and 15 PE, -931).
   Before the morning of 8 October the page and the watcher judged every earlier
   candle against the lines of the moment, so each new high or low redrew the
   whole day's calls: NIFTY 50 showed 22 different calls through that morning and
@@ -194,9 +180,8 @@ The rule, in the order it is applied:
    5 October): a call that goes the wrong way is held, to the target or to the
    day's last candle, and its loss is whatever the day does. A signal pointing
    outward from the 0% or 100% level has no next level, so it gives no call
-   with the previous day's levels **(owner to decide)**; with *Today so far* it
-   is a break call, with no target, sold when a candle closes back across the
-   broken low or high (owner's decision, 8 October evening, see Levels).
+   **(owner to decide)**; the seven lines only (owner's decision, 8 October
+   evening, see Levels).
    **Entry already past the target** (owner's decision, 7 October): when the
    next candle opens at or past the target, because the signal candle itself ran
    through the next level, the call aims one level further, at the first level

@@ -20,8 +20,6 @@ const jobs = JSON.parse(require("fs").readFileSync(0, "utf8"));
 const out = jobs.map(j => {
   const levels = j.levels;  // the live page: the levels as they stand now, for every candle
   const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined })
-    : j.mode === "live-today" ? R.paperTrades({ bars: j.bars, levelsAt: R.todayLevelsAt(j.bars), targetsAt: R.todayLinesAt(j.bars), now: j.now, seconds: j.seconds,
-                                                dayCandles: false, signal: j.signal, rideBreaks: true })  // the index page and the watcher today, with the break calls
     : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined });
   res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now });  // the candle verdict too
     t.carry = R.carryOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // and the carry read
@@ -41,8 +39,6 @@ def py_run(jobs: list) -> list:
     for j in jobs:
         if j["mode"] == "replay":
             res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"))
-        elif j["mode"] == "live-today":
-            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True)
         else:
             levels = j["levels"]
             res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"))
@@ -130,7 +126,6 @@ def main() -> int:
                     levels = rule.levels_of(rule.move_of(shown))
                     for signal in ("held", "crossed", "both"):
                         jobs.append({"mode": "live", "bars": shown, "levels": levels, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live at {cut} {signal}"})
-                        jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live today at {cut} {signal}"})
                     if prev:
                         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of_day(prev)), "now": now, "seconds": 300, "signal": "both", "what": f"{d['date']} {name} live prev at {cut}"})
     # 3. the hand-made day of lab/check.js (previous day 100 -> 200 closing 190)
@@ -152,7 +147,6 @@ def main() -> int:
         cut = rnd.randrange(2, len(bars))
         shown = bars[:cut + 1]
         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of(shown)), "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live"})
-        jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live today"})
     js, py = js_run(jobs), py_run(jobs)
     bad = 0
     for j, a, b in zip(jobs, js, py):

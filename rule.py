@@ -69,9 +69,7 @@ def move_of_day(d):
 
 # ---- Layer 2 inside layer 3's signal: held or crossed, one candle one call, no repeat until closed back across
 
-def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, ride_breaks: bool = False):
-    """ride_breaks (owner, 8 October evening, "option 3"; "today so far" only): a close beyond the day's earlier low or high is a
-    call with no target line, held until a candle closes back across the broken line (see static/rules.js)."""
+def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str):
     def crossed(L):
         return (prev < L < bar["close"]) or (prev > L > bar["close"])
 
@@ -92,9 +90,9 @@ def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, rid
     kind = "crossed" if crossed(at["price"]) else "held"
     side = "CE" if bar["close"] > at["price"] else "PE"
     nxt = next((l for l in levels if l["price"] > at["price"]), None) if side == "CE" else next((l for l in reversed(levels) if l["price"] < at["price"]), None)
-    if nxt is None and not (ride_breaks and kind == "crossed"):
+    if nxt is None:
         return None  # a signal pointing outward from the 0% or 100% level has no next level
-    return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"] if nxt else None, "ride": nxt is None,
+    return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
             "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
             "prices": [l["price"] for l in levels]}
 
@@ -102,10 +100,6 @@ def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, rid
 def enter_at(sig: dict, bar: dict):
     """The entry (owner, 7 October): already at or past the target, the call aims at the first level beyond the entry
     price; with no level left beyond it, there is no call."""
-    if sig.get("ride"):  # a break: no target
-        t = {k: v for k, v in sig.items() if k != "prices"}
-        t.update(aimed=None, ladder=[], entry=bar["open"], entryTime=bar["time"], how="open")
-        return t
     target, aimed = sig["target"], None
     if bar["open"] >= target if sig["side"] == "CE" else bar["open"] <= target:
         prices = sig["prices"]
@@ -122,8 +116,7 @@ def enter_at(sig: dict, bar: dict):
 
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
 
-def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
-                 ride_breaks: bool = False) -> dict:
+def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None) -> dict:
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -165,13 +158,11 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         return True
 
     def set_stop(t):
-        if stop_share and t.get("stop") is None and not t.get("ride"):
+        if stop_share and t.get("stop") is None:
             t["stop"] = round2(t["entry"] - stop_share * (t["target"] - t["entry"]) if t["side"] == "CE" else t["entry"] + stop_share * (t["entry"] - t["target"]))
 
     def follow(t, levels):
         """The target on the lines as they stand (owner's decision, 8 October; see static/rules.js), the ladder beyond it for idea P5."""
-        if t.get("ride"):  # a break call has no target
-            return
         past = max(t["entry"], t["level"]) if t["side"] == "CE" else min(t["entry"], t["level"])
         prices = [l["price"] for l in levels]
         beyond = [p for p in prices if p > past] if t["side"] == "CE" else [p for p in reversed(prices) if p < past]
@@ -181,11 +172,6 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
     def settle(t, bar):
         """The target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target."""
-        if t.get("ride"):  # a break: closed back across the broken line
-            if bar["close"] > t["level"] if t["side"] == "PE" else bar["close"] < t["level"]:
-                end(t, bar["close"], bar, "back")
-                return False
-            return True
         while reaches(t, bar):
             beyond = t["ladder"][0] if carry_on is not None and t["ladder"] else None
             if beyond is not None and (bar["close"] - t["target"] if t["side"] == "CE" else t["target"] - bar["close"]) >= carry_on * abs(beyond - t["target"]):
@@ -219,7 +205,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if stop_share:  # ideas P6, P7
             still = []
             for t in open_:
-                if not t.get("ride") and touches_stop(t, bar) and stop_first(t, bar):
+                if touches_stop(t, bar) and stop_first(t, bar):
                     end(t, t["stop"], bar, "stop")
                 else:
                     still.append(t)
@@ -229,7 +215,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             still = []
             for t in open_:
                 back = t["level"] - bar["close"] if t["side"] == "CE" else bar["close"] - t["level"]
-                if not t.get("ride") and back >= exit_back * abs(t["target"] - t["level"]):
+                if back >= exit_back * abs(t["target"] - t["level"]):
                     end(t, bar["close"], bar, "candle")
                 else:
                     still.append(t)
@@ -241,11 +227,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         for price, side in list(used):  # closed back across: the line may call again (kept by its price, 8 October)
             if (bar["close"] < price) if side == "CE" else (bar["close"] > price):
                 del used[(price, side)]
-        sig = signal_at(bar, prev_bar["close"], levels, used, signal, ride_breaks)
-        if sig and sig["ride"] and any(t.get("ride") and t["side"] == sig["side"] for t in open_):
-            sig = None  # a break call that way is already held: one at a time
+        sig = signal_at(bar, prev_bar["close"], levels, used, signal)
         late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
-        shallow = bool(sig) and not sig["ride"] and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
+        shallow = bool(sig) and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
         if sig and not late and not shallow:
             ready = sig
             used[(sig["level"], sig["side"])] = True
@@ -265,14 +249,14 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if stop_share:  # ideas P6, P7, tick by tick
             still = []
             for t in open_:
-                if not t.get("ride") and touches_stop(t, forming):
+                if touches_stop(t, forming):
                     end(t, t["stop"], forming, "stop")
                 else:
                     still.append(t)
             open_ = still
         still = []
         for t in open_:
-            if not t.get("ride") and reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close; a break call at a close
+            if reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close
                 end(t, t["target"], forming, "target")
             else:
                 still.append(t)
@@ -296,7 +280,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     if move == "prev" and not fixed:
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), move != "prev")
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars))
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},
@@ -332,13 +316,6 @@ def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
     rows carry what the page would say; check_rule.py keeps the two the same."""
     if t.get("entry") is None and t.get("how") != "pending":
         return None
-    if t.get("ride"):  # a break of the day's low or high: carry while no candle has closed back across the broken line
-        low, back = t["side"] == "PE", t.get("how") == "back"
-        word, place = ("exit" if back else "carry"), ("low" if low else "high")
-        why = (f"price closed back {'above' if low else 'below'} the day's {place} it broke" if back
-               else f"price stays {'below' if low else 'above'} the day's {place} it broke")
-        return {"depth": None, "body": None, "back": None, "retest": False, "strength": None, "word": word, "why": why,
-                "exitAt": t.get("exitTime") if back else None, "exitPrice": t.get("exit") if back else None}
     gap = abs(t["target"] - t["level"])
     sig = next((b for b in bars if b["time"] == t["signalTime"]), None)
     if not gap or sig is None:
