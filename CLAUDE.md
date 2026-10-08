@@ -224,5 +224,7 @@ branch from `main`.
 - "Today so far" calls (8 October): `paperTrades()` on the index page, `watch_index()` in main.py, `Rules.replayDay`
   and the lab's replay all use `Rules.todayLevelsAt(bars)` / `rule.today_levels_at(bars)`: candle i against the day's
   range up to candle i-1, the seven Fibonacci lines only (the extra line beyond each end was taken off on 8 October
-  evening, the owner's decision). The chart draws the same lines (the closed candles' range), so they stand still while
-  a candle forms. A call never changes after it is given.
+  evening, the owner's decision). The chart draws the day's range with the candle forming now (worked out again at once
+  when the price crosses 0% or 100%), and a call's target follows those lines: `Rules.todayLinesAt` / `rule.today_lines_at`,
+  passed as `targetsAt` / `targets_at`. A call never changes after it is given; a target hit seen live stays a hit when
+  the candle closes (its price can differ by a few points when the line moved on later in that candle).

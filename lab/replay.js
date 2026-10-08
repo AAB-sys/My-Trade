@@ -45,7 +45,7 @@ function run(bars, previous, o, higher) {
   const fixed = o.levels === "prev" ? (previous ? R.levelsOf(R.moveOfDay(previous)) : null) : null;
   const openRange = n => { const first = bars.filter(b => tod(b.time) < hm(9, 15) + n * 60); return first.length ? R.levelsOf(R.moveOf(first)) : null; };
   const opening = o.levels === "open30" ? openRange(30) : o.levels === "open15" ? openRange(15) : null;
-  const today = R.todayLevelsAt(bars);  // the seven lines as they stood when each candle began (8 October)
+  const today = R.todayLevelsAt(bars), todayLines = R.todayLinesAt(bars);  // the seven lines as they stood when each candle began, and with it (the target's, 8 October)
   const levelsAt = i => o.levels === "prev" ? fixed : o.levels === "today" ? today(i) : opening;
   const trades = [], used = {}, crossedAgo = {}, shallow = {}; let ready = null, open = [];
   const gain = (x, p) => r2(x.side === "CE" ? p - x.entry : x.entry - p);
@@ -65,7 +65,8 @@ function run(bars, previous, o, higher) {
     }
     open = open.filter(x => {
       const past = x.side === "CE" ? Math.max(x.entry, x.level) : Math.min(x.entry, x.level), k = x.carried || 0;  // the target follows the lines, as Rules.paperTrades (8 October)
-      const beyond = x.side === "CE" ? levels.map(l => l.price).filter(p => p > past) : levels.map(l => l.price).filter(p => p < past).reverse();
+      const lines = o.levels === "today" ? todayLines(i) : levels;
+      const beyond = x.side === "CE" ? lines.map(l => l.price).filter(p => p > past) : lines.map(l => l.price).filter(p => p < past).reverse();
       if (beyond.length > k) { x.target = beyond[k]; x.ladder = beyond.slice(k + 1); }
       x.fav = Math.max(x.fav, x.side === "CE" ? bar.high - x.entry : x.entry - bar.low); x.adv = Math.max(x.adv, x.side === "CE" ? x.entry - bar.low : bar.high - x.entry);
       while (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target) {  // the target reached: idea P5 may carry on to the level beyond

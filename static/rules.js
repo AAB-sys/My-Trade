@@ -31,6 +31,10 @@
   // the Fibonacci basic 7 levels only"); the extra line beyond each end of that afternoon is gone, so a close beyond the
   // day's earlier low or high is outward from the last line and gives no call, as before that afternoon.
   const todayLevelsAt = (bars) => (i) => levelsOf(moveOf(bars.slice(0, Math.max(1, i))));
+  // The lines the chart draws while candle i forms (owner's decision, 8 October evening: when the price breaks the 0% or 100%
+  // line, the 7 lines are worked out again at once from the live price): the day's range up to and with candle i. A call's
+  // target follows these, so the target is always a line on the chart; the signal is still judged by todayLevelsAt
+  const todayLinesAt = (bars) => (i) => levelsOf(moveOf(bars.slice(0, i + 1)));
   function moveOfDay(d) {  // "previous day": only the day's four figures are known, so it is an up move when it closed above its open
     return d ? { high: d.high, low: d.low, up: d.close >= d.open } : null;
   }
@@ -78,7 +82,8 @@
 
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
   //   bars       the session's candles, oldest first (several days together are allowed: a new day ends the old day's calls)
-  //   levelsAt   (i) => the levels in force when bars[i] closes, sorted by price; a constant list for levels that do not move
+  //   levelsAt   (i) => the levels bars[i] is judged against, sorted by price; a constant list for levels that do not move
+  //   targetsAt  (i) => the lines a call's target follows while bars[i] forms (the chart's lines); levelsAt when not given
   //   now        the server's clock: candles that have closed by it are judged, the one forming now runs the open calls
   //   seconds    the size of one candle; dayCandles: a day is one candle, so no day end; signal: "held", "crossed" or "both"
   //   the call   given the moment the signal candle closes; entry at the open of the next candle; target the next level in the
@@ -106,7 +111,8 @@
   //              day's levels the lines never move, so the target is the one set at the entry, as before. With "today so far"
   //              every new low or high moves the lines: until then the target stayed where the line stood at the signal, and the
   //              table showed numbers no line on the chart had any more (12:15 call: 22,385.21 while the 23.6% line read 22,380.55)
-  function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal, ideas }) {
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas }) {
+    const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
     const stopShare = ideas && ideas.stopShare, minutes = (ideas && ideas.minutes) || null;
@@ -155,8 +161,8 @@
         ready = null;  // a signal on a day's last candle has no candle left to enter on
       }
       if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
-      const levels = levelsAt(i);
-      open.forEach(t => { follow(t, levels); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      const levels = levelsAt(i), lines = linesAt(i);
+      open.forEach(t => { follow(t, lines); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
       if (stopShare) open = open.filter(t => { if (touchesStop(t, bar) && stopFirst(t, bar)) { end(t, t.stop, bar, "stop"); return false; } return true; });  // ideas P6, P7
       open = open.filter(t => settle(t, bar));
       if (exitBack) open = open.filter(t => { if (backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
@@ -171,8 +177,8 @@
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
       if (ready) { const t = enterAt(ready, forming); if (t) { trades.push(t); open.push(t); } ready = null; }
-      const levels = levelsAt(closed.length);  // the lines as the chart draws them now, with the forming candle in the day's range
-      open.forEach(t => { follow(t, levels); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      const lines = linesAt(closed.length);  // the lines as the chart draws them now, with the forming candle in the day's range
+      open.forEach(t => { follow(t, lines); if (stopShare && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
       if (stopShare) open = open.filter(t => { if (touchesStop(t, forming)) { end(t, t.stop, forming, "stop"); return false; } return true; });  // ideas P6, P7, tick by tick
       open = open.filter(t => { if (!reaches(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
                                 end(t, t.target, forming, "target"); return false; });
@@ -190,8 +196,8 @@
   function replayDay({ bars, move, previous, seconds, signal, ideas }) {
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null;
     if (move === "prev" && !fixed) return { trades: [], closed: 0 };
-    const levelsAt = move === "prev" ? () => fixed : todayLevelsAt(bars);
-    return paperTrades({ bars, levelsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas });
+    const levelsAt = move === "prev" ? () => fixed : todayLevelsAt(bars), targetsAt = move === "prev" ? null : todayLinesAt(bars);
+    return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas });
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -336,6 +342,6 @@
     return { deep, beyond, reached: reachedAt != null, reachedAt };
   }
 
-  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
+  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);

@@ -484,10 +484,10 @@
       return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
     }
     if (state.move === "today") {
-      // one session's candles (8 October afternoon): the lines the candle forming now is judged against, the day's range up to
-      // the candle before it, so a new low or high shows as the price beyond the 0% or 100% line until the candle closes
-      const all = sessionBars(), closed = all.filter(b => endOf(b) <= serverNow());
-      const mv = Rules.moveOf(judgedToday() ? (closed.length ? closed : all.slice(0, 1)) : all);
+      // the day's range so far, the candle forming now included: when the price breaks the 0% or 100% line the 7 lines are
+      // worked out again at once from the live price (owner's decision, 8 October evening; that afternoon they stood still
+      // while a candle formed). A candle is still judged against the lines as they were when it began (Rules.todayLevelsAt)
+      const mv = Rules.moveOf(sessionBars());
       if (!mv) return null;
       return { ...mv, what: key === "all" ? "days shown" : isToday(key) ? "today so far" : dayLabel(key) };
     }
@@ -499,7 +499,8 @@
 
   const levelsOf = Rules.levelsOf;
   // "Today so far" on one session's intraday candles: each candle judged against the seven lines as they stood when it began
-  // (Rules.todayLevelsAt); a day candle or several sessions shown keep the lines of the whole range shown
+  // (Rules.todayLevelsAt), a call's target on the lines the chart draws (Rules.todayLinesAt); a day candle or several
+  // sessions shown keep the lines of the whole range shown
   const judgedToday = () => state.move === "today" && state.interval !== "1d" && currentSession() !== "all";
 
   // ---- Layer 2 of the owner's logic, held and crossed (see LOGIC.md), is judged inside the paper
@@ -537,11 +538,12 @@
   // as the server's watcher records the calls. Until that morning every candle was judged against the levels of this
   // moment, so each new high or low of the day redrew the whole morning's calls; from then until the afternoon each candle
   // was judged with its own high and low in the range, so every candle making a new low "held" the 0% line it drew itself
-  // (Buy CE after Buy CE on a falling day). The chart shows the lines the forming candle is judged against.
+  // (Buy CE after Buy CE on a falling day). The chart shows the day's range with the candle forming now, worked out again
+  // at once on a new high or low; a call's target follows those lines.
   function paperTrades(levels) {
     const bars = sessionBars();
-    const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels;
-    return Rules.paperTrades({ bars, levelsAt, now: serverNow(), seconds: SECONDS[state.interval],
+    const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
+    return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal });
   }
 

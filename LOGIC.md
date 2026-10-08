@@ -34,10 +34,12 @@ turn after a move. Whether that holds is for the owner's own record to show.
   decide)**. Blank until it has traded. **Each candle is judged against the
   lines as they stood when it began** (owner's decision, 8 October afternoon):
   the day's range up to the candle before it (the day's first candle: its own).
-  The chart draws exactly those lines, so while a candle forms they stand still,
-  and a new low shows as the price below the 0% line until the candle closes;
-  then the lines move to the new range. The same on the index page, in the
-  server's watcher and on the Study page. The reason: from the morning of 8
+  **The chart works the 7 lines out again at once from the live price whenever
+  the price crosses the 0% or 100% line** (owner's decision, 8 October evening:
+  "the Fibonacci levels should be recalculated when 0% and 100% are crossed,
+  that is the whole crux"), and a call's target follows the lines the chart
+  draws (item 5). The same on the index page, in the server's watcher and on the
+  Study page. The reason: from the morning of 8
   October until then each candle was judged with its own high and low in the
   range, so every candle that made a new low "held" the 0% line it drew itself:
   18 of NIFTY 50's 23 calls that day were Buy CE at 0.0%, all the way down.
@@ -47,9 +49,10 @@ turn after a move. Whether that holds is for the owner's own record to show.
   and above the high), so that a close below the day's earlier low gave a Buy PE
   aiming at it; it was taken off the same evening, so such a close is outward
   from the 0% line again and gives no call. On the seven saved days, 5-minute
-  candles, both signals: 212 calls instead of 263 on NIFTY 50 (net -902 instead
-  of -945) and 224 instead of 258 on NIFTY BANK (+2,423 instead of +3,128); on 8
-  October NIFTY 50 14 calls, 11 CE and 3 PE, instead of 27 (12 CE, 15 PE).
+  candles, both signals, the targets on the chart's lines: NIFTY 50 212 calls,
+  net -730 (it was 263 calls, -945); NIFTY BANK 224 calls, +2,193 (it was 258,
+  +3,128); on 8 October NIFTY 50 14 calls, 11 CE and 3 PE, -755 (it was 27, 12
+  CE and 15 PE, -931).
   Before the morning of 8 October the page and the watcher judged every earlier
   candle against the lines of the moment, so each new high or low redrew the
   whole day's calls: NIFTY 50 showed 22 different calls through that morning and
@@ -189,9 +192,12 @@ The rule, in the order it is applied:
    22,605.32, −5.28). The research engine replays every saved day the same way.
    **The target follows the lines** (owner's decision, 8 October): at every
    candle the target is the next line beyond both the entry and the level that
-   gave the call, in the call's direction, among the lines as they stand at that
-   candle (on the candle forming now, as the chart draws them), and the call
-   ends when the price reaches that line. With the previous day's levels the
+   gave the call, in the call's direction, among the lines the chart draws
+   during that candle (the day's range with that candle in it, worked out again
+   when the price crosses 0% or 100%), and the call ends when the price reaches
+   that line. A hit seen live stays a hit when the candle closes; its price can
+   differ by a few points when the line moved on later in the same candle (on
+   8 October, 4 of NIFTY 50's 5 live hits and 7 of NIFTY BANK's 32). With the previous day's levels the
    lines never move, so nothing changes there (the six saved days: all 432 day
    and setting combinations the same). With *Today so far* every new low or high
    moves the lines, and until then the target stayed where its line stood at

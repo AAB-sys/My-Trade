@@ -56,6 +56,12 @@ def today_levels_at(bars: list):
     return lambda i: levels_of(move_of(bars[:max(1, i)]))
 
 
+def today_lines_at(bars: list):
+    """The lines the chart draws while candle i forms, the day's range up to and with it (owner's decision, 8 October evening:
+    the 7 lines worked out again at once when the price breaks 0% or 100%); a call's target follows these."""
+    return lambda i: levels_of(move_of(bars[:i + 1]))
+
+
 def move_of_day(d):
     """"Previous day": only the day's four figures are known, so it is an up move when it closed above its open."""
     return {"high": d["high"], "low": d["low"], "up": d["close"] >= d["open"]} if d else None
@@ -110,7 +116,8 @@ def enter_at(sig: dict, bar: dict):
 
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
 
-def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None) -> dict:
+def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None) -> dict:
+    lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
     min_depth = (ideas or {}).get("minDepth")  # idea P3 (7 October): a crossed signal must close this share of the way to the next level
@@ -191,9 +198,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 trades.append(t)
                 open_.append(t)
             ready = None
-        levels = levels_at(i)
+        levels, lines = levels_at(i), lines_at(i)
         for t in open_:
-            follow(t, levels)
+            follow(t, lines)
             set_stop(t)
         if stop_share:  # ideas P6, P7
             still = []
@@ -235,9 +242,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 trades.append(t)
                 open_.append(t)
             ready = None
-        levels = levels_at(len(closed))  # the lines as the chart draws them now, with the forming candle in the day's range
+        lines = lines_at(len(closed))  # the lines as the chart draws them now, with the forming candle in the day's range
         for t in open_:
-            follow(t, levels)
+            follow(t, lines)
             set_stop(t)
         if stop_share:  # ideas P6, P7, tick by tick
             still = []
@@ -273,7 +280,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     if move == "prev" and not fixed:
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas)
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars))
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},

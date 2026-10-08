@@ -673,7 +673,8 @@ def watch_index(name: str) -> dict:
         levels = None  # today so far: each candle against the seven lines as they stood when it began, as the page and the Study page judge it (8 October)
     now = time.time()
     levels_at = (lambda i: levels) if levels is not None else rule.today_levels_at(bars)
-    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL)["trades"]
+    targets_at = None if levels is not None else rule.today_lines_at(bars)  # a call's target on the chart's lines (8 October evening)
+    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at)["trades"]
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, WATCH_LEVELS)
