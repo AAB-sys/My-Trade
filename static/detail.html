@@ -719,7 +719,7 @@
     tr.querySelector("td.prem").replaceWith(fresh.children[0]);
   }
 
-  const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK"];  // the indices the broker feed covers (dhan.INDEX_IDS)
+  const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK", "SENSEX"];  // the indices whose options the server follows (dhan.OPTION_INDICES; SENSEX's on the BSE since 8 October)
   // The Dhan line shows only when something needs the owner's attention; on a normal day it stays out of sight.
   function drawFeedNote() {
     const el = document.getElementById("feed-note");
