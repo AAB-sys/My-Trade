@@ -817,6 +817,20 @@ def end_call(key: str, how: str) -> dict | None:
         return dict(rec) if rec else None
 
 
+def reopen_call(key: str) -> dict | None:
+    """The server's watcher sees the call by this name still open while its record says it ended: the record follows
+    the premium again (and can still get its Sell mark). On 8 October the rule changed twice during the session, and
+    two NIFTY 50 calls of the new rule took the names of calls of the old one that had reached their targets, so their
+    premium stood still on the table while the same contract moved on in the rows beside them. The day end stays final."""
+    with _records_lock:
+        rec = _records.get(key)
+        if rec and rec["ended"] and rec["ended"].get("how") != "day end":
+            rec["ended"] = None
+            _save_records()
+            _changed()
+        return dict(rec) if rec else None
+
+
 def end_day(day: str) -> int:
     """Nothing carries overnight (LOGIC.md): once the day's final copy is saved, every record of that day still open is
     marked ended at the day end. The page and the watcher mark the calls they see; a record neither matches any more

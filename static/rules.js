@@ -88,6 +88,12 @@
   //              carryOn (idea P5, 7 October: when the candle that reaches the target closes at least this share of the next
   //              gap past it, the call carries on to the level beyond, again and again up the ladder; otherwise it ends at the
   //              target as ever. The decision waits for that candle to close: on the candle forming now the call stays open)
+  //   the target follows the lines (owner's decision, 8 October): at every candle the call's target is the next line beyond
+  //              both its entry and the level that gave it, in the call's direction, among the lines as they stand at that
+  //              candle (the forming one: as the chart draws them now), and it is reached against that line. With the previous
+  //              day's levels the lines never move, so the target is the one set at the entry, as before. With "today so far"
+  //              every new low or high moves the lines: until then the target stayed where the line stood at the signal, and the
+  //              table showed numbers no line on the chart had any more (12:15 call: 22,385.21 while the 23.6% line read 22,380.55)
   function paperTrades({ bars, levelsAt, now, seconds, dayCandles, signal, ideas }) {
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -97,6 +103,13 @@
     const gain = (t, price) => round2(t.side === "CE" ? price - t.entry : t.entry - price);  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
     const reaches = (t, bar) => t.side === "CE" ? bar.high >= t.target : bar.low <= t.target;
+    const follow = (t, levels) => {  // the target on the lines as they stand (and the ladder beyond it, for idea P5, one step further per carry)
+      const past = t.side === "CE" ? Math.max(t.entry, t.level) : Math.min(t.entry, t.level);
+      const prices = levels.map(l => l.price);
+      const beyond = t.side === "CE" ? prices.filter(p => p > past) : prices.filter(p => p < past).reverse();
+      const k = t.carried || 0;
+      if (beyond.length > k) { t.target = beyond[k]; t.ladder = beyond.slice(k + 1); }  // no line that far out (the entry at the day's high): it stays
+    };
     const backAcross = (t, close) => t.side === "CE" ? t.level - close : close - t.level;  // how far a close went back across the call's level, in points
     const settle = (t, bar) => {  // the target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target
       while (reaches(t, bar)) {
@@ -119,10 +132,11 @@
         ready = null;  // a signal on a day's last candle has no candle left to enter on
       }
       if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
+      const levels = levelsAt(i);
+      open.forEach(t => follow(t, levels));
       open = open.filter(t => settle(t, bar));
       if (exitBack) open = open.filter(t => { if (backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
-      const levels = levelsAt(i);
       for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
       const sig = signalAt(bar, prevBar.close, levels, used, signal);  // the call, at the signal candle's close
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
@@ -133,6 +147,8 @@
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
       if (ready) { const t = enterAt(ready, forming); if (t) { trades.push(t); open.push(t); } ready = null; }
+      const levels = levelsAt(closed.length);  // the lines as the chart draws them now, with the forming candle in the day's range
+      open.forEach(t => follow(t, levels));
       open = open.filter(t => { if (!reaches(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
                                 end(t, t.target, forming, "target"); return false; });
       open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at

@@ -300,11 +300,12 @@ The app is ready to run on a platform that deploys from GitHub:
   target and no stop, one call per level (by its price) and direction until the index closes
   back across it, closed at the day's end), listed one row each in the owner's
   format: time, call with its contract, signal, call entry (the strike), call
-  target (with "hit" or "not reached" once ended) and premium paid -> now, under
+  target (the next line on the chart in the call's direction, following the lines
+  as they move; with "hit" or "not reached" once ended), premium paid -> now and
+  candle status (the candle verdict, CARRY or EXIT with its reason), under
   a header row that stays in view; scored, and downloadable as a CSV file. The
-  candle verdict (CARRY or EXIT with its reason) is not on the table: it goes
-  with every call into the day's calls CSV for the research engine, and so
-  does the carry read (did the candle that reached the target close a quarter
+  candle verdict also goes with every call into the day's calls CSV for the
+  research engine, and so does the carry read (did the candle that reached the target close a quarter
   into the next gap, and was the level beyond reached).
   Nothing else is drawn on the chart, and nothing is sent anywhere.
 - `static/detail.html` is the detail page: the previous session's and today's figures,

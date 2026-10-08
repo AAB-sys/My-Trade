@@ -126,6 +126,15 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     def reaches(t, bar):
         return bar["high"] >= t["target"] if t["side"] == "CE" else bar["low"] <= t["target"]
 
+    def follow(t, levels):
+        """The target on the lines as they stand (owner's decision, 8 October; see static/rules.js), the ladder beyond it for idea P5."""
+        past = max(t["entry"], t["level"]) if t["side"] == "CE" else min(t["entry"], t["level"])
+        prices = [l["price"] for l in levels]
+        beyond = [p for p in prices if p > past] if t["side"] == "CE" else [p for p in reversed(prices) if p < past]
+        k = t.get("carried", 0)
+        if len(beyond) > k:  # no line that far out (the entry at the day's high): it stays
+            t["target"], t["ladder"] = beyond[k], beyond[k + 1:]
+
     def settle(t, bar):
         """The target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target."""
         while reaches(t, bar):
@@ -154,6 +163,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 trades.append(t)
                 open_.append(t)
             ready = None
+        levels = levels_at(i)
+        for t in open_:
+            follow(t, levels)
         open_ = [t for t in open_ if settle(t, bar)]
         if exit_back:  # idea P4: the candle says exit, at its close
             still = []
@@ -168,7 +180,6 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             for t in open_:
                 end(t, bar["close"], bar, "time")
             open_ = []
-        levels = levels_at(i)
         for price, side in list(used):  # closed back across: the line may call again (kept by its price, 8 October)
             if (bar["close"] < price) if side == "CE" else (bar["close"] > price):
                 del used[(price, side)]
@@ -187,6 +198,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 trades.append(t)
                 open_.append(t)
             ready = None
+        levels = levels_at(len(closed))  # the lines as the chart draws them now, with the forming candle in the day's range
+        for t in open_:
+            follow(t, levels)
         still = []
         for t in open_:
             if reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close

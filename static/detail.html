@@ -125,6 +125,12 @@
   #paper td.target small { display: block; color: var(--muted); }
   #paper td.target small.up { color: var(--up); }
   #paper td.prem small.sell { color: var(--down); font-weight: 600; }
+  /* "Candle status": carry or exit, from the closed candles around the call's level, with the reason under it (back on the
+     table, owner's ask, 8 October) */
+  #paper td.cand { text-align: left; font-weight: 600; }
+  #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
+  #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
+  #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
   #paper td.call { text-align: left; }
   #paper tr.ended td { color: var(--ink-2); }
   #paper tr.ended td.up { color: var(--up); } #paper tr.ended td.down { color: var(--down); }
@@ -283,7 +289,7 @@
     <div id="paper-score"></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th>Candle status</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -598,14 +604,14 @@
 
   // One row reads left to right, in the owner's format of 7 October: the time, the call with its contract, the signal,
   // the entry (the strike number bought; the index at entry only where there is no strike), the target level (with
-  // "hit" or "not reached" once the call has ended) and the premium paid and now. The candle verdict is not on the table
-  // (owner's ask, 7 October evening): it goes with every recorded call and into the CSV, for the research engine.
+  // "hit" or "not reached" once the call has ended), the premium paid and now, and what the candles say (off the table on
+  // 7 October evening, back on 8 October: the owner's exit signal).
   function rowCells(t, r) {
     const strike = strikeOf(t, r);
     return `<td>${callTime(t.signalTime)}</td>`
       + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t) + premiumCell(t, r);
+      + entryCell(t, strike) + targetCell(t) + premiumCell(t, r) + candleCell(t);
   }
   const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
 
@@ -637,12 +643,22 @@
     return `<td class="target">${fmt.format(t.target)}${note}</td>`;
   }
 
-  // The candle verdict (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): CARRY or EXIT with its reason, for the
-  // research engine: the page sends it with every call it records (the server's watcher does the same with rule.read_of),
-  // and the CSV download carries it. Not on the table (owner's ask, the same evening). It changes nothing about a call
+  // The candle verdict (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): CARRY or EXIT with its reason. On the
+  // table as "Candle status" (off it on 7 October evening, back on 8 October as the owner's exit signal); the page also
+  // sends it with every call it records (the server's watcher does the same with rule.read_of), and the CSV download
+  // carries it. It changes nothing about a call
   function candleRead(t) {
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
     return rd ? { say: rd.word, exitAt: rd.exitAt, why: rd.why } : null;
+  }
+  // "Candle status": one word for every open call, CARRY or EXIT, with the reason in words under it; on a finished call,
+  // what the word was and when, so the owner can judge it against the result
+  function candleCell(t) {
+    const rd = candleRead(t);
+    if (!rd) return `<td class="cand">—</td>`;
+    if (t.exit == null) return `<td class="cand ${rd.say}">${rd.say === "exit" ? "EXIT" : "CARRY"}<small>${rd.why}</small></td>`;
+    if (rd.exitAt == null) return `<td class="cand carry">CARRY the whole time<small>${rd.why}</small></td>`;
+    return `<td class="cand exit">Said EXIT at ${callTime(rd.exitAt)}<small>${rd.why}</small></td>`;
   }
   // The carry read (idea P5's question, 7 October evening; Rules.carryOf): at the candle that reached the target, did the
   // close go a quarter into the next gap, and was the level beyond reached later. For the CSV and the research engine only
