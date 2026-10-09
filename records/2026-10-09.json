@@ -577,11 +577,14 @@
   "index_at_entry": 55229.05,
   "premium_paid": 679.7,
   "paid_at": "2026-10-09T13:25:00+05:30",
-  "premium_now": 599.85,
-  "now_at": "2026-10-09T14:21:57+05:30",
+  "premium_now": 657.8,
+  "now_at": "2026-10-09T15:12:30+05:30",
   "sell_below": 441.81,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "target",
+   "at": "2026-10-09T15:12:31+05:30"
+  },
   "security_id": 49450
  },
  {
@@ -631,8 +634,8 @@
   "index_at_entry": 22509.15,
   "premium_paid": 133.75,
   "paid_at": "2026-10-09T13:40:05+05:30",
-  "premium_now": 172.6,
-  "now_at": "2026-10-09T14:22:00+05:30",
+  "premium_now": 133.45,
+  "now_at": "2026-10-09T15:12:33+05:30",
   "sell_below": 86.94,
   "sold": null,
   "ended": null,
@@ -647,8 +650,8 @@
   "index_at_entry": 22533.4,
   "premium_paid": 112.2,
   "paid_at": "2026-10-09T13:50:01+05:30",
-  "premium_now": 87.4,
-  "now_at": "2026-10-09T14:22:00+05:30",
+  "premium_now": 99.6,
+  "now_at": "2026-10-09T15:12:32+05:30",
   "sell_below": 72.93,
   "sold": null,
   "ended": null,
@@ -663,11 +666,14 @@
   "index_at_entry": 55285.35,
   "premium_paid": 655.0,
   "paid_at": "2026-10-09T13:50:04+05:30",
-  "premium_now": 599.85,
-  "now_at": "2026-10-09T14:21:57+05:30",
+  "premium_now": 657.8,
+  "now_at": "2026-10-09T15:12:30+05:30",
   "sell_below": 425.75,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "target",
+   "at": "2026-10-09T15:12:31+05:30"
+  },
   "security_id": 49450
  },
  {
@@ -679,8 +685,8 @@
   "index_at_entry": 72484.12,
   "premium_paid": 471.5,
   "paid_at": "2026-10-09T13:55:02+05:30",
-  "premium_now": 389.55,
-  "now_at": "2026-10-09T14:21:55+05:30",
+  "premium_now": 422.6,
+  "now_at": "2026-10-09T15:12:32+05:30",
   "sell_below": 306.48,
   "sold": null,
   "ended": null,
@@ -695,11 +701,14 @@
   "index_at_entry": 55302.2,
   "premium_paid": 680.0,
   "paid_at": "2026-10-09T14:00:08+05:30",
-  "premium_now": 635.75,
-  "now_at": "2026-10-09T14:22:00+05:30",
+  "premium_now": 700.45,
+  "now_at": "2026-10-09T15:12:30+05:30",
   "sell_below": 442.0,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "target",
+   "at": "2026-10-09T15:12:31+05:30"
+  },
   "security_id": 49456
  },
  {
@@ -711,8 +720,8 @@
   "index_at_entry": 22526.25,
   "premium_paid": 168.4,
   "paid_at": "2026-10-09T14:21:29+05:30",
-  "premium_now": 172.6,
-  "now_at": "2026-10-09T14:22:00+05:30",
+  "premium_now": 133.45,
+  "now_at": "2026-10-09T15:12:33+05:30",
   "sell_below": 109.46,
   "sold": null,
   "ended": null,
