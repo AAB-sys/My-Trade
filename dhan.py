@@ -15,6 +15,7 @@ import csv
 import json
 import logging
 import os
+import re
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -460,7 +461,38 @@ def _parse_expiry(text: str):
             return datetime.strptime(head, fmt).date().isoformat()
         except ValueError:
             continue
+    words = text.split()  # more ways to write it, tried only when those fail (9 October: the BSE's rows may not write it as the NSE's do),
+    if not words:         # each on the whole date as written, never on a cut piece of it (a cut "15-Oct-20" would read as 2020)
+        return None
+    tries = [(re.split(r"(?<=\d)T(?=\d)", words[0])[0], fmt) for fmt in ("%d-%b-%Y", "%Y/%m/%d", "%d%b%Y", "%d-%b-%y", "%d%b%y")] + [(" ".join(words[:3]), "%d %b %Y")]
+    for part, fmt in tries:
+        try:
+            return datetime.strptime(part, fmt).date().isoformat()
+        except ValueError:
+            continue
     return None
+
+
+_SENSEX_WORD = re.compile(r"(?:^|[^A-Z0-9])SENSEX(?:$|[^A-Z0-9])")  # SENSEX as a word: "SENSEX", "S&P BSE SENSEX", "SENSEX 15 OCT 72000 CALL", "SENSEX-Oct2026-..."
+_SENSEX_JOINED = re.compile(r"^SENSEX(?=\d{2}[A-Z]{3}\d|\d{2}[1-9OND]\d{2}\d)")  # or written together with its expiry: "SENSEX26OCT72000CE", "SENSEX26O1572000CE"
+
+
+def _bse_underlying(*texts: str) -> str | None:
+    """SENSEX, when a BSE option row's names say so in any of its name columns (9 October: the server found no SENSEX
+    option in the list, written as it looked for them). Never SENSEX 50 ("SENSEX50") or BANKEX."""
+    for text in texts:
+        t = text.strip().upper()
+        if t and (_SENSEX_WORD.search(t) or _SENSEX_JOINED.match(t)):
+            return "SENSEX"
+    return None
+
+
+_list_report: dict = {}  # what the instrument list gave, for /health (9 October): ids per underlying, SENSEX's expiries, how its BSE rows are written
+
+
+def list_report() -> dict:
+    with _option_ids_lock:
+        return dict(_list_report)
 
 
 def _read_option_ids() -> dict:
@@ -468,6 +500,7 @@ def _read_option_ids() -> dict:
     Dhan's instrument list (a large CSV; only the option rows of NIFTY and BANKNIFTY on the NSE, and of SENSEX on
     the BSE, are kept)."""
     found, columns = {}, None
+    report = {"bse_option_rows": 0, "bse_names": {}, "sensex_rows": [], "no_expiry": 0}
     wanted = set(UNDERLYING.values())
     index_rows = set(LIST_NAMES.values())
     seen_index = {}  # the list's own ids of the indices (checked against QUOTE_IDS: a wrong id would show another instrument's price)
@@ -483,11 +516,11 @@ def _read_option_ids() -> dict:
                                 return i
                         return None
                     columns = (col("SECURITY_ID"), col("INSTRUMENT_NAME"), col("EXPIRY_DATE"), col("STRIKE"), col("OPTION_TYPE"),
-                               col("SYMBOL_NAME"), col("TRADING_SYMBOL"), col("EXCH_ID"))
+                               col("SYMBOL_NAME"), col("TRADING_SYMBOL"), col("EXCH_ID"), col("CUSTOM_SYMBOL"))
                     if None in columns[:5]:
                         raise DhanError("other", f"Dhan's instrument list has an unexpected header: {', '.join(row)[:160]}")
                     continue
-                sid, instrument, expiry, strike, side, symbol, trading, exchange = (row[i] if i is not None and i < len(row) else "" for i in columns)
+                sid, instrument, expiry, strike, side, symbol, trading, exchange, custom = (row[i] if i is not None and i < len(row) else "" for i in columns)
                 if instrument.strip().upper() == "INDEX":
                     label = (symbol.strip() or trading.strip()).upper()
                     if label in index_rows and label not in seen_index:
@@ -499,10 +532,23 @@ def _read_option_ids() -> dict:
                 if instrument.strip().upper() != "OPTIDX":
                     continue
                 underlying = symbol.strip().upper() or trading.strip().upper().replace(" ", "-").split("-")[0]
+                bse = exchange.strip().upper() == "BSE"
+                if bse:  # the BSE's option rows: how the list writes them, for /health
+                    report["bse_option_rows"] += 1
+                    name = (symbol.strip() or trading.strip())[:16].upper()
+                    report["bse_names"][name] = report["bse_names"].get(name, 0) + 1
+                    if underlying not in wanted:
+                        underlying = _bse_underlying(symbol, trading, custom) or underlying  # SENSEX, however its name is written
+                    if underlying == "SENSEX" and len(report["sensex_rows"]) < 3:
+                        report["sensex_rows"].append({"symbol": symbol.strip(), "trading": trading.strip(), "custom": custom.strip(),
+                                                      "expiry": expiry.strip(), "strike": strike.strip(), "type": side.strip()})
                 if underlying not in wanted or (exchange and exchange.strip().upper() != OPTION_EXCHANGE[underlying]):
                     continue
                 when = _parse_expiry(expiry)
-                if not when or when < today:
+                if not when:
+                    report["no_expiry"] += 1
+                    continue
+                if when < today:
                     continue
                 try:
                     found[(underlying, when, round(float(strike), 2), side.strip().upper())] = int(float(sid))
@@ -512,8 +558,16 @@ def _read_option_ids() -> dict:
         raise DhanError("network", f"Dhan's instrument list could not be fetched ({type(exc).__name__}: {str(exc)[:100]})") from exc
     if not found:
         raise DhanError("other", "Dhan's instrument list had no NIFTY or BANKNIFTY options in it")
+    counts = {}
+    for (underlying, when, _, _) in found:
+        counts[underlying] = counts.get(underlying, 0) + 1
+    report.update(read_at=datetime.now(IST).isoformat(timespec="seconds"), option_ids=counts,
+                  sensex_expiries=sorted({when for (u, when, _, _) in found if u == "SENSEX"})[:4],
+                  bse_names=dict(sorted(report["bse_names"].items(), key=lambda kv: -kv[1])[:6]))
     with _option_ids_lock:
         _index_ids_seen.update(seen_index)
+        _list_report.clear()
+        _list_report.update(report)
     if problem := id_problem():
         log.warning("Dhan ids: %s", problem)
     return found
