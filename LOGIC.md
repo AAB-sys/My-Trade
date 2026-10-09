@@ -129,9 +129,14 @@ item 5, says *hold* or *target passed, continue* and what sells it, then how it
 was sold), **Premium Paid ->
 Now** (at exit once the call has ended; *SELL NOW* while the premium sits below
 the sell mark, *sold at* once marked sold), **Candle status** (the candle
-verdict of item 7: HOLD or SELL with its reason on an open call; on a finished
-one, "HOLD the whole time" or "said SELL at" its time; the owner's plain words of 8
-October night: buy, hold, continue, sell, where it said CARRY and EXIT; off the table on 7
+verdict of item 7: HOLD or SELL with its reason on an open call; the owner's
+plain words of 8 October night: buy, hold, continue, sell, where it said CARRY
+and EXIT. A closed call reads the same whatever closed it (owner, 9 October:
+"if both the trades are closed then why the message format is different"):
+Call Target "sold at <time>", Premium "<paid> -> <at sale> (x%) at sale",
+Candle status "SOLD" with the reason under it (target hit, a candle closed
+above/below the line, price came back to where the fall or rise started,
+premium fell 35%, day end), green for a gain and red for a loss; off the table on 7
 October evening, back on 8 October as the owner's exit signal, and in the day's
 calls CSV all along). A finished row is greyed. A finished call that
 no page saw enter reads "not seen at entry" in the premium cell: no page was
