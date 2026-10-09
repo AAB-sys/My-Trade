@@ -47,8 +47,12 @@
   // and a line at a new price is a new level. Until then the memory was kept by the ratio's name, so the 0% hold at 09:20
   // blocked every later hold of the day's low that day, at lines up to 186 points lower, and could never be released
   // (no close goes below the day's own low). With the previous day's levels the lines never move: nothing changes there.
-  function signalAt(bar, prev, levels, used, signal) {
-    const crossed = L => (prev < L && bar.close > L) || (prev > L && bar.close < L);
+  // A close exactly on a line has not crossed it yet (9 October, the owner's NIFTY 50 chart: the 13:35 candle closed at
+  // 22,509.35, the 78.6% line itself, and the 13:40 candle closed above it at 22,526.15; judged against the close just
+  // before, the break went uncounted and no call came): a cross is judged from the last close off that line, from(L), the
+  // close just before whenever that is off the line. Holds are judged from the close just before, as ever
+  function signalAt(bar, prev, levels, used, signal, from) {
+    const crossed = L => { const p = from ? from(L) : prev; return (p < L && bar.close > L) || (p > L && bar.close < L); };
     const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
     const hits = levels.filter(l => {
       const kind = crossed(l.price) ? "crossed" : held(l.price) ? "held" : null;
@@ -241,7 +245,8 @@
       if (exitBack) open = open.filter(t => { if (!t.hold && backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
-      let sig = signalAt(bar, prevBar.close, levels, used, signal);  // the call, at the signal candle's close
+      const from = (L) => { for (let j = i - 1; j >= 0; j--) if (closed[j].close !== L) return closed[j].close; return prevBar.close; };  // the last close off line L
+      let sig = signalAt(bar, prevBar.close, levels, used, signal, from);  // the call, at the signal candle's close
       if (sig && holdBreaks && open.some(t => t.hold && t.side === sig.side)) sig = null;  // a held break that way: the same trade continues, no new call
       if (sig && holdBreaks && sig.kind === "crossed") { sig.hold = true; sig.c1Open = bar.open; }  // C1, the signal candle: its open is where the break began
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call

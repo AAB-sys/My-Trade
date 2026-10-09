@@ -69,9 +69,11 @@ def move_of_day(d):
 
 # ---- Layer 2 inside layer 3's signal: held or crossed, one candle one call, no repeat until closed back across
 
-def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str):
+def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, frm=None):
+    """frm(L): the last close off line L; a close exactly on a line has not crossed it yet (9 October, see static/rules.js)."""
     def crossed(L):
-        return (prev < L < bar["close"]) or (prev > L > bar["close"])
+        p = frm(L) if frm else prev
+        return (p < L < bar["close"]) or (p > L > bar["close"])
 
     def held(L):
         return not crossed(L) and ((prev > L and bar["low"] <= L and bar["close"] > L) or (prev < L and bar["high"] >= L and bar["close"] < L))
@@ -318,7 +320,12 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         for price, side in list(used):  # closed back across: the line may call again (kept by its price, 8 October)
             if (bar["close"] < price) if side == "CE" else (bar["close"] > price):
                 del used[(price, side)]
-        sig = signal_at(bar, prev_bar["close"], levels, used, signal)
+        def frm(L, i=i):  # the last close off line L
+            for j in range(i - 1, -1, -1):
+                if closed[j]["close"] != L:
+                    return closed[j]["close"]
+            return closed[i - 1]["close"]
+        sig = signal_at(bar, prev_bar["close"], levels, used, signal, frm)
         if sig and hold_breaks and any(t.get("hold") and t["side"] == sig["side"] for t in open_):
             sig = None  # a held break that way: the same trade continues, no new call
         if sig and hold_breaks and sig["kind"] == "crossed":
