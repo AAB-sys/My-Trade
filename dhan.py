@@ -665,7 +665,8 @@ def restore_records(text: str) -> int:
                 continue
             local = _records.get(r["key"])
             if local is None or r["paid_at"] < local.get("paid_at", ""):  # the older record is the true one: a page that sent its
-                _records[r["key"]] = r                                   # open call again in the seconds before the fetch made a new one
+                _settle_sold(r)                                          # open call again in the seconds before the fetch made a new one
+                _records[r["key"]] = r
                 got += 1
         if got:
             _save_records()
@@ -680,6 +681,8 @@ def _load_records() -> None:
         _records.update({r["key"]: r for r in data if isinstance(r, dict) and "key" in r})
     except (OSError, ValueError):
         pass
+    for r in _records.values():
+        _settle_sold(r)
 
 
 def _save_records() -> None:
@@ -732,17 +735,35 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
     return dict(record)
 
 
+def _settle_sold(rec: dict) -> bool:
+    """A record with its Sell mark is a sold call (the owner, 9 October: "if it is sold at 67 then ... it should stop
+    there"): it ends at the mark, its premium stays at the price it was sold at, and nothing follows it any more.
+    True when this ended it now. Until that morning the mark was only a mark and the premium went on moving."""
+    if not rec.get("sold") or rec.get("ended"):
+        return False
+    rec["ended"] = {"how": "sold", "at": rec["sold"]["at"]}
+    rec["premium_now"], rec["now_at"] = rec["sold"]["premium"], rec["sold"]["at"]
+    return True
+
+
 def note_premium(key: str, premium: float, when: str | None = None) -> dict | None:
     """The premium now for one record, from the feed, the poll or the chain, and the Sell mark the first time
-    it is at or below the sell point. The mark stays. Returns the record as the page shows it, or None."""
+    it is at or below the sell point: the call is sold there and its premium stops (9 October). Returns the record
+    as the page shows it, or None."""
     premium = round(float(premium), 2)
     with _records_lock:
         rec = _records.get(key)
         if not rec or rec["ended"]:
             return None
+        if _settle_sold(rec):  # marked before 9 October's change, still open: it ends at its mark, not at this price
+            _save_records()
+            _changed()
+            return dict(rec)
         rec["premium_now"], rec["now_at"] = premium, when or datetime.now(IST).isoformat(timespec="seconds")
         if rec["sold"] is None and premium <= rec["sell_below"]:
             rec["sold"] = {"premium": premium, "at": rec["now_at"]}
+            _settle_sold(rec)
+            _save_records()
             _changed()
         return dict(rec)
 
@@ -829,10 +850,11 @@ def reopen_call(key: str) -> dict | None:
     """The server's watcher sees the call by this name still open while its record says it ended: the record follows
     the premium again (and can still get its Sell mark). On 8 October the rule changed twice during the session, and
     two NIFTY 50 calls of the new rule took the names of calls of the old one that had reached their targets, so their
-    premium stood still on the table while the same contract moved on in the rows beside them. The day end stays final."""
+    premium stood still on the table while the same contract moved on in the rows beside them. The day end and a sale
+    at the Sell mark stay final."""
     with _records_lock:
         rec = _records.get(key)
-        if rec and rec["ended"] and rec["ended"].get("how") != "day end":
+        if rec and rec["ended"] and rec["ended"].get("how") not in ("day end", "sold"):  # a sold call stays sold (9 October)
             rec["ended"] = None
             _save_records()
             _changed()

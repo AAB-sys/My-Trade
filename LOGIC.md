@@ -293,8 +293,16 @@ the premium paid for the CE or PE at entry. The sell point is a fall of 35% of
 it, i.e. 65% of the premium paid (the `SELL_SHARE` setting; owner's decision of
 6 October: a fall of 35%, not the 50% of the day before). While the call is open, when the current premium is
 at or below the sell point, the **Sell** column lights red ("SELL", then "SOLD at
-<premium>") and stays lit. The premiums are real prices from the owner's broker
-account; nothing is estimated from the index (owner's choice: no guessed
+<premium>") and stays lit. **The call is sold there** (owner's decision, 9
+October: "if it is sold at 67 then ... it should stop there"): the record ends
+"sold", its premium stays at the price it was sold at, and the row is finished
+(greyed, "sold by the 35% rule at <time>", Candle status "SOLD at <time>"),
+ending at the index price of the candle the sale fell in, whatever the index
+rule (target, rules A and B, day end) would have done later; whichever comes
+first sells the call. Until then the mark was only a mark and the premium went
+on moving. The research engine and the Study page stay on index points only,
+so they do not know this sale. The premiums are real prices from the owner's
+broker account; nothing is estimated from the index (owner's choice: no guessed
 premiums). Where Dhan is not connected the column shows a dash.
 
 **The option behind a call** (owner's decisions, 5 October): the prices come
