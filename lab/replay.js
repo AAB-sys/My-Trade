@@ -218,13 +218,13 @@ const IDEAS = [
   ["depth past halfway + exit on a quarter reclaim", { minDepth: 0.5, closeBackShare: 0.25 }],
   ["today-so-far levels + depth past halfway", { levels: "today", minDepth: 0.5 }],
   ["today-so-far levels + depth past halfway + quarter reclaim", { levels: "today", minDepth: 0.5, closeBackShare: 0.25 }],
-  // 9 October, the owner's specification: Rule 2's settings (section 6) against the rule as the page runs it (section 5 on all 7
-  // lines, the owner's choice: no buffer, the stop on the line crossed); the buffer in points: 10 on NIFTY 50 (the specification's
-  // example), the same share of the index elsewhere
+  // 9 October, the owner's specification: Rule 2's settings (section 6) against the rule as the page runs it (the owner's choice:
+  // all 7 lines, no buffer, the stop one Fibonacci line back); the buffer in points: 10 on NIFTY 50 (the specification's example),
+  // the same share of the index elsewhere
   ...["prev", "today"].flatMap(lv => [
     [`${lv}: Rule 1 alone, no moving stop`, { levels: lv, trail: null }],
-    [`${lv}: Rule 2 on lines 23.6% to 78.6% only`, { levels: lv, trail: { lines: "middle", buffer: "none", place: "at" } }],
-    [`${lv}: Rule 2, stop one line back`, { levels: lv, trail: { lines: "all", buffer: "none", place: "back" } }],
+    [`${lv}: Rule 2 on lines 23.6% to 78.6% only`, { levels: lv, trail: { lines: "middle", buffer: "none", place: "back" } }],
+    [`${lv}: Rule 2, stop on the line crossed (PR #115)`, { levels: lv, trail: { lines: "all", buffer: "none", place: "at" } }],
     [`${lv}: Rule 2, buffer in points`, ix => ({ levels: lv, trail: { lines: "all", buffer: "fixed", points: POINTS[ix], place: "at" } })],
     [`${lv}: Rule 2, buffer in points, one line back`, ix => ({ levels: lv, trail: { lines: "all", buffer: "fixed", points: POINTS[ix], place: "back" } })],
     [`${lv}: Rule 2, buffer a quarter ATR`, ix => ({ levels: lv, trail: { lines: "all", buffer: "atr", mult: 0.25, points: POINTS[ix], place: "at" } })],

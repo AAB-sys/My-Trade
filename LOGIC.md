@@ -238,14 +238,17 @@ The rule, in the order it is applied:
    levels it does worse: NIFTY 50 -275 (it was +316), NIFTY BANK -194 (it was
    +1,826).
    **Rule 2: the stop moves line by line** (the owner's "Trading Rules
-   Specification", 9 October; the setting the owner chose that afternoon: "Rule
-   2 on all 7 lines"). Once a closed candle of a held break closes beyond a
-   further line than L in the call's direction (judged on the lines the candle
-   is judged against, as the signals: the day's range up to the candle before
-   it, with *Today so far*), the stop moves to that line; each further line
-   crossed moves it again, never back; one candle past several lines moves it
-   to the furthest. All seven lines count, so with *Today so far* a close past
-   the day's low or high so far (the 0% or 100% line) moves it there. Each
+   Specification", 9 October; the settings the owner chose that afternoon, each
+   in its own PR: "Rule 2 on all 7 lines" (#115), then "Stop one Fibonacci level
+   back"). Once a closed candle of a held break closes beyond a further line
+   than L in the call's direction (judged on the lines the candle is judged
+   against, as the signals: the day's range up to the candle before it, with
+   *Today so far*), the stop moves to the Fibonacci line one behind it (the line
+   just behind the one crossed, as the lines stand at that candle; when that is
+   L itself, the stop stays on L); each further line crossed moves it again,
+   never back; one candle past several lines counts the furthest. All seven
+   lines count, so with *Today so far* a close past the day's low or high so far
+   (the 0% or 100% line) counts as crossing that line. Each
    candle is first checked against the stop as it stood before it, then the
    stop moves. The call is sold at the close of a candle that closes back past
    the stop (`trail`). From the first further line on, A and B no longer sell
@@ -256,15 +259,17 @@ The rule, in the order it is applied:
    owner, 8 October: "keep it as it is"), not C2 with C1's close as the
    specification's table writes it. The specification's other settings
    (section 6: only the lines 23.6% to 78.6%, a buffer of fixed points or of a
-   share of the 14-candle ATR, the stop one line back) are in the research
-   engine (`node lab/replay.js`) for comparison; none is live. On the seven
-   saved days, *Today so far*, 5-minute candles, both signals: NIFTY 50 179
-   calls, net -459 (Rule 1 alone: 123, +181); NIFTY BANK 183 calls, +1,760
-   (115, +1,403). Every bounce call is the same as before; a held break changes
-   only once a further line is crossed, and when it is sold sooner, new calls
-   that way can come sooner (the rule above). 8 October NIFTY 50: the 10:15 PE
-   is sold at 10:40 for +26.80 (one candle closed 1.90 points above the day's
-   low so far); with Rule 1 alone it was held to the close for +229.50.
+   share of the 14-candle ATR, the stop on the line crossed as #115 ran it) are
+   in the research engine (`node lab/replay.js`) for comparison; none is live.
+   On the seven saved days, *Today so far*, 5-minute candles, both signals:
+   NIFTY 50 143 calls, net +208 (the stop on the line crossed: 179, -459; Rule
+   1 alone: 123, +181); NIFTY BANK 140 calls, +1,315 (183, +1,760; 115,
+   +1,403). Every bounce call is the same as before; a held break changes only
+   once a further line is crossed, and when it is sold sooner, new calls that
+   way can come sooner (the rule above). 8 October NIFTY 50: the 10:15 PE (L =
+   23.6% at 22,481.89) is held to the close for +229.50, its stop moved down to
+   22,286.54; with the stop on the line crossed it was sold at 10:40 for +26.80
+   (one candle closed 1.90 points above the day's low so far).
 6. **Day end** - a call still open at the day's last closed candle ends at its
    close; nothing carries overnight. A signal on the day's last candle has no
    candle left to enter on, so it gives nothing. The day's final save (15:40)

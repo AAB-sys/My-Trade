@@ -269,7 +269,8 @@ console.log("rules unit checks passed");
 {
   const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
   const lv = R.levelsOf(R.moveOfDay({ open: 100, high: 200, low: 100, close: 190 }));
-  const run = (bars, trail = R.TRAIL, now = Infinity) => R.paperTrades({ bars, levelsAt: () => lv, now, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: true, trail }).trades;
+  const AT = { lines: "all", buffer: "none", place: "at" };  // the stop on the line crossed (PR #115); the page runs one line back (R.TRAIL, checked at j)
+  const run = (bars, trail = AT, now = Infinity) => R.paperTrades({ bars, levelsAt: () => lv, now, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: true, trail }).trades;
   const head = [bar(0, 170, 171, 168, 170), bar(1, 166, 167, 158, 160), bar(2, 159, 161, 150, 151)];  // 09:25 reaches 150 but closes above it: still Rule 1
   // a. 09:30 closes 140, past 150: the stop moves to 150 (Rule 2 from now on); 09:35 closes 151, back above it: sold at 151, +8.
   // Rule 1 alone holds on (151 is under 161.8) to the day end at 145. That close crosses 150 upward too: a Buy CE either way
@@ -281,7 +282,7 @@ console.log("rules unit checks passed");
   // b. Rule 2 has taken over, so exit B no longer sells: 09:35 opens 139 below 09:30's close 140 and reaches 166 (C1's open) but closes
   // 149, under the stop 150: held. Rule 1 alone sells it at 166 (-7). On the forming candle too: no sale at the touch
   const b = [...head, bar(3, 150, 152, 139, 140), bar(4, 139, 166.5, 138.5, 149), bar(5, 149, 150, 144, 145)];
-  const rb = run(b), rb1 = run(b, null), rbLive = run(b.slice(0, 5), R.TRAIL, t0 + 4 * 300 + 100);
+  const rb = run(b), rb1 = run(b, null), rbLive = run(b.slice(0, 5), AT, t0 + 4 * 300 + 100);
   assert(rb[0].how === "day end" && rb[0].points === 14 && rb1[0].how === "retouch" && rb1[0].exit === 166, "exit B ends with Rule 2: " + JSON.stringify([rb[0], rb1[0]]));
   assert(rbLive[0].how === "open" && rbLive[0].last === 149, "no sale at the touch on the forming candle once Rule 2 runs: " + JSON.stringify(rbLive[0]));
   // c. one candle past two lines (09:30 closes 137, past 150 and 138.2): the stop jumps to 138.2; one line back it goes to 150
@@ -306,15 +307,26 @@ console.log("rules unit checks passed");
   assert(rf2[0].how === "open" && rf2[0].trail === undefined, "inside the buffer: no line crossed yet: " + JSON.stringify(rf2[0]));
   // g. the candle status words: held with the stop moved, and sold by it
   const said = (t) => { const r = R.readOf({ trade: t, bars: a, seconds: 300, now: Infinity }); return r.word + ": " + r.why; };
-  const open = run(a.slice(0, 4), R.TRAIL, t0 + 4 * 300 + 100)[0];
+  const open = run(a.slice(0, 4), AT, t0 + 4 * 300 + 100)[0];
   assert(said(ra[0]) === "exit: price closed back above the 50.0% level" && said(open) === "carry: price stays below the 50.0% level", "the words: " + [said(ra[0]), said(open)].join(" | "));
   // h. the CE mirror (every price p as 300 - p)
   const flip = (x) => ({ time: x.time, open: 300 - x.open, high: 300 - x.low, low: 300 - x.high, close: 300 - x.close });
   const lvUp = R.levelsOf(R.moveOfDay({ open: 200, high: 200, low: 100, close: 110 }));
-  const h = R.paperTrades({ bars: a.map(flip), levelsAt: () => lvUp, now: Infinity, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: true, trail: R.TRAIL }).trades;
+  const h = R.paperTrades({ bars: a.map(flip), levelsAt: () => lvUp, now: Infinity, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: true, trail: AT }).trades;
   assert(h[0].side === "CE" && h[0].how === "trail" && h[0].exit === 149 && h[0].points === 8 && h[0].trail.stop === 150, "the CE mirror: " + JSON.stringify(h[0]));
-  // i. the replays run Rule 2 unless told not to; trail null is Rule 1 alone, exactly as before 9 October
+  // i. the replays run Rule 2 as the page does unless told not to; trail null is Rule 1 alone, exactly as before 9 October
   const rp = (trail) => R.replayDay({ bars: a, move: "prev", previous: { open: 100, high: 200, low: 100, close: 190 }, seconds: 300, signal: "crossed", trail }).trades;
-  assert(rp(undefined)[0].how === "trail" && JSON.stringify(rp(null)) === JSON.stringify(r1), "replayDay: Rule 2 by default, Rule 1 alone with null");
+  assert(JSON.stringify(rp(undefined)) === JSON.stringify(run(a, R.TRAIL)) && rp(AT)[0].how === "trail" && JSON.stringify(rp(null)) === JSON.stringify(r1), "replayDay: Rule 2 as the page runs it by default, Rule 1 alone with null");
+  // j. the page's setting (the owner's choice, 9 October: "Stop one Fibonacci level back"): all 7 lines, no buffer, one line back.
+  // a: 09:30 closes 140, past 150: the line behind 150 is 161.8, the line the call broke, so the stop stays there; 09:35 closes 151,
+  // under 161.8: held, to the day end at 145 (+14). c: 09:30 closes 137, past 150 and 138.2: the stop goes to 150, one line back
+  // from 138.2; 09:35 closes 138, 09:40 closes 144, under 150: held to the day end, +15. A close back above 150 would sell it
+  assert(R.TRAIL.place === "back" && R.TRAIL.lines === "all" && R.TRAIL.buffer === "none", "the page's setting: " + JSON.stringify(R.TRAIL));
+  const ja = run(a, R.TRAIL), jc = run(c, R.TRAIL), jcSold = run([...c.slice(0, 5), bar(5, 144, 152, 143, 151)], R.TRAIL);
+  assert(ja[0].how === "day end" && ja[0].exit === 145 && ja[0].points === 14 && ja[0].trail.stop === 161.8 && ja[0].trail.line === 150, "one line back from the first line: the stop stays on 161.8: " + JSON.stringify(ja[0]));
+  assert(jc[0].how === "day end" && jc[0].points === 15 && jc[0].trail.stop === 150 && jc[0].trail.stopRatio === 0.5 && jc[0].trail.line === 138.2, "one line back from 138.2: the stop on 150: " + JSON.stringify(jc[0]));
+  assert(jcSold[0].how === "trail" && jcSold[0].exit === 151 && jcSold[0].points === 8, "a close back above 150 sells: " + JSON.stringify(jcSold[0]));
+  const jSaid = R.readOf({ trade: jc[0], bars: c, seconds: 300, now: Infinity });
+  assert(jSaid.word === "carry" && jSaid.why === "price stays below the 50.0% level", "the words name the stop's line: " + JSON.stringify(jSaid));
   console.log("Rule 2 in the held break checks passed");
 }

@@ -234,9 +234,9 @@ branch from `main`.
   close, then back to `c1Open`, tick by tick), else at the day end; never at its target. While one is open, no new call
   that way. The lab's `run()` mirrors it (`holdBreaks !== false`).
 - Rule 2 of the owner's specification (9 October): `trail` / `trail` (with holdBreaks), `Rules.TRAIL` / `rule.TRAIL`, the
-  owner's choice `{ lines: "all", buffer: "none", place: "at" }`, passed by the index page, the watcher and `replayDay`
+  owner's choice `{ lines: "all", buffer: "none", place: "back" }` (#115 had `place: "at"`), passed by the index page, the watcher and `replayDay`
   (`replayDay({ trail: null })` is Rule 1 alone). A held break whose candle closes beyond a further line (on `levelsAt`)
   gets `trail: { stop, stopRatio, line, ratio }` (`Rules.trailStep` / `rule.trail_step`, the stop never moves back);
   from then exits A and B are off and it ends `"trail"` at the close of a candle back past `trail.stop`, or at the day
-  end. The buffers (`"fixed"` points, `"atr"` x `Rules.atrBefore`) and `place: "back"` and `lines: "middle"` are research
+  end. The buffers (`"fixed"` points, `"atr"` x `Rules.atrBefore`) and `place: "at"` and `lines: "middle"` are research
   settings only (lab/replay.js rows, check_rule.py jobs); lab/check.js holds the specification's test cases T1 to T11.

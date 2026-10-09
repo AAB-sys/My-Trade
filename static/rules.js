@@ -116,12 +116,14 @@
     }
     return out;
   }
-  // Rule 2 as the index page, the server's watcher and the replays run it (the owner's choice, 9 October afternoon: "Rule 2 on all
-  // 7 lines"): section 5 of the specification, no buffer and the stop at the line crossed, on all seven lines of the chart, so with
-  // "today so far" lines a close past the day's low or high so far (the 0% or 100% line) moves the stop there too. The other
-  // settings (lines: "middle", the specification's 23.6% to 78.6% only; buffer: "fixed" points, or "atr" mult x ATR with points
-  // until 14 candles have closed; place: "back") are for the research engine to compare; none goes live without the owner's yes
-  const TRAIL = { lines: "all", buffer: "none", place: "at" };
+  // Rule 2 as the index page, the server's watcher and the replays run it (the owner's choices, 9 October afternoon: "Rule 2 on all
+  // 7 lines", then "Stop one Fibonacci level back", each in its own PR): no buffer, on all seven lines of the chart, the stop one
+  // Fibonacci line back from the line crossed (the specification's ONE_LEVEL_BACK, 6.3: the line just behind it; when that is the
+  // line the call broke, the stop stays there). With "today so far" lines a close past the day's low or high so far (the 0% or 100%
+  // line) counts as crossing it too. The other settings (lines: "middle", the specification's 23.6% to 78.6% only; buffer:
+  // "fixed" points, or "atr" mult x ATR with points until 14 candles have closed; place: "at", the stop on the line crossed, as
+  // PR #115 ran it) are for the research engine to compare; none goes live without the owner's yes
+  const TRAIL = { lines: "all", buffer: "none", place: "back" };
 
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
   //   bars       the session's candles, oldest first (several days together are allowed: a new day ends the old day's calls)
