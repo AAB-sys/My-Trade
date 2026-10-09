@@ -635,10 +635,13 @@ TOKEN_CHECK_SECONDS = float(os.environ.get("DHAN_TOKEN_CHECK_SECONDS", "1800"))
 # a call that enters is recorded at once (its option, its premium paid), a call that ends is marked, and the day's
 # calls are recorded for the CSV. The page does all this too; whichever is first wins, the other finds the record.
 WATCH_INTERVAL = os.environ.get("WATCH_INTERVAL", "5m")                  # the time frame the owner trades on
-WATCH_LEVELS = os.environ.get("WATCH_LEVELS", "today")                    # "today" (today so far) or "prev" (previous day)
+# the levels modes watched, each by itself: "today" (today so far) and "prev" (previous day). Until 9 October only "today": a
+# call on previous-day lines got its option and premium only while a page was open on them (the owner that day: "yes, build it")
+WATCH_LEVELS = tuple(m.strip() for m in os.environ.get("WATCH_LEVELS", "today,prev").split(",") if m.strip())
 WATCH_SIGNAL = os.environ.get("WATCH_SIGNAL", "both")                     # "held", "crossed" or "both"
 WATCH_SECONDS = float(os.environ.get("WATCH_SECONDS", "5"))
-WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL != "1d" and WATCH_LEVELS in ("today", "prev") and WATCH_SIGNAL in ("held", "crossed", "both")
+WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL != "1d" and bool(WATCH_LEVELS) and all(m in ("today", "prev") for m in WATCH_LEVELS) and WATCH_SIGNAL in ("held", "crossed", "both")
+WATCH_SETTING = f"{WATCH_INTERVAL} {'+'.join(WATCH_LEVELS)} {WATCH_SIGNAL}"  # as /health shows it
 # The live feed (the stream, and the poll behind it) used to run only while an index page was open. The watcher needs the
 # candle forming now and the open calls' premiums whether or not a page is open, so in market hours the feed runs for the
 # watcher too: the indices it watches, and the option contracts behind its open calls (the Sell mark works with no page).
@@ -654,18 +657,34 @@ watch_retry: dict = {}  # call key -> when to try registering its option again, 
 
 
 def watch_index(name: str) -> dict:
-    """One look at one index: the day's candles as the page has them (Dhan's, with the one forming now from the ticks), the
-    levels (previous day's; or today so far, each candle against the day's range up to it, as the page judges it since
-    8 October), the rule, then the records and the day's calls brought up to date. Returns counts."""
+    """One look at one index: the day's candles as the page has them (Dhan's, with the one forming now from the ticks),
+    fetched once, then each levels mode watched (watch_levels). A problem with one mode (the previous day's figures not
+    readable) leaves the other watched. Returns counts, and the problem, if any."""
     key, seconds = WATCH_INTERVAL, INTERVALS[WATCH_INTERVAL]["bar_seconds"]
     today = dhan.today_ist()
-    minutes = seconds // 60
-    all_candles = dhan.intraday(name, minutes)
+    all_candles = dhan.intraday(name, seconds // 60)
     todays = [b for b in all_candles if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
     bars = with_live_candles(todays, name, key)
+    out = {"calls": 0, "open": 0, "problem": None}
     if not bars:
-        return {"calls": 0, "open": 0}
-    if WATCH_LEVELS == "prev":
+        return out
+    for levels_mode in WATCH_LEVELS:
+        try:
+            got = watch_levels(name, levels_mode, bars, all_candles, today)
+        except Exception as exc:
+            out["problem"] = out["problem"] or f"{name} {levels_mode}: {type(exc).__name__}: {str(exc)[:120]}"
+            log.warning("watch: %s %s: %s", name, levels_mode, exc)
+            continue
+        out["calls"] += got["calls"]
+        out["open"] += got["open"]
+    return out
+
+
+def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, today) -> dict:
+    """The rule on one levels mode: the levels (previous day's; or today so far, each candle against the day's range up to
+    it, as the page judges it since 8 October), the rule, then the records and the day's calls brought up to date."""
+    key, seconds = WATCH_INTERVAL, INTERVALS[WATCH_INTERVAL]["bar_seconds"]
+    if levels_mode == "prev":
         previous = dhan.previous_day(name, all_candles)
         if not previous:
             return {"calls": 0, "open": 0}
@@ -678,12 +697,12 @@ def watch_index(name: str) -> dict:
     given = {}  # the calls given live in this setting (their options recorded): each stays, whatever Dhan's final candle says (9 October)
     for r in sorted(dhan.records_for(name), key=lambda r: r["paid_at"]):
         parts = r["key"].split("|")
-        if len(parts) == 5 and parts[0] == name and parts[1] == key and parts[4] == WATCH_LEVELS and parts[2].isdigit():
+        if len(parts) == 5 and parts[0] == name and parts[1] == key and parts[4] == levels_mode and parts[2].isdigit():
             given.setdefault(int(parts[2]), parts[3])
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given)["trades"]  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
     rows = []
     for t in trades:
-        call_key = rule.call_key(name, key, t, WATCH_LEVELS)
+        call_key = rule.call_key(name, key, t, levels_mode)
         read = rule.read_of(t, bars, seconds, now)  # the candle verdict, for the day's calls CSV (the research engine's), as the page gives it
         carry = rule.carry_of(t, bars, seconds, now)  # and the carry read (idea P5's question), the same way
         rec = dhan.record_of(call_key)
@@ -710,7 +729,7 @@ def watch_index(name: str) -> dict:
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None})
     if rows:
-        study.record_calls(name, key, WATCH_LEVELS, WATCH_SIGNAL, today.isoformat(), rows)
+        study.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
 
 
@@ -751,22 +770,23 @@ def measured(what: str, work, *args):
 async def calls_forever() -> None:
     """The watcher's loop: every WATCH_SECONDS in market hours, each index on Dhan: the calls, then their premiums."""
     if not WATCH_ON:
-        watch_state["problem"] = f"the watcher's setting is not one the page has: {WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}"
+        watch_state["problem"] = f"the watcher's setting is not one the page has: {WATCH_SETTING}"
         log.warning("watch: %s", watch_state["problem"])
         return
     while True:
         try:
             if DHAN_ON and in_tick_hours():
                 calls = open_now = without_id = 0
-                premiums = None
+                premiums = problem = None
                 for name in dhan.OPTION_INDICES:
                     got = await asyncio.to_thread(measured, f"call tracker {name}", watch_index, name)
                     calls += got["calls"]
                     open_now += got["open"]
+                    problem = problem or got.get("problem")  # one levels mode that could not be watched just now, if so
                     more = await asyncio.to_thread(measured, f"premiums {name}", watch_premiums, name)  # after the calls: a call entering is recorded first, the premiums now next
                     without_id += more["without_id"]  # open calls whose contract is not on the feed yet (the instrument list still loading, or one it does not know)
                     premiums = premiums or more["premiums"]  # why a premium could not be read just now, if so
-                watch_state.update(at=now_ist(), calls=calls, open=open_now, without_id=without_id, premiums=premiums, problem=None)
+                watch_state.update(at=now_ist(), calls=calls, open=open_now, without_id=without_id, premiums=premiums, problem=problem)
         except Exception as exc:
             watch_state["problem"] = f"{type(exc).__name__}: {str(exc)[:160]}"
             log.warning("watch: %s", exc)
@@ -941,7 +961,7 @@ def feed_state() -> dict:
             "status": d["status"], "stream": d["stream"], "stream_tick": d["stream_tick"], "poll": d["poll"], "tiles": d["tiles"],
             "tiles_problem": d["tiles_problem"],
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
-            "watch": {"setting": f"{WATCH_INTERVAL} {WATCH_LEVELS} {WATCH_SIGNAL}", **watch_state},
+            "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem()}  # null, or what Dhan's instrument list says differs from the index ids this code uses
 
 

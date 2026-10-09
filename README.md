@@ -125,8 +125,8 @@ poll, who is watching, the last price and when) with no login. `check_dhan.bat` 
 price, the candles and the option chain, and says in plain words what to fix.
 Only data is read; nothing here can place an order. `DHAN_POLL_SECONDS` (default
 15) is how often the index page refreshes its candles and calls on Dhan;
-`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL` (defaults `5m`, `today`, `both`)
-are the setting the server watches the calls in by itself, every `WATCH_SECONDS`
+`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL` (defaults `5m`, `today,prev`, `both`:
+both levels modes, each by itself, since 9 October) are the settings the server watches the calls in by itself, every `WATCH_SECONDS`
 (5) in market hours, so a call entering with no page open is still recorded
 (`rule.py` is the page's rule in Python; `python3 check_rule.py` proves the two
 give the same calls); with the watcher on, the live feed runs all session whether
