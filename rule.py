@@ -114,13 +114,63 @@ def enter_at(sig: dict, bar: dict):
     return t
 
 
+def trail_step(st: dict, close: float, levels: list, side: str, place: str, buf: float) -> str:
+    """Rule 2 of the owner's specification (9 October; see static/rules.js trailStep): on one closed candle, the exit against the
+    stop as it stood ("sell"), then the stop moved to the furthest line crossed beyond the furthest one so far ("at"), or to the
+    line behind it ("back"), never backward. st {stop, stopRatio, line, ratio} is changed in place."""
+    d = 1 if side == "CE" else -1
+    if d * (close - st["stop"]) < 0:
+        return "sell"
+    frm = st["line"] if st["line"] is not None else st["stop"]
+    far = None
+    for l in levels:
+        if d * (l["price"] - frm) > 0 and d * (close - l["price"]) > buf and (far is None or d * (l["price"] - far["price"]) > 0):
+            far = l
+    if far is None:
+        return "hold"
+    st["line"], st["ratio"] = far["price"], far["ratio"]
+    to = far
+    if place == "back":
+        to = None
+        for l in levels:
+            if d * (far["price"] - l["price"]) > 0 and (to is None or d * (l["price"] - to["price"]) > 0):
+                to = l
+    if to is not None and d * (to["price"] - st["stop"]) > 0:
+        st["stop"], st["stopRatio"] = to["price"], to["ratio"]
+    return "hold"
+
+
+def atr_before(bars: list, period: int) -> list:
+    """The ATR for Rule 2's buffer, as static/rules.js atrBefore: [i] is the ATR through the candle before bars[i] (Wilder's, begun
+    with the plain average of the first `period` true ranges; a day's first candle its own high - low); None until then."""
+    out, atr, total = [None], None, 0
+    for j in range(len(bars) - 1):
+        b = bars[j]
+        p = bars[j - 1]["close"] if j > 0 and day_of(bars[j - 1]["time"]) == day_of(b["time"]) else None
+        tr = b["high"] - b["low"] if p is None else max(b["high"] - b["low"], abs(b["high"] - p), abs(b["low"] - p))
+        if j < period:
+            total += tr
+            if j == period - 1:
+                atr = total / period
+        else:
+            atr = (atr * (period - 1) + tr) / period
+        out.append(atr)
+    return out
+
+
+TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choice, 9 October (see static/rules.js TRAIL)
+
+
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
-                 hold_breaks: bool = False) -> dict:
+                 hold_breaks: bool = False, trail: dict | None = None) -> dict:
     """hold_breaks: the owner's exit rule "Hold Through a Level Break" (8 October night; see static/rules.js): a crossed call is held
     through its target, sold on a close back across its line ("back"), on a return to the signal candle's open after a candle
-    opened beyond the previous close ("retouch"), or at the day end; no new call that way while it is held."""
+    opened beyond the previous close ("retouch"), or at the day end; no new call that way while it is held.
+    trail: with hold_breaks, Rule 2 of the owner's specification (9 October; see static/rules.js): once a candle closes beyond a
+    further line, the stop moves to it, line by line, and a close back past the stop sells ("trail"); exits A and B end there.
+    None: Rule 1 alone."""
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -135,6 +185,21 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
     closed = [b for b in bars if end_of(b, seconds) <= now]
     forming = bars[len(closed)] if len(bars) > len(closed) else None
+    atr = atr_before(closed, trail.get("period") or 14) if trail and trail.get("buffer") == "atr" else None
+
+    def trail_lines(levels):
+        """The lines that move Rule 2's stop: the specification's, 23.6% to 78.6%, or all seven."""
+        return levels if trail.get("lines") == "all" else [l for l in levels if l["ratio"] != 0 and l["ratio"] != 1]
+
+    def buffer_at(i):
+        """Rule 2's buffer for closed candle i."""
+        if not trail:
+            return 0
+        if trail.get("buffer") == "fixed":
+            return trail["points"]
+        if trail.get("buffer") == "atr":
+            return trail["mult"] * atr[i] if atr[i] is not None else (trail.get("points") or 0)
+        return 0
 
     def gain(t, price):
         return round2(price - t["entry"] if t["side"] == "CE" else t["entry"] - price)
@@ -180,15 +245,23 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             return t["c1Open"] >= t["level"] and bar["open"] < prev_close and bar["high"] >= t["c1Open"]
         return t["c1Open"] <= t["level"] and bar["open"] > prev_close and bar["low"] <= t["c1Open"]
 
-    def settle(t, bar, prev_close):
+    def settle(t, bar, prev_close, levels, buf):
         """The target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target."""
-        if t.get("hold"):  # a held break: exit B, then exit A at the close; the target does not end it
-            if retouch(t, bar, prev_close):
-                end(t, t["c1Open"], bar, "retouch")
-                return False
-            if bar["close"] > t["level"] if t["side"] == "PE" else bar["close"] < t["level"]:
-                end(t, bar["close"], bar, "back")
-                return False
+        if t.get("hold"):  # a held break: exit B, then exit A at the close (Rule 1); the target does not end it
+            if not t.get("trail"):
+                if retouch(t, bar, prev_close):
+                    end(t, t["c1Open"], bar, "retouch")
+                    return False
+                if bar["close"] > t["level"] if t["side"] == "PE" else bar["close"] < t["level"]:
+                    end(t, bar["close"], bar, "back")
+                    return False
+            if trail:  # Rule 2: the stop on the lines crossed since, from the line the call broke
+                st = t.get("trail") or {"stop": t["level"], "stopRatio": t["ratio"], "line": None, "ratio": None}
+                if trail_step(st, bar["close"], trail_lines(levels), t["side"], trail["place"], buf) == "sell":
+                    end(t, bar["close"], bar, "trail")
+                    return False
+                if st["line"] is not None:
+                    t["trail"] = st  # the first further line crossed: Rule 2 from now on
             return True
         while reaches(t, bar):
             beyond = t["ladder"][0] if carry_on is not None and t["ladder"] else None
@@ -228,7 +301,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 else:
                     still.append(t)
             open_ = still
-        open_ = [t for t in open_ if settle(t, bar, prev_bar["close"])]
+        open_ = [t for t in open_ if settle(t, bar, prev_bar["close"], levels, buffer_at(i))]
         if exit_back:  # idea P4: the candle says exit, at its close
             still = []
             for t in open_:
@@ -278,8 +351,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             open_ = still
         still = []
         for t in open_:
-            if t.get("hold"):  # exit B tick by tick; exit A waits for the close
-                if retouch(t, forming, last["close"]):
+            if t.get("hold"):  # exit B tick by tick; exit A and Rule 2 wait for the close
+                if not t.get("trail") and retouch(t, forming, last["close"]):
                     end(t, t["c1Open"], forming, "retouch")
                 else:
                     still.append(t)
@@ -301,13 +374,14 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     return {"trades": trades, "closed": len(closed)}
 
 
-def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None) -> dict:
-    """A finished day replayed, as the Study page and the research engine do it."""
+def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL) -> dict:
+    """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
+    setting is given (None: Rule 1 alone)."""
     fixed = (levels_of(move_of_day(previous)) if previous else None) if move == "prev" else None
     if move == "prev" and not fixed:
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True)
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True, trail)
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},
@@ -343,11 +417,12 @@ def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
     rows carry what the page would say; check_rule.py keeps the two the same."""
     if t.get("entry") is None and t.get("how") != "pending":
         return None
-    if t.get("hold"):  # a held break: the verdict is the owner's exit rule itself
-        name = "the level" if t.get("ratio") is None else f"the {t['ratio'] * 100:.1f}% level"
+    if t.get("hold"):  # a held break: the verdict is the owner's exit rule itself, worded for the line its stop is on (Rule 2: the line it moved to)
+        ratio = t["trail"]["stopRatio"] if t.get("trail") else t.get("ratio")
+        name = "the level" if ratio is None else f"the {ratio * 100:.1f}% level"
         pe, how = t["side"] == "PE", t.get("how")
-        word = "exit" if how in ("back", "retouch") else "carry"
-        why = (f"price closed back {'above' if pe else 'below'} {name}" if how == "back" else f"price came back to where the {'fall' if pe else 'rise'} started" if how == "retouch"
+        word = "exit" if how in ("back", "retouch", "trail") else "carry"
+        why = (f"price closed back {'above' if pe else 'below'} {name}" if how in ("back", "trail") else f"price came back to where the {'fall' if pe else 'rise'} started" if how == "retouch"
                else f"price stays {'below' if pe else 'above'} {name}")
         return {"depth": None, "body": None, "back": None, "retest": False, "strength": None, "word": word, "why": why,
                 "exitAt": t.get("exitTime") if word == "exit" else None, "exitPrice": t.get("exit") if word == "exit" else None}

@@ -534,9 +534,10 @@
   //   a break  - the owner's exit rule "Hold Through a Level Break" (8 October night; Rules.paperTrades holdBreaks): a call
   //             from a crossed signal is held through its target and sold on a close back across its line, on a return to
   //             the signal candle's open after a candle opened further away, or at the day end; while it is held, no new
-  //             call that way. Not on day candles
+  //             call that way. Not on day candles. Rule 2 of the owner's specification (9 October; Rules.TRAIL): once a candle closes
+  //             beyond a further line, the stop moves to that line, line by line, and a close back past it sells
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", retouch: "Came back", sold: "Sold at the Sell mark", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", retouch: "Came back", trail: "Closed back past the moved stop", sold: "Sold at the Sell mark", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
@@ -553,7 +554,7 @@
     const bars = sessionBars();
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
-                               dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d" });
+                               dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL });
   }
 
   function drawPaper(levels) {
@@ -682,11 +683,16 @@
     const way = t.side === "PE" ? "above" : "below";
     return t.how === "target" ? "target hit" : t.how === "day end" ? "day end" : t.how === "sold" ? "premium fell 35% of what was paid"
       : t.how === "back" ? `a candle closed ${way} ${fmt.format(t.level)}` : t.how === "retouch" ? `price came back to ${fmt.format(t.c1Open)}`
+      : t.how === "trail" ? `index candle closed ${way} ${stopName(t)}`
       : t.how === "candle" ? "a candle closed back across the line" : t.how;
   }
+  // Rule 2's stop by its line, the way the owner's specification writes it (section 7): "38.2% (24,380.00)"
+  const stopName = (t) => `${(t.trail.stopRatio * 100).toFixed(1)}% (${fmt.format(t.trail.stop)})`;
   function targetCell(t, r) {
     if (t.exit != null)
       return `<td class="target">${fmt.format(t.target)}<small class="${closedTone(t)}">sold at ${callTime(t.exitTime)}</small></td>`;
+    if (t.hold && t.trail)  // Rule 2: the stop has moved to a further line; the note always names the stop's line (section 7)
+      return `<td class="target">${fmt.format(t.target)}<small>target passed, continue · sell if a candle closes ${t.side === "PE" ? "above" : "below"} ${stopName(t)}</small></td>`;
     if (t.hold) {
       const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
       const past = t.entry != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));

@@ -301,7 +301,9 @@ The app is ready to run on a platform that deploys from GitHub:
   target and no stop, one call per level (by its price) and direction until the index closes
   back across it, closed at the day's end; a call from a break is held through its
   target and sold when a candle closes back across the broken line, when the price
-  comes back to where the break began, or at the day's end), listed one row each in the owner's
+  comes back to where the break began, or at the day's end; once a candle closes past
+  a further line, its stop moves to that line, line by line, and a close back past
+  the stop sells it), listed one row each in the owner's
   format: time, call with its contract, signal, call entry (the strike), call
   target (the next line on the chart in the call's direction, following the lines
   as they move; with "hit" or "not reached" once ended), premium paid -> now and

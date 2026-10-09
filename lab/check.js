@@ -230,3 +230,91 @@ console.log("rules unit checks passed");
   assert(d.length === 1 && d[0].side === "CE" && d[0].level === 138.2 && d[0].entry === 141 && d[0].how === "retouch" && d[0].exit === 134 && d[0].points === -7, "the CE mirror: " + JSON.stringify(d));
   console.log("hold through a level break checks passed");
 }
+
+// ---- Rule 2 of the owner's "Trading Rules Specification" (9 October): the stop moved line by line. First the specification's own
+// test cases (6.8) and worked example (6.4), on its lines 38.2% = 24380, 50.0% = 24450, 61.8% = 24520 and its initial stop 24300
+{
+  const L = [{ ratio: 0.382, price: 24380 }, { ratio: 0.5, price: 24450 }, { ratio: 0.618, price: 24520 }];
+  const walk = (side, place, buf, closes, stop = side === "CE" ? 24300 : 24600) => {  // the stop after each close, or SELL
+    const st = { stop, stopRatio: null, line: null, ratio: null };
+    return closes.map(c => R.trailStep(st, c, L, side, place, buf) === "sell" ? "SELL" : st.stop).join(" ");
+  };
+  assert(walk("CE", "at", 0, [24395, 24460, 24440]) === "24380 24450 SELL", "T1: " + walk("CE", "at", 0, [24395, 24460, 24440]));
+  assert(walk("CE", "at", 10, [24385]) === "24300", "T2: inside the buffer, not crossed");
+  assert(walk("CE", "at", 10, [24395]) === "24380", "T3: 38.2% crossed by the buffer");
+  assert(walk("CE", "at", 10, [24535]) === "24520", "T4: one candle past three lines jumps to the furthest");
+  assert(walk("CE", "at", 10, [24445], 24450) === "SELL", "T5: a close below the stop sells");
+  const t6 = { stop: 24380, stopRatio: 0.382, line: 24450, ratio: 0.5 };
+  assert(R.trailStep(t6, 24445, L, "CE", "back", 10) === "hold" && t6.stop === 24380, "T6: one line back, 24445 is above the stop 24380: HOLD");
+  assert(walk("CE", "back", 10, [24395]) === "24300", "T7: the first line crossed has no line behind it: the stop stays");
+  assert(walk("CE", "back", 10, [24465], 24400) === "24400", "T8: the line behind (24380) is below the stop 24400: the stop stays");
+  assert(walk("PE", "at", 10, [24515, 24505, 24525]) === "24600 24520 SELL", "T9: " + walk("PE", "at", 10, [24515, 24505, 24525]));
+  // 6.4, CE with a buffer of 10: candles A to E, the stop at the line and one line back
+  assert(walk("CE", "at", 10, [24385, 24395, 24455, 24465, 24445]) === "24300 24380 24380 24450 SELL", "6.4 at the line");
+  assert(walk("CE", "back", 10, [24385, 24395, 24455, 24465, 24445]) === "24300 24300 24300 24380 24380", "6.4 one line back");
+  // 5.4, the worked examples with no buffer, CE and PE
+  assert(walk("CE", "at", 0, [24395, 24460, 24440]) === "24380 24450 SELL" && walk("PE", "at", 0, [24440, 24370, 24390], 24520) === "24450 24380 SELL", "5.4 worked examples");
+  // T10: the ATR through the candle before: 14 candles with a true range of 20, then one with a range of 100: its buffer is still
+  // 0.5 x 20 = 10. T11: 14 candles with a true range of 30 closing at 24400, then high 24420 low 24400: TR 20, ATR 410 / 14 = 29.29
+  const flat = (n, half) => Array.from({ length: n }, (_, i) => ({ time: t0 + i * 300, open: 24400, high: 24400 + half, low: 24400 - half, close: 24400 }));
+  const a10 = R.atrBefore([...flat(14, 10), { time: t0 + 14 * 300, open: 24400, high: 24480, low: 24380, close: 24470 }], 14);
+  assert(a10[14] === 20 && a10.slice(0, 14).every(x => x == null), "T10: the ATR before the big candle is 20, so its buffer is 10: " + a10[14]);
+  const a11 = R.atrBefore([...flat(14, 15), { time: t0 + 14 * 300, open: 24410, high: 24420, low: 24400, close: 24410 }, { time: t0 + 15 * 300, open: 24410, high: 24411, low: 24409, close: 24410 }], 14);
+  assert(a11[14] === 30 && R.round2(a11[15]) === 29.29, "T11: the new ATR is 29.29: " + a11[15]);
+  console.log("Rule 2 specification test cases T1 to T11 passed");
+}
+
+// ---- Rule 2 inside the held break (the owner's two rules together, specification section 8), on the previous day's lines 100 to
+// 200 (100, 121.4, 138.2, 150, 161.8, 176.4, 200): C1 (09:20) opens 166 above 161.8 and closes 160 below it: Buy PE, in at 159
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const lv = R.levelsOf(R.moveOfDay({ open: 100, high: 200, low: 100, close: 190 }));
+  const run = (bars, trail = R.TRAIL, now = Infinity) => R.paperTrades({ bars, levelsAt: () => lv, now, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: true, trail }).trades;
+  const head = [bar(0, 170, 171, 168, 170), bar(1, 166, 167, 158, 160), bar(2, 159, 161, 150, 151)];  // 09:25 reaches 150 but closes above it: still Rule 1
+  // a. 09:30 closes 140, past 150: the stop moves to 150 (Rule 2 from now on); 09:35 closes 151, back above it: sold at 151, +8.
+  // Rule 1 alone holds on (151 is under 161.8) to the day end at 145. That close crosses 150 upward too: a Buy CE either way
+  const a = [...head, bar(3, 150, 152, 139, 140), bar(4, 141, 152, 140, 151), bar(5, 151, 152, 144, 145)];
+  const ra = run(a), r1 = run(a, null);
+  assert(ra.length === 2 && ra[1].side === "CE" && ra[0].how === "trail" && ra[0].exit === 151 && ra[0].exitTime === t0 + 4 * 300 && ra[0].points === 8 && ra[0].trail.stop === 150 && ra[0].trail.stopRatio === 0.5,
+         "sold on the close back above the moved stop: " + JSON.stringify(ra));
+  assert(r1.length === 2 && r1[1].side === "CE" && r1[0].how === "day end" && r1[0].exit === 145 && r1[0].trail === undefined, "Rule 1 alone: held to the day end: " + JSON.stringify(r1));
+  // b. Rule 2 has taken over, so exit B no longer sells: 09:35 opens 139 below 09:30's close 140 and reaches 166 (C1's open) but closes
+  // 149, under the stop 150: held. Rule 1 alone sells it at 166 (-7). On the forming candle too: no sale at the touch
+  const b = [...head, bar(3, 150, 152, 139, 140), bar(4, 139, 166.5, 138.5, 149), bar(5, 149, 150, 144, 145)];
+  const rb = run(b), rb1 = run(b, null), rbLive = run(b.slice(0, 5), R.TRAIL, t0 + 4 * 300 + 100);
+  assert(rb[0].how === "day end" && rb[0].points === 14 && rb1[0].how === "retouch" && rb1[0].exit === 166, "exit B ends with Rule 2: " + JSON.stringify([rb[0], rb1[0]]));
+  assert(rbLive[0].how === "open" && rbLive[0].last === 149, "no sale at the touch on the forming candle once Rule 2 runs: " + JSON.stringify(rbLive[0]));
+  // c. one candle past two lines (09:30 closes 137, past 150 and 138.2): the stop jumps to 138.2; one line back it goes to 150
+  const c = [...head, bar(3, 150, 151, 136, 137), bar(4, 137, 139, 135, 138), bar(5, 138, 145, 137, 144)];
+  const rc = run(c), rcBack = run(c, { lines: "middle", buffer: "none", place: "back" });
+  assert(rc[0].how === "trail" && rc[0].exit === 144 && rc[0].trail.stop === 138.2 && rc[0].trail.line === 138.2, "jumps to the furthest line: " + JSON.stringify(rc[0]));
+  assert(rcBack[0].how === "day end" && rcBack[0].trail.stop === 150 && rcBack[0].trail.line === 138.2, "one line back: the stop on 150: " + JSON.stringify(rcBack[0]));
+  // d. one line back from the first line crossed: the line behind 150 is 161.8, the line the call broke, so the stop stays there
+  const rd = run([...head, bar(3, 150, 152, 139, 140), bar(4, 141, 158, 140, 157)], { lines: "middle", buffer: "none", place: "back" });
+  assert(rd[0].how === "day end" && rd[0].trail.stop === 161.8 && rd[0].trail.stopRatio === 0.382, "one line back from the first line: the stop stays on the broken line: " + JSON.stringify(rd[0]));
+  // e. on all seven lines (the owner's choice) a close below 100, the 100% line, moves the stop there; on the specification's lines
+  // (23.6% to 78.6%) it does not
+  const e = [...head, bar(3, 150, 152, 139, 140), bar(4, 140, 141, 120, 121), bar(5, 121, 122, 98, 99), bar(6, 99, 102, 98, 101)];
+  const re = run(e, { lines: "middle", buffer: "none", place: "at" }), reAll = run(e);
+  assert(reAll[0].how === "trail" && reAll[0].trail.stop === 100 && reAll[0].trail.stopRatio === 1 && reAll[0].exit === 101, "on all seven lines the 100% line moves the stop: " + JSON.stringify(reAll[0]));
+  assert(re[0].how === "day end" && re[0].trail.stop === 121.4 && re[0].points === 58, "on lines 23.6% to 78.6% it does not: " + JSON.stringify(re[0]));
+  // f. a buffer: 09:30 closes 145, 5 under 150: with a buffer of 10 it is not crossed (still Rule 1); 09:35 closes 139, 11 under: crossed
+  const f = [...head, bar(3, 150, 151, 144, 145), bar(4, 145, 146, 138.5, 139), bar(5, 139, 151, 138, 150.5)];
+  const rf = run(f, { lines: "middle", buffer: "fixed", points: 10, place: "at" });
+  assert(rf[0].how === "trail" && rf[0].exit === 150.5 && rf[0].trail.stop === 150, "a fixed buffer: " + JSON.stringify(rf[0]));
+  const rf2 = run(f.slice(0, 5), { lines: "middle", buffer: "fixed", points: 10, place: "at" }, t0 + 4 * 300 + 299);
+  assert(rf2[0].how === "open" && rf2[0].trail === undefined, "inside the buffer: no line crossed yet: " + JSON.stringify(rf2[0]));
+  // g. the candle status words: held with the stop moved, and sold by it
+  const said = (t) => { const r = R.readOf({ trade: t, bars: a, seconds: 300, now: Infinity }); return r.word + ": " + r.why; };
+  const open = run(a.slice(0, 4), R.TRAIL, t0 + 4 * 300 + 100)[0];
+  assert(said(ra[0]) === "exit: price closed back above the 50.0% level" && said(open) === "carry: price stays below the 50.0% level", "the words: " + [said(ra[0]), said(open)].join(" | "));
+  // h. the CE mirror (every price p as 300 - p)
+  const flip = (x) => ({ time: x.time, open: 300 - x.open, high: 300 - x.low, low: 300 - x.high, close: 300 - x.close });
+  const lvUp = R.levelsOf(R.moveOfDay({ open: 200, high: 200, low: 100, close: 110 }));
+  const h = R.paperTrades({ bars: a.map(flip), levelsAt: () => lvUp, now: Infinity, seconds: 300, dayCandles: false, signal: "crossed", holdBreaks: true, trail: R.TRAIL }).trades;
+  assert(h[0].side === "CE" && h[0].how === "trail" && h[0].exit === 149 && h[0].points === 8 && h[0].trail.stop === 150, "the CE mirror: " + JSON.stringify(h[0]));
+  // i. the replays run Rule 2 unless told not to; trail null is Rule 1 alone, exactly as before 9 October
+  const rp = (trail) => R.replayDay({ bars: a, move: "prev", previous: { open: 100, high: 200, low: 100, close: 190 }, seconds: 300, signal: "crossed", trail }).trades;
+  assert(rp(undefined)[0].how === "trail" && JSON.stringify(rp(null)) === JSON.stringify(r1), "replayDay: Rule 2 by default, Rule 1 alone with null");
+  console.log("Rule 2 in the held break checks passed");
+}
