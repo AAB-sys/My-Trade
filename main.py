@@ -20,6 +20,7 @@ import httpx
 import websockets
 
 import dhan
+import memwatch
 import study
 from providers import INDICES, INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 import rule
@@ -721,6 +722,12 @@ def watch_premiums(name: str) -> dict:
     return {"without_id": without_id, "premiums": problem}
 
 
+def measured(what: str, work, *args):
+    """One piece of the watcher's work, its memory measured (memwatch, 9 October)."""
+    with memwatch.watch(what):
+        return work(*args)
+
+
 async def calls_forever() -> None:
     """The watcher's loop: every WATCH_SECONDS in market hours, each index on Dhan: the calls, then their premiums."""
     if not WATCH_ON:
@@ -733,10 +740,10 @@ async def calls_forever() -> None:
                 calls = open_now = without_id = 0
                 premiums = None
                 for name in dhan.OPTION_INDICES:
-                    got = await asyncio.to_thread(watch_index, name)
+                    got = await asyncio.to_thread(measured, f"call tracker {name}", watch_index, name)
                     calls += got["calls"]
                     open_now += got["open"]
-                    more = await asyncio.to_thread(watch_premiums, name)  # after the calls: a call entering is recorded first, the premiums now next
+                    more = await asyncio.to_thread(measured, f"premiums {name}", watch_premiums, name)  # after the calls: a call entering is recorded first, the premiums now next
                     without_id += more["without_id"]  # open calls whose contract is not on the feed yet (the instrument list still loading, or one it does not know)
                     premiums = premiums or more["premiums"]  # why a premium could not be read just now, if so
                 watch_state.update(at=now_ist(), calls=calls, open=open_now, without_id=without_id, premiums=premiums, problem=None)
@@ -839,6 +846,18 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)  # the saved days are larg
 
 
 @app.middleware("http")
+async def measure_memory(request: Request, call_next):
+    """What each kind of page request costs in memory (memwatch, 9 October): the route's pattern names it, so
+    /detail/NIFTY%2050 and /detail/SENSEX are one kind."""
+    before = memwatch.rss_mb()
+    response = await call_next(request)
+    route = request.scope.get("route")
+    path = request.url.path
+    memwatch.note(f"page {getattr(route, 'path', None) or ('/static' if path.startswith('/static/') else path)}", before, memwatch.rss_mb())
+    return response
+
+
+@app.middleware("http")
 async def require_login(request: Request, call_next):
     path = request.url.path
     is_page = path == "/" or path in PAGE_EXACT or path.startswith(PAGE_PATHS[1:])
@@ -879,6 +898,7 @@ def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
     day's session was saved. No secret in here: dates, and a problem said in plain words."""
     return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(), "memory_mb": memory_mb(),
+            "memory": memwatch.summary(),  # where the memory goes (9 October): threads, the allocator, the most numerous objects, the biggest jumps
             "feed": feed_state(), "keep_awake": {k: v for k, v in keep_awake_state.items() if k != "url"} | {"on": bool(SELF_URL)}}
 
 
