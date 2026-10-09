@@ -144,13 +144,12 @@ premium fell 35%, day end), green for a gain and red for a loss; off the table o
 October evening, back on 8 October as the owner's exit signal, and in the day's
 calls CSV all along). A finished row is greyed. A finished call that
 no page saw enter reads "not seen at entry" in the premium cell: no page was
-open at its entry, so no premium could be recorded then (7 October). An open
-call whose option was first recorded more than two minutes after its entry (the
-server was restarting, or the rule changed during the session and the call
-appeared afterwards) says so under its premium: "paid: the price at 12:12 PM,
-not at entry" (8 October: the 10:35 NIFTY 50 call entered at 10:40 and showed
-118.65 paid, the price at 12:12; the same contract was 155.65 at 10:45). Its
-sell mark is 65% of that later price. The header
+open at its entry, so no premium could be recorded then (7 October). A call
+whose option was first recorded late (the server was restarting, or the rule
+changed during the session and the call appeared afterwards) holds the price
+when it was recorded, and its sell mark is 65% of that price; the cell no
+longer says so (the owner, 9 October: the note "paid: the price at ..., not at
+entry" taken off every row, "not required at all"). The header
 row stays in view while the page scrolls (owner's ask, 7 October). The list is in time order, the newest call at the
 top, open or finished alike (owner's ask, 7 October: an open call listed above a
 later one read as if it had been given later); one line keeps the score (owner's
