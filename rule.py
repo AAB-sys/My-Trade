@@ -179,7 +179,7 @@ def atr_before(bars: list, period: int) -> list:
     return out
 
 
-TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choice, 9 October (see static/rules.js TRAIL)
+TRAIL = {"lines": "all", "buffer": "none", "place": "back"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choices, 9 October (see static/rules.js TRAIL)
 
 
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
