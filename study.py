@@ -32,6 +32,7 @@ from pathlib import Path
 import httpx
 
 import dhan
+import memwatch
 from providers import INTERVALS, now_ist
 
 log = logging.getLogger("my-trade.study")
@@ -423,6 +424,12 @@ def pull_records(day: date) -> int:
 
 # ---------------------------------------------------------------- the loop
 
+def measured_save(day: date) -> dict | None:
+    """The day's partial copy, its memory measured (memwatch, 9 October)."""
+    with memwatch.watch("the day's partial copy"):
+        return save_day(day, False)
+
+
 def catch_up(days_back: int = 7) -> None:
     """Any finished weekday of the last days without a final copy is saved now (the server was asleep at its close)."""
     today = dhan.today_ist()
@@ -431,7 +438,9 @@ def catch_up(days_back: int = 7) -> None:
         day = today - timedelta(days=back)
         if day.weekday() >= 5 or is_complete(day) or (day == today and (now.hour, now.minute) < save_time()):
             continue
-        if save_day(day, complete=True) is None:
+        with memwatch.watch("the day's final save"):
+            saved = save_day(day, complete=True)
+        if saved is None:
             if day == today:
                 state["checked"] = today.isoformat()  # looked, and Dhan had no candle for today: a holiday, nothing to save
             continue
@@ -476,7 +485,7 @@ async def study_forever(dhan_on: bool) -> None:
                 changed = calls_version() != seen  # the page told of a call: the partial copy goes sooner, so a restart loses little
                 if time.monotonic() - partial_at >= (120 if changed else PARTIAL_SECONDS):
                     partial_at, seen = time.monotonic(), calls_version()
-                    await asyncio.to_thread(save_day, now.date(), False)
+                    await asyncio.to_thread(measured_save, now.date())
             if time.monotonic() - caught_up >= 3600 or ((now.hour, now.minute) >= save_time() and now.weekday() < 5 and not is_complete(now.date())):
                 caught_up = time.monotonic()
                 await asyncio.to_thread(catch_up)

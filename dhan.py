@@ -22,6 +22,7 @@ from pathlib import Path
 
 import httpx
 
+import memwatch
 from providers import bucket_start
 
 log = logging.getLogger("dhan")
@@ -109,14 +110,15 @@ def call(method: str, path: str, payload: dict | None = None) -> dict:
     if payload is not None:
         payload = {**payload, "dhanClientId": client_id}
     _pace(path)
-    try:
-        response = httpx.request(method, BASE + path, json=payload, headers=headers, timeout=15)
-    except httpx.HTTPError as exc:
-        raise DhanError("network", f"could not reach {BASE}: {type(exc).__name__}: {exc}"[:200]) from exc
-    try:
-        body = response.json() if response.content else {}
-    except ValueError:
-        body = {}
+    with memwatch.watch(f"Dhan {path}"):  # what each kind of request to Dhan costs in memory (9 October)
+        try:
+            response = httpx.request(method, BASE + path, json=payload, headers=headers, timeout=15)
+        except httpx.HTTPError as exc:
+            raise DhanError("network", f"could not reach {BASE}: {type(exc).__name__}: {exc}"[:200]) from exc
+        try:
+            body = response.json() if response.content else {}
+        except ValueError:
+            body = {}
     if not isinstance(body, dict):
         body = {"data": body}
     code = str(body.get("errorCode", ""))
@@ -537,7 +539,8 @@ _option_ids_lock = threading.Lock()
 def _refresh_option_ids() -> None:
     """Reads the list (a large download) in a thread of its own; never raises."""
     try:
-        value, ttl = _read_option_ids(), 6 * 3600
+        with memwatch.watch("Dhan's instrument list"):
+            value, ttl = _read_option_ids(), 6 * 3600
     except DhanError as exc:
         value, ttl = exc, 600
     except Exception as exc:  # whatever happens, the list is never left stuck "busy"
