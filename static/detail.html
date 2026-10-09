@@ -670,9 +670,19 @@
   // "Call Target": the next level in the call's direction, and how the call ended once it has, in the owner's plain words
   // (8 October night: buy, hold, continue, sell). A held break is not sold at its target: once the price has gone past it,
   // the call continues; the note says what sells it, and once sold, what did
+  // A closed call reads the same whatever closed it (the owner, 9 October: "if both the trades are closed then why the
+  // message format is different. it should be same"): Call Target "sold at <time>", Premium "paid -> at sale",
+  // Candle status "SOLD" with the reason under it, green for a gain and red for a loss
+  const closedTone = (t) => t.points > 0 ? "up" : t.points < 0 ? "down" : "";
+  function soldReason(t) {
+    const way = t.side === "PE" ? "above" : "below";
+    return t.how === "target" ? "target hit" : t.how === "day end" ? "day end" : t.how === "sold" ? "premium fell 35% of what was paid"
+      : t.how === "back" ? `a candle closed ${way} ${fmt.format(t.level)}` : t.how === "retouch" ? `price came back to ${fmt.format(t.c1Open)}`
+      : t.how === "candle" ? "a candle closed back across the line" : t.how;
+  }
   function targetCell(t, r) {
-    if (t.how === "sold" && r && r.sold)
-      return `<td class="target">${fmt.format(t.target)}<small class="down">sold by the 35% rule at ${callTime(Date.parse(r.sold.at) / 1000)}</small></td>`;
+    if (t.exit != null)
+      return `<td class="target">${fmt.format(t.target)}<small class="${closedTone(t)}">sold at ${callTime(t.exitTime)}</small></td>`;
     if (t.hold) {
       const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
       const past = t.entry != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));
@@ -697,8 +707,8 @@
   // until then), with the reason in words under it; on a finished call, what the word was and when, so the owner can judge
   // it against the result
   function candleCell(t, r) {
-    if (t.how === "sold" && r && r.sold)  // sold at the Sell mark: the sale is the last word on the call
-      return `<td class="cand exit">SOLD at ${callTime(Date.parse(r.sold.at) / 1000)}<small>premium fell 35% or more of what was paid</small></td>`;
+    if (t.exit != null)  // closed: the sale is the last word on the call, the same way for every reason
+      return `<td class="cand ${t.points > 0 ? "carry" : t.points < 0 ? "exit" : ""}">SOLD<small>${soldReason(t)}</small></td>`;
     const rd = candleRead(t);
     if (!rd) return `<td class="cand">—</td>`;
     if (t.exit == null) return `<td class="cand ${rd.say}">${rd.say === "exit" ? "SELL" : "HOLD"}<small>${rd.why}</small></td>`;
@@ -721,10 +731,10 @@
   function premiumCell(t, r) {
     if (!r) return `<td class="opt prem">${t.exit != null ? "<small>not seen at entry</small>" : "—"}</td>`;
     const change = Math.round((r.premium_now - r.premium_paid) / r.premium_paid * 100);
-    const mark = r.sold ? ` <small class="sell">sold at ${fmt.format(r.sold.premium)}</small>` : t.exit == null && r.premium_now <= r.sell_below ? ` <small class="sell">SELL NOW</small>` : "";
+    const mark = t.exit == null && r.premium_now <= r.sell_below ? ` <small class="sell">SELL NOW</small>` : "";  // a closed call says "at sale", whatever closed it
     const paidAt = Date.parse(r.paid_at) / 1000, late = t.entryTime != null && paidAt > t.entryTime + LATE_SECONDS;
     const when = late ? ` <small class="late">paid: the price at ${callTime(paidAt)}, not at entry</small>` : "";
-    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)${t.exit != null ? " at exit" : ""}</small>${mark}${when}</td>`;
+    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)${t.exit != null ? " at sale" : ""}</small>${mark}${when}</td>`;
   }
   const LATE_SECONDS = 120;  // a record made later than this after the entry candle opened was not made at the entry
 
