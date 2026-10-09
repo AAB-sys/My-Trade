@@ -318,3 +318,24 @@ console.log("rules unit checks passed");
   assert(rp(undefined)[0].how === "trail" && JSON.stringify(rp(null)) === JSON.stringify(r1), "replayDay: Rule 2 by default, Rule 1 alone with null");
   console.log("Rule 2 in the held break checks passed");
 }
+
+// ---- a close exactly on a line has not crossed it yet (9 October, NIFTY 50: the 13:35 candle closed at 22,509.35, the 78.6% line
+// itself, then 13:40 closed above it): the cross is judged from the last close off the line. On the previous day's lines 100 to 200
+// (100, 121.4, 138.2, 150, 161.8, 176.4, 200): 09:20 closes 149 below 150, 09:25 closes exactly 150, 09:30 closes 153: a Buy CE,
+// crossed 150, in at 09:35's open. Coming from above instead (09:20 closes 151), the same 09:30 is no cross and no hold, as before
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const lv = R.levelsOf(R.moveOfDay({ open: 100, high: 200, low: 100, close: 190 }));
+  const run = (bars, signal = "both") => R.paperTrades({ bars, levelsAt: () => lv, now: Infinity, seconds: 300, dayCandles: false, signal, holdBreaks: true, trail: R.TRAIL }).trades;
+  const up = [bar(0, 148, 149, 147, 148), bar(1, 148, 149.5, 147.5, 149), bar(2, 149, 150.5, 148.5, 150), bar(3, 149.8, 154, 149.6, 153), bar(4, 153.5, 155, 153, 154), bar(5, 154, 155, 153, 154.5)];
+  const a = run(up);
+  assert(a.length === 1 && a[0].side === "CE" && a[0].kind === "crossed" && a[0].level === 150 && a[0].signalTime === up[3].time && a[0].entry === 153.5 && a[0].c1Open === 149.8,
+         "a break after a close exactly on the line: " + JSON.stringify(a));
+  const fromAbove = [bar(0, 152, 153, 151, 152), bar(1, 152, 152.5, 150.5, 151), bar(2, 151, 151.5, 149.5, 150), bar(3, 150.2, 154, 150.1, 153), bar(4, 153.5, 155, 153, 154)];
+  assert(run(fromAbove).length === 0, "from above, a close on the line then above it is no break: " + JSON.stringify(run(fromAbove)));
+  const down = up.map(b => ({ time: b.time, open: 300 - b.open, high: 300 - b.low, low: 300 - b.high, close: 300 - b.close }));
+  const lvDown = R.levelsOf(R.moveOfDay({ open: 200, high: 200, low: 100, close: 110 }));
+  const d = R.paperTrades({ bars: down, levelsAt: () => lvDown, now: Infinity, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL }).trades;
+  assert(d.length === 1 && d[0].side === "PE" && d[0].kind === "crossed" && d[0].level === 150 && d[0].signalTime === down[3].time, "the PE mirror: " + JSON.stringify(d));
+  console.log("close exactly on a line checks passed");
+}

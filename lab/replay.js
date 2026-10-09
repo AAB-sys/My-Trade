@@ -107,7 +107,8 @@ function run(bars, previous, o, higher) {
     });
     if (o.closeAt && clockEnd >= o.closeAt) { open.forEach(x => end(x, bar.close, bar, "time")); open = []; }
     for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // the line at its price, as Rules.paperTrades (8 October)
-    const crossed = L => (prev < L && bar.close > L) || (prev > L && bar.close < L);
+    const from = L => { for (let j = i - 1; j >= 0; j--) if (bars[j].close !== L) return bars[j].close; return prev; };  // the last close off line L (9 October, as Rules.signalAt)
+    const crossed = L => { const p = from(L); return (p < L && bar.close > L) || (p > L && bar.close < L); };
     const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
     const hits = levels.filter(l => {
       if (o.onlyRatios && !o.onlyRatios.includes(l.ratio)) return false;

@@ -98,7 +98,13 @@ against where the previous candle closed:
   through) and closed back on the side it came from. The level acted as a floor
   or a ceiling.
 - **Crossed**: the candle closed on the other side of the level from the previous
-  close.
+  close. A close exactly on the level has not crossed it yet: the cross is judged
+  from the last close off the level (9 October, NIFTY 50: the 13:35 candle closed
+  at 22,509.35, the 78.6% line itself, and the 13:40 candle closed above it at
+  22,526.15; judged from 13:35's close the break was missed and no Buy CE came; it
+  now counts, judged from 13:30's close, 22,507.50 below). This is how the paper
+  calls judge it; on the seven saved days no close sat exactly on a line, so no
+  call there changes.
 
 A candle that never reaches a level does nothing at it. Nothing else is read into
 the candle: not its colour, size or wicks.
