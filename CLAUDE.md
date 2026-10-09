@@ -226,7 +226,9 @@ branch from `main`.
   range up to candle i-1, the seven Fibonacci lines only (the extra line beyond each end was taken off on 8 October
   evening, the owner's decision). The chart draws the day's range with the candle forming now (worked out again at once
   when the price crosses 0% or 100%), and a call's target follows those lines: `Rules.todayLinesAt` / `rule.today_lines_at`,
-  passed as `targetsAt` / `targets_at`. A call never changes after it is given; a target hit seen live stays a hit when
+  passed as `targetsAt` / `targets_at`. A call given live stays given (9 October): `given` / `given`, { signal time: side }
+  from today's option records of the page's (or the watcher's) time frame and levels mode, keeps a recorded call when the
+  candle's final prices no longer give it (`Rules.keptAt` / `rule.kept_at`, `kept: true`). A target hit seen live stays a hit when
   the candle closes (its price can differ by a few points when the line moved on later in that candle).
 - The owner's exit rule "Hold Through a Level Break" (8 October night): `holdBreaks` / `hold_breaks`, passed by the index
   page (not on day candles), the watcher and `replayDay`. A crossed call gets `hold: true` and `c1Open` (the signal

@@ -68,6 +68,23 @@
              range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending",
              prices: levels.map(l => l.price) };  // the levels in force at the signal, for the entry's check below
   }
+  // A call given live stays given (the owner, 9 October: "yes, fix it"): at 13:40:05 the NIFTY 50 page gave the 13:35 Buy CE
+  // from the price at the candle's close, just above the 78.6% line (22,509.35), and recorded its option; Dhan's final candle
+  // then closed exactly on the line, and the call vanished from the table. When the candle's prices no longer give a call
+  // that was given (its option recorded), it is kept on that side: on the line nearest the close that the candle reached
+  // (any line with one beyond it that way when it reached none), crossed when the price came from the other side of it
+  // (the last close off it), held otherwise; "kept" marks it
+  function keptAt(bar, levels, from, side) {
+    const ok = levels.filter((l, k) => side === "CE" ? k < levels.length - 1 : k > 0);
+    if (!ok.length) return null;
+    const touched = ok.filter(l => bar.low <= l.price && bar.high >= l.price);
+    const at = (touched.length ? touched : ok).reduce((a, b) => Math.abs(b.price - bar.close) < Math.abs(a.price - bar.close) ? b : a);
+    const p = from(at.price), kind = (side === "CE" ? p < at.price : p > at.price) ? "crossed" : "held";
+    const next = side === "CE" ? levels.find(l => l.price > at.price) : levels.slice().reverse().find(l => l.price < at.price);
+    return { signalTime: bar.time, level: at.price, ratio: at.ratio, kind, side, target: next.price, close: bar.close,
+             range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending", kept: true,
+             prices: levels.map(l => l.price) };
+  }
 
   // The entry (owner's decision, 7 October): when the next candle opens already at or past the target (the signal candle
   // itself ran through the next level), the call aims one level further, the first level beyond the entry price; with no
@@ -169,7 +186,9 @@
   //              stop moves to that line, and on to each further line crossed; it is sold at the close of a candle closing back
   //              past the stop ("trail"). From then on exits A and B are no longer used (the stop has taken A's place); the day end
   //              still is. Off when not given: Rule 1 alone, as before 9 October
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail }) {
+  //   given      the calls given live, { signal candle's time: "CE" or "PE" } (the server's records of their options): each stays,
+  //              whatever the candle's final prices say (keptAt above). The replays have none
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -247,11 +266,13 @@
       for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
       const from = (L) => { for (let j = i - 1; j >= 0; j--) if (closed[j].close !== L) return closed[j].close; return prevBar.close; };  // the last close off line L
       let sig = signalAt(bar, prevBar.close, levels, used, signal, from);  // the call, at the signal candle's close
-      if (sig && holdBreaks && open.some(t => t.hold && t.side === sig.side)) sig = null;  // a held break that way: the same trade continues, no new call
+      const was = given && given[bar.time];  // a call given live at this candle (its option recorded): it stays
+      if (was && !(sig && sig.side === was)) sig = keptAt(bar, levels, from, was) || sig;
+      if (sig && !was && holdBreaks && open.some(t => t.hold && t.side === sig.side)) sig = null;  // a held break that way: the same trade continues, no new call
       if (sig && holdBreaks && sig.kind === "crossed") { sig.hold = true; sig.c1Open = bar.open; }  // C1, the signal candle: its open is where the break began
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
       const shallow = !!sig && !sig.hold && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
-      if (sig && !late && !shallow) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
+      if (sig && (was || (!late && !shallow))) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
     }
     const last = closed[closed.length - 1];
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end

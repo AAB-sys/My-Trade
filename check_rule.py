@@ -22,8 +22,8 @@ const out = jobs.map(j => {
   const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined,
                                                  trail: "trail" in j ? j.trail : undefined })  // Rule 2: as the page runs it, or another setting, or null (Rule 1 alone)
     : j.mode === "live-today" ? R.paperTrades({ bars: j.bars, levelsAt: R.todayLevelsAt(j.bars), targetsAt: R.todayLinesAt(j.bars), now: j.now, seconds: j.seconds,
-                                                dayCandles: false, signal: j.signal, holdBreaks: true, trail: R.TRAIL })  // the index page and the watcher today
-    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL });
+                                                dayCandles: false, signal: j.signal, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined })  // the index page and the watcher today
+    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined });
   res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now });  // the candle verdict too
     t.carry = R.carryOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // and the carry read
   return res;
@@ -37,16 +37,21 @@ def js_run(jobs: list) -> list:
     return json.loads(proc.stdout)
 
 
+def given_of(j: dict):
+    """The calls given live, as the watcher passes them: {signal time: side} (JSON's keys are text)."""
+    return {int(k): v for k, v in j["given"].items()} if j.get("given") else None
+
+
 def py_run(jobs: list) -> list:
     out = []
     for j in jobs:
         if j["mode"] == "replay":
             res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL)
         elif j["mode"] == "live-today":
-            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL)
+            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j))
         else:
             levels = j["levels"]
-            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL)
+            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL, given_of(j))
         for t in res["trades"]:
             t["read"] = rule.read_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # the candle verdict too
             t["carry"] = rule.carry_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # and the carry read
@@ -107,6 +112,7 @@ def main() -> int:
     TRAILS = [None, {"buffer": "none", "place": "back"}, {"buffer": "fixed", "points": 10, "place": "at"}, {"buffer": "fixed", "points": 10, "place": "back"},
               {"buffer": "atr", "mult": 0.25, "points": 10, "place": "at"}, {"buffer": "atr", "mult": 0.5, "points": 10, "place": "back"},
               {"buffer": "atr", "mult": 0.5, "period": 5, "place": "at"}, {"lines": "all", "buffer": "none", "place": "at"}, {"lines": "all", "buffer": "fixed", "points": 10, "place": "back"}]
+    kept = random.Random(11)  # the calls given live of the jobs below
     # 1. the saved days, replayed in every setting
     days = saved_days(folder) if folder.exists() else []
     for d in days:
@@ -139,6 +145,10 @@ def main() -> int:
                     for signal in ("held", "crossed", "both"):
                         jobs.append({"mode": "live", "bars": shown, "levels": levels, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live at {cut} {signal}"})
                         jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live today at {cut} {signal}"})
+                    # calls given live (9 October): some candles' calls kept on a side the final prices may not give
+                    given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(4, len(shown) - 2))} if len(shown) > 2 else {}
+                    jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": "both", "given": given, "what": f"{d['date']} {name} live today at {cut} given {given}"})
+                    jobs.append({"mode": "live", "bars": shown, "levels": levels, "now": now, "seconds": 300, "signal": "crossed", "given": given, "what": f"{d['date']} {name} live at {cut} given {given}"})
                     if prev:
                         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of_day(prev)), "now": now, "seconds": 300, "signal": "both", "what": f"{d['date']} {name} live prev at {cut}"})
     # 3. the hand-made day of lab/check.js (previous day 100 -> 200 closing 190)
@@ -162,6 +172,8 @@ def main() -> int:
         shown = bars[:cut + 1]
         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of(shown)), "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live today"})
+        given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(5, len(shown) - 2))} if len(shown) > 2 else {}
+        jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "what": f"random {k} live today given"})
     js, py = js_run(jobs), py_run(jobs)
     bad = 0
     for j, a, b in zip(jobs, js, py):
