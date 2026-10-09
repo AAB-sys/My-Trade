@@ -383,7 +383,10 @@ page's engine call for call by `check_rule.py` on every saved day, a hand-made
 day and random days, runs on the server every few seconds in market hours, on
 the same candles the page has and the levels as the page draws them, for the
 setting the owner trades on (`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL`:
-5-minute candles, today so far, both signals). A call that enters is recorded
+5-minute candles, both signals, and since 9 October both levels modes, today so
+far and previous day, each by itself on the same candles; until then only today
+so far, so a previous-day-line call got its option and premium only while a page
+was open on those lines: the owner that day, "yes, build it"). A call that enters is recorded
 the moment it enters, with its option and its premium paid, page or no page,
 restart or no restart; a call that ends is marked; and the day's calls go into
 the record for the CSV. The page does the same when it is open, and whichever

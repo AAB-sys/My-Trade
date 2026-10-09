@@ -72,7 +72,8 @@ their own logic. Read this before touching the code.
   **Log out** button whenever the login is on.
 - `rule.py` - the owner's rule (layers 1 to 3) in Python, the page's engine line
   for line, so the server can watch the calls itself (`calls_forever` /
-  `watch_index` in `main.py`, setting `WATCH_INTERVAL`/`WATCH_LEVELS`/`WATCH_SIGNAL`,
+  `watch_index` in `main.py`, setting `WATCH_INTERVAL`/`WATCH_LEVELS`/`WATCH_SIGNAL`; `WATCH_LEVELS` is a list, default
+  `today,prev`, each mode run by `watch_levels` on the candles fetched once (9 October),
   state on `/health` under `feed.watch`; `watch_premiums` then keeps the open
   records' security ids, premium now and Sell mark current for both indices,
   page or no page: until 7 October only an open page did, and NIFTY BANK's
