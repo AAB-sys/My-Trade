@@ -10,7 +10,12 @@ finds, so the morning check (the wake workflow's log) shows it:
   jumps          the biggest growth of the whole process seen while one piece of work ran: a page's request, a request
                  to Dhan, the call tracker for one index, the day's save, the read of Dhan's instrument list
 Growth is measured on the whole process, so work running at the same moment in other threads counts too; the biggest
-jumps still say where to look."""
+jumps still say where to look.
+
+What it found (9 October, 10:06): 36 MB in use and 265 MB "held but free". The big jobs (Dhan's instrument list, the
+candle downloads, the day's partial copy every two minutes) leave freed memory that the C allocator keeps instead of
+giving it back, so the process grew about 10 MB a minute towards Render's 512 MB. The fix (the owner's yes, 10:10):
+fewer allocator pools from the start (limit_pools) and the free memory given back once a minute (give_back)."""
 import contextlib
 import ctypes
 import gc
@@ -74,6 +79,44 @@ def malloc() -> dict | None:
     return {"in_use": round(m.uordblks / MB), "held_free": round(m.fordblks / MB), "mapped": round(m.hblkhd / MB)}
 
 
+M_ARENA_MAX = -8  # glibc's mallopt setting for the most memory pools (arenas) the allocator may make
+
+
+def _libc():
+    try:
+        return ctypes.CDLL("libc.so.6")
+    except OSError:
+        return None
+
+
+def limit_pools(most: int = 2) -> bool:
+    """At most this many allocator pools: by default glibc makes up to eight per CPU for a process with many threads,
+    and every pool keeps its own freed memory. Called once at start, before the server's threads; True when it took."""
+    libc = _libc()
+    try:
+        return bool(libc and libc.mallopt(M_ARENA_MAX, most))
+    except AttributeError:
+        return False
+
+
+_given = {"at": None, "freed_mb": None, "times": 0}
+
+
+def give_back() -> None:
+    """Hands the allocator's free memory back to the system (glibc's malloc_trim, every pool). The server calls it
+    once a minute; it changes no data. The last result goes on /health."""
+    libc = _libc()
+    if libc is None:
+        return
+    before = rss_mb()
+    try:
+        libc.malloc_trim(0)
+    except AttributeError:
+        return
+    with _lock:
+        _given.update(at=datetime.now(IST).strftime("%H:%M:%S"), freed_mb=round(before - rss_mb(), 1), times=_given["times"] + 1)
+
+
 _census = {"at": 0.0, "value": None}
 
 
@@ -88,5 +131,9 @@ def objects() -> list:
 def summary() -> dict:
     with _lock:
         jumps = sorted(({"what": k, **v} for k, v in _jumps.items() if v["mb"] > 0), key=lambda r: -r["mb"])[:8]
+        given = dict(_given)
     return {"threads": threading.active_count(), "python_blocks": sys.getallocatedblocks(), "malloc": malloc(),
-            "objects": objects(), "jumps": jumps}
+            "pools_limited": _pools_limited, "given_back": given, "objects": objects(), "jumps": jumps}
+
+
+_pools_limited = limit_pools()  # at import, before the server starts its threads

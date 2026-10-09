@@ -799,6 +799,17 @@ async def token_forever() -> None:
         await asyncio.sleep(TOKEN_CHECK_SECONDS)
 
 
+async def give_memory_back_forever() -> None:
+    """Once a minute the allocator's free memory goes back to the system (memwatch.give_back; 9 October: 265 MB held
+    free against 36 MB in use, and the server grew towards Render's 512 MB)."""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            await asyncio.to_thread(memwatch.give_back)
+        except Exception as exc:  # never stops the server
+            log.warning("memory: %s", exc)
+
+
 async def warm_option_ids() -> None:
     """Starts the read of Dhan's instrument list at start (it runs in its own thread), so the first call of
     the day finds its contract's id at once, and logs how it went."""
@@ -823,7 +834,8 @@ async def lifespan(app: FastAPI):
     asyncio.get_running_loop().set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=16, thread_name_prefix="work"))
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
-    tasks = [asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever()),
+    tasks = [asyncio.create_task(give_memory_back_forever()),
+             asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever()),
              asyncio.create_task(study.study_forever(DHAN_ON))]
     if DHAN_ON:
         tasks.append(asyncio.create_task(warm_option_ids()))
