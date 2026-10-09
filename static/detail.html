@@ -129,7 +129,6 @@
   #paper td.target small.up { color: var(--up); }
   #paper td.target small.down { color: var(--down); }
   #paper td.prem small.sell { color: var(--down); font-weight: 600; }
-  #paper td.prem small.late { display: block; color: var(--muted); }
   /* "Candle status": carry or exit, from the closed candles around the call's level, with the reason under it (back on the
      table, owner's ask, 8 October) */
   #paper td.cand { text-align: left; font-weight: 600; }
@@ -754,18 +753,14 @@
   // paid → now while the call is open; paid → at exit once it has ended, with the Sell mark (LOGIC.md, "Exit by premium"):
   // SELL NOW while the premium sits below the mark, "sold at" once the server has marked it sold. A finished call with no
   // record was never seen open by a page (no page open at its entry, so no premium could be recorded then): the cell says so.
-  // A record made more than two minutes after the call entered (the server was restarting, or the rule changed during the
-  // session and the call appeared afterwards) holds the price when it was made, not at the entry: the cell says when (8
-  // October: the 10:35 NIFTY 50 call entered at 10:40 and showed 118.65 "paid", the price at 12:12; at 10:45 it was 155.65)
+  // A record made late (the server restarting, the rule changed during the session) holds the price when it was made; the
+  // cell no longer says so (the owner, 9 October: "remove this message from every row and from future calls, not required")
   function premiumCell(t, r) {
     if (!r) return `<td class="opt prem">${t.exit != null ? "<small>not seen at entry</small>" : "—"}</td>`;
     const change = Math.round((r.premium_now - r.premium_paid) / r.premium_paid * 100);
     const mark = t.exit == null && r.premium_now <= r.sell_below ? ` <small class="sell">SELL NOW</small>` : "";  // a closed call says "at sale", whatever closed it
-    const paidAt = Date.parse(r.paid_at) / 1000, late = t.entryTime != null && paidAt > t.entryTime + LATE_SECONDS;
-    const when = late ? ` <small class="late">paid: the price at ${callTime(paidAt)}, not at entry</small>` : "";
-    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)${t.exit != null ? " at sale" : ""}</small>${mark}${when}</td>`;
+    return `<td class="opt prem">${fmt.format(r.premium_paid)} → ${fmt.format(r.premium_now)} <small class="${change > 0 ? "up" : change < 0 ? "down" : ""}">(${change >= 0 ? "+" : ""}${change}%)${t.exit != null ? " at sale" : ""}</small>${mark}</td>`;
   }
-  const LATE_SECONDS = 120;  // a record made later than this after the entry candle opened was not made at the entry
 
   // ---- the option behind each call: recorded by the server from Dhan (see LOGIC.md, "Exit by premium")
   // The page tells the server when a call enters (the contract and the premium paid are recorded then)
