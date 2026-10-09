@@ -131,7 +131,11 @@ Now** (at exit once the call has ended; *SELL NOW* while the premium sits below
 the sell mark, *sold at* once marked sold), **Candle status** (the candle
 verdict of item 7: HOLD or SELL with its reason on an open call; the owner's
 plain words of 8 October night: buy, hold, continue, sell, where it said CARRY
-and EXIT. A closed call reads the same whatever closed it (owner, 9 October:
+and EXIT. On an open **bounce** call the candles' sell is only a warning (a
+bounce call is sold at its target, the day end or the 35% premium rule), so it
+reads **WATCH** while the last closed candle is still a quarter of the gap or
+more on the wrong side of the line, and goes back to **HOLD** ("price is back
+below the 78.6% level") when the price returns (owner's choice, 9 October). A closed call reads the same whatever closed it (owner, 9 October:
 "if both the trades are closed then why the message format is different"):
 Call Target "sold at <time>", Premium "<paid> -> <at sale> (x%) at sale",
 Candle status "SOLD" with the reason under it (target hit, a candle closed

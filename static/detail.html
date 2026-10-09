@@ -18,6 +18,7 @@
     --muted: #898781;
     --up: #006300;
     --down: #d03b3b;
+    --watch: #a86400;
     --candle-up: #0ca30c;
     --candle-down: #d03b3b;
     --line: #2a78d6;
@@ -34,6 +35,7 @@
       --muted: #898781;
       --up: #0ca30c;
       --down: #e66767;
+      --watch: #e0a03a;
       --candle-up: #0ca30c;
       --candle-down: #e66767;
       --line: #3987e5;
@@ -50,6 +52,7 @@
     --muted: #898781;
     --up: #0ca30c;
     --down: #e66767;
+    --watch: #e0a03a;
     --candle-up: #0ca30c;
     --candle-down: #e66767;
     --line: #3987e5;
@@ -132,6 +135,7 @@
   #paper td.cand { text-align: left; font-weight: 600; }
   #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
   #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
+  #paper td.cand.watch { color: var(--watch); }
   #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
   #paper td.call { text-align: left; }
   #paper tr.ended td { color: var(--ink-2); }
@@ -711,10 +715,29 @@
       return `<td class="cand ${t.points > 0 ? "carry" : t.points < 0 ? "exit" : ""}">SOLD<small>${soldReason(t)}</small></td>`;
     const rd = candleRead(t);
     if (!rd) return `<td class="cand">—</td>`;
+    if (t.exit == null && rd.say === "exit" && !t.hold) {  // a bounce call: the candles' warning is not a sale (the owner, 9 October)
+      const w = watchNow(t);
+      return w.watch ? `<td class="cand watch">WATCH<small>${rd.why}</small></td>` : `<td class="cand carry">HOLD<small>${w.why}</small></td>`;
+    }
     if (t.exit == null) return `<td class="cand ${rd.say}">${rd.say === "exit" ? "SELL" : "HOLD"}<small>${rd.why}</small></td>`;
     if (rd.exitAt == null) return `<td class="cand carry">HOLD the whole time<small>${rd.why}</small></td>`;
     return `<td class="cand exit">said SELL at ${callTime(rd.exitAt)}<small>${rd.why}</small></td>`;
   }
+  // WATCH, not SELL, on an open bounce call (the owner's choice of 9 October, "2"): a bounce call is sold only at its
+  // target, at the day end or by the 35% premium rule, so the candles' "sell" is a warning. It shows WATCH while the last
+  // closed candle is still on the wrong side of the call's line by a quarter of the gap to the target or more (the same
+  // measure as Rules.readOf), and goes back to HOLD when the price returns to the right side
+  function watchNow(t) {
+    const now = serverNow(), gap = Math.abs(t.target - t.level);
+    const done = sessionBars().filter(b => b.time > t.signalTime && endOf(b) <= now);
+    const last = done[done.length - 1];
+    if (!last || !gap) return { watch: true };
+    const went = t.side === "CE" ? t.level - last.close : last.close - t.level;  // back across the line, in points
+    const pct = (t.ratio * 100).toFixed(1);
+    if (went >= 0.25 * gap) return { watch: true };
+    return { watch: false, why: went <= 0 ? `price is back ${t.side === "CE" ? "above" : "below"} the ${pct}% level` : `price is near the ${pct}% level again` };
+  }
+
   // The carry read (idea P5's question, 7 October evening; Rules.carryOf): at the candle that reached the target, did the
   // close go a quarter into the next gap, and was the level beyond reached later. For the CSV and the research engine only
   function carryRead(t) {
