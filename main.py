@@ -675,7 +675,12 @@ def watch_index(name: str) -> dict:
     now = time.time()
     levels_at = (lambda i: levels) if levels is not None else rule.today_levels_at(bars)
     targets_at = None if levels is not None else rule.today_lines_at(bars)  # a call's target on the chart's lines (8 October evening)
-    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL)["trades"]  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
+    given = {}  # the calls given live in this setting (their options recorded): each stays, whatever Dhan's final candle says (9 October)
+    for r in sorted(dhan.records_for(name), key=lambda r: r["paid_at"]):
+        parts = r["key"].split("|")
+        if len(parts) == 5 and parts[0] == name and parts[1] == key and parts[4] == WATCH_LEVELS and parts[2].isdigit():
+            given.setdefault(int(parts[2]), parts[3])
+    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given)["trades"]  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, WATCH_LEVELS)

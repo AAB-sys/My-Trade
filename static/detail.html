@@ -553,7 +553,17 @@
     const bars = sessionBars();
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
-                               dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL });
+                               dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL,
+                               given: state.interval === "1d" ? null : givenCalls() });
+  }
+  // The calls given live (9 October, the owner: a call already given must stay on the table): today's records of options
+  // bought on this page's time frame and levels, { signal candle's time: side }, the first recorded for a candle. A candle
+  // whose final prices from Dhan no longer give its call (13:35, closed exactly on the 78.6% line) keeps it (Rules.paperTrades)
+  function givenCalls() {
+    const given = {}, head = `${name}|${state.interval}|`, tail = `|${state.move}`;
+    Object.values(optionRecords).filter(r => r.key.startsWith(head) && r.key.endsWith(tail)).sort((a, b) => (a.paid_at < b.paid_at ? -1 : 1))
+      .forEach(r => { const [, , at, side] = r.key.split("|"); if (!(at in given)) given[at] = side; });
+    return given;
   }
 
   function drawPaper(levels) {

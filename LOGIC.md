@@ -106,6 +106,20 @@ against where the previous candle closed:
   calls judge it; on the seven saved days no close sat exactly on a line, so no
   call there changes.
 
+**A call given live stays given** (the owner, 9 October: "yes, fix it"). The
+live page and the server's watcher judge a candle the moment it closes, from the
+prices they have then; Dhan's final candle can differ by a few paise. At 13:40:05
+on 9 October the NIFTY 50 page gave the 13:35 Buy CE (the price at the close was
+just above the 78.6% line, 22,509.35) and recorded its option; Dhan's final 13:35
+candle closed exactly on the line, and the call vanished from the table. Now a
+call whose option is recorded (it entered, page or watcher) stays on the table
+whatever the candle's final prices say: kept on its side, on the line nearest the
+close that the candle reached, crossed when the price came from the other side
+of it, held otherwise, and run by the rule from there like any call (its target,
+X5 and Rule 2, the day end). A candle with no recorded call is judged as before;
+the replays of saved days (the Study page, the research) have no records, so
+nothing there changes.
+
 A candle that never reaches a level does nothing at it. Nothing else is read into
 the candle: not its colour, size or wicks.
 

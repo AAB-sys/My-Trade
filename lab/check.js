@@ -339,3 +339,29 @@ console.log("rules unit checks passed");
   assert(d.length === 1 && d[0].side === "PE" && d[0].kind === "crossed" && d[0].level === 150 && d[0].signalTime === down[3].time, "the PE mirror: " + JSON.stringify(d));
   console.log("close exactly on a line checks passed");
 }
+
+// ---- a call given live stays given (9 October, NIFTY 50: at 13:40:05 the page gave the 13:35 Buy CE from the price at the candle's
+// close, just above the 78.6% line, and recorded its option; Dhan's final 13:35 candle closed exactly on the line and the call
+// vanished). On the previous day's lines 100 to 200: 09:20 closes 149, 09:25 closes exactly on 150 (live it was 150.20), 09:30 closes
+// 153. Without the record, 09:30 gives the Buy CE (judged from 149); with the record of the 09:25 CE, that call stays: crossed 150,
+// in at 09:30's open, and 09:30 gives no second CE (the same trade continues)
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const lv = R.levelsOf(R.moveOfDay({ open: 100, high: 200, low: 100, close: 190 }));
+  const run = (bars, given, now = Infinity) => R.paperTrades({ bars, levelsAt: () => lv, now, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, given }).trades;
+  const day = [bar(0, 148, 149, 147, 148), bar(1, 148, 149.5, 147.5, 149), bar(2, 149, 150.5, 148.5, 150), bar(3, 149.8, 154, 149.6, 153), bar(4, 153.5, 155, 153, 154), bar(5, 154, 155, 153, 154.5)];
+  const none = run(day), kept = run(day, { [day[2].time]: "CE" });
+  assert(none.length === 1 && none[0].signalTime === day[3].time && !none[0].kept, "no record: the 09:30 CE: " + JSON.stringify(none));
+  assert(kept.length === 1 && kept[0].kept && kept[0].signalTime === day[2].time && kept[0].side === "CE" && kept[0].kind === "crossed" && kept[0].level === 150
+         && kept[0].entry === 149.8 && kept[0].hold && kept[0].c1Open === 149 && kept[0].target === 161.8, "the 09:25 CE given live stays: " + JSON.stringify(kept));
+  // live, the moment after 09:25 closed: the same call, waiting to enter
+  const live = run(day.slice(0, 3), { [day[2].time]: "CE" }, day[2].time + 300);
+  assert(live.length === 1 && live[0].how === "pending" && live[0].kept, "waiting to enter: " + JSON.stringify(live));
+  // a record on the other side of what the final prices give: kept as given (a PE from 150, held from below), not the CE
+  const flip = run([...day.slice(0, 2), bar(2, 149, 150.5, 148.5, 150.3), ...day.slice(3)], { [day[2].time]: "PE" });
+  assert(flip[0].side === "PE" && flip[0].kept && flip[0].level === 150 && flip[0].kind === "held" && flip[0].signalTime === day[2].time, "kept on the side given: " + JSON.stringify(flip[0]));
+  // records of other candles change nothing, and the replays (no records) are as before
+  assert(JSON.stringify(run(day, { [t0 - 300]: "PE" })) === JSON.stringify(none), "a record of no candle here changes nothing");
+  assert(JSON.stringify(R.replayDay({ bars: day, move: "prev", previous: { open: 100, high: 200, low: 100, close: 190 }, seconds: 300, signal: "both" }).trades) === JSON.stringify(none), "replays have no records");
+  console.log("calls given live stay checks passed");
+}

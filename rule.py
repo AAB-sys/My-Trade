@@ -99,6 +99,25 @@ def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, frm
             "prices": [l["price"] for l in levels]}
 
 
+def kept_at(bar: dict, levels: list, frm, side: str):
+    """A call given live, kept although the candle's prices no longer give it (9 October; see static/rules.js keptAt)."""
+    ok = [l for k, l in enumerate(levels) if (k < len(levels) - 1 if side == "CE" else k > 0)]
+    if not ok:
+        return None
+    touched = [l for l in ok if bar["low"] <= l["price"] <= bar["high"]]
+    pool = touched or ok
+    at = pool[0]
+    for b in pool[1:]:  # the nearest the close; the first of equals, as the page's reduce
+        if abs(b["price"] - bar["close"]) < abs(at["price"] - bar["close"]):
+            at = b
+    p = frm(at["price"])
+    kind = "crossed" if (p < at["price"] if side == "CE" else p > at["price"]) else "held"
+    nxt = next((l for l in levels if l["price"] > at["price"]), None) if side == "CE" else next((l for l in reversed(levels) if l["price"] < at["price"]), None)
+    return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
+            "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
+            "kept": True, "prices": [l["price"] for l in levels]}
+
+
 def enter_at(sig: dict, bar: dict):
     """The entry (owner, 7 October): already at or past the target, the call aims at the first level beyond the entry
     price; with no level left beyond it, there is no call."""
@@ -166,13 +185,15 @@ TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
-                 hold_breaks: bool = False, trail: dict | None = None) -> dict:
+                 hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None) -> dict:
     """hold_breaks: the owner's exit rule "Hold Through a Level Break" (8 October night; see static/rules.js): a crossed call is held
     through its target, sold on a close back across its line ("back"), on a return to the signal candle's open after a candle
     opened beyond the previous close ("retouch"), or at the day end; no new call that way while it is held.
     trail: with hold_breaks, Rule 2 of the owner's specification (9 October; see static/rules.js): once a candle closes beyond a
     further line, the stop moves to it, line by line, and a close back past the stop sells ("trail"); exits A and B end there.
-    None: Rule 1 alone."""
+    None: Rule 1 alone.
+    given: the calls given live, {signal candle's time: "CE" or "PE"} (the records of their options): each stays, whatever the
+    candle's final prices say (kept_at; 9 October)."""
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -326,13 +347,16 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                     return closed[j]["close"]
             return closed[i - 1]["close"]
         sig = signal_at(bar, prev_bar["close"], levels, used, signal, frm)
-        if sig and hold_breaks and any(t.get("hold") and t["side"] == sig["side"] for t in open_):
+        was = given.get(bar["time"]) if given else None  # a call given live at this candle (its option recorded): it stays
+        if was and not (sig and sig["side"] == was):
+            sig = kept_at(bar, levels, frm, was) or sig
+        if sig and not was and hold_breaks and any(t.get("hold") and t["side"] == sig["side"] for t in open_):
             sig = None  # a held break that way: the same trade continues, no new call
         if sig and hold_breaks and sig["kind"] == "crossed":
             sig["hold"], sig["c1Open"] = True, bar["open"]  # C1, the signal candle: its open is where the break began
         late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
         shallow = bool(sig) and not sig.get("hold") and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
-        if sig and not late and not shallow:
+        if sig and (was or (not late and not shallow)):
             ready = sig
             used[(sig["level"], sig["side"])] = True
     last = closed[-1] if closed else None
