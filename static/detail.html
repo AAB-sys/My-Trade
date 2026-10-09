@@ -124,6 +124,7 @@
   #paper td.entry.wait { color: var(--ink-2); }
   #paper td.target small { display: block; color: var(--muted); }
   #paper td.target small.up { color: var(--up); }
+  #paper td.target small.down { color: var(--down); }
   #paper td.prem small.sell { color: var(--down); font-weight: 600; }
   #paper td.prem small.late { display: block; color: var(--muted); }
   /* "Candle status": carry or exit, from the closed candles around the call's level, with the reason under it (back on the
@@ -531,7 +532,7 @@
   //             the signal candle's open after a candle opened further away, or at the day end; while it is held, no new
   //             call that way. Not on day candles
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", retouch: "Came back", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
+  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", retouch: "Came back", sold: "Sold at the Sell mark", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const pctOf = (t) => (t.ratio * 100).toFixed(1) + "%";  // the level's ratio, as the rows and the CSV show it
   let lastPaper = { trades: [], levels: [] };
 
@@ -563,6 +564,7 @@
       return;
     }
     const { trades, closed } = paperTrades(levels);
+    markSold(trades);
     lastPaper = { trades, levels };
     const done = trades.filter(t => t.exit != null);
     const won = done.filter(t => t.points > 0).length, lost = done.filter(t => t.points < 0).length;
@@ -591,6 +593,21 @@
     }));
     syncOptions(trades);
     recordCalls(trades);
+  }
+
+  // A call sold at its Sell mark (the owner, 9 October: "if it is sold at 67 then ... it should stop there"): the server
+  // ends its record there and its premium stops; the row ends too, at the moment of the mark, at the index price of the
+  // candle it fell in (its close; the price now for the candle forming), whatever the index rule says
+  function markSold(trades) {
+    const bars = sessionBars();
+    trades.forEach(t => {
+      const r = optionRecords[callKey(t)];
+      if (!r || !r.sold || !r.ended || r.ended.how !== "sold" || t.entry == null) return;
+      const at = Date.parse(r.sold.at) / 1000, bar = [...bars].reverse().find(b => b.time <= at);
+      if (!bar) return;
+      t.how = "sold"; t.exit = bar.close; t.exitTime = Math.floor(at);
+      t.points = Rules.round2(t.side === "CE" ? bar.close - t.entry : t.entry - bar.close);
+    });
   }
 
   // Every call this page suggests for today goes to the server as drawn (the owner's ask, 7 October), so the day's
@@ -625,7 +642,7 @@
     return `<td>${callTime(t.signalTime)}</td>`
       + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${t.kind === "held" ? "Held" : "Crossed"} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t) + premiumCell(t, r) + candleCell(t);
+      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + candleCell(t, r);
   }
   const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
 
@@ -653,7 +670,9 @@
   // "Call Target": the next level in the call's direction, and how the call ended once it has, in the owner's plain words
   // (8 October night: buy, hold, continue, sell). A held break is not sold at its target: once the price has gone past it,
   // the call continues; the note says what sells it, and once sold, what did
-  function targetCell(t) {
+  function targetCell(t, r) {
+    if (t.how === "sold" && r && r.sold)
+      return `<td class="target">${fmt.format(t.target)}<small class="down">sold by the 35% rule at ${callTime(Date.parse(r.sold.at) / 1000)}</small></td>`;
     if (t.hold) {
       const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
       const past = t.entry != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));
@@ -677,7 +696,9 @@
   // "Candle status": one word for every open call, HOLD or SELL (the owner's plain words, 8 October night; CARRY and EXIT
   // until then), with the reason in words under it; on a finished call, what the word was and when, so the owner can judge
   // it against the result
-  function candleCell(t) {
+  function candleCell(t, r) {
+    if (t.how === "sold" && r && r.sold)  // sold at the Sell mark: the sale is the last word on the call
+      return `<td class="cand exit">SOLD at ${callTime(Date.parse(r.sold.at) / 1000)}<small>premium fell 35% or more of what was paid</small></td>`;
     const rd = candleRead(t);
     if (!rd) return `<td class="cand">—</td>`;
     if (t.exit == null) return `<td class="cand ${rd.say}">${rd.say === "exit" ? "SELL" : "HOLD"}<small>${rd.why}</small></td>`;

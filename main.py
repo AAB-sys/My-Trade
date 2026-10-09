@@ -691,8 +691,10 @@ def watch_index(name: str) -> dict:
                 log.warning("watch: %s %s: %s", name, call_key, exc)
         elif t.get("exit") is not None and rec and not rec["ended"]:
             rec = dhan.end_call(call_key, t["how"]) or rec
-        elif t["how"] == "open" and rec and rec["ended"] and rec["ended"].get("how") != "day end":
+        elif t["how"] == "open" and rec and rec["ended"] and rec["ended"].get("how") not in ("day end", "sold"):
             rec = dhan.reopen_call(call_key) or rec  # still open by the rule: its premium is followed again (8 October)
+        if rec and (rec.get("ended") or {}).get("how") == "sold" and t.get("entry") is not None:
+            t = sold_trade(t, rec, bars, seconds)  # sold at the Sell mark: the call ends there, whatever the index rule says (9 October)
         rows.append({"signal_time": t["signalTime"], "level": t["level"], "ratio": t["ratio"], "kind": t["kind"], "side": t["side"],
                      "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
                      "points": t.get("points"), "how": t["how"],
@@ -704,7 +706,20 @@ def watch_index(name: str) -> dict:
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None})
     if rows:
         study.record_calls(name, key, WATCH_LEVELS, WATCH_SIGNAL, today.isoformat(), rows)
-    return {"calls": len(rows), "open": sum(1 for t in trades if t["how"] == "open")}
+    return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
+
+
+def sold_trade(t: dict, rec: dict, bars: list, seconds: int) -> dict:
+    """The call as sold at its Sell mark (the owner, 9 October): it ends at the moment of the mark, at the index price of
+    the candle it fell in (its close; the price now for the candle forming), so the day's calls CSV says "sold"."""
+    at = datetime.fromisoformat(rec["sold"]["at"]).timestamp()
+    bar = next((b for b in reversed(bars) if b["time"] <= at), None)
+    out = dict(t)
+    if bar is not None:
+        exit_ = bar["close"]
+        out.update(exit=exit_, exitTime=int(at), how="sold",
+                   points=round(exit_ - t["entry"] if t["side"] == "CE" else t["entry"] - exit_, 2))
+    return out
 
 
 def watch_premiums(name: str) -> dict:
