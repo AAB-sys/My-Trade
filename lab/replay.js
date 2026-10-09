@@ -43,8 +43,13 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 //   holdBreaks: the owner's exit rule for breaks (8 October night), on unless set to false: a crossed call is held through its
 //   target and sold on a close back across its line, on a return to the signal candle's open after a candle opened further
 //   away, or at the day end; no new call that way while it is held (as Rules.paperTrades)
+//   trail: Rule 2 of the owner's specification (9 October), the held break's stop moved line by line (Rules.trailStep): as the
+//   index page runs it (Rules.TRAIL) unless another setting is given, null for Rule 1 alone
 function run(bars, previous, o, higher) {
   const holdBreaks = o.holdBreaks !== false;
+  const trail = !holdBreaks ? null : o.trail === undefined ? R.TRAIL : o.trail;
+  const atr = trail && trail.buffer === "atr" ? R.atrBefore(bars, trail.period || 14) : null;
+  const bufferAt = i => !trail ? 0 : trail.buffer === "fixed" ? trail.points : trail.buffer === "atr" ? (atr[i] != null ? trail.mult * atr[i] : trail.points || 0) : 0;
   const sec = o.sec;
   const fixed = o.levels === "prev" ? (previous ? R.levelsOf(R.moveOfDay(previous)) : null) : null;
   const openRange = n => { const first = bars.filter(b => tod(b.time) < hm(9, 15) + n * 60); return first.length ? R.levelsOf(R.moveOf(first)) : null; };
@@ -71,8 +76,16 @@ function run(bars, previous, o, higher) {
       if (x.hold) {  // a held break: exit B (back to C1's open after a candle opened further away), then exit A at the close
         const pc = bars[i - 1].close, pe = x.side === "PE";
         x.fav = Math.max(x.fav, pe ? x.entry - bar.low : bar.high - x.entry); x.adv = Math.max(x.adv, pe ? bar.high - x.entry : x.entry - bar.low);
-        if ((pe ? x.c1Open >= x.level && bar.open < pc && bar.high >= x.c1Open : x.c1Open <= x.level && bar.open > pc && bar.low <= x.c1Open)) { end(x, x.c1Open, bar, "retouch"); return false; }
-        if (pe ? bar.close > x.level : bar.close < x.level) { end(x, bar.close, bar, "back"); return false; }
+        if (!x.trail) {  // Rule 1 until a further line is crossed
+          if ((pe ? x.c1Open >= x.level && bar.open < pc && bar.high >= x.c1Open : x.c1Open <= x.level && bar.open > pc && bar.low <= x.c1Open)) { end(x, x.c1Open, bar, "retouch"); return false; }
+          if (pe ? bar.close > x.level : bar.close < x.level) { end(x, bar.close, bar, "back"); return false; }
+        }
+        if (trail) {  // Rule 2: the stop moved line by line, on the lines this candle is judged against
+          const st = x.trail || { stop: x.level, stopRatio: x.ratio, line: null, ratio: null };
+          const lines = trail.lines === "all" ? levels : levels.filter(l => l.ratio !== 0 && l.ratio !== 1);
+          if (R.trailStep(st, bar.close, lines, x.side, trail.place, bufferAt(i)) === "sell") { end(x, bar.close, bar, "trail"); return false; }
+          if (st.line != null) x.trail = st;
+        }
         return true;
       }
       const past = x.side === "CE" ? Math.max(x.entry, x.level) : Math.min(x.entry, x.level), k = x.carried || 0;  // the target follows the lines, as Rules.paperTrades (8 October)
@@ -142,6 +155,7 @@ function run(bars, previous, o, higher) {
 }
 function all(index, interval, opts) {
   const higherKey = interval === "5m" ? "15m" : "30m";
+  if (typeof opts === "function") opts = opts(index);  // a setting that depends on the index (Rule 2's buffer in points)
   return DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix) return [];
     return run(ix.candles[interval], ix.previous, { levels: "prev", signal: "both", ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
 }
@@ -157,6 +171,7 @@ function tally(L, base) {
 const row = (name, s) => `${name.padEnd(46)} ${String(s.n).padStart(3)} calls ${String(s.won).padStart(3)}W ${String(s.lost).padStart(3)}L  net ${String(s.net).padStart(9)}  avg ${String(s.avg).padStart(7)}  day-end ${String(s.ends).padStart(2)}  worst call ${String(s.worst).padStart(8)}  days up ${s.daysUp}/${DAYS.length}  worst day ${String(s.worstDay).padStart(8)}`
   + (s.ahead == null ? "" : `  ahead of the rule on ${s.ahead}, behind on ${s.behind}`);
 
+const POINTS = { "NIFTY 50": 10, "NIFTY BANK": 25, "SENSEX": 32 };  // Rule 2's fixed buffer per index (and the ATR's until 14 candles have closed)
 // The ideas. The first rows are the owner's rule; P1 and P2 are the ones the owner confirmed for the study page (6 October).
 const IDEAS = [
   ["your rule: previous-day levels, both signals", {}],
@@ -203,6 +218,19 @@ const IDEAS = [
   ["depth past halfway + exit on a quarter reclaim", { minDepth: 0.5, closeBackShare: 0.25 }],
   ["today-so-far levels + depth past halfway", { levels: "today", minDepth: 0.5 }],
   ["today-so-far levels + depth past halfway + quarter reclaim", { levels: "today", minDepth: 0.5, closeBackShare: 0.25 }],
+  // 9 October, the owner's specification: Rule 2's settings (section 6) against the rule as the page runs it (section 5 on all 7
+  // lines, the owner's choice: no buffer, the stop on the line crossed); the buffer in points: 10 on NIFTY 50 (the specification's
+  // example), the same share of the index elsewhere
+  ...["prev", "today"].flatMap(lv => [
+    [`${lv}: Rule 1 alone, no moving stop`, { levels: lv, trail: null }],
+    [`${lv}: Rule 2 on lines 23.6% to 78.6% only`, { levels: lv, trail: { lines: "middle", buffer: "none", place: "at" } }],
+    [`${lv}: Rule 2, stop one line back`, { levels: lv, trail: { lines: "all", buffer: "none", place: "back" } }],
+    [`${lv}: Rule 2, buffer in points`, ix => ({ levels: lv, trail: { lines: "all", buffer: "fixed", points: POINTS[ix], place: "at" } })],
+    [`${lv}: Rule 2, buffer in points, one line back`, ix => ({ levels: lv, trail: { lines: "all", buffer: "fixed", points: POINTS[ix], place: "back" } })],
+    [`${lv}: Rule 2, buffer a quarter ATR`, ix => ({ levels: lv, trail: { lines: "all", buffer: "atr", mult: 0.25, points: POINTS[ix], place: "at" } })],
+    [`${lv}: Rule 2, buffer half the ATR`, ix => ({ levels: lv, trail: { lines: "all", buffer: "atr", mult: 0.5, points: POINTS[ix], place: "at" } })],
+    [`${lv}: Rule 2, buffer half the ATR, one line back`, ix => ({ levels: lv, trail: { lines: "all", buffer: "atr", mult: 0.5, points: POINTS[ix], place: "back" } })],
+  ]),
 ];
 console.log(`${DAYS.length} finished days: ${DAYS[0].date} to ${DAYS[DAYS.length - 1].date}; ${LIVE.length} calls suggested live on the index page in ${new Set(LIVE.map(c => c.date)).size} of them`);
 // the live calls: what the page suggested, setting by setting, by the page's own points; and whether the replay gives the same call
@@ -213,7 +241,7 @@ if (LIVE.length) {
   console.log("\n==== the calls the index page suggested live (its own points; finished ones only in the counts)");
   Object.keys(groups).sort().forEach(key => {
     const [index, interval, levels, signal] = key.split("|"), list = groups[key];
-    const done = list.filter(c => ["target", "day end", "back", "retouch"].includes(c.ended_by));
+    const done = list.filter(c => ["target", "day end", "back", "retouch", "trail"].includes(c.ended_by));
     const net = r2(done.reduce((s, c) => s + (parseFloat(c.points) || 0), 0)), won = done.filter(c => parseFloat(c.points) > 0).length;
     let matched = 0, replayable = 0;
     if (SEC[interval] && (levels === "prev" || levels === "today") && signal !== "off") {
