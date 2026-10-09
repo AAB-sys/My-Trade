@@ -86,7 +86,9 @@ their own logic. Read this before touching the code.
   `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. Real-time candles,
   quotes for `QUOTE_IDS` (NIFTY 50, NIFTY BANK, SENSEX; the ids are checked
   against Dhan's instrument list once it is read, `id_problem()` on `/health`
-  as `feed.ids`) and the option chain for `OPTION_INDICES` (NIFTY 50, NIFTY BANK, and SENSEX on the BSE since
+  as `feed.ids`; `list_report()` as `feed.option_list`: ids per underlying, SENSEX's expiries, a few SENSEX rows as written;
+  SENSEX's BSE rows are matched by `_bse_underlying` on any name column, never SENSEX50 or BANKEX, 9 October)
+  and the option chain for `OPTION_INDICES` (NIFTY 50, NIFTY BANK, and SENSEX on the BSE since
   8 October; `OPTION_SEGMENTS` says each one's segment, NSE_FNO or BSE_FNO, and `open_options` keys the contracts
   by (segment, security id) for the feed and the poll; `INDEX_IDS` stays the two whose days are saved), with small
   caches for Dhan's rate limits and every request paced to them in `call()`

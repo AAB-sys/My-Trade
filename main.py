@@ -962,7 +962,8 @@ def feed_state() -> dict:
             "tiles_problem": d["tiles_problem"],
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
             "watch": {"setting": WATCH_SETTING, **watch_state},
-            "ids": dhan.id_problem()}  # null, or what Dhan's instrument list says differs from the index ids this code uses
+            "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
+            "option_list": dhan.list_report()}  # what Dhan's instrument list gave (9 October, SENSEX): option ids per underlying, SENSEX's expiries and rows
 
 
 @app.get("/login")

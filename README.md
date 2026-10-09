@@ -84,7 +84,11 @@ and moving every second, after the close "Dhan · closed"; `/health`'s
 `feed.tiles_problem` says if an index's figures could not be read);
 the other tiles are Yahoo's, about 15 minutes delayed,
 and the footer says which is which. `/health`'s `feed.ids` is null, or what
-Dhan's instrument list says differs from the index ids the code uses.
+Dhan's instrument list says differs from the index ids the code uses; its
+`feed.option_list` says what the list gave once read: the option ids per index,
+SENSEX's expiries, and how the BSE's option rows are written (9 October: no
+SENSEX option had been found in it; SENSEX's name is now looked for in every
+name column of a BSE row, and more ways of writing the expiry are read).
 The index page says which feed it is on; while it is open during market hours
 the price and the candle forming now move tick by tick: the server holds one
 connection to Dhan's market feed (`wss://api-feed.dhan.co`, ticker packets for
