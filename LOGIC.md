@@ -158,10 +158,14 @@ reads **WATCH** while the last closed candle is still a quarter of the gap or
 more on the wrong side of the line, and goes back to **HOLD** ("price is back
 below the 78.6% level") when the price returns (owner's choice, 9 October). A closed call reads the same whatever closed it (owner, 9 October:
 "if both the trades are closed then why the message format is different"):
-Call Target "sold at <time>", Premium "<paid> -> <at sale> (x%) at sale",
-Candle status "SOLD" with the reason under it (target hit, a candle closed
-above/below the line, price came back to where the fall or rise started,
-premium fell 35%, day end), green for a gain and red for a loss (the premium's
+Call Target "sold at <time>", Premium "<paid> -> <at sale>" with the real
+change in words under it ("price rose 16% at sale", "price dropped 14% at
+sale"; a sale by the premium rule "price dropped 38%, hence sold", its real
+fall, not the rule's 35%: owner, 12 October, "35% is just an example"),
+Candle status "SOLD" with the reason under it, every line named with its
+percentage as the Signal column does (owner, 12 October: "target hit at 23.6% ·
+54,875.81", "a candle closed below 23.6% · 55,095.46", "price came back to
+54,859.70, below 23.6%", "premium dropped 38%", "day end"), green for a gain and red for a loss (the premium's
 when the option is known, the index points otherwise: the owner, 12 October); off the table on 7
 October evening, back on 8 October as the owner's exit signal, and in the day's
 calls CSV all along). A finished row is greyed. A finished call that
