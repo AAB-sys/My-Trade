@@ -146,32 +146,6 @@
   // PR #115 ran it) are for the research engine to compare; none goes live without the owner's yes
   const TRAIL = { lines: "all", buffer: "none", place: "back" };
 
-  // ---- Idea 13, no call against a fresh run (the owner's yes, 12 October: "yes, do it"; NIFTY 50 only, 5-minute candles, both
-  // levels modes): while NIFTY 50 is still making new lows of the day, no Buy CE; while it is still making new highs, no Buy PE.
-  // "Still": a candle among the last FRESH_CANDLES up to the signal candle (30 minutes; the signal candle too, from the day's
-  // second candle) went below the day's low before it, and none went above the day's high (for a Buy PE the other way round).
-  // A call the same way as the fresh run still comes. Found on 12 October from the saved days 29 September to 9 October: NIFTY
-  // 50's calls against a fresh low or high lost −790 points on 8 October (Buy CE after Buy CE bounced into the fall); NIFTY BANK's
-  // made money on all 8 days, so it stays as it is. Today-so-far lines, 5-minute: NIFTY 50 −165 → +488 on those 8 days (better
-  // on 4, worse on 4), 12 October −120 → +172; previous-day lines, the 9 days: −227 → −96. 15-minute: worse (+629 → +322),
-  // so 5-minute only. It also does PR #125's job (one bounce call at a time each way), which was closed for it
-  const FRESH_RUN = { "NIFTY 50": true };
-  const FRESH_CANDLES = 6;
-  function freshOf(bars, i) {  // { lows, highs }: the day's new lows and new highs among its last FRESH_CANDLES candles up to bars[i]
-    const day = dayOf(bars[i].time);
-    let first = i;
-    while (first > 0 && dayOf(bars[first - 1].time) === day) first--;
-    let lo = Infinity, hi = -Infinity, lows = 0, highs = 0;
-    for (let k = first; k <= i; k++) {
-      const b = bars[k];
-      if (k > first && k > i - FRESH_CANDLES) { if (b.low < lo) lows++; if (b.high > hi) highs++; }
-      if (b.low < lo) lo = b.low;
-      if (b.high > hi) hi = b.high;
-    }
-    return { lows, highs };
-  }
-  const againstFresh = (side, f) => side === "CE" ? f.lows > 0 && f.highs === 0 : f.highs > 0 && f.lows === 0;
-
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
   //   bars       the session's candles, oldest first (several days together are allowed: a new day ends the old day's calls)
   //   levelsAt   (i) => the levels bars[i] is judged against, sorted by price; a constant list for levels that do not move
@@ -216,10 +190,7 @@
   //              still is. Off when not given: Rule 1 alone, as before 9 October
   //   given      the calls given live, { signal candle's time: "CE" or "PE" } (the server's records of their options): each stays,
   //              whatever the candle's final prices say (keptAt above). The replays have none
-  //   freshRun   idea 13 (FRESH_RUN above; the index page, the watcher and the replays ask for it on NIFTY 50, 5-minute candles): no
-  //              call against a fresh run. A call given live stays; a skipped signal leaves its line free, as a signal never given,
-  //              and is listed in the result (skipped: its time, side, kind, line and why, "new low" or "new high")
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, freshRun }) {
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -293,7 +264,7 @@
       return true;
     };
     const newDay = (a, b) => !dayCandles && dayOf(a.time) !== dayOf(b.time);
-    const trades = [], skipped = [];  // skipped: the signals idea 13 gave no call
+    const trades = [];
     const used = {};  // "price|side" -> { price, side } while the line at that price has given a call that way
     let ready = null, open = [];
     for (let i = 1; i < closed.length; i++) {
@@ -316,10 +287,6 @@
       if (was && !(sig && sig.side === was)) sig = keptAt(bar, levels, from, was) || sig;
       if (sig && !was && holdBreaks && open.some(t => t.hold && t.side === sig.side)) sig = null;  // a held break that way: the same trade continues, no new call
       if (sig && holdBreaks && sig.kind === "crossed") { sig.hold = true; sig.c1Open = bar.open; }  // C1, the signal candle: its open is where the break began
-      if (sig && !was && freshRun && againstFresh(sig.side, freshOf(closed, i))) {  // idea 13: against a fresh run, no call
-        skipped.push({ signalTime: bar.time, side: sig.side, kind: sig.kind, level: sig.level, ratio: sig.ratio, why: sig.side === "CE" ? "new low" : "new high" });
-        sig = null;
-      }
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
       const shallow = !!sig && !sig.hold && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
       if (sig && (was || (!late && !shallow))) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
@@ -339,20 +306,19 @@
       open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
     }
     if (ready && !over) { const { prices, ...pending } = ready; trades.push(pending); }  // the next candle has not begun yet (a second or two): "Enters at the next open"
-    return freshRun ? { trades, closed: closed.length, skipped } : { trades, closed: closed.length };
+    return { trades, closed: closed.length };
   }
 
   // A finished day replayed: every candle has closed, so the clock is set past the day's end. "Previous day" levels
   // stand still; "today so far" levels are the ones the page draws while each candle forms: the day's range up to the
   // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page, with Rule 2 as
-  // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone. Idea 13 when
-  // asked for (the caller asks for it on NIFTY 50, 5-minute candles)
-  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, freshRun }) {
+  // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone
+  function replayDay({ bars, move, previous, seconds, signal, ideas, trail }) {
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null;
     if (move === "prev" && !fixed) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : todayLevelsAt(bars), targetsAt = move === "prev" ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
-                         trail: trail === undefined ? TRAIL : trail, freshRun: !!freshRun });
+                         trail: trail === undefined ? TRAIL : trail });
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -506,6 +472,6 @@
   }
 
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
-                 trailStep, atrBefore, TRAIL, FRESH_RUN, FRESH_CANDLES, freshOf,
+                 trailStep, atrBefore, TRAIL,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);

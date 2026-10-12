@@ -158,8 +158,7 @@
     const bars = ix && ix.candles && ix.candles[interval];
     if (!bars || !bars.length) return [];
     const ideas = { ...Rules.ideasOf(keys || []), minutes: ix.candles["1m"] };  // the one-minute candles settle a candle that touched both a stop and the target (P6, P7)
-    return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal, ideas,
-                             freshRun: interval === "5m" && !!Rules.FRESH_RUN[index] }).trades  // idea 13 as the index page runs it (NIFTY 50)
+    return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal, ideas }).trades
       .filter(t => t.exit != null).map(t => ({ ...t, date: file.date, bars, previous: ix.previous }));  // on a finished day every call has ended
   }
   const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];
