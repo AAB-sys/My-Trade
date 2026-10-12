@@ -699,7 +699,8 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
         parts = r["key"].split("|")
         if len(parts) == 5 and parts[0] == name and parts[1] == key and parts[4] == levels_mode and parts[2].isdigit():
             given.setdefault(int(parts[2]), parts[3])
-    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given)["trades"]  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
+    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,
+                               rule.ONE_BOUNCE.get(name, False))["trades"]  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October); one bounce call at a time each way on NIFTY 50 (12 October)
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, levels_mode)

@@ -402,3 +402,28 @@ console.log("rules unit checks passed");
   assert(e && e.side === "CE" && e.entry === 102 && e.how === "target" && e.target === 119.78 && e.exitTime === early[2].time, "the entry candle reaches lines moved before it: " + JSON.stringify(e));
   console.log("a target brought closer by its own candle checks passed");
 }
+
+// ---- one bounce call at a time each way, NIFTY 50 only (the owner, 12 October: bounce calls "increasing the no of calls and
+// unnecessarily are held till the end of the day"). On the previous day's lines 100 to 200 (up: 0% at 200, 23.6% 176.4,
+// 38.2% 161.8, 50% 150, 61.8% 138.2, 78.6% 121.4, 100% 100), bounce calls only: 09:20 holds 150, Buy CE in at 152, target
+// 161.8; 09:25 holds 138.2 while it is still open: a second Buy CE without the rule, none with it; 09:35 reaches 161.8, which
+// sells the first, and holds 150 on its way (low 149, close 162): the first call over, a Buy CE with the rule too
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const lv = R.levelsOf(R.moveOfDay({ open: 100, high: 200, low: 100, close: 190 }));
+  const day = [bar(0, 160, 161, 159, 160), bar(1, 158, 159, 149.5, 152), bar(2, 152, 153, 138, 141), bar(3, 141, 151, 140, 150.5),
+               bar(4, 150, 163, 149, 162), bar(5, 160, 160.5, 149.8, 151), bar(6, 151, 163, 150.5, 162.5), bar(7, 162, 162.5, 161.9, 162)];
+  const run = (oneBounce, now = Infinity) => R.paperTrades({ bars: day, levelsAt: () => lv, now, seconds: 300, dayCandles: false, signal: "held", holdBreaks: true, trail: R.TRAIL, oneBounce }).trades
+    .map(t => [Math.round((t.signalTime - t0) / 300), t.side, t.level, t.entry, t.target, t.exit, t.how].join("|"));
+  const without = run(false), withRule = run(true);
+  assert(without.join(" / ") === "1|CE|150|152|161.8|161.8|target / 2|CE|138.2|141|150|150|target / 4|CE|150|160|161.8|161.8|target", "without the rule: " + without.join(" / "));
+  assert(withRule.join(" / ") === "1|CE|150|152|161.8|161.8|target / 4|CE|150|160|161.8|161.8|target", "one bounce at a time: " + withRule.join(" / "));
+  // live, the 09:25 candle just closed: no second call waiting to enter
+  const live = run(true, day[2].time + 300 + 30);
+  assert(live.length === 1 && live[0].startsWith("1|CE|150|152|161.8||"), "live, the first still open, no second: " + live.join(" / "));
+  // the rule is NIFTY 50's alone; replayDay leaves it off unless asked
+  assert(R.ONE_BOUNCE["NIFTY 50"] === true && !R.ONE_BOUNCE["NIFTY BANK"] && !R.ONE_BOUNCE.SENSEX, "NIFTY 50 only");
+  const rp = (o) => R.replayDay({ bars: day, move: "prev", previous: { open: 100, high: 200, low: 100, close: 190 }, seconds: 300, signal: "held", oneBounce: o }).trades.length;
+  assert(rp(undefined) === 3 && rp(true) === 2, "replayDay: off unless asked");
+  console.log("one bounce call at a time (NIFTY 50) checks passed");
+}

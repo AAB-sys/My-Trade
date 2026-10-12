@@ -145,6 +145,14 @@
   // "fixed" points, or "atr" mult x ATR with points until 14 candles have closed; place: "at", the stop on the line crossed, as
   // PR #115 ran it) are for the research engine to compare; none goes live without the owner's yes
   const TRAIL = { lines: "all", buffer: "none", place: "back" };
+  // One bounce call at a time each way, on NIFTY 50 only (the owner, 12 October: "Need to work properly on bounce calls, it is
+  // increasing the no of calls and unnecessarily are held till the end of the day and bearing the losses"; "Build the rule for
+  // nifty 50 only"). While a bounce (held) call is open, the next bounce the same way gives no call, as a held break gives no
+  // second break call that way; the line skipped stays free, so it can call once the first call has ended. On the eight saved
+  // days (5-minute, today so far) NIFTY 50 went from 69 bounce calls to 43 and from -165 to +228 points (8 October, a falling
+  // day of Buy CE after Buy CE at each new low: -521 to +34), though it was worse on 5 of the 8 days; NIFTY BANK's bounce calls,
+  // which often dip first and reach their target later, would have gone from +1,577 to -261, so it keeps the rule as it was
+  const ONE_BOUNCE = { "NIFTY 50": true };
 
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
   //   bars       the session's candles, oldest first (several days together are allowed: a new day ends the old day's calls)
@@ -190,7 +198,7 @@
   //              still is. Off when not given: Rule 1 alone, as before 9 October
   //   given      the calls given live, { signal candle's time: "CE" or "PE" } (the server's records of their options): each stays,
   //              whatever the candle's final prices say (keptAt above). The replays have none
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given }) {
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, oneBounce }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -286,6 +294,7 @@
       const was = given && given[bar.time];  // a call given live at this candle (its option recorded): it stays
       if (was && !(sig && sig.side === was)) sig = keptAt(bar, levels, from, was) || sig;
       if (sig && !was && holdBreaks && open.some(t => t.hold && t.side === sig.side)) sig = null;  // a held break that way: the same trade continues, no new call
+      if (sig && !was && oneBounce && sig.kind === "held" && open.some(t => t.kind === "held" && t.side === sig.side)) sig = null;  // a bounce call open that way: no second one (ONE_BOUNCE)
       if (sig && holdBreaks && sig.kind === "crossed") { sig.hold = true; sig.c1Open = bar.open; }  // C1, the signal candle: its open is where the break began
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
       const shallow = !!sig && !sig.hold && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
@@ -313,12 +322,12 @@
   // stand still; "today so far" levels are the ones the page draws while each candle forms: the day's range up to the
   // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page, with Rule 2 as
   // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone
-  function replayDay({ bars, move, previous, seconds, signal, ideas, trail }) {
+  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, oneBounce }) {
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null;
     if (move === "prev" && !fixed) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : todayLevelsAt(bars), targetsAt = move === "prev" ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
-                         trail: trail === undefined ? TRAIL : trail });
+                         trail: trail === undefined ? TRAIL : trail, oneBounce });
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -472,6 +481,6 @@
   }
 
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
-                 trailStep, atrBefore, TRAIL,
+                 trailStep, atrBefore, TRAIL, ONE_BOUNCE,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);

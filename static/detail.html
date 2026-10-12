@@ -554,7 +554,7 @@
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL,
-                               given: state.interval === "1d" ? null : givenCalls() });
+                               given: state.interval === "1d" ? null : givenCalls(), oneBounce: state.interval !== "1d" && !!Rules.ONE_BOUNCE[name] });  // NIFTY 50: one bounce call at a time each way (12 October)
   }
   // The calls given live (9 October, the owner: a call already given must stay on the table): today's records of options
   // bought on this page's time frame and levels, { signal candle's time: side }, the first recorded for a candle. A candle

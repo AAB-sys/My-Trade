@@ -140,6 +140,7 @@ function run(bars, previous, o, higher) {
       const k = levels.indexOf(at), next = side === "CE" ? levels[k + 1] : levels[k - 1];
       const late = (o.noNewAfter && clockEnd > o.noNewAfter) || (o.closeAt && clockEnd >= o.closeAt);
       let ok = !!next && !late && !(holdBreaks && open.some(x => x.hold && x.side === side));  // a held break that way: the same trade continues
+      if (ok && o.oneBounce && kind === "held" && open.some(x => x.kind === "held" && x.side === side)) ok = false;  // NIFTY 50: one bounce call at a time each way (Rules.ONE_BOUNCE)
       if (ok && kind === "crossed" && next && !holdBreaks) {  // the depth and the body of the crossing candle, against the gap to the next level
         const gap = Math.abs(next.price - at.price), depth = Math.abs(bar.close - at.price) / gap, body = Math.abs(bar.close - bar.open) / gap;
         if (o.minDepth && depth < o.minDepth) { ok = false; if (o.waitDeeper) shallow[at.ratio + side] = { ratio: at.ratio, side }; }
@@ -161,7 +162,7 @@ function all(index, interval, opts) {
   const higherKey = interval === "5m" ? "15m" : "30m";
   if (typeof opts === "function") opts = opts(index);  // a setting that depends on the index (Rule 2's buffer in points)
   return DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix) return [];
-    return run(ix.candles[interval], ix.previous, { levels: "prev", signal: "both", ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
+    return run(ix.candles[interval], ix.previous, { levels: "prev", signal: "both", oneBounce: !!R.ONE_BOUNCE[index], ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
 }
 const byDay = (L) => { const m = {}; L.forEach(x => m[x.date] = r2((m[x.date] || 0) + x.points)); return m; };
 function tally(L, base) {
@@ -251,7 +252,7 @@ if (LIVE.length) {
     if (SEC[interval] && (levels === "prev" || levels === "today") && signal !== "off") {
       list.forEach(c => { const day = DAYS.find(d => d.date === c.date); const ix = day && day.indices[index]; if (!ix) return;
         replayable++;
-        const t = R.replayDay({ bars: ix.candles[interval], move: levels, previous: ix.previous, seconds: SEC[interval], signal }).trades;
+        const t = R.replayDay({ bars: ix.candles[interval], move: levels, previous: ix.previous, seconds: SEC[interval], signal, oneBounce: !!R.ONE_BOUNCE[index] }).trades;
         const stamp = e => new Date(e * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 16);
         if (t.some(x => stamp(x.signalTime) === c.signal_time_ist && x.side === c.option_side)) matched++; });
     }
@@ -262,9 +263,9 @@ if (LIVE.length) {
 for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", "15m"]) {
   // the self-check: the base line must equal the page's engine
   const mine = tally(all(index, interval, {}));
-  const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both" }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
+  const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both", oneBounce: !!R.ONE_BOUNCE[index] }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
   const mineToday = tally(all(index, interval, { levels: "today" }));  // and the today-so-far line
-  const pageToday = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "today", previous: ix.previous, seconds: SEC[interval], signal: "both" }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
+  const pageToday = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "today", previous: ix.previous, seconds: SEC[interval], signal: "both", oneBounce: !!R.ONE_BOUNCE[index] }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
   const same = mine.n === page.n && mine.net === page.net && mineToday.n === pageToday.n && mineToday.net === pageToday.net;
   console.log(`\n==== ${index}, ${interval} candles ${same ? "(base lines agree with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify({ page, pageToday, mine, mineToday })}`);
   const base = all(index, interval, {});
@@ -272,7 +273,7 @@ for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", 
   // the stops of the Study page (P6, P7; the owner's question of 8 October), by the page's own engine, a candle that touched both
   // the stop and the target settled by the one-minute candles, on both levels modes and both signals
   const viaRules = (move, ideas) => DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix || (move === "prev" && !ix.previous)) return [];
-    return R.replayDay({ bars: ix.candles[interval], move, previous: ix.previous, seconds: SEC[interval], signal: "both", ideas: ideas && { ...ideas, minutes: ix.candles["1m"] } })
+    return R.replayDay({ bars: ix.candles[interval], move, previous: ix.previous, seconds: SEC[interval], signal: "both", ideas: ideas && { ...ideas, minutes: ix.candles["1m"] }, oneBounce: !!R.ONE_BOUNCE[index] })
       .trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); });
   for (const move of ["today", "prev"]) {
     const rule = viaRules(move, null);

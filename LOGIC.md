@@ -253,6 +253,20 @@ The rule, in the order it is applied:
    −78.35 at the day end; 8 October's 10:40 CE, +5.60 → −203.85; 12 October's
    9:40 CE sold at 9:55 instead of 9:50, +1.13 either way); NIFTY BANK +1,278.60
    → +1,277.72. The previous day's lines never move: nothing changes there.
+   **One bounce call at a time each way, NIFTY 50 only** (owner, 12 October:
+   bounce calls "increasing the no of calls and unnecessarily are held till
+   the end of the day"; "Build the rule for nifty 50 only"): on NIFTY 50, while
+   a bounce (held) call is open, the next bounce the same way gives no call, as
+   a held break gives no second break call that way. The line skipped stays
+   free, so it can call again once the first call has ended. NIFTY BANK and
+   SENSEX keep the rule as it was (`Rules.ONE_BOUNCE`, `rule.ONE_BOUNCE`; the
+   index page, the watcher, the Study page and the research engine pass it by
+   index). On the eight saved days, *Today so far*, 5-minute candles: NIFTY 50
+   69 bounce calls → 43, held to the day end 17 → 5, −165 → +228 points
+   (8 October, Buy CE after Buy CE at each new low: −521 → +34), but worse on
+   5 of the 8 days; 15-minute +629 → +506; previous-day lines −380 → −418.
+   NIFTY BANK would have gone +1,577 → −261 (its bounce calls dip first and
+   reach the target later), so it is not given the rule.
    **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
    candles): a call given by a *crossed* signal (the candle C1 broke a line L)
    is not sold at its target. It is held, and the same trade continues while

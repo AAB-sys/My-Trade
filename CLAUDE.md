@@ -236,6 +236,10 @@ branch from `main`.
   itself brought closer (12 October; its own new low for a CE, high for a PE, moved the lines) counts its high/low only
   against the target as it stood before the candle (`linesAt(i - 1)`), and the moved target on its close (live: the price
   now): `hits` / `hits` in paperTrades, mirrored in `lab/replay.js`.
+- One bounce call at a time each way, NIFTY 50 only (12 October): `oneBounce` / `one_bounce` in paperTrades and replayDay
+  (off unless given): a held (bounce) signal gives no call while a bounce call the same way is open; the line is not marked
+  used. `Rules.ONE_BOUNCE` / `rule.ONE_BOUNCE` = { "NIFTY 50": true }: the index page (not on day candles), the watcher, the
+  Study page, `lab/replay.js` and check_rule.py pass it by index. NIFTY BANK and SENSEX are unchanged.
 - The owner's exit rule "Hold Through a Level Break" (8 October night): `holdBreaks` / `hold_breaks`, passed by the index
   page (not on day candles), the watcher and `replayDay`. A crossed call gets `hold: true` and `c1Open` (the signal
   candle's open); it ends `"back"` (a close back across its line) or `"retouch"` (a candle opening beyond the previous

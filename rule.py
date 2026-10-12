@@ -179,13 +179,14 @@ def atr_before(bars: list, period: int) -> list:
     return out
 
 
+ONE_BOUNCE = {"NIFTY 50": True}  # one bounce call at a time each way, on NIFTY 50 only (the owner, 12 October; see static/rules.js ONE_BOUNCE)
 TRAIL = {"lines": "all", "buffer": "none", "place": "back"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choices, 9 October (see static/rules.js TRAIL)
 
 
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
-                 hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None) -> dict:
+                 hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, one_bounce: bool = False) -> dict:
     """hold_breaks: the owner's exit rule "Hold Through a Level Break" (8 October night; see static/rules.js): a crossed call is held
     through its target, sold on a close back across its line ("back"), on a return to the signal candle's open after a candle
     opened beyond the previous close ("retouch"), or at the day end; no new call that way while it is held.
@@ -371,6 +372,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             sig = kept_at(bar, levels, frm, was) or sig
         if sig and not was and hold_breaks and any(t.get("hold") and t["side"] == sig["side"] for t in open_):
             sig = None  # a held break that way: the same trade continues, no new call
+        if sig and not was and one_bounce and sig["kind"] == "held" and any(t["kind"] == "held" and t["side"] == sig["side"] for t in open_):
+            sig = None  # a bounce call open that way: no second one (ONE_BOUNCE, NIFTY 50)
         if sig and hold_breaks and sig["kind"] == "crossed":
             sig["hold"], sig["c1Open"] = True, bar["open"]  # C1, the signal candle: its open is where the break began
         late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
@@ -425,14 +428,14 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     return {"trades": trades, "closed": len(closed)}
 
 
-def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL) -> dict:
+def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL, one_bounce: bool = False) -> dict:
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
     setting is given (None: Rule 1 alone)."""
     fixed = (levels_of(move_of_day(previous)) if previous else None) if move == "prev" else None
     if move == "prev" and not fixed:
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True, trail)
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True, trail, None, one_bounce)
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},
