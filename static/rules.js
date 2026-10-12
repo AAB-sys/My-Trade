@@ -204,12 +204,27 @@
     const gain = (t, price) => round2(t.side === "CE" ? price - t.entry : t.entry - price);  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
     const reaches = (t, bar) => t.side === "CE" ? bar.high >= t.target : bar.low <= t.target;
-    const follow = (t, levels) => {  // the target on the lines as they stand (and the ladder beyond it, for idea P5, one step further per carry)
+    const beyondOf = (t, levels) => {  // the lines past the call's entry and level, in its direction, nearest first
       const past = t.side === "CE" ? Math.max(t.entry, t.level) : Math.min(t.entry, t.level);
       const prices = levels.map(l => l.price);
-      const beyond = t.side === "CE" ? prices.filter(p => p > past) : prices.filter(p => p < past).reverse();
-      const k = t.carried || 0;
+      return t.side === "CE" ? prices.filter(p => p > past) : prices.filter(p => p < past).reverse();
+    };
+    const follow = (t, levels) => {  // the target on the lines as they stand (and the ladder beyond it, for idea P5, one step further per carry)
+      const beyond = beyondOf(t, levels), k = t.carried || 0;
       if (beyond.length > k) { t.target = beyond[k]; t.ladder = beyond.slice(k + 1); }  // no line that far out (the entry at the day's high): it stays
+    };
+    // The target reached (the owner, 12 October: NIFTY 50's 9:40 Buy CE was sold "at the target" at 9:54 with the index at
+    // 22,475 and the premium down 20%). A candle that brings the target closer (its own new low for a Buy CE, high for a Buy
+    // PE, moved the lines; on 12 October the 9:50 candle went up to 22,523.90 and then down to a new low of 22,472.15, which
+    // pulled the 23.6% line from 22,542 to 22,514.38) may have made its high or low before the move: that counts only
+    // against the target as it stood before the candle; the moved target counts on the close (on the candle forming now,
+    // the price now), which came after the move. Until then the earlier high counted against the moved target
+    const came = new Map();  // open call -> its target on the lines as they stood before this candle
+    const targetOn = (t, levels) => { const beyond = beyondOf(t, levels), k = t.carried || 0; return beyond.length > k ? beyond[k] : t.target; };
+    const hits = (t, bar) => {
+      const was = came.get(t), nearer = was != null && (t.side === "CE" ? t.target < was : t.target > was);
+      if (!nearer) return reaches(t, bar);
+      return t.side === "CE" ? bar.high >= was || bar.close >= t.target : bar.low <= was || bar.close <= t.target;
     };
     const touchesStop = (t, bar) => t.stop != null && (t.side === "CE" ? bar.low <= t.stop : bar.high >= t.stop);
     const stopFirst = (t, bar) => {  // the candle touched the stop: did the stop come before the target? (ideas P6, P7)
@@ -239,7 +254,7 @@
         }
         return true;
       }
-      while (reaches(t, bar)) {
+      while (hits(t, bar)) {
         const beyond = carryOn != null && t.ladder.length ? t.ladder[0] : null;
         if (beyond != null && (t.side === "CE" ? bar.close - t.target : t.target - bar.close) >= carryOn * Math.abs(beyond - t.target)) {
           t.carried = (t.carried || 0) + 1; t.target = beyond; t.ladder = t.ladder.slice(1); continue;  // and the same candle may have reached the next one too
@@ -259,8 +274,8 @@
         ready = null;  // a signal on a day's last candle has no candle left to enter on
       }
       if (ready) { const t = enterAt(ready, bar); if (t) { trades.push(t); open.push(t); } ready = null; }
-      const levels = levelsAt(i), lines = linesAt(i);
-      open.forEach(t => { follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      const levels = levelsAt(i), lines = linesAt(i), linesBefore = linesAt(i - 1);
+      open.forEach(t => { came.set(t, targetOn(t, linesBefore)); follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
       if (stopShare) open = open.filter(t => { if (!t.hold && touchesStop(t, bar) && stopFirst(t, bar)) { end(t, t.stop, bar, "stop"); return false; } return true; });  // ideas P6, P7
       open = open.filter(t => settle(t, bar, prevBar.close, levels, bufferAt(i)));
       if (exitBack) open = open.filter(t => { if (!t.hold && backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit
@@ -280,11 +295,11 @@
     const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a call enters at its open, and open calls run on its live price
       if (ready) { const t = enterAt(ready, forming); if (t) { trades.push(t); open.push(t); } ready = null; }
-      const lines = linesAt(closed.length);  // the lines as the chart draws them now, with the forming candle in the day's range
-      open.forEach(t => { follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
+      const lines = linesAt(closed.length), linesBefore = linesAt(closed.length - 1);  // the lines as the chart draws them now, with the forming candle in the day's range
+      open.forEach(t => { came.set(t, targetOn(t, linesBefore)); follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
       if (stopShare) open = open.filter(t => { if (!t.hold && touchesStop(t, forming)) { end(t, t.stop, forming, "stop"); return false; } return true; });  // ideas P6, P7, tick by tick
       open = open.filter(t => { if (t.hold) { if (!t.trail && retouch(t, forming, last.close)) { end(t, t.c1Open, forming, "retouch"); return false; } return true; }  // exit B tick by tick; exit A and Rule 2 wait for the close
-                                if (!reaches(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
+                                if (!hits(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
                                 end(t, t.target, forming, "target"); return false; });
       open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at
     } else {

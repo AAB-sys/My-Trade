@@ -232,7 +232,10 @@ branch from `main`.
   passed as `targetsAt` / `targets_at`. A call given live stays given (9 October): `given` / `given`, { signal time: side }
   from today's option records of the page's (or the watcher's) time frame and levels mode, keeps a recorded call when the
   candle's final prices no longer give it (`Rules.keptAt` / `rule.kept_at`, `kept: true`). A target hit seen live stays a hit when
-  the candle closes (its price can differ by a few points when the line moved on later in that candle).
+  the candle closes (its price can differ by a few points when the line moved on later in that candle). A target the candle
+  itself brought closer (12 October; its own new low for a CE, high for a PE, moved the lines) counts its high/low only
+  against the target as it stood before the candle (`linesAt(i - 1)`), and the moved target on its close (live: the price
+  now): `hits` / `hits` in paperTrades, mirrored in `lab/replay.js`.
 - The owner's exit rule "Hold Through a Level Break" (8 October night): `holdBreaks` / `hold_breaks`, passed by the index
   page (not on day candles), the watcher and `replayDay`. A crossed call gets `hold: true` and `c1Open` (the signal
   candle's open); it ends `"back"` (a close back across its line) or `"retouch"` (a candle opening beyond the previous

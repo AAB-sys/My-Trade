@@ -238,6 +238,20 @@ The rule, in the order it is applied:
    candles, both signals: the same 450 calls, 381 won instead of 370, net
    +6,014 points instead of +7,344 (targets come closer as the lines move, so
    more are reached, each for fewer points).
+   **A target the candle itself brought closer** (owner's yes, 12 October): when
+   a candle's own new low (for a Buy CE; new high for a Buy PE) moves the lines
+   and brings the target closer, the candle's high (low) may have come before
+   that move. It then counts only against the target as it stood before the
+   candle; the moved target counts on the candle's close (live: the price now),
+   which came after. On 12 October NIFTY 50's 9:40 Buy CE (in at 22,513.25,
+   target 22,542) went up to 22,523.90 in the 9:50 candle and then to a new low
+   of 22,472.15, which pulled the 23.6% line to 22,514.38: the table sold it
+   "at the target" with the index at 22,475 (premium −20%); the price reached
+   22,514.38 at 9:56. On the nine saved days, *Today so far*, 5-minute candles,
+   both signals: NIFTY 50 +31.54 → −266.44 (1 October's 12:15 CE, +10.18 →
+   −78.35 at the day end; 8 October's 10:40 CE, +5.60 → −203.85; 12 October's
+   9:40 CE sold at 9:55 instead of 9:50, +1.13 either way); NIFTY BANK +1,278.60
+   → +1,277.72. The previous day's lines never move: nothing changes there.
    **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
    candles): a call given by a *crossed* signal (the candle C1 broke a line L)
    is not sold at its target. It is held, and the same trade continues while

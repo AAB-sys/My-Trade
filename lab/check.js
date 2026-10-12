@@ -377,3 +377,28 @@ console.log("rules unit checks passed");
   assert(JSON.stringify(R.replayDay({ bars: day, move: "prev", previous: { open: 100, high: 200, low: 100, close: 190 }, seconds: 300, signal: "both" }).trades) === JSON.stringify(none), "replays have no records");
   console.log("calls given live stay checks passed");
 }
+
+// ---- a target the candle itself brought closer (12 October, NIFTY 50: the 9:40 Buy CE, in at 22,513.25, target the 23.6% line at
+// 22,542; the 9:50 candle went up to 22,523.90, then down to a new low of 22,472.15, which pulled the 23.6% line down to 22,514.38;
+// the table sold the call "at the target" on the candle's earlier high, with the index at 22,475). Today-so-far lines, a day
+// down from 200 to 100: 09:20 holds 0% (100), Buy CE in at 106, target 23.6% (123.6). 09:30 goes up to 122, then to a new low of
+// 90, which brings the 23.6% line down to 115.96, and closes at 95: not the target (122 never reached 123.6, and the moved line
+// came after the high). 09:35 goes up to 118: the target, 115.96, at 09:35
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const day = [bar(0, 200, 200, 100, 110), bar(1, 108, 112, 100, 105), bar(2, 106, 120, 104, 115), bar(3, 115, 122, 90, 95), bar(4, 96, 118, 95, 110), bar(5, 110, 111, 108, 109)];
+  const ce = (trades) => trades.find(t => t.signalTime === day[1].time && t.side === "CE");
+  const r = ce(R.replayDay({ bars: day, move: "today", previous: null, seconds: 300, signal: "both" }).trades);
+  assert(r && r.entry === 106 && r.how === "target" && r.target === 115.96 && r.exitTime === day[4].time && r.points === 9.96, "the moved target, reached at 09:35: " + JSON.stringify(r));
+  // live, with 09:30 forming at its low: still open; once the price now is back above the moved line, sold at it
+  const live = (forming) => ce(R.paperTrades({ bars: [...day.slice(0, 3), forming], levelsAt: R.todayLevelsAt([...day.slice(0, 3), forming]), targetsAt: R.todayLinesAt([...day.slice(0, 3), forming]),
+    now: day[3].time + 200, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL }).trades);
+  const low = live(day[3]), back = live(bar(3, 115, 122, 90, 117));
+  assert(low && low.exit == null && low.target === 115.96, "forming at the new low: still open: " + JSON.stringify(low));
+  assert(back && back.how === "target" && back.exit === 115.96 && back.exitTime === day[3].time, "forming, the price now back above the moved line: sold at it: " + JSON.stringify(back));
+  // the signal candle's own new low moved the lines before the entry: the entry candle's high counts against them as ever
+  const early = [bar(0, 200, 200, 100, 110), bar(1, 108, 112, 95, 101), bar(2, 102, 121, 101, 118), bar(3, 118, 119, 117, 118)];
+  const e = R.replayDay({ bars: early, move: "today", previous: null, seconds: 300, signal: "both" }).trades.find(t => t.signalTime === early[1].time);
+  assert(e && e.side === "CE" && e.entry === 102 && e.how === "target" && e.target === 119.78 && e.exitTime === early[2].time, "the entry candle reaches lines moved before it: " + JSON.stringify(e));
+  console.log("a target brought closer by its own candle checks passed");
+}
