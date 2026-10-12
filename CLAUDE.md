@@ -236,12 +236,6 @@ branch from `main`.
   itself brought closer (12 October; its own new low for a CE, high for a PE, moved the lines) counts its high/low only
   against the target as it stood before the candle (`linesAt(i - 1)`), and the moved target on its close (live: the price
   now): `hits` / `hits` in paperTrades, mirrored in `lab/replay.js`.
-- Idea 13, no call against a fresh run (12 October): `freshRun` / `fresh_run` in paperTrades and replayDay / replay_day, passed by
-  the index page (5m, `Rules.FRESH_RUN[name]`), the watcher (5m, `rule.FRESH_RUN`, both levels modes), the Study page (5m) and
-  `lab/replay.js` (its own engine, `o.freshRun`, and the page's base lines, so they still agree). `Rules.freshOf` / `rule.fresh_of`:
-  the day's new lows and highs among its last `FRESH_CANDLES` (6) candles up to the signal; against a fresh run (a new low and no new
-  high for a CE, the other way for a PE) a signal not given live gets no call and goes into the result's `skipped` (with `why`), its
-  line left free. `FRESH_FROM` (env) tells `lab/replay.js` from which session the live calls ran it.
 - The owner's exit rule "Hold Through a Level Break" (8 October night): `holdBreaks` / `hold_breaks`, passed by the index
   page (not on day candles), the watcher and `replayDay`. A crossed call gets `hold: true` and `c1Open` (the signal
   candle's open); it ends `"back"` (a close back across its line) or `"retouch"` (a candle opening beyond the previous

@@ -258,24 +258,6 @@ The rule, in the order it is applied:
    −78.35 at the day end; 8 October's 10:40 CE, +5.60 → −203.85; 12 October's
    9:40 CE sold at 9:55 instead of 9:50, +1.13 either way); NIFTY BANK +1,278.60
    → +1,277.72. The previous day's lines never move: nothing changes there.
-   **No call against a fresh run** (idea 13; owner's yes, 12 October: "yes, do
-   it"; NIFTY 50 only, 5-minute candles, both levels modes): while NIFTY 50 is
-   still making new lows of the day, no Buy CE; while it is still making new
-   highs, no Buy PE. "Still": one of the last 6 candles up to the signal
-   candle (30 minutes, the signal candle too) went below the day's low before
-   it, and none went above the day's high (for a Buy PE the other way round).
-   A call the same way as the fresh run still comes; a call given live stays;
-   the signals given no call are listed under the table ("No call against a
-   fresh run"), and their lines stay free. Found from the saved days 29
-   September to 9 October: NIFTY 50's calls against a fresh low or high made
-   money on 5 of the 8 days but lost −790 on 8 October (Buy CE after Buy CE
-   bounced into the fall); NIFTY BANK's made money on all 8 days, so NIFTY
-   BANK and SENSEX stay as they are. NIFTY 50, today-so-far lines: the 8 days
-   −165 → +488 (better on 4, worse on 4), 12 October −119.62 → +171.85;
-   previous-day lines, the 9 days −226.68 → −96.39; 15-minute candles worse
-   (+629 → +322), so 5-minute only. It also does the job of PR #125 (one
-   bounce call at a time each way), closed for it. Its gain rests mostly on
-   the falling days (8 and 12 October): the new days are its fair test.
    **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
    candles): a call given by a *crossed* signal (the candle C1 broke a line L)
    is not sold at its target. It is held, and the same trade continues while
