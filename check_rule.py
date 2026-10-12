@@ -20,10 +20,10 @@ const jobs = JSON.parse(require("fs").readFileSync(0, "utf8"));
 const out = jobs.map(j => {
   const levels = j.levels;  // the live page: the levels as they stand now, for every candle
   const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined,
-                                                 trail: "trail" in j ? j.trail : undefined })  // Rule 2: as the page runs it, or another setting, or null (Rule 1 alone)
+                                                 trail: "trail" in j ? j.trail : undefined, freshRun: !!j.freshRun })  // Rule 2: as the page runs it, or another setting, or null (Rule 1 alone)
     : j.mode === "live-today" ? R.paperTrades({ bars: j.bars, levelsAt: R.todayLevelsAt(j.bars), targetsAt: R.todayLinesAt(j.bars), now: j.now, seconds: j.seconds,
-                                                dayCandles: false, signal: j.signal, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined })  // the index page and the watcher today
-    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined });
+                                                dayCandles: false, signal: j.signal, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined, freshRun: !!j.freshRun })  // the index page and the watcher today
+    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined, freshRun: !!j.freshRun });
   res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now });  // the candle verdict too
     t.carry = R.carryOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // and the carry read
   return res;
@@ -46,12 +46,14 @@ def py_run(jobs: list) -> list:
     out = []
     for j in jobs:
         if j["mode"] == "replay":
-            res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL)
+            res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL, bool(j.get("freshRun")))
         elif j["mode"] == "live-today":
-            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j))
+            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j),
+                                    bool(j.get("freshRun")))
         else:
             levels = j["levels"]
-            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL, given_of(j))
+            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL, given_of(j),
+                                    bool(j.get("freshRun")))
         for t in res["trades"]:
             t["read"] = rule.read_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # the candle verdict too
             t["carry"] = rule.carry_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # and the carry read
@@ -130,6 +132,8 @@ def main() -> int:
                         for k, trail in enumerate(TRAILS):
                             jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "trail": trail,
                                          "what": f"{d['date']} {name} {key} {move} {signal} trail {k}"})
+                        jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "freshRun": True,
+                                     "what": f"{d['date']} {name} {key} {move} {signal} idea 13"})
                         if candles.get("1m"):  # the stops settled by the day's one-minute candles, as the Study page runs them
                             for share in (1, 0.5):
                                 jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal,
@@ -145,6 +149,8 @@ def main() -> int:
                     for signal in ("held", "crossed", "both"):
                         jobs.append({"mode": "live", "bars": shown, "levels": levels, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live at {cut} {signal}"})
                         jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live today at {cut} {signal}"})
+                        jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "freshRun": True, "what": f"{d['date']} {name} live today at {cut} {signal} idea 13"})
+                        jobs.append({"mode": "live", "bars": shown, "levels": levels, "now": now, "seconds": 300, "signal": signal, "freshRun": True, "what": f"{d['date']} {name} live at {cut} {signal} idea 13"})
                     # calls given live (9 October): some candles' calls kept on a side the final prices may not give
                     given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(4, len(shown) - 2))} if len(shown) > 2 else {}
                     jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": "both", "given": given, "what": f"{d['date']} {name} live today at {cut} given {given}"})
@@ -174,6 +180,9 @@ def main() -> int:
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live today"})
         given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(5, len(shown) - 2))} if len(shown) > 2 else {}
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "what": f"random {k} live today given"})
+        jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "what": f"random {k} live today given idea 13"})
+        for move in ("prev", "today"):
+            jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": 300, "signal": "both", "freshRun": True, "what": f"random {k} {move} idea 13"})
     js, py = js_run(jobs), py_run(jobs)
     bad = 0
     for j, a, b in zip(jobs, js, py):
