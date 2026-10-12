@@ -402,3 +402,25 @@ console.log("rules unit checks passed");
   assert(e && e.side === "CE" && e.entry === 102 && e.how === "target" && e.target === 119.78 && e.exitTime === early[2].time, "the entry candle reaches lines moved before it: " + JSON.stringify(e));
   console.log("a target brought closer by its own candle checks passed");
 }
+
+// ---- idea 13, no call against a fresh run (the owner's yes, 12 October; NIFTY 50): lines from 100 to 200 on a falling day. 09:20 goes
+// down to 98, a new low of the day, and closes at 105, back above the 0% line (100): a bounce Buy CE, but against the fresh low, so
+// no call with idea 13. 09:25 goes up to 123 and closes at 110, under the 23.6% line (122.07 from the new low): a bounce Buy PE, the
+// same way as the fresh low, so it comes. A call given live stays. A new low 7 candles back no longer counts
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const day = [bar(0, 200, 200, 100, 110), bar(1, 108, 112, 98, 105), bar(2, 105, 123, 104, 110), bar(3, 110, 111, 106, 107), bar(4, 107, 108, 104, 105)];
+  assert(JSON.stringify(R.freshOf(day, 1)) === JSON.stringify({ lows: 1, highs: 0 }), "09:20 made a new low: " + JSON.stringify(R.freshOf(day, 1)));
+  const plain = R.replayDay({ bars: day, move: "today", previous: null, seconds: 300, signal: "both" });
+  assert(plain.trades.some(t => t.signalTime === day[1].time && t.side === "CE" && t.kind === "held") && !("skipped" in plain), "without idea 13: the 09:20 Buy CE, no list");
+  const fresh = R.replayDay({ bars: day, move: "today", previous: null, seconds: 300, signal: "both", freshRun: true });
+  assert(!fresh.trades.some(t => t.signalTime === day[1].time), "idea 13: no 09:20 Buy CE: " + JSON.stringify(fresh.trades.map(t => [t.signalTime, t.side])));
+  assert(JSON.stringify(fresh.skipped) === JSON.stringify([{ signalTime: day[1].time, side: "CE", kind: "held", level: 100, ratio: 0, why: "new low" }]), "listed: " + JSON.stringify(fresh.skipped));
+  assert(fresh.trades.some(t => t.signalTime === day[2].time && t.side === "PE" && t.kind === "held"), "the 09:25 Buy PE, the way of the fresh low, comes: " + JSON.stringify(fresh.trades));
+  const kept = R.paperTrades({ bars: day, levelsAt: R.todayLevelsAt(day), targetsAt: R.todayLinesAt(day), now: Infinity, seconds: 300, dayCandles: false, signal: "both",
+    holdBreaks: true, trail: R.TRAIL, given: { [day[1].time]: "CE" }, freshRun: true });
+  assert(kept.trades.some(t => t.signalTime === day[1].time && t.side === "CE") && !kept.skipped.length, "a call given live stays: " + JSON.stringify(kept.skipped));
+  const calm = [bar(0, 200, 200, 100, 110), bar(1, 108, 112, 98, 105), ...[2, 3, 4, 5, 6, 7, 8].map(i => bar(i, 105, 110, 101, 106))];
+  assert(R.freshOf(calm, 6).lows === 1 && R.freshOf(calm, 7).lows === 0 && R.freshOf(calm, 8).lows === 0, "the last 6 candles only: " + JSON.stringify([6, 7, 8].map(i => R.freshOf(calm, i))));
+  console.log("idea 13 checks passed");
+}

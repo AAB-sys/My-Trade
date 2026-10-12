@@ -145,6 +145,7 @@
   #paper[hidden] { display: none; }
   #paper-box .controls { margin: 0 0 8px; }
   #paper-score { font-size: 13px; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+  #paper-skipped { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
   .scroll { overflow-x: auto; }
   #csv {
     font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer; margin-left: auto;
@@ -292,6 +293,7 @@
     <div id="paper-note"></div>
     <div id="feed-note" hidden></div>
     <div id="paper-score"></div>
+    <div id="paper-skipped" hidden></div>
     <div class="scroll">
       <table id="paper">
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th>Candle status</th></tr></thead>
@@ -554,7 +556,7 @@
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL,
-                               given: state.interval === "1d" ? null : givenCalls() });
+                               given: state.interval === "1d" ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name] });  // idea 13, NIFTY 50 (12 October)
   }
   // The calls given live (9 October, the owner: a call already given must stay on the table): today's records of options
   // bought on this page's time frame and levels, { signal candle's time: side }, the first recorded for a candle. A candle
@@ -577,7 +579,7 @@
       note.textContent = "Off. Pick a signal to see the calls it would have given in this session.";
       return;
     }
-    const { trades, closed } = paperTrades(levels);
+    const { trades, closed, skipped } = paperTrades(levels);
     markSold(trades);
     lastPaper = { trades, levels };
     const done = trades.filter(t => t.exit != null);
@@ -589,6 +591,10 @@
       ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
       : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
       + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
+    const skippedBox = document.getElementById("paper-skipped");  // idea 13 (12 October): the signals given no call, newest first, in plain words
+    skippedBox.hidden = !(skipped && skipped.length);
+    skippedBox.innerHTML = skipped && skipped.length ? `<b>No call against a fresh run (${skipped.length}):</b> ` + skipped.slice().reverse().map(x =>
+      `${callTime(x.signalTime)} Buy ${x.side} (${x.kind === "held" ? "Held" : "Crossed"} ${(x.ratio * 100).toFixed(1)}%: ${name} made a ${x.why} in the last 30 minutes)`).join(" · ") : "";
     table.hidden = !trades.length;
     const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
     table.classList.toggle("no-options", !withOptions);
