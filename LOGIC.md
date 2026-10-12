@@ -181,8 +181,9 @@ saves it as a file for the owner's own record, one session at a time.
 
 The rule, in the order it is applied:
 
-1. **Signal** - a closed candle that **held** a level ("Held: trade the bounce")
-   or **crossed** one ("Crossed: trade the break"), or either ("Both"), as the
+1. **Signal** - a closed candle that **held** a level (the owner's words since 12
+   October: "On the line") or **crossed** one ("Crossed above" for a Buy CE,
+   "Crossed below" for a Buy PE; the switch: "Crossed above / below"), or either ("Both"), as the
    switch says. The switch is remembered per browser; *Off* hides the list. When
    one candle signals at several levels, the one nearest its close counts: one
    candle, one call **(owner to decide)**. A level that has given a call in a
