@@ -709,8 +709,11 @@
         : t.how === "day end" ? "sold at day end" : t.entry == null ? "" : `${past ? "target passed, continue" : "hold"} · sell if a candle closes ${way} ${line}`;
       return `<td class="target">${fmt.format(t.target)}${note ? `<small${t.exit != null && t.points > 0 ? ' class="up"' : ""}>${note}</small>` : ""}</td>`;
     }
+    // an open bounce call says what to do and what sells it, as an open break call does (the owner, 12 October: on NIFTY 50
+    // the 11:05 and 11:15 Buy CE bounce calls showed only their target, a blank row beside the 9:30 PE's "continue" note)
+    const open = t.entry == null ? "" : `${t.aimed ? "next line · " : ""}hold · sell at the target or at the day end`;
     const note = t.how === "target" ? `<small class="up">target hit, sold</small>` : t.how === "day end" ? "<small>sold at day end</small>"
-      : t.how === "candle" ? "<small>sold on SELL</small>" : t.aimed ? "<small>next line</small>" : "";
+      : t.how === "candle" ? "<small>sold on SELL</small>" : open ? `<small>${open}</small>` : "";
     return `<td class="target">${fmt.format(t.target)}${note}</td>`;
   }
 

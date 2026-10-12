@@ -144,7 +144,8 @@ ratio and price), **Call Entry** (the strike number of the contract, the same
 number as in the call; the index price at entry until the contract is known:
 no Dhan, or no page open at the entry), **Call Target** (the next level in the
 call's direction, on the lines as the chart draws them now, item 5; once the
-call has ended, *target hit, sold* or *sold at day end* under it; a held break,
+call has ended, *target hit, sold* or *sold at day end* under it; an open bounce
+call says *hold · sell at the target or at the day end* (12 October); a held break,
 item 5, says *hold* or *target passed, continue* and what sells it, then how it
 was sold), **Premium Paid ->
 Now** (at exit once the call has ended; *SELL NOW* while the premium sits below
