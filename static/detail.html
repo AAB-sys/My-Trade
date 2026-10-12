@@ -285,8 +285,8 @@
     <div class="controls levels">
       <div class="seg" id="signal" aria-label="Signal">
         <button data-signal="off">Off</button>
-        <button data-signal="held" class="on">On the line</button>
-        <button data-signal="crossed">Crossed above / below</button>
+        <button data-signal="held" class="on">Held: trade the bounce</button>
+        <button data-signal="crossed">Crossed: trade the break</button>
         <button data-signal="both">Both</button>
       </div>
       <button id="csv" type="button" title="Save the list below as a spreadsheet file">Download CSV</button>
@@ -665,9 +665,8 @@
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
       + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + candleCell(t, r);
   }
-  // The owner's words (12 October): "On the line" for a held signal; a crossed one says which way, "Crossed above" (Buy CE) or
-  // "Crossed below" (Buy PE) the Fibonacci level
-  const signalWord = (t) => t.kind === "held" ? "On the line" : t.side === "CE" ? "Crossed above" : "Crossed below";
+  // The signal's word, "Held" or "Crossed" (#127's "On the line" / "Crossed above" / "Crossed below" rolled back)
+  const signalWord = (t) => t.kind === "held" ? "Held" : "Crossed";
   const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
 
   // The strike bought (the owner's choice, one strike in the money: a CE the first strike below the index at entry, a PE the

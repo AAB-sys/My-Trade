@@ -89,7 +89,7 @@
       <span class="lbl">Levels</span>
       <select class="pick" id="move" aria-label="Levels"><option value="prev">Previous day</option><option value="today">Today so far</option></select>
       <span class="lbl">Signal</span>
-      <select class="pick" id="signal" aria-label="Signal"><option value="held">On the line</option><option value="crossed">Crossed above / below</option><option value="both">Both</option></select>
+      <select class="pick" id="signal" aria-label="Signal"><option value="held">Held</option><option value="crossed">Crossed</option><option value="both">Both</option></select>
     </div>
     <div class="controls" id="ideas-row"><span class="lbl">Ideas under test</span></div>
     <div id="setting-note" class="note"></div>
@@ -121,7 +121,7 @@
 
     <h2>The candles at the levels</h2>
     <div id="levels-note" class="note"></div>
-    <div class="scroll"><table id="behaviour"><thead><tr><th>Level</th><th>Touched</th><th>On the line</th><th>Crossed</th><th>On the line share</th><th>After on the line: reached the next level</th><th>After crossed: went on to the next level</th></tr></thead><tbody></tbody></table></div>
+    <div class="scroll"><table id="behaviour"><thead><tr><th>Level</th><th>Touched</th><th>Held</th><th>Crossed</th><th>Held share</th><th>After a hold: reached the next level</th><th>After a cross: went on to the next level</th></tr></thead><tbody></tbody></table></div>
 
     <h2>Candle high and low breaks</h2>
     <div id="breaks-note" class="note"></div>
@@ -136,7 +136,7 @@
 <script>
   const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 };
   const NAMES = { interval: { "1m": "1 min", "5m": "5 min", "15m": "15 min", "30m": "30 min" }, move: { prev: "Previous day", today: "Today so far" },
-                  signal: { held: "On the line", crossed: "Crossed above / below", both: "Both" } };  // the owner's words (12 October)
+                  signal: { held: "Held", crossed: "Crossed", both: "Both" } };
   const state = { days: [], files: {}, store: null, index: "NIFTY 50", interval: "5m", move: "prev", signal: "held", ideas: [] };  // ideas: the keys switched on (study only)
   try { const k = JSON.parse(localStorage.getItem("study-ideas") || "[]"); if (Array.isArray(k)) state.ideas = k.filter(x => Rules.IDEAS[x]); } catch (e) {}
   try { const m = localStorage.getItem("levels"); if (["prev", "today"].includes(m)) state.move = m; } catch (e) {}  // the index page's choices carry over
