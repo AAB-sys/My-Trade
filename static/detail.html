@@ -686,8 +686,11 @@
   // the call continues; the note says what sells it, and once sold, what did
   // A closed call reads the same whatever closed it (the owner, 9 October: "if both the trades are closed then why the
   // message format is different. it should be same"): Call Target "sold at <time>", Premium "paid -> at sale",
-  // Candle status "SOLD" with the reason under it, green for a gain and red for a loss
-  const closedTone = (t) => t.points > 0 ? "up" : t.points < 0 ? "down" : "";
+  // Candle status "SOLD" with the reason under it, green for a gain and red for a loss: the premium's, the way the Premium
+  // column reads it, when the option is known (the owner, 12 October: NIFTY 50's 9:40 Buy CE read green for +1.13 index
+  // points while its premium went 113.15 -> 90.85), the index points otherwise
+  const gainOf = (t, r) => r && r.premium_paid > 0 && r.premium_now != null ? r.premium_now - r.premium_paid : t.points;
+  const closedTone = (t, r) => { const g = gainOf(t, r); return g > 0 ? "up" : g < 0 ? "down" : ""; };
   function soldReason(t) {
     const way = t.side === "PE" ? "above" : "below";
     return t.how === "target" ? "target hit" : t.how === "day end" ? "day end" : t.how === "sold" ? "premium fell 35% of what was paid"
@@ -699,7 +702,7 @@
   const stopName = (t) => `${(t.trail.stopRatio * 100).toFixed(1)}% (${fmt.format(t.trail.stop)})`;
   function targetCell(t, r) {
     if (t.exit != null)
-      return `<td class="target">${fmt.format(t.target)}<small class="${closedTone(t)}">sold at ${callTime(t.exitTime)}</small></td>`;
+      return `<td class="target">${fmt.format(t.target)}<small class="${closedTone(t, r)}">sold at ${callTime(t.exitTime)}</small></td>`;
     if (t.hold && t.trail)  // Rule 2: the stop has moved to a further line; the note always names the stop's line (section 7)
       return `<td class="target">${fmt.format(t.target)}<small>target passed, continue · sell if a candle closes ${t.side === "PE" ? "above" : "below"} ${stopName(t)}</small></td>`;
     if (t.hold) {
@@ -730,7 +733,7 @@
   // it against the result
   function candleCell(t, r) {
     if (t.exit != null)  // closed: the sale is the last word on the call, the same way for every reason
-      return `<td class="cand ${t.points > 0 ? "carry" : t.points < 0 ? "exit" : ""}">SOLD<small>${soldReason(t)}</small></td>`;
+      return `<td class="cand ${{ up: "carry", down: "exit" }[closedTone(t, r)] || ""}">SOLD<small>${soldReason(t)}</small></td>`;
     const rd = candleRead(t);
     if (!rd) return `<td class="cand">—</td>`;
     if (t.exit == null && rd.say === "exit" && !t.hold) {  // a bounce call: the candles' warning is not a sale (the owner, 9 October)
