@@ -253,14 +253,32 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if stop_share and t.get("stop") is None and not t.get("hold"):
             t["stop"] = round2(t["entry"] - stop_share * (t["target"] - t["entry"]) if t["side"] == "CE" else t["entry"] + stop_share * (t["entry"] - t["target"]))
 
-    def follow(t, levels):
-        """The target on the lines as they stand (owner's decision, 8 October; see static/rules.js), the ladder beyond it for idea P5."""
+    def beyond_of(t, levels):
+        """The lines past the call's entry and level, in its direction, nearest first."""
         past = max(t["entry"], t["level"]) if t["side"] == "CE" else min(t["entry"], t["level"])
         prices = [l["price"] for l in levels]
-        beyond = [p for p in prices if p > past] if t["side"] == "CE" else [p for p in reversed(prices) if p < past]
-        k = t.get("carried", 0)
+        return [p for p in prices if p > past] if t["side"] == "CE" else [p for p in reversed(prices) if p < past]
+
+    def follow(t, levels):
+        """The target on the lines as they stand (owner's decision, 8 October; see static/rules.js), the ladder beyond it for idea P5."""
+        beyond, k = beyond_of(t, levels), t.get("carried", 0)
         if len(beyond) > k:  # no line that far out (the entry at the day's high): it stays
             t["target"], t["ladder"] = beyond[k], beyond[k + 1:]
+
+    came = {}  # id of an open call -> its target on the lines as they stood before this candle (12 October; see static/rules.js)
+
+    def target_on(t, levels):
+        beyond, k = beyond_of(t, levels), t.get("carried", 0)
+        return beyond[k] if len(beyond) > k else t["target"]
+
+    def hits(t, bar):
+        """The target reached. A candle that brought the target closer (its own new low for a CE, high for a PE, moved the lines) may
+        have made its high or low before the move: that counts only against the target as it stood before; the moved one on the close."""
+        was = came.get(id(t))
+        nearer = was is not None and (t["target"] < was if t["side"] == "CE" else t["target"] > was)
+        if not nearer:
+            return reaches(t, bar)
+        return bar["high"] >= was or bar["close"] >= t["target"] if t["side"] == "CE" else bar["low"] <= was or bar["close"] <= t["target"]
 
     def retouch(t, bar, prev_close):
         """Exit B: the candle opened beyond the previous close and came back to the signal candle's open (C1 began on the far side)."""
@@ -286,7 +304,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 if st["line"] is not None:
                     t["trail"] = st  # the first further line crossed: Rule 2 from now on
             return True
-        while reaches(t, bar):
+        while hits(t, bar):
             beyond = t["ladder"][0] if carry_on is not None and t["ladder"] else None
             if beyond is not None and (bar["close"] - t["target"] if t["side"] == "CE" else t["target"] - bar["close"]) >= carry_on * abs(beyond - t["target"]):
                 t["carried"] = t.get("carried", 0) + 1
@@ -312,8 +330,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 trades.append(t)
                 open_.append(t)
             ready = None
-        levels, lines = levels_at(i), lines_at(i)
+        levels, lines, lines_before = levels_at(i), lines_at(i), lines_at(i - 1)
         for t in open_:
+            came[id(t)] = target_on(t, lines_before)
             follow(t, lines)
             set_stop(t)
         if stop_share:  # ideas P6, P7
@@ -368,8 +387,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 trades.append(t)
                 open_.append(t)
             ready = None
-        lines = lines_at(len(closed))  # the lines as the chart draws them now, with the forming candle in the day's range
+        lines, lines_before = lines_at(len(closed)), lines_at(len(closed) - 1)  # the lines as the chart draws them now, with the forming candle in the day's range
         for t in open_:
+            came[id(t)] = target_on(t, lines_before)
             follow(t, lines)
             set_stop(t)
         if stop_share:  # ideas P6, P7, tick by tick
@@ -387,7 +407,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                     end(t, t["c1Open"], forming, "retouch")
                 else:
                     still.append(t)
-            elif reaches(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close
+            elif hits(t, forming) and not (carry_on is not None and t["ladder"]):  # idea P5: the decision waits for the close
                 end(t, t["target"], forming, "target")
             else:
                 still.append(t)

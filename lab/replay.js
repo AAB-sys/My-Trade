@@ -89,11 +89,14 @@ function run(bars, previous, o, higher) {
         return true;
       }
       const past = x.side === "CE" ? Math.max(x.entry, x.level) : Math.min(x.entry, x.level), k = x.carried || 0;  // the target follows the lines, as Rules.paperTrades (8 October)
-      const lines = o.levels === "today" ? todayLines(i) : levels;
-      const beyond = x.side === "CE" ? lines.map(l => l.price).filter(p => p > past) : lines.map(l => l.price).filter(p => p < past).reverse();
+      const lines = o.levels === "today" ? todayLines(i) : levels, before = o.levels === "today" ? todayLines(i - 1) : levels;
+      const beyondOn = L => x.side === "CE" ? L.map(l => l.price).filter(p => p > past) : L.map(l => l.price).filter(p => p < past).reverse();
+      const beyond = beyondOn(lines), was = beyondOn(before).length > k ? beyondOn(before)[k] : x.target;  // the target as the lines stood before this candle
       if (beyond.length > k) { x.target = beyond[k]; x.ladder = beyond.slice(k + 1); }
       x.fav = Math.max(x.fav, x.side === "CE" ? bar.high - x.entry : x.entry - bar.low); x.adv = Math.max(x.adv, x.side === "CE" ? x.entry - bar.low : bar.high - x.entry);
-      while (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target) {  // the target reached: idea P5 may carry on to the level beyond
+      const hit = () => !(x.side === "CE" ? x.target < was : x.target > was) ? (x.side === "CE" ? bar.high >= x.target : bar.low <= x.target)  // as Rules.paperTrades (12 October): a target this candle
+        : x.side === "CE" ? bar.high >= was || bar.close >= x.target : bar.low <= was || bar.close <= x.target;                    // brought closer counts on its close
+      while (hit()) {  // the target reached: idea P5 may carry on to the level beyond
         const beyond = o.carryOn != null && x.ladder.length ? x.ladder[0] : null;
         if (beyond != null && (x.side === "CE" ? bar.close - x.target : x.target - bar.close) >= o.carryOn * Math.abs(beyond - x.target)) { x.carried = (x.carried || 0) + 1; x.target = beyond; x.ladder = x.ladder.slice(1); continue; }
         end(x, x.target, bar, "target"); return false;
