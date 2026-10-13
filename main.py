@@ -708,11 +708,18 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
         carry = rule.carry_of(t, bars, seconds, now)  # and the carry read (idea P5's question), the same way
         rec = dhan.record_of(call_key)
         if t["how"] == "open" and rec is None and time.monotonic() >= watch_retry.get(call_key, 0):  # entered, and no record yet: the option and its premium, now
-            try:
-                rec = dhan.register_call(name, call_key, t["side"], t["entry"])
+            try:  # (entered a while ago: the premium of its entry minute, dhan.late_prices)
+                rec = dhan.register_call(name, call_key, t["side"], t["entry"], t.get("entryTime"))
                 watch_retry.pop(call_key, None)
             except Exception as exc:
                 watch_retry[call_key] = time.monotonic() + 30  # Dhan refused (its limit, the chain down): again in half a minute
+                log.warning("watch: %s %s: %s", name, call_key, exc)
+        elif t.get("exit") is not None and t.get("entry") is not None and rec is None and time.monotonic() >= watch_retry.get(call_key, 0):
+            try:  # bought and sold while the server could not see it (13 October): its prices from the option's one-minute candles
+                rec = dhan.register_call(name, call_key, t["side"], t["entry"], t["entryTime"], {"how": t["how"], "at": sale_minute(name, t, seconds)})
+                watch_retry.pop(call_key, None)
+            except Exception as exc:
+                watch_retry[call_key] = time.monotonic() + 120  # no candles yet, or Dhan refused: again in two minutes
                 log.warning("watch: %s %s: %s", name, call_key, exc)
         elif t.get("exit") is not None and rec and not rec["ended"]:
             rec = dhan.end_call(call_key, t["how"]) or rec
@@ -732,6 +739,19 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
     if rows:
         study.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
+
+
+def sale_minute(name: str, t: dict, seconds: int) -> int:
+    """The minute a call nobody saw was sold in, for its option's price then: a target or a retouch is reached tick by tick,
+    so the first one-minute candle of the selling candle that reached that price (13 October: the 9:20 Buy CE's target,
+    22,477.78, in the 9:25 candle, was reached at 9:29); any other sale is at the candle's close, so its last minute."""
+    start, end = t["exitTime"], t["exitTime"] + seconds
+    if t["how"] in ("target", "retouch"):
+        up = (t["how"] == "target") == (t["side"] == "CE")  # a Buy CE's target is above, its retouch below; a Buy PE's the other way
+        for b in dhan.intraday(name, 1):
+            if start <= b["time"] < end and (b["high"] >= t["exit"] if up else b["low"] <= t["exit"]):
+                return b["time"]
+    return min(end, int(time.time()) // 60 * 60 + 60) - 60  # the candle forming now: the minute now
 
 
 def sold_trade(t: dict, rec: dict, bars: list, seconds: int) -> dict:
@@ -1135,8 +1155,11 @@ async def options_register(name: str, request: Request):
         raise HTTPException(status_code=400, detail="index_at_entry must be a number")
     if not call_key or side not in ("CE", "PE"):
         raise HTTPException(status_code=400, detail="key and side (CE or PE) are required")
+    parts, entry_time = call_key.split("|"), None
+    if len(parts) == 5 and parts[1] in INTERVALS and parts[1] != "1d" and parts[2].isdigit():
+        entry_time = int(parts[2]) + INTERVALS[parts[1]]["bar_seconds"]  # the open of the candle after the signal candle: a page seeing the call late gets its entry minute's premium
     try:
-        return await asyncio.to_thread(dhan.register_call, key, call_key, side, level)
+        return await asyncio.to_thread(dhan.register_call, key, call_key, side, level, entry_time)
     except Exception as exc:
         dhan_status(False, dhan_reason(exc))
         raise HTTPException(status_code=502, detail=store["dhan"]["status"])

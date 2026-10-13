@@ -763,10 +763,12 @@ def records_for(name: str) -> list:
         return [dict(r) for r in _records.values() if r["index"] == name and r["paid_at"][:10] == today]
 
 
-def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict:
+def register_call(name: str, key: str, side: str, index_at_entry: float, entry_time: int | None = None, sale: dict | None = None) -> dict:
     """Records the option behind a call the page has seen enter: the one-strike-in-the-money contract on the
     nearest expiry, and its premium now, which is the premium paid. Asked again for the same key, returns
-    the record as it is."""
+    the record as it is. A call seen late (entry_time, the entry candle's open, LATE_SECONDS or more ago), or
+    one already sold (sale: {"how", "at": the minute it was sold in}), takes its prices from the option's own
+    one-minute candles instead (late_prices); a sold call whose candles Dhan does not give gets no record."""
     with _records_lock:
         if key in _records:
             return dict(_records[key])
@@ -780,6 +782,9 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
     record = {"key": key, "index": name, "side": side, "expiry": expiry, "strike": strike, "index_at_entry": float(index_at_entry),
               "premium_paid": premium, "paid_at": now, "premium_now": premium, "now_at": now, "sell_below": round(premium * SELL_SHARE, 2),
               "sold": None, "ended": None, "security_id": None}  # the id is filled in by fill_ids, so the premium is recorded at once
+    if sale is not None or (entry_time is not None and time.time() - entry_time >= LATE_SECONDS):
+        if not late_prices(name, record, entry_time, sale) and sale is not None:
+            raise DhanError("other", f"Dhan gave no one-minute candles of {int(strike)} {side} {expiry} from {_hhmm(entry_time)}")
     with _records_lock:
         if key in _records:  # the page and the server's watcher may both have asked in the same second: the first record stands
             return dict(_records[key])
@@ -787,6 +792,61 @@ def register_call(name: str, key: str, side: str, index_at_entry: float) -> dict
         _save_records()
     _changed()
     return dict(record)
+
+
+# A call the server did not see at its entry (the owner, 13 October: Dhan refused the token from 9:05 to 9:49, so NIFTY 50's
+# 9:20 Buy CE, bought at 9:25 and sold at 9:29, had no premium at all, "not seen at entry", and the 9:30 Buy CE, bought at 9:35,
+# showed the premium of 9:49, when the server first saw it, as the premium paid). Its prices come from the option's own
+# one-minute candles: the premium paid is the open of the entry minute (the entry is the open of the candle after the signal),
+# the premium at sale the close of the minute it was sold in, and the Sell mark is looked for in every minute in between, as
+# the feed would have done tick by tick. "late" in the record says which minutes the prices came from
+LATE_SECONDS = float(os.environ.get("LATE_SECONDS", "120"))  # by then the entry minute is over and Dhan has its candle
+
+
+def _hhmm(epoch) -> str:
+    return datetime.fromtimestamp(epoch, IST).strftime("%H:%M") if epoch is not None else "?"
+
+
+def option_minutes(name: str, security_id: int) -> list:
+    """Today's one-minute candles of one option contract, oldest first, refreshed at most every 30 s."""
+    def make():
+        day = today_ist()
+        base = {"securityId": str(security_id), "exchangeSegment": OPTION_SEGMENTS[name], "instrument": "OPTIDX", "interval": "1",
+                "oi": False, "fromDate": day.isoformat()}
+        try:
+            return _bars(call("POST", "/charts/intraday", {**base, "toDate": (day + timedelta(days=1)).isoformat()}))
+        except DhanError as exc:  # Dhan's toDate has been exclusive in some versions (_chart)
+            if exc.kind != "other" or "date" not in exc.message.lower():
+                raise
+            return _bars(call("POST", "/charts/intraday", {**base, "toDate": day.isoformat()}))
+    return cached(("option minutes", name, security_id), 30, make)
+
+
+def late_prices(name: str, rec: dict, entry_time: int | None, sale: dict | None) -> bool:
+    """The record's prices from the option's one-minute candles (see LATE_SECONDS above). False, the record as it was,
+    when the contract or its entry minute is not known."""
+    sid = option_security_id(name, rec["expiry"], rec["strike"], rec["side"])
+    if not sid or entry_time is None:
+        return False
+    bars = option_minutes(name, sid)
+    first = next((b for b in bars if entry_time <= b["time"] < entry_time + 300), None)  # a minute with no trade has no candle
+    if first is None:
+        return False
+    stamp = lambda epoch: datetime.fromtimestamp(epoch, IST).isoformat(timespec="seconds")
+    paid = first["open"]
+    rec.update(premium_paid=paid, sell_below=round(paid * SELL_SHARE, 2), security_id=sid, late={"paid": stamp(first["time"]), "sold": None})
+    until = sale["at"] if sale else time.time()
+    for b in bars:  # the Sell mark, in the minutes nobody saw
+        if first["time"] <= b["time"] <= until and b["low"] <= rec["sell_below"]:
+            rec["sold"] = {"premium": min(b["open"], rec["sell_below"]), "at": stamp(b["time"])}
+            _settle_sold(rec)
+            rec["late"]["sold"] = rec["sold"]["at"]
+            return True
+    if sale:  # sold by the index rule before anyone saw it: the close of the minute it was sold in
+        last = ([b for b in bars if first["time"] <= b["time"] <= sale["at"]] or [first])[-1]
+        rec.update(premium_now=last["close"], now_at=stamp(sale["at"]), ended={"how": sale["how"], "at": stamp(sale["at"])})
+        rec["late"]["sold"] = stamp(last["time"])
+    return True
 
 
 def _settle_sold(rec: dict) -> bool:
