@@ -701,7 +701,8 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
             given.setdefault(int(parts[2]), parts[3])
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,
                                key == "5m" and rule.FRESH_RUN.get(name, False),  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October); idea 13 on NIFTY 50 (12 October)
-                               key == "5m" and levels is None and rule.NEW_HIGH_LOW.get(name, False))["trades"]  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
+                               key == "5m" and levels is None and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
+                               key == "5m" and rule.CLEAR_CROSS.get(name, False), key == "5m" and rule.ONE_WAY.get(name, False))["trades"]  # ideas 8 and 5: NIFTY 50, both kinds of lines (13 October)
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, levels_mode)

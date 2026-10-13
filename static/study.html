@@ -160,7 +160,8 @@
     const ideas = { ...Rules.ideasOf(keys || []), minutes: ix.candles["1m"] };  // the one-minute candles settle a candle that touched both a stop and the target (P6, P7)
     return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal, ideas,
                              freshRun: interval === "5m" && !!Rules.FRESH_RUN[index],  // idea 13 as the index page runs it (NIFTY 50)
-                             newHighLow: interval === "5m" && !!Rules.NEW_HIGH_LOW[index] }).trades  // and idea 24 (NIFTY 50, today so far: replayDay leaves it off on the previous day's lines)
+                             newHighLow: interval === "5m" && !!Rules.NEW_HIGH_LOW[index],  // and idea 24 (NIFTY 50, today so far: replayDay leaves it off on the previous day's lines)
+                             clearCross: interval === "5m" && !!Rules.CLEAR_CROSS[index], oneWay: interval === "5m" && !!Rules.ONE_WAY[index] }).trades  // and ideas 8 and 5 (NIFTY 50)
       .filter(t => t.exit != null).map(t => ({ ...t, date: file.date, bars, previous: ix.previous }));  // on a finished day every call has ended
   }
   const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];

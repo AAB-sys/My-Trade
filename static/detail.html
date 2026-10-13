@@ -558,7 +558,8 @@
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL,
                                given: state.interval === "1d" ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
-                               newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name] });  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
+                               newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
+                               clearCross: state.interval === "5m" && !!Rules.CLEAR_CROSS[name], oneWay: state.interval === "5m" && !!Rules.ONE_WAY[name] });  // ideas 8 and 5, NIFTY 50 (13 October)
   }
   // The calls given live (9 October, the owner: a call already given must stay on the table): today's records of options
   // bought on this page's time frame and levels, { signal candle's time: side }, the first recorded for a candle. A candle
@@ -593,10 +594,15 @@
       ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
       : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
       + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
-    const skippedBox = document.getElementById("paper-skipped");  // idea 13 (12 October): the signals given no call, newest first, in plain words
-    skippedBox.hidden = !(skipped && skipped.length);
-    skippedBox.innerHTML = skipped && skipped.length ? `<b>No call against a fresh run (${skipped.length}):</b> ` + skipped.slice().reverse().map(x =>
-      `${callTime(x.signalTime)} Buy ${x.side} (${signalWord(x)} ${(x.ratio * 100).toFixed(1)}%: ${name} made a ${x.why} in the last 30 minutes)`).join(" · ") : "";
+    // the signals given no call, newest first, in plain words, one line per reason: idea 13 (12 October), ideas 8 and 5 (13 October)
+    const skippedBox = document.getElementById("paper-skipped"), groups = [
+      ["No call against a fresh run", x => x.why === "new low" || x.why === "new high", x => `${name} made a ${x.why} in the last 30 minutes`],
+      ["No call, the candle closed too near the line", x => x.why === "not clear", () => "less than a quarter of the way to the next line"],
+      ["No call while a call the other way is held", x => x.why === "held other way", x => `a Buy ${x.side === "CE" ? "PE" : "CE"} was held`]];
+    const said = groups.map(([head, is, why]) => { const L = (skipped || []).filter(is);
+      return L.length ? `<b>${head} (${L.length}):</b> ` + L.slice().reverse().map(x => `${callTime(x.signalTime)} Buy ${x.side} (${signalWord(x)} ${(x.ratio * 100).toFixed(1)}%: ${why(x)})`).join(" · ") : ""; }).filter(Boolean);
+    skippedBox.hidden = !said.length;
+    skippedBox.innerHTML = said.join("<br>");
     table.hidden = !trades.length;
     const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
     table.classList.toggle("no-options", !withOptions);
