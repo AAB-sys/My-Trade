@@ -165,7 +165,10 @@ fall, not the rule's 35%: owner, 12 October, "35% is just an example"),
 Candle status "SOLD" with the reason under it, every line named with its
 percentage as the Signal column does (owner, 12 October: "target hit at 23.6% ·
 54,875.81", "a candle closed below 23.6% · 55,095.46", "price came back to
-54,859.70, below 23.6%", "premium dropped 38%", "day end"), green for a gain and red for a loss (the premium's
+54,859.70, below 23.6%", "premium dropped 38%", "day end"; a sale at a candle's close
+names that candle and its close since 13 October, "the 10:45 AM candle closed at 22,524.25, above 61.8% ·
+22,518.68": the owner had read "a candle closed above 61.8%" as the 10:30 candle, which closed below
+it), green for a gain and red for a loss (the premium's
 when the option is known, the index points otherwise: the owner, 12 October); off the table on 7
 October evening, back on 8 October as the owner's exit signal, and in the day's
 calls CSV all along). A finished row is greyed. A finished call that
@@ -315,7 +318,8 @@ The rule, in the order it is applied:
    the stop (`trail`). From the first further line on, A and B no longer sell
    (the stop has taken A's place); C still does. The table says "target passed,
    continue · sell if a candle closes above 0.0% (22,432.60)" and, when sold,
-   "SOLD · index candle closed above 0.0% (22,432.60)" (below for a CE).
+   "SOLD · the 11:35 AM candle closed at 22,440.10, above 0.0% (22,432.60)"
+   (below for a CE; until 13 October "index candle closed above ...").
    **The target moves on with it** (the owner, 13 October: NIFTY 50's 9:30
    Buy CE stood at 22,570 with its target still on 61.8%, 22,518.68, "candle is
    rising, it is in up direction, why still taget at lower level ?"): from the

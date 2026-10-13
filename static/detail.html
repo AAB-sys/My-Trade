@@ -702,14 +702,17 @@
   const gainOf = (t, r) => r && r.premium_paid > 0 && r.premium_now != null ? r.premium_now - r.premium_paid : t.points;
   const closedTone = (t, r) => { const g = gainOf(t, r); return g > 0 ? "up" : g < 0 ? "down" : ""; };
   // Every reason that names a line gives its percentage too, the way the Signal column does, and a sale by the premium rule
-  // gives the real fall (the owner, 12 October: "here in the box, also mention the percentage"; "35% is just an example")
+  // gives the real fall (the owner, 12 October: "here in the box, also mention the percentage"; "35% is just an example").
+  // A sale at a candle's close names that candle and its close (the owner, 13 October: NIFTY 50's 10:30 Buy PE read "a candle
+  // closed above 61.8%", taken for the 10:30 candle, which closed below it; the candle was the 10:45 one, closed at 22,524.25)
   function soldReason(t, r) {
     const way = t.side === "PE" ? "above" : "below", line = `${pctOf(t)} · ${fmt.format(t.level)}`, target = targetPct(t);
+    const closed = `the ${callTime(t.exitTime)} candle closed at ${fmt.format(t.exit)},`;
     return t.how === "target" ? (target ? `target hit at ${target} · ${fmt.format(t.target)}` : "target hit") : t.how === "day end" ? "day end"
       : t.how === "sold" ? (r ? `premium dropped ${-premiumChange(r)}%` : "premium fell 35% of what was paid")
-      : t.how === "back" ? `a candle closed ${way} ${line}` : t.how === "retouch" ? `price came back to ${fmt.format(t.c1Open)}, ${way} ${pctOf(t)}`
-      : t.how === "trail" ? `index candle closed ${way} ${stopName(t)}`
-      : t.how === "candle" ? `a candle closed back across ${line}` : t.how;
+      : t.how === "back" ? `${closed} ${way} ${line}` : t.how === "retouch" ? `price came back to ${fmt.format(t.c1Open)}, ${way} ${pctOf(t)}`
+      : t.how === "trail" ? `${closed} ${way} ${stopName(t)}`
+      : t.how === "candle" ? `${closed} back across ${line}` : t.how;
   }
   // The target's line: a target follows the lines ("today so far" levels move with each new high or low), so it is looked up
   // on the lines as they stood at the candle that sold the call; null when no line sits at that price
