@@ -707,6 +707,14 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
         read = rule.read_of(t, bars, seconds, now)  # the candle verdict, for the day's calls CSV (the research engine's), as the page gives it
         carry = rule.carry_of(t, bars, seconds, now)  # and the carry read (idea P5's question), the same way
         rec = dhan.record_of(call_key)
+        if rec and t.get("entryTime") is not None and dhan.paid_late(rec, t["entryTime"]) and time.monotonic() >= watch_retry.get(call_key, 0):
+            try:  # made late before 13 October's change: its prices again from the option's one-minute candles (dhan.reprice_late)
+                sale = {"how": t["how"], "at": sale_minute(name, t, seconds)} if t.get("exit") is not None else None
+                rec = dhan.reprice_late(name, call_key, t["entryTime"], sale) or rec
+                watch_retry.pop(call_key, None)
+            except Exception as exc:
+                watch_retry[call_key] = time.monotonic() + 300  # no candles for it, or Dhan refused: again in five minutes
+                log.warning("watch: %s %s: %s", name, call_key, exc)
         if t["how"] == "open" and rec is None and time.monotonic() >= watch_retry.get(call_key, 0):  # entered, and no record yet: the option and its premium, now
             try:  # (entered a while ago: the premium of its entry minute, dhan.late_prices)
                 rec = dhan.register_call(name, call_key, t["side"], t["entry"], t.get("entryTime"))
