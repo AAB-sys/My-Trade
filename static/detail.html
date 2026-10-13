@@ -557,7 +557,8 @@
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL,
-                               given: state.interval === "1d" ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name] });  // idea 13, NIFTY 50 (12 October)
+                               given: state.interval === "1d" ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
+                               newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name] });  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
   }
   // The calls given live (9 October, the owner: a call already given must stay on the table): today's records of options
   // bought on this page's time frame and levels, { signal candle's time: side }, the first recorded for a candle. A candle
@@ -739,18 +740,31 @@
     return { passed: t.trail.ratio, next, price: next ? next.price : t.trail.line };
   }
   const pctText = (ratio) => (ratio * 100).toFixed(1) + "%";
+  // A call past the day's high or low (idea 24, 13 October) has no line beyond it to aim at until the lines move past its
+  // entry: its target reads "no line above" (a Buy PE: "no line below") instead of a price
+  const noLine = (t) => `no line ${t.side === "PE" ? "below" : "above"}`;
+  const targetPrice = (v, t) => v == null ? noLine(t) : fmt.format(v);
+  const newEdge = (t) => `new ${t.side === "PE" ? "low" : "high"} of the day`;
   function targetCell(t, r) {
     const moved = movedTarget(t), shown = moved ? moved.price : t.target;
     if (t.exit != null)
-      return `<td class="target">${fmt.format(shown)}<small class="${closedTone(t, r)}">sold at ${callTime(t.exitTime)}</small></td>`;
-    if (t.hold && t.trail)  // Rule 2: the stop has moved to a further line; the note always names the stop's line (section 7)
-      return `<td class="target">${fmt.format(shown)}<small>target ${pctText(moved.passed)} passed, ${moved.next ? `next target ${pctText(moved.next.ratio)}` : "no line beyond it"} · sell if a candle closes ${t.side === "PE" ? "above" : "below"} ${stopName(t)}</small></td>`;
+      return `<td class="target">${targetPrice(shown, t)}<small class="${closedTone(t, r)}">sold at ${callTime(t.exitTime)}</small></td>`;
+    if (t.hold && t.trail) {  // Rule 2: the stop has moved to a further line; the note always names the stop's line (section 7)
+      // the line passed was the day's high (low) and the price has gone on past it: no line beyond, the target shown is the day's
+      // high (low) itself (13 October, idea 24: it read "target 0.0% passed, next target 0.0%"); "Today so far" lines only, the
+      // previous day's top line is not today's high
+      const edge = judgedToday() && (!moved.next || moved.next.ratio === moved.passed);
+      const said = edge ? `day's ${t.side === "PE" ? "low" : "high"} · ${noLine(t)}`
+        : `target ${pctText(moved.passed)} passed, ${moved.next ? `next target ${pctText(moved.next.ratio)}` : "no line beyond it"}`;
+      return `<td class="target">${fmt.format(shown)}<small>${said} · sell if a candle closes ${t.side === "PE" ? "above" : "below"} ${stopName(t)}</small></td>`;
+    }
     if (t.hold) {
       const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
-      const past = t.entry != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));
+      const past = t.entry != null && t.target != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));
       const note = t.how === "back" ? `sold: a candle closed ${way} ${line}` : t.how === "retouch" ? `sold: price came back to ${fmt.format(t.c1Open)}`
-        : t.how === "day end" ? "sold at day end" : t.entry == null ? "" : `${past ? "target passed, continue" : "hold"} · sell if a candle closes ${way} ${line}`;
-      return `<td class="target">${fmt.format(t.target)}${note ? `<small${t.exit != null && t.points > 0 ? ' class="up"' : ""}>${note}</small>` : ""}</td>`;
+        : t.how === "day end" ? "sold at day end" : t.entry == null ? (t.target == null ? newEdge(t) : "")
+        : `${t.target == null ? `${newEdge(t)} · hold` : past ? "target passed, continue" : "hold"} · sell if a candle closes ${way} ${line}`;
+      return `<td class="target">${targetPrice(t.target, t)}${note ? `<small${t.exit != null && t.points > 0 ? ' class="up"' : ""}>${note}</small>` : ""}</td>`;
     }
     // an open bounce call says what to do and what sells it, as an open break call does (the owner, 12 October: on NIFTY 50
     // the 11:05 and 11:15 Buy CE bounce calls showed only their target, a blank row beside the 9:30 PE's "continue" note)

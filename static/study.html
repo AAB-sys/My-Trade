@@ -159,7 +159,8 @@
     if (!bars || !bars.length) return [];
     const ideas = { ...Rules.ideasOf(keys || []), minutes: ix.candles["1m"] };  // the one-minute candles settle a candle that touched both a stop and the target (P6, P7)
     return Rules.replayDay({ bars, move, previous: ix.previous, seconds: SECONDS[interval], signal, ideas,
-                             freshRun: interval === "5m" && !!Rules.FRESH_RUN[index] }).trades  // idea 13 as the index page runs it (NIFTY 50)
+                             freshRun: interval === "5m" && !!Rules.FRESH_RUN[index],  // idea 13 as the index page runs it (NIFTY 50)
+                             newHighLow: interval === "5m" && !!Rules.NEW_HIGH_LOW[index] }).trades  // and idea 24 (NIFTY 50, today so far: replayDay leaves it off on the previous day's lines)
       .filter(t => t.exit != null).map(t => ({ ...t, date: file.date, bars, previous: ix.previous }));  // on a finished day every call has ended
   }
   const dayBars = (index, interval) => state.days.slice().reverse().map(d => { const f = state.files[d.date], ix = f && f.indices[index];
@@ -314,7 +315,7 @@
     ["lower levels (nearer 0%)", "higher levels (nearer 100%)", t => t.ratio],
     ["PE calls", "CE calls", t => t.side === "CE" ? 1 : 0],
     ["held signals", "crossed signals", t => t.kind === "crossed" ? 1 : 0],
-    ["nearer targets", "farther targets", t => Math.abs(t.target - t.entry) / t.entry * 100],
+    ["nearer targets", "farther targets", t => t.target == null ? 0 : Math.abs(t.target - t.entry) / t.entry * 100],  // a call past the day's high or low may end with no target (idea 24)
     ["small signal candles", "big signal candles", t => (t.range || 0) / t.close * 100],
     ["days that opened lower", "days that opened higher", t => candleFacts(t).gapPct],
     ["days going down so far", "days going up so far", t => candleFacts(t).dayUp],

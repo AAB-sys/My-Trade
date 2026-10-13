@@ -118,11 +118,31 @@ def kept_at(bar: dict, levels: list, frm, side: str):
             "kept": True, "prices": [l["price"] for l in levels]}
 
 
+# Idea 24, a call past the day's high or low (the owner, 13 October evening: "yes, build way 1"; see static/rules.js NEW_HIGH_LOW
+# for the words): NIFTY 50 only, 5-minute candles, "Today so far" lines
+NEW_HIGH_LOW = {"NIFTY 50": True}
+
+
+def past_edge_at(bar: dict, levels: list, used: dict):
+    """A close above the top line (Buy CE) or below the bottom line (Buy PE), when no line gives a signal: a Crossed call past
+    it, with no target until the lines move past its entry (static/rules.js pastEdgeAt)."""
+    top, bottom = levels[-1], levels[0]
+    at = top if bar["close"] > top["price"] else bottom if bar["close"] < bottom["price"] else None
+    if at is None:
+        return None
+    side = "CE" if at is top else "PE"
+    if used.get((at["price"], side)):
+        return None
+    return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": "crossed", "side": side, "target": None, "edge": True,
+            "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
+            "prices": [l["price"] for l in levels]}
+
+
 def enter_at(sig: dict, bar: dict):
     """The entry (owner, 7 October): already at or past the target, the call aims at the first level beyond the entry
-    price; with no level left beyond it, there is no call."""
+    price; with no level left beyond it, there is no call. A call past the day's high or low (idea 24) enters as it is."""
     target, aimed = sig["target"], None
-    if bar["open"] >= target if sig["side"] == "CE" else bar["open"] <= target:
+    if target is not None and (bar["open"] >= target if sig["side"] == "CE" else bar["open"] <= target):
         prices = sig["prices"]
         beyond = next((p for p in prices if p > bar["open"]), None) if sig["side"] == "CE" else next((p for p in reversed(prices) if p < bar["open"]), None)
         if beyond is None:
@@ -130,7 +150,7 @@ def enter_at(sig: dict, bar: dict):
         target, aimed = beyond, "beyond"
     t = {k: v for k, v in sig.items() if k != "prices"}
     prices = sig["prices"]  # the levels beyond the target, nearest first: idea P5 carries the call up them, and the carry read asks about the first
-    ladder = [p for p in prices if p > target] if sig["side"] == "CE" else [p for p in reversed(prices) if p < target]
+    ladder = [] if target is None else [p for p in prices if p > target] if sig["side"] == "CE" else [p for p in reversed(prices) if p < target]
     t.update(target=target, aimed=aimed, ladder=ladder, entry=bar["open"], entryTime=bar["time"], how="open")
     return t
 
@@ -215,7 +235,8 @@ def against_fresh(side: str, f: dict) -> bool:
 # ---- Layer 3: the paper calls the rule gives on a list of candles (see static/rules.js for the words)
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
-                 hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, fresh_run: bool = False) -> dict:
+                 hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, fresh_run: bool = False,
+                 new_high_low: bool = False) -> dict:
     """hold_breaks: the owner's exit rule "Hold Through a Level Break" (8 October night; see static/rules.js): a crossed call is held
     through its target, sold on a close back across its line ("back"), on a return to the signal candle's open after a candle
     opened beyond the previous close ("retouch"), or at the day end; no new call that way while it is held.
@@ -225,7 +246,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     given: the calls given live, {signal candle's time: "CE" or "PE"} (the records of their options): each stays, whatever the
     candle's final prices say (kept_at; 9 October).
     fresh_run: idea 13 (12 October; see static/rules.js): no call against a fresh run; a call given live stays; the result then
-    lists the skipped signals."""
+    lists the skipped signals.
+    new_high_low: idea 24 (13 October; see static/rules.js): a close past the top or bottom line, when no line gives a signal,
+    gives a Crossed call past it (edge), alongside the other calls; "Today so far" lines only."""
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -399,11 +422,13 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                     return closed[j]["close"]
             return closed[i - 1]["close"]
         sig = signal_at(bar, prev_bar["close"], levels, used, signal, frm)
+        if not sig and new_high_low and signal != "held":
+            sig = past_edge_at(bar, levels, used)  # idea 24: a close past the day's high or low
         was = given.get(bar["time"]) if given else None  # a call given live at this candle (its option recorded): it stays
         if was and not (sig and sig["side"] == was):
             sig = kept_at(bar, levels, frm, was) or sig
-        if sig and not was and hold_breaks and any(t.get("hold") and t["side"] == sig["side"] for t in open_):
-            sig = None  # a held break that way: the same trade continues, no new call
+        if sig and not was and hold_breaks and any(t.get("hold") and t["side"] == sig["side"] and (not t.get("edge") or sig.get("edge")) for t in open_):
+            sig = None  # a held break that way: the same trade continues, no new call (a held edge call stops only another edge call, idea 24)
         if sig and hold_breaks and sig["kind"] == "crossed":
             sig["hold"], sig["c1Open"] = True, bar["open"]  # C1, the signal candle: its open is where the break began
         if sig and not was and fresh_run and against_fresh(sig["side"], fresh_of(closed, i)):  # idea 13: against a fresh run, no call
@@ -411,7 +436,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                             "why": "new low" if sig["side"] == "CE" else "new high"})
             sig = None
         late = not day_candles and ((no_new_after and clock_end(bar) > no_new_after) or (close_at and clock_end(bar) >= close_at))
-        shallow = bool(sig) and not sig.get("hold") and bool(min_depth) and sig["kind"] == "crossed" and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
+        shallow = bool(sig) and not sig.get("hold") and bool(min_depth) and sig["kind"] == "crossed" and sig["target"] is not None and abs(sig["close"] - sig["level"]) < min_depth * abs(sig["target"] - sig["level"])  # idea P3
         if sig and (was or (not late and not shallow)):
             ready = sig
             used[(sig["level"], sig["side"])] = True
@@ -463,14 +488,15 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
 
 def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL,
-               fresh_run: bool = False) -> dict:
+               fresh_run: bool = False, new_high_low: bool = False) -> dict:
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
-    setting is given (None: Rule 1 alone); idea 13 when asked for."""
+    setting is given (None: Rule 1 alone); idea 13 when asked for, and idea 24 the same way, on "today so far" lines only."""
     fixed = (levels_of(move_of_day(previous)) if previous else None) if move == "prev" else None
     if move == "prev" and not fixed:
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True, trail, None, bool(fresh_run))
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True, trail, None, bool(fresh_run),
+                        move != "prev" and bool(new_high_low))
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},

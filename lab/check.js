@@ -424,3 +424,39 @@ console.log("rules unit checks passed");
   assert(R.freshOf(calm, 6).lows === 1 && R.freshOf(calm, 7).lows === 0 && R.freshOf(calm, 8).lows === 0, "the last 6 candles only: " + JSON.stringify([6, 7, 8].map(i => R.freshOf(calm, i))));
   console.log("idea 13 checks passed");
 }
+
+// ---- idea 24, a call past the day's high or low (the owner, 13 October evening: "yes, build way 1"; NIFTY 50, today-so-far lines).
+// A rising day: 09:15 makes the lines 95 to 110 (0% at 110). 09:20 closes at 113, above the top line, and no line gives a signal:
+// a Buy CE Crossed above 0.0% (110), no target yet, in at 113 at 09:25. 09:25 closes at 117, past the next top line (114): no second
+// call while the first is held. 09:35 closes below the 23.6% line (112.57): a Buy PE comes, and 09:40's close back above it gives a
+// Buy CE of the lines although the 09:20 call is still held (they run alongside). The 09:20 call is held to the day end. Off by
+// default, never on the previous day's lines nor with the held signals only; a held Crossed call of the lines stops it; a falling
+// day gives the Buy PE the same way
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const day = [bar(0, 100, 110, 95, 108), bar(1, 108, 114, 107, 113), bar(2, 113, 118, 112, 117), bar(3, 117, 117.5, 113, 114.5), bar(4, 114, 114.5, 111, 112), bar(5, 112, 116, 111.5, 115.5), bar(6, 115.5, 116, 114, 115)];
+  const sides = (trades) => JSON.stringify(trades.map(t => [t.signalTime - t0, t.side, !!t.edge]));
+  const off = R.replayDay({ bars: day, move: "today", previous: null, seconds: 300, signal: "both" }).trades;
+  assert(sides(off) === JSON.stringify([[1200, "PE", false], [1500, "CE", false]]), "without idea 24 no call at 09:20: " + sides(off));
+  const on = R.replayDay({ bars: day, move: "today", previous: null, seconds: 300, signal: "both", newHighLow: true }).trades;
+  assert(sides(on) === JSON.stringify([[300, "CE", true], [1200, "PE", false], [1500, "CE", false]]), "idea 24: the 09:20 Buy CE, alone at 09:25, the lines' calls alongside: " + sides(on));
+  const e = on[0];
+  assert(e.kind === "crossed" && e.level === 110 && e.ratio === 0 && e.entry === 113 && e.hold && e.c1Open === 108 && e.how === "day end" && e.points === 2 && e.target === 118,
+         "Crossed above 0.0%, held to the day end, its target the line the price later made: " + JSON.stringify(e));
+  const pending = R.paperTrades({ bars: day.slice(0, 2), levelsAt: R.todayLevelsAt(day.slice(0, 2)), targetsAt: R.todayLinesAt(day.slice(0, 2)), now: day[1].time + 301,
+    seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, newHighLow: true }).trades;
+  assert(pending.length === 1 && pending[0].how === "pending" && pending[0].target === null && pending[0].edge, "given at 09:20's close with no target: " + JSON.stringify(pending));
+  const live = R.paperTrades({ bars: day.slice(0, 3), levelsAt: R.todayLevelsAt(day.slice(0, 3)), targetsAt: R.todayLinesAt(day.slice(0, 3)), now: day[2].time + 60,
+    seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, newHighLow: true }).trades;
+  assert(live.length === 1 && live[0].how === "open" && live[0].entry === 113 && live[0].target === 118 && live[0].points === 4, "open at 09:25, its target the line the price made: " + JSON.stringify(live));
+  const prev = R.replayDay({ bars: day, move: "prev", previous: { open: 90, high: 120, low: 90, close: 118 }, seconds: 300, signal: "both", newHighLow: true }).trades;
+  assert(!prev.some(t => t.edge), "never on the previous day's lines: " + sides(prev));
+  assert(!R.replayDay({ bars: day, move: "today", previous: null, seconds: 300, signal: "held", newHighLow: true }).trades.some(t => t.edge), "a Crossed call: not with the held signals only");
+  const lineHeld = [bar(0, 100, 110, 95, 101), bar(1, 101, 104, 100.5, 103), bar(2, 103, 112, 102.8, 111), bar(3, 111, 112, 109, 110.5)];
+  const lh = R.replayDay({ bars: lineHeld, move: "today", previous: null, seconds: 300, signal: "both", newHighLow: true }).trades;
+  assert(sides(lh) === JSON.stringify([[300, "CE", false]]), "a held Crossed call of the lines stops it: " + sides(lh));
+  const flip = (b) => ({ time: b.time, open: 300 - b.open, high: 300 - b.low, low: 300 - b.high, close: 300 - b.close });
+  const down = R.replayDay({ bars: day.map(flip), move: "today", previous: null, seconds: 300, signal: "both", newHighLow: true }).trades;
+  assert(down[0].side === "PE" && down[0].edge && down[0].level === 190 && down[0].ratio === 0 && down[0].entry === 187 && down[0].points === 2, "a falling day: the Buy PE below the day's low: " + JSON.stringify(down[0]));
+  console.log("idea 24 checks passed");
+}

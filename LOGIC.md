@@ -223,9 +223,11 @@ The rule, in the order it is applied:
    too, tick by tick. **No stop** (owner's decision,
    5 October): a call that goes the wrong way is held, to the target or to the
    day's last candle, and its loss is whatever the day does. A signal pointing
-   outward from the 0% or 100% level has no next level, so it gives no call
-   **(owner to decide)**; the seven lines only (owner's decision, 8 October
-   evening, see Levels).
+   outward from the 0% or 100% level has no next level, so it gives no call;
+   the seven lines only (owner's decision, 8 October evening, see Levels). On
+   NIFTY 50, 5-minute candles, *Today so far*, a close past the day's high or
+   low gives a call since 13 October: see "A call past the day's high or low"
+   below.
    **Entry already past the target** (owner's decision, 7 October): when the
    next candle opens at or past the target, because the signal candle itself ran
    through the next level, the call aims one level further, at the first level
@@ -282,6 +284,33 @@ The rule, in the order it is applied:
    (+629 → +322), so 5-minute only. It also does the job of PR #125 (one
    bounce call at a time each way), closed for it. Its gain rests mostly on
    the falling days (8 and 12 October): the new days are its fair test.
+   **A call past the day's high or low** (idea 24, "way 1"; owner's yes, 13
+   October evening: "yes, build way 1"; NIFTY 50 only, 5-minute candles,
+   *Today so far* lines). With *Today so far* the top line is the day's high
+   so far and the bottom line its low, and no line lies beyond them, so while
+   NIFTY 50 kept making new highs no Buy CE could come: on 13 October the day
+   rose from 22,288.45 to 22,581.15 by 9:55, and the first Buy CE came at
+   10:30, after the price had come back down to the 23.6% line. Now, when no
+   line gives a signal, a candle that closes above the top line gives a Buy CE
+   "Crossed above" it (0.0%, or 100.0% on a day down so far), and one that
+   closes below the bottom line a Buy PE "Crossed below" it. There is no line
+   beyond to aim at, so its Call Target reads "no line above" ("no line
+   below") with "new high of the day · hold" until the lines move past its
+   entry (the target follows the lines, as every call's). It is held and sold
+   as every Crossed call is (A, B, Rule 2, the day end). It runs alongside the
+   other calls: while it is held, the lines' own calls that way still come;
+   while a Crossed call of the lines is held, it does not come, nor a second
+   one of its own. Example, 13 October: the 9:25 candle closed at 22,471.40,
+   above the top line at 22,460.80; bought at the 9:30 open, 22,470.90, held
+   to the day end, 22,721.95: +251.05. The ten saved days 29 September to 13
+   October, NIFTY 50, 5-minute *Today so far*: +804 → +1,447 (better on 4 days,
+   worse on 5; its own 10 calls: 4 won, together +764, 6 lost, together −121;
+   all 10 came between 9:20 and 10:25); 15-minute +617 → +936; the other ways
+   tried (only after two closes past the high, only before 10:15, only with a
+   clear close past it, stopping the lines' calls while held, the previous
+   day's lines until 10:00) are on the research page, box 24. The previous
+   day's lines are left as they are. The days after 13 October are its fair
+   test.
    **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
    candles): a call given by a *crossed* signal (the candle C1 broke a line L)
    is not sold at its target. It is held, and the same trade continues while

@@ -29,7 +29,8 @@
   // longer "hold" the 0% line it draws itself (on 8 October 18 of NIFTY 50's 23 calls were such holds, Buy CE after Buy CE
   // all the way down). The seven Fibonacci lines only (owner's decision, 8 October evening: "all the charts always work on
   // the Fibonacci basic 7 levels only"); the extra line beyond each end of that afternoon is gone, so a close beyond the
-  // day's earlier low or high is outward from the last line and gives no call, as before that afternoon.
+  // day's earlier low or high is outward from the last line and gives no call, as before that afternoon (on NIFTY 50, 5-minute
+  // candles, it gives a call past the day's high or low since 13 October: idea 24, pastEdgeAt).
   const todayLevelsAt = (bars) => (i) => levelsOf(moveOf(bars.slice(0, Math.max(1, i))));
   // The lines the chart draws while candle i forms (owner's decision, 8 October evening: when the price breaks the 0% or 100%
   // line, the 7 lines are worked out again at once from the live price): the day's range up to and with candle i. A call's
@@ -85,19 +86,42 @@
              range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending", kept: true,
              prices: levels.map(l => l.price) };
   }
+  // ---- Idea 24, a call past the day's high or low (the owner, 13 October evening: "yes, build way 1"; NIFTY 50 only, 5-minute
+  // candles, "Today so far" lines). With today-so-far lines the top line is the day's high so far and the bottom line its low, and
+  // no line lies beyond them, so while NIFTY 50 kept making new highs no Buy CE could come (13 October: the day rose from
+  // 22,288.45 to 22,581.15 by 9:55 and the first Buy CE came at 10:30, after the price had come back down to the 23.6% line).
+  // Now a candle that closes above the top line gives a Buy CE "Crossed above" it, and one that closes below the bottom line a
+  // Buy PE "Crossed below" it, when no line gives a signal. There is no line beyond to aim at: its target is null until the lines
+  // move past its entry (the target follows the lines, as every call's). It is held and sold as every Crossed call is (A, B,
+  // Rule 2, the day end), and it runs alongside the other calls: while it is held the lines' own calls that way still come,
+  // while a held Crossed call of the lines stops it (paperTrades). 13 October: the 9:25 candle closed at 22,471.40, above
+  // the top line at 22,460.80; bought at the 9:30 open, 22,470.90, held to the day end, 22,721.95: +251.05. The ten saved days
+  // 29 September to 13 October, NIFTY 50, 5-minute today-so-far lines: +804 → +1,447 (better on 4 days, worse on 5; its
+  // own 10 calls: 4 won, +764; 6 lost, −121); 15-minute +617 → +936; so 5-minute, NIFTY 50 only, as idea 13
+  const NEW_HIGH_LOW = { "NIFTY 50": true };
+  function pastEdgeAt(bar, levels, used) {
+    const top = levels[levels.length - 1], bottom = levels[0];
+    const at = bar.close > top.price ? top : bar.close < bottom.price ? bottom : null;
+    if (!at) return null;
+    const side = at === top ? "CE" : "PE";
+    if (used[at.price + "|" + side]) return null;
+    return { signalTime: bar.time, level: at.price, ratio: at.ratio, kind: "crossed", side, target: null, edge: true, close: bar.close,
+             range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending", prices: levels.map(l => l.price) };
+  }
 
   // The entry (owner's decision, 7 October): when the next candle opens already at or past the target (the signal candle
   // itself ran through the next level), the call aims one level further, the first level beyond the entry price; with no
   // level left beyond it, there is no call. Until then such a call "hit" a target below its entry and lost at once.
+  // A call past the day's high or low (idea 24) has no target to be past: it enters as it is
   function enterAt(sig, bar) {
     let target = sig.target, aimed = null;
-    if (sig.side === "CE" ? bar.open >= target : bar.open <= target) {
+    if (target != null && (sig.side === "CE" ? bar.open >= target : bar.open <= target)) {
       const beyond = sig.side === "CE" ? sig.prices.find(p => p > bar.open) : sig.prices.slice().reverse().find(p => p < bar.open);
       if (beyond == null) return null;
       target = beyond; aimed = "beyond";
     }
     const { prices, ...rest } = sig;
-    const ladder = sig.side === "CE" ? prices.filter(p => p > target) : prices.filter(p => p < target).reverse();  // the levels beyond the target, nearest first: idea P5 carries the call up them, and the carry read asks about the first
+    const ladder = target == null ? [] : sig.side === "CE" ? prices.filter(p => p > target) : prices.filter(p => p < target).reverse();  // the levels beyond the target, nearest first: idea P5 carries the call up them, and the carry read asks about the first
     return { ...rest, target, aimed, ladder, entry: bar.open, entryTime: bar.time, how: "open" };
   }
 
@@ -219,7 +243,11 @@
   //   freshRun   idea 13 (FRESH_RUN above; the index page, the watcher and the replays ask for it on NIFTY 50, 5-minute candles): no
   //              call against a fresh run. A call given live stays; a skipped signal leaves its line free, as a signal never given,
   //              and is listed in the result (skipped: its time, side, kind, line and why, "new low" or "new high")
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, freshRun }) {
+  //   newHighLow idea 24 (NEW_HIGH_LOW and pastEdgeAt above; the index page, the watcher and the replays ask for it on NIFTY 50,
+  //              5-minute candles, "Today so far" lines only): a candle closing past the top or bottom line, when no line gives a
+  //              signal, gives a Crossed call past it (edge). It runs alongside: a held edge call stops only another edge call
+  //              that way, a held Crossed call of the lines stops both
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, freshRun, newHighLow }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -312,16 +340,17 @@
       for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
       const from = (L) => { for (let j = i - 1; j >= 0; j--) if (closed[j].close !== L) return closed[j].close; return prevBar.close; };  // the last close off line L
       let sig = signalAt(bar, prevBar.close, levels, used, signal, from);  // the call, at the signal candle's close
+      if (!sig && newHighLow && signal !== "held") sig = pastEdgeAt(bar, levels, used);  // idea 24: a close past the day's high or low
       const was = given && given[bar.time];  // a call given live at this candle (its option recorded): it stays
       if (was && !(sig && sig.side === was)) sig = keptAt(bar, levels, from, was) || sig;
-      if (sig && !was && holdBreaks && open.some(t => t.hold && t.side === sig.side)) sig = null;  // a held break that way: the same trade continues, no new call
+      if (sig && !was && holdBreaks && open.some(t => t.hold && t.side === sig.side && (!t.edge || sig.edge))) sig = null;  // a held break that way: the same trade continues, no new call (a held edge call stops only another edge call, idea 24)
       if (sig && holdBreaks && sig.kind === "crossed") { sig.hold = true; sig.c1Open = bar.open; }  // C1, the signal candle: its open is where the break began
       if (sig && !was && freshRun && againstFresh(sig.side, freshOf(closed, i))) {  // idea 13: against a fresh run, no call
         skipped.push({ signalTime: bar.time, side: sig.side, kind: sig.kind, level: sig.level, ratio: sig.ratio, why: sig.side === "CE" ? "new low" : "new high" });
         sig = null;
       }
       const late = !dayCandles && ((noNewAfter && clockEnd(bar) > noNewAfter) || (closeAt && clockEnd(bar) >= closeAt));  // ideas P2 and P1: too late in the day for a new call
-      const shallow = !!sig && !sig.hold && !!minDepth && sig.kind === "crossed" && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
+      const shallow = !!sig && !sig.hold && !!minDepth && sig.kind === "crossed" && sig.target != null && Math.abs(sig.close - sig.level) < minDepth * Math.abs(sig.target - sig.level);  // idea P3
       if (sig && (was || (!late && !shallow))) { ready = sig; used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side }; }
     }
     const last = closed[closed.length - 1];
@@ -346,13 +375,13 @@
   // stand still; "today so far" levels are the ones the page draws while each candle forms: the day's range up to the
   // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page, with Rule 2 as
   // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone. Idea 13 when
-  // asked for (the caller asks for it on NIFTY 50, 5-minute candles)
-  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, freshRun }) {
+  // asked for (the caller asks for it on NIFTY 50, 5-minute candles), and idea 24 the same way, on "today so far" lines only
+  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, freshRun, newHighLow }) {
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null;
     if (move === "prev" && !fixed) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : todayLevelsAt(bars), targetsAt = move === "prev" ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
-                         trail: trail === undefined ? TRAIL : trail, freshRun: !!freshRun });
+                         trail: trail === undefined ? TRAIL : trail, freshRun: !!freshRun, newHighLow: move !== "prev" && !!newHighLow });
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -506,6 +535,6 @@
   }
 
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, signalAt, paperTrades, replayDay, readOf, carryOf,
-                 trailStep, atrBefore, TRAIL, FRESH_RUN, FRESH_CANDLES, freshOf,
+                 trailStep, atrBefore, TRAIL, FRESH_RUN, FRESH_CANDLES, freshOf, NEW_HIGH_LOW, pastEdgeAt,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);
