@@ -175,7 +175,10 @@ whose option was first recorded late (the server was restarting, or the rule
 changed during the session and the call appeared afterwards) holds the price
 when it was recorded, and its sell mark is 65% of that price; the cell no
 longer says so (the owner, 9 October: the note "paid: the price at ..., not at
-entry" taken off every row, "not required at all"). The header
+entry" taken off every row, "not required at all"). Since 13 October both take
+their prices from the option's one-minute candles on Dhan when it has them
+(see "A call seen late" under Exit by premium): the price of the entry minute,
+and of the minute it was sold in. The header
 row stays in view while the page scrolls (owner's ask, 7 October). The list is in time order, the newest call at the
 top, open or finished alike (owner's ask, 7 October: an open call listed above a
 later one read as if it had been given later); one line keeps the score (owner's
@@ -448,9 +451,21 @@ name is still open is opened again, and its premium is followed again (8
 October: the rule changed twice during that session, and two NIFTY 50 calls of
 the new rule had the names of calls of the old one that had reached their
 targets, so their premium stood still on the table); only the day end stays
-final. A call that entered and ended before
-either looked (a server just started) still has no premium: nothing can be
-recorded after the fact, and its cell reads "not seen at entry". While the page is open in
+final. **A call seen late** (owner's yes, 13 October: Dhan refused the token
+from 9:05 to 9:49, so NIFTY 50's 9:20 Buy CE, bought at 9:25 and sold at 9:29,
+read "not seen at entry", and the 9:30 Buy CE, bought at 9:35, showed the
+premium of 9:49 as the premium paid: "how would i know that at what price it is
+bought and sold ?") takes its prices from the option's own one-minute candles
+on Dhan: the premium paid is the open of the entry minute; for a call already
+sold, the premium at sale is the close of the minute it was sold in (a target
+or a retouch: the first minute of that candle that reached the price; any
+other sale: the candle's last minute); and the Sell mark is looked for in every
+minute in between, as the feed would have done tick by tick. "Late" means two
+minutes or more after the entry (`LATE_SECONDS`), so a call seen live is
+recorded as before. The record's `late` says which minutes the prices came
+from. A call whose option Dhan has no one-minute candles for keeps the old way:
+an open one is paid at the premium when first seen, and an ended one reads "not
+seen at entry". While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's
 own feed (one price a second if that feed is quiet); the closed candles, and so
 the signals, are judged when the next candle begins. Dhan's own copy of a
