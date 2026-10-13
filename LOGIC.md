@@ -311,6 +311,35 @@ The rule, in the order it is applied:
    day's lines until 10:00) are on the research page, box 24. The previous
    day's lines are left as they are. The days after 13 October are its fair
    test.
+   **Fewer calls on the back-and-forth at one line** (ideas 5 and 8; owner's
+   yes, 13 October evening: "yes, make the PR" for "build ideas 5 and 8 as a
+   second PR"; NIFTY 50 only, 5-minute candles, both kinds of lines). On 13
+   October the price went back and forth across the 23.6% line (22,512.07)
+   from 10:35 to 12:05; each close across it gave a Crossed call: 7 calls,
+   all lost, −130.10 together. **Idea 8** (from the owner's three
+   calculators, 11 October): a Crossed call only when its candle closes at
+   least a quarter of the way from the line to the next line; a shallower
+   close gives no call and leaves the line free. **Idea 5** (the owner's of
+   11 October, "need to put rule on PE calls also so it will reduce the
+   losses"): while a Crossed call is held, no Crossed call the other way
+   either, and that line is then used that way. On-the-line calls and the
+   call past the day's high or low (which has no next line) are left as they
+   are by idea 8; idea 5 stops any Crossed call the other way. The signals
+   they give no call are listed under the table, as idea 13's: "No call, the
+   candle closed too near the line" and "No call while a call the other way
+   is held". 13 October, today-so-far lines: 10 calls, +395.20 → 5 calls,
+   +509.40 (the 9:25 Buy CE past the day's high, and Buy CE On the line
+   23.6% at 10:30, 10:50, 11:55 and 12:15, all to their target; the 12:10
+   Buy CE Crossed above 23.6%, +205.05, closed only 3.68 past the line and
+   is gone too). The ten saved days, NIFTY 50, 5-minute *Today so far*, with
+   the call past the day's high or low: +1,447 → +1,567, 114 → 96 calls,
+   better on 5 days, worse on 2 (29 September 10 → −40, 9 October 3 → −80;
+   against the rule before both, +804 with 104 calls: better on 6, worse on
+   3); previous-day lines +111 → +259 (35 calls instead of 51; better on 5,
+   worse on 1);
+   15-minute candles worse without the call past the high (+617 → +558), so
+   5-minute only. Several Buy CE On the line can be open at once (13
+   October: four at 23.6%).
    **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
    candles): a call given by a *crossed* signal (the candle C1 broke a line L)
    is not sold at its target. It is held, and the same trade continues while

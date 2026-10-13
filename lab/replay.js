@@ -26,6 +26,7 @@ function readCsv(file) {
 }
 const FRESH_FROM = process.env.FRESH_FROM || "9999-12-31";  // the first session the index page ran idea 13 (12 October's pull request), "YYYY-MM-DD"
 const EDGE_FROM = process.env.EDGE_FROM || "9999-12-31";  // the first session the index page ran idea 24 (a call past the day's high or low), "YYYY-MM-DD"
+const CROSS_FROM = process.env.CROSS_FROM || "9999-12-31";  // the first session the index page ran ideas 5 and 8, "YYYY-MM-DD"
 const LIVE = [].concat(...fs.readdirSync(folder).filter(f => /^\d{4}-\d{2}-\d{2}-calls\.csv$/.test(f)).sort().map(f => readCsv(path.join(folder, f))));
 const SEC = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800 }, IST = 19800;
 const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h, m) => h * 3600 + m * 60;
@@ -49,6 +50,8 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 //   index page runs it (Rules.TRAIL) unless another setting is given, null for Rule 1 alone
 //   newHighLow: idea 24 (13 October), on "today" levels only: a close past the top or bottom line, when no line gives a signal,
 //   gives a Crossed call past it with no target, alongside the other calls (as Rules.paperTrades)
+//   clearCross: idea 8 (13 October): a Crossed signal closing less than a quarter of the way to the next line gives no call, its
+//   line free   oneWay: idea 5: while a Crossed call is held, a Crossed signal the other way gives no call, its line used (as Rules)
 function run(bars, previous, o, higher) {
   const holdBreaks = o.holdBreaks !== false;
   const trail = !holdBreaks ? null : o.trail === undefined ? R.TRAIL : o.trail;
@@ -144,13 +147,16 @@ function run(bars, previous, o, higher) {
       const k = levels.indexOf(at), next = side === "CE" ? levels[k + 1] : levels[k - 1];
       const late = (o.noNewAfter && clockEnd > o.noNewAfter) || (o.closeAt && clockEnd >= o.closeAt);
       lineSignal = !!next;  // a line gave a signal (Rules.signalAt would give it), whatever stops its call below
-      let ok = !!next && !late && !(holdBreaks && open.some(x => x.hold && x.side === side && !x.edge));  // a held break that way: the same trade continues (a held edge call does not stop it, idea 24)
+      const sameWay = holdBreaks && open.some(x => x.hold && x.side === side && !x.edge);  // a held break that way: the same trade continues (a held edge call does not stop it, idea 24)
+      let ok = !!next && !late && !sameWay;
+      if (next && !sameWay && o.oneWay && holdBreaks && kind === "crossed" && open.some(x => x.hold && x.side !== side)) { used[at.price + "|" + side] = { price: at.price, side }; ok = false; }  // idea 5
       if (ok && o.freshRun && R.freshOf && (side === "CE" ? (f => f.lows > 0 && f.highs === 0) : (f => f.highs > 0 && f.lows === 0))(R.freshOf(bars, i))) ok = false;  // idea 13 (Rules.FRESH_RUN)
       if (ok && kind === "crossed" && next && !holdBreaks) {  // the depth and the body of the crossing candle, against the gap to the next level
         const gap = Math.abs(next.price - at.price), depth = Math.abs(bar.close - at.price) / gap, body = Math.abs(bar.close - bar.open) / gap;
         if (o.minDepth && depth < o.minDepth) { ok = false; if (o.waitDeeper) shallow[at.ratio + side] = { ratio: at.ratio, side }; }
         if (ok && o.minBody && body < o.minBody) ok = false;
       }
+      if (ok && o.clearCross && kind === "crossed" && Math.abs(bar.close - at.price) < 0.25 * Math.abs(next.price - at.price)) ok = false;  // idea 8, its line free
       if (ok && o.sideOnDay === "with") ok = (side === "CE") === (bar.close >= bars[0].open);
       if (ok && o.agree && higher) { const done = higher.filter(b => b.time + o.higherSec <= bar.time + sec); const c = done[done.length - 1]; ok = !!c && (side === "CE" ? c.close > at.price : c.close < at.price); }
       if (ok && o.minNeed) ok = Math.abs(next.price - bar.close) >= o.minNeed;
@@ -160,7 +166,9 @@ function run(bars, previous, o, higher) {
     if (!lineSignal && o.newHighLow && o.levels === "today" && o.signal !== "held") {  // idea 24: a close past the day's high or low so far
       const top = levels[levels.length - 1], bottom = levels[0], at = bar.close > top.price ? top : bar.close < bottom.price ? bottom : null;
       const side = at === top ? "CE" : "PE", late = (o.noNewAfter && clockEnd > o.noNewAfter) || (o.closeAt && clockEnd >= o.closeAt);
-      let ok = !!at && !used[at.price + "|" + side] && !late && !(holdBreaks && open.some(x => x.hold && x.side === side));  // any held break that way stops it
+      const sameWay = holdBreaks && open.some(x => x.hold && x.side === side);  // any held break that way stops it
+      let ok = !!at && !used[at.price + "|" + side] && !late && !sameWay;
+      if (at && !used[at.price + "|" + side] && !sameWay && o.oneWay && holdBreaks && open.some(x => x.hold && x.side !== side)) { used[at.price + "|" + side] = { price: at.price, side }; ok = false; }  // idea 5
       if (ok && o.freshRun && R.freshOf && (side === "CE" ? (f => f.lows > 0 && f.highs === 0) : (f => f.highs > 0 && f.lows === 0))(R.freshOf(bars, i))) ok = false;
       if (ok) { sig = { signalTime: bar.time, level: at.price, ratio: at.ratio, kind: "crossed", side, target: null, edge: true, close: bar.close, prices: levels.map(l => l.price) };
         if (holdBreaks) { sig.hold = true; sig.c1Open = bar.open; } }
@@ -176,7 +184,7 @@ function all(index, interval, opts) {
   if (typeof opts === "function") opts = opts(index);  // a setting that depends on the index (Rule 2's buffer in points)
   return DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix) return [];
     return run(ix.candles[interval], ix.previous, { levels: "prev", signal: "both", freshRun: interval === "5m" && !!R.FRESH_RUN[index], newHighLow: interval === "5m" && !!R.NEW_HIGH_LOW[index],
-                   ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
+                   clearCross: interval === "5m" && !!R.CLEAR_CROSS[index], oneWay: interval === "5m" && !!R.ONE_WAY[index], ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
 }
 const byDay = (L) => { const m = {}; L.forEach(x => m[x.date] = r2((m[x.date] || 0) + x.points)); return m; };
 function tally(L, base) {
@@ -268,7 +276,9 @@ if (LIVE.length) {
         replayable++;
         const t = R.replayDay({ bars: ix.candles[interval], move: levels, previous: ix.previous, seconds: SEC[interval], signal,
                                 freshRun: interval === "5m" && !!R.FRESH_RUN[index] && c.signal_time_ist >= FRESH_FROM,
-                                newHighLow: interval === "5m" && !!R.NEW_HIGH_LOW[index] && c.signal_time_ist >= EDGE_FROM }).trades;  // the live rule of that day
+                                newHighLow: interval === "5m" && !!R.NEW_HIGH_LOW[index] && c.signal_time_ist >= EDGE_FROM,
+                                clearCross: interval === "5m" && !!R.CLEAR_CROSS[index] && c.signal_time_ist >= CROSS_FROM,
+                                oneWay: interval === "5m" && !!R.ONE_WAY[index] && c.signal_time_ist >= CROSS_FROM }).trades;  // the live rule of that day
         const stamp = e => new Date(e * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 16);
         if (t.some(x => stamp(x.signalTime) === c.signal_time_ist && x.side === c.option_side)) matched++; });
     }
@@ -280,9 +290,10 @@ for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", 
   // the self-check: the base line must equal the page's engine
   const mine = tally(all(index, interval, {}));
   const fresh = interval === "5m" && !!R.FRESH_RUN[index], edge = interval === "5m" && !!R.NEW_HIGH_LOW[index];  // ideas 13 and 24, as the index page runs them
-  const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both", freshRun: fresh, newHighLow: edge }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
+  const clear = interval === "5m" && !!R.CLEAR_CROSS[index], oneWay = interval === "5m" && !!R.ONE_WAY[index];  // and ideas 8 and 5
+  const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both", freshRun: fresh, newHighLow: edge, clearCross: clear, oneWay }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
   const mineToday = tally(all(index, interval, { levels: "today" }));  // and the today-so-far line
-  const pageToday = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "today", previous: ix.previous, seconds: SEC[interval], signal: "both", freshRun: fresh, newHighLow: edge }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
+  const pageToday = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "today", previous: ix.previous, seconds: SEC[interval], signal: "both", freshRun: fresh, newHighLow: edge, clearCross: clear, oneWay }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
   const same = mine.n === page.n && mine.net === page.net && mineToday.n === pageToday.n && mineToday.net === pageToday.net;
   console.log(`\n==== ${index}, ${interval} candles ${same ? "(base lines agree with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify({ page, pageToday, mine, mineToday })}`);
   const base = all(index, interval, {});
@@ -290,7 +301,7 @@ for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", 
   // the stops of the Study page (P6, P7; the owner's question of 8 October), by the page's own engine, a candle that touched both
   // the stop and the target settled by the one-minute candles, on both levels modes and both signals
   const viaRules = (move, ideas) => DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix || (move === "prev" && !ix.previous)) return [];
-    return R.replayDay({ bars: ix.candles[interval], move, previous: ix.previous, seconds: SEC[interval], signal: "both", ideas: ideas && { ...ideas, minutes: ix.candles["1m"] }, freshRun: fresh, newHighLow: edge })
+    return R.replayDay({ bars: ix.candles[interval], move, previous: ix.previous, seconds: SEC[interval], signal: "both", ideas: ideas && { ...ideas, minutes: ix.candles["1m"] }, freshRun: fresh, newHighLow: edge, clearCross: clear, oneWay })
       .trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); });
   for (const move of ["today", "prev"]) {
     const rule = viaRules(move, null);

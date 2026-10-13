@@ -460,3 +460,27 @@ console.log("rules unit checks passed");
   assert(down[0].side === "PE" && down[0].edge && down[0].level === 190 && down[0].ratio === 0 && down[0].entry === 187 && down[0].points === 2, "a falling day: the Buy PE below the day's low: " + JSON.stringify(down[0]));
   console.log("idea 24 checks passed");
 }
+
+// ---- ideas 8 and 5 against the back-and-forth on one line (the owner, 13 October evening; NIFTY 50, 5-minute candles). The lines
+// of 100 -> 200 (161.8, 176.4, ...). Idea 8: 09:20 closes at 163, only 0.08 of the way from 161.8 to 176.4, and 09:25 closes back at
+// 160, 0.15 of the way down to 150: no call either time, both listed "not clear", the line stays free; 09:30 closes at 166, 0.29 of
+// the way: the Buy CE comes. Idea 5: a Buy CE Crossed above 161.8 is held; 09:30 closes below 176.4 a third of the way to 161.8 while
+// it is still held: no Buy PE, listed "held other way". Both off by default
+{
+  const bar = (i, open, high, low, close) => ({ time: t0 + i * 300, open, high, low, close });
+  const lv = R.levelsOf(R.moveOfDay({ open: 100, high: 200, low: 100, close: 190 }));
+  const run = (bars, o) => R.paperTrades({ bars, levelsAt: () => lv, now: Infinity, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, ...o });
+  const calls = (r) => JSON.stringify(r.trades.map(t => [(t.signalTime - t0) / 300, t.side, t.level, t.entry, t.how])), why = (r) => JSON.stringify((r.skipped || []).map(x => [(x.signalTime - t0) / 300, x.side, x.level, x.why]));
+  const d8 = [bar(0, 158, 160, 157, 158), bar(1, 158, 164, 157.5, 163), bar(2, 163, 163.5, 159, 160), bar(3, 160, 167, 159.5, 166), bar(4, 166, 167, 165, 166.5)];
+  const off8 = run(d8, {}), on8 = run(d8, { clearCross: true });
+  assert(calls(off8) === JSON.stringify([[1, "CE", 161.8, 163, "back"], [2, "PE", 161.8, 160, "back"], [3, "CE", 161.8, 166, "day end"]]) && !("skipped" in off8), "without idea 8 every crossing calls: " + calls(off8));
+  assert(calls(on8) === JSON.stringify([[3, "CE", 161.8, 166, "day end"]]), "idea 8: only the clear crossing calls: " + calls(on8));
+  assert(why(on8) === JSON.stringify([[1, "CE", 161.8, "not clear"], [2, "PE", 161.8, "not clear"]]), "idea 8: listed: " + why(on8));
+  const d5 = [bar(0, 158, 160, 157, 158), bar(1, 158, 169, 157.5, 168), bar(2, 168, 180, 167, 179), bar(3, 179, 179.5, 170.5, 171), bar(4, 171, 172, 170, 171.5)];
+  const off5 = run(d5, {}), on5 = run(d5, { oneWay: true });
+  assert(calls(off5) === JSON.stringify([[1, "CE", 161.8, 168, "day end"], [3, "PE", 176.4, 171, "day end"]]), "without idea 5 the Buy PE comes while the Buy CE is held: " + calls(off5));
+  assert(calls(on5) === JSON.stringify([[1, "CE", 161.8, 168, "day end"]]) && why(on5) === JSON.stringify([[3, "PE", 176.4, "held other way"]]), "idea 5: no Buy PE, listed: " + calls(on5) + why(on5));
+  const rp = (o) => R.replayDay({ bars: d8, move: "prev", previous: { open: 100, high: 200, low: 100, close: 190 }, seconds: 300, signal: "both", ...o }).trades;
+  assert(calls({ trades: rp({ clearCross: true, oneWay: true }) }) === calls(on8) && calls({ trades: rp({}) }) === calls(off8), "replayDay passes them on");
+  console.log("ideas 5 and 8 checks passed");
+}
