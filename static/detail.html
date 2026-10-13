@@ -721,11 +721,27 @@
   }
   // Rule 2's stop by its line, the way the owner's specification writes it (section 7): "38.2% (24,380.00)"
   const stopName = (t) => `${(t.trail.stopRatio * 100).toFixed(1)}% (${fmt.format(t.trail.stop)})`;
+  // A held break's target moves on with the price (the owner, 13 October: NIFTY 50's 9:30 Buy CE stood at 22,570 with its
+  // target still on 61.8%, 22,518.68: "candle is rising, it is in up direction, why still taget at lower level ?"). Once a
+  // candle has closed beyond a further line (Rule 2: t.trail.line, the line the stop moved for), the target shown is the next
+  // line beyond that one, on the lines as they stood at the candle that sold the call (an open call: as the chart draws them
+  // now); with no line beyond it, that line itself. Only the table moves it: a held break is not sold at its target, and the
+  // rule, the server and the CSV keep the target the call was given
+  function movedTarget(t) {
+    if (!t.hold || !t.trail || t.trail.line == null) return null;
+    const bars = sessionBars(), i = t.exit != null ? bars.findIndex(b => b.time === t.exitTime) : -1;
+    const lines = judgedToday() && i >= 0 ? Rules.todayLinesAt(bars)(i) : lastPaper.levels, d = t.side === "CE" ? 1 : -1;
+    const ahead = (lines || []).filter(l => d * (l.price - t.trail.line) > 0.005);
+    const next = ahead.length ? ahead.reduce((a, b) => (d * (b.price - a.price) < 0 ? b : a)) : null;
+    return { passed: t.trail.ratio, next, price: next ? next.price : t.trail.line };
+  }
+  const pctText = (ratio) => (ratio * 100).toFixed(1) + "%";
   function targetCell(t, r) {
+    const moved = movedTarget(t), shown = moved ? moved.price : t.target;
     if (t.exit != null)
-      return `<td class="target">${fmt.format(t.target)}<small class="${closedTone(t, r)}">sold at ${callTime(t.exitTime)}</small></td>`;
+      return `<td class="target">${fmt.format(shown)}<small class="${closedTone(t, r)}">sold at ${callTime(t.exitTime)}</small></td>`;
     if (t.hold && t.trail)  // Rule 2: the stop has moved to a further line; the note always names the stop's line (section 7)
-      return `<td class="target">${fmt.format(t.target)}<small>target passed, continue · sell if a candle closes ${t.side === "PE" ? "above" : "below"} ${stopName(t)}</small></td>`;
+      return `<td class="target">${fmt.format(shown)}<small>target ${pctText(moved.passed)} passed, ${moved.next ? `next target ${pctText(moved.next.ratio)}` : "no line beyond it"} · sell if a candle closes ${t.side === "PE" ? "above" : "below"} ${stopName(t)}</small></td>`;
     if (t.hold) {
       const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
       const past = t.entry != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));

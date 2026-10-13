@@ -316,6 +316,15 @@ The rule, in the order it is applied:
    (the stop has taken A's place); C still does. The table says "target passed,
    continue · sell if a candle closes above 0.0% (22,432.60)" and, when sold,
    "SOLD · index candle closed above 0.0% (22,432.60)" (below for a CE).
+   **The target moves on with it** (the owner, 13 October: NIFTY 50's 9:30
+   Buy CE stood at 22,570 with its target still on 61.8%, 22,518.68, "candle is
+   rising, it is in up direction, why still taget at lower level ?"): from the
+   first further line on, the Call Target column shows the next line beyond the
+   furthest line a candle has closed beyond (the line the stop moved for), and
+   says so: "target 61.8% passed, next target 78.6% · sell if a candle closes
+   below 50.0% (22,477.78)". With no line beyond it, that line itself. Only
+   the table moves it: a held break is not sold at its target, and the rule,
+   the server and the day's calls CSV keep the target the call was given.
    Kept as it was: B compares each later candle with the previous close (the
    owner, 8 October: "keep it as it is"), not C2 with C1's close as the
    specification's table writes it. The specification's other settings
