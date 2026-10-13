@@ -474,7 +474,14 @@ minutes or more after the entry (`LATE_SECONDS`), so a call seen live is
 recorded as before. The record's `late` says which minutes the prices came
 from. A call whose option Dhan has no one-minute candles for keeps the old way:
 an open one is paid at the premium when first seen, and an ended one reads "not
-seen at entry". While the page is open in
+seen at entry". **A record made late before this change** (no `late` in it,
+its premium paid taken two minutes or more after the entry) gets its prices
+again the same way, and its Sell mark is looked for again from the real price
+paid, so a sale at the mark that only came from the wrong price is undone (the
+owner, 13 October: the 9:30 Buy CE, bought at 9:35 but "paid" 140.90, its
+premium at 9:49, was sold at 10:38 at 90.40, "price dropped 36%", while NIFTY
+50 stayed above 50.0%, the line its stop was on: "this is wrong. Check and
+fix"). The record's `late.was_paid` keeps what it said before. While the page is open in
 market hours the price and the candle forming now move tick by tick from Dhan's
 own feed (one price a second if that feed is quiet); the closed candles, and so
 the signals, are judged when the next candle begins. Dhan's own copy of a

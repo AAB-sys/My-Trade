@@ -849,6 +849,39 @@ def late_prices(name: str, rec: dict, entry_time: int | None, sale: dict | None)
     return True
 
 
+def paid_late(rec: dict, entry_time: int) -> bool:
+    """Whether a record's premium paid is the one of a moment LATE_SECONDS or more after the call's entry: a record made
+    late before 13 October's change (no "late" in it), which reprice_late puts right."""
+    try:
+        return "late" not in rec and datetime.fromisoformat(rec["paid_at"]).timestamp() - entry_time >= LATE_SECONDS
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
+def reprice_late(name: str, key: str, entry_time: int, sale: dict | None) -> dict:
+    """A record made late before 13 October's change gets its prices again from the option's one-minute candles, as a call
+    seen late now does (late_prices; sale: the index rule's sale, if it has sold the call). The Sell mark is looked for again
+    from the real price paid, so a sale at the mark that only came from the wrong price is undone (the owner, 13 October:
+    NIFTY 50's 9:30 Buy CE, bought at 9:35 but "paid" 140.90, its premium at 9:49, was sold at 10:38 at 90.40, "price dropped
+    36%", while NIFTY 50 stayed above the line its stop was on: "this is wrong. Check and fix"). Raises when Dhan gives no
+    candles; the record then stays as it was."""
+    with _records_lock:
+        rec = _records.get(key)
+        if rec is None or "late" in rec:
+            return dict(rec) if rec else None
+        fresh = dict(rec, sold=None, ended=None)
+    was = rec["premium_paid"]
+    if not late_prices(name, fresh, entry_time, sale):
+        raise DhanError("other", f"Dhan gave no one-minute candles of {int(rec['strike'])} {rec['side']} {rec['expiry']} from {_hhmm(entry_time)}")
+    fresh["late"]["was_paid"] = was  # what the record said before
+    with _records_lock:
+        if key in _records and "late" not in _records[key]:
+            _records[key] = fresh
+            _save_records()
+    _changed()
+    return dict(fresh)
+
+
 def _settle_sold(rec: dict) -> bool:
     """A record with its Sell mark is a sold call (the owner, 9 October: "if it is sold at 67 then ... it should stop
     there"): it ends at the mark, its premium stays at the price it was sold at, and nothing follows it any more.
