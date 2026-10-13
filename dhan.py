@@ -746,9 +746,6 @@ def _save_records() -> None:
         pass
 
 
-_load_records()
-
-
 def record_of(key: str) -> dict | None:
     """One call's record as the page shows it, or None."""
     with _records_lock:
@@ -891,6 +888,12 @@ def _settle_sold(rec: dict) -> bool:
     rec["ended"] = {"how": "sold", "at": rec["sold"]["at"]}
     rec["premium_now"], rec["now_at"] = rec["sold"]["premium"], rec["sold"]["at"]
     return True
+
+
+# The records on disk, read at start. Here, after _settle_sold, which the reading uses: until 13 October this line stood
+# above it, so a server started with records in paper_calls.json (a laptop's second start) stopped at once with
+# "NameError: name '_settle_sold' is not defined". Render starts on an empty disk, so it never met it there
+_load_records()
 
 
 def note_premium(key: str, premium: float, when: str | None = None) -> dict | None:
