@@ -825,11 +825,14 @@ async def calls_forever() -> None:
 
 
 def in_keep_awake_hours() -> bool:
-    """From before the open until after the day's save at 15:40 and the wake-up check, Monday to Friday, IST."""
+    """From early morning until after the day's save at 15:40 and the wake-up check, Monday to Friday, IST. Until 14
+    October it began at 08:45, so a server woken earlier (the morning's fresh Dhan token pasted into Render restarts it)
+    went back to sleep 15 minutes later, and that day nothing woke it again until 14:11. From 06:00, whatever wakes it
+    in the morning keeps it awake through the session; it never wakes itself, so a morning nobody wakes it costs nothing."""
     if TICK_ALWAYS:
         return True
     now = datetime.now(dhan.IST)
-    return now.weekday() < 5 and (8, 45) <= (now.hour, now.minute) < (16, 15)
+    return now.weekday() < 5 and (6, 0) <= (now.hour, now.minute) < (16, 15)
 
 
 keep_awake_state: dict = {"url": SELF_URL, "at": None, "status": None, "problem": None}
