@@ -15,7 +15,15 @@ jumps still say where to look.
 What it found (9 October, 10:06): 36 MB in use and 265 MB "held but free". The big jobs (Dhan's instrument list, the
 candle downloads, the day's partial copy every two minutes) leave freed memory that the C allocator keeps instead of
 giving it back, so the process grew about 10 MB a minute towards Render's 512 MB. The fix (the owner's yes, 10:10):
-fewer allocator pools from the start (limit_pools) and the free memory given back once a minute (give_back)."""
+fewer allocator pools from the start (limit_pools) and the free memory given back once a minute (give_back).
+
+What it found next (14 October, 20:00): 409 MB, peak 427 MB, with 320 MB "in use" and only about 500,000 Python blocks;
+on 13 October the server reached 469 MB in 13 minutes while Dhan refused the token, and after a restart at night it
+reaches about 280 MB in 13 minutes with no page open. Every request to Dhan and to Yahoo makes its own HTTPS client, and
+each holds about 0.75 MB of C memory (the certificate list) that Python's garbage collector does not count. Requests,
+most of all refused ones, leave their clients in reference cycles, which only the collector frees, and in a process
+this size its full runs can be far apart. A test the same evening: 250 refused requests to Dhan held up to 55 MB, and one full
+collection freed it all. The fix (the owner's yes, 14 October, about 21:20): give_back runs a full collection first."""
 import contextlib
 import ctypes
 import gc
@@ -99,22 +107,30 @@ def limit_pools(most: int = 2) -> bool:
         return False
 
 
-_given = {"at": None, "freed_mb": None, "times": 0}
+_given = {"at": None, "freed_mb": None, "times": 0, "collected": None, "collect_ms": None, "most_freed_mb": 0.0, "most_at": None}
 
 
 def give_back() -> None:
-    """Hands the allocator's free memory back to the system (glibc's malloc_trim, every pool). The server calls it
-    once a minute; it changes no data. The last result goes on /health."""
-    libc = _libc()
-    if libc is None:
-        return
+    """A full run of Python's garbage collector (14 October, see the note at the top), then the allocator's free memory
+    handed back to the system (glibc's malloc_trim, every pool). The server calls it once a minute; it changes no data.
+    The last result goes on /health: what the collector found (objects), how long it took, and the memory it gave back,
+    with the most given back at one time."""
     before = rss_mb()
-    try:
-        libc.malloc_trim(0)
-    except AttributeError:
-        return
+    start = time.perf_counter()
+    collected = gc.collect()
+    collect_ms = round((time.perf_counter() - start) * 1000)
+    libc = _libc()
+    if libc is not None:
+        try:
+            libc.malloc_trim(0)
+        except AttributeError:
+            pass
+    freed = round(before - rss_mb(), 1)
     with _lock:
-        _given.update(at=datetime.now(IST).strftime("%H:%M:%S"), freed_mb=round(before - rss_mb(), 1), times=_given["times"] + 1)
+        now = datetime.now(IST).strftime("%H:%M:%S")
+        _given.update(at=now, freed_mb=freed, times=_given["times"] + 1, collected=collected, collect_ms=collect_ms)
+        if freed > _given["most_freed_mb"]:
+            _given.update(most_freed_mb=freed, most_at=now)
 
 
 _census = {"at": 0.0, "value": None}
