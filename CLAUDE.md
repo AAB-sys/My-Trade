@@ -216,7 +216,8 @@ branch from `main`.
 
 - Keep-awake (8 October): Render's free plan sleeps after 15 minutes without an incoming request, and the watcher
   sleeps with it. `keep_awake_forever` in main.py calls the server's own public address (`RENDER_EXTERNAL_URL`, set
-  by Render; `KEEP_AWAKE_URL` for tests) every `KEEP_AWAKE_SECONDS` (300) from 08:45 to 16:15 IST on weekdays;
+  by Render; `KEEP_AWAKE_URL` for tests) every `KEEP_AWAKE_SECONDS` (300) from 06:00 to 16:15 IST on weekdays (08:45
+  until 14 October: a server woken earlier, by the morning's token paste restarting it, fell asleep again);
   `.github/workflows/keepawake.yml` knocks every ten minutes 08:30 to 16:20 IST, which also wakes it before the open.
   `/health` says `keep_awake`.
 - `/health` says `memory_mb` (now and peak, from /proc): on 8 October the server stopped at about 09:50 with a page
