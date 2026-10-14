@@ -872,7 +872,8 @@ async def token_forever() -> None:
 
 async def give_memory_back_forever() -> None:
     """Once a minute the allocator's free memory goes back to the system (memwatch.give_back; 9 October: 265 MB held
-    free against 36 MB in use, and the server grew towards Render's 512 MB)."""
+    free against 36 MB in use, and the server grew towards Render's 512 MB), after a full run of the garbage collector
+    (14 October: the requests' HTTPS clients left in reference cycles, about 0.75 MB each, took the server to 427 MB)."""
     while True:
         await asyncio.sleep(60)
         try:
