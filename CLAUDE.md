@@ -175,12 +175,12 @@ their own logic. Read this before touching the code.
   plus layers 1, 2 and 3 of `LOGIC.md` (level price lines
   with a readout; held/crossed judged per closed candle, its own table taken off
   the page on 6 October; the paper trades the owner's rule gives on the closed
-  candles, with a score line and a CSV download; nothing drawn on the chart), computed in the page from the
+  candles; the score line, the CSV download and the no-call notes left the page on 16 October, the owner's ask; nothing drawn on the chart), computed in the page from the
   summary and the bars. Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
-  interface; `target=_blank` links kept in the same view so the login's tab
+  interface, unused since the CSV button went on 16 October; `target=_blank` links kept in the same view so the login's tab
   note survives). `.github/workflows/android.yml` builds and signs it with
   `android/keystore/my-trade.jks` (a personal sideload key) and publishes the
   APK on the `app-latest` release. Nothing in the app can reach Dhan directly.
