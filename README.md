@@ -345,6 +345,11 @@ The app is ready to run on a platform that deploys from GitHub:
      delivery is instant.
 4. **Orders** - paper trading first, with hard limits, before anything real.
 
+**Each tick is small** (15 October): a tick to an open index page carries the price, its time and the candle of
+each size forming now, not the closed candles the server keeps for itself. Before that every tick carried the last 48
+closed candles of every size too (about 13 KB a tick, one or two ticks a second), which used up Render's free 5 GB of
+outbound data a month in two weeks and got the service suspended on 15 October.
+
 **The server stays awake in market hours** (8 October). Render's free plan puts it to sleep after 15 minutes
 without an incoming request, so on a morning with no page open the watcher sleeps too and misses calls. From 06:00
 to 16:30 IST every day (since 15 October; weekdays to 16:15 before that, and from 08:45 until 14 October) the server

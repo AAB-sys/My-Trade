@@ -460,12 +460,21 @@ def with_live_candles(candles: list, name: str, key: str) -> list:
     return [by_time[t] for t in sorted(by_time)]
 
 
+def tick_payload(name: str) -> dict:
+    """What a page needs from the index's live entry, once per tick: the price, its time and way, and the candle of
+    each size forming now. Not the closed candles the entry keeps (the last 48 of each size, for the detail answer):
+    the page never read them from a tick, and with them every tick was about 13 KB instead of under 1 KB. One open
+    page, one or two ticks a second, six hours a day, used up Render's free 5 GB of outbound data on 15 October."""
+    entry = live.get(name) or {}
+    return {"name": name, "last": entry.get("last"), "time": entry.get("time"), "via": entry.get("via"), "bars": entry.get("bars") or {}}
+
+
 async def push_tick(name: str) -> None:
-    """The index's live entry to every page watching it."""
+    """The index's live price and forming candles to every page watching it."""
     for ws, wanted in list(live_subs.items()):
         if wanted == name:
             try:
-                await ws.send_json({"tick": {"name": name, **live[name]}})
+                await ws.send_json({"tick": tick_payload(name)})
             except Exception:
                 live_subs.pop(ws, None)
 
@@ -1292,7 +1301,7 @@ async def stream(ws: WebSocket):
     try:
         await ws.send_json({**store, "page": page_id})
         if wanted in live:
-            await ws.send_json({"tick": {"name": wanted, **live[wanted]}})
+            await ws.send_json({"tick": tick_payload(wanted)})
         if ws in dash_subs and DHAN_ON and (snapshot := live_now()):
             await ws.send_json({"live": snapshot})  # the tiles move at once, not a second later
         while True:
