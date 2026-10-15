@@ -251,7 +251,7 @@ The rule, in the order it is applied:
 1. **Signal** - a closed candle that **held** a level (the owner's words since 12
    October: "On the line") or **crossed** one ("Crossed above" for a Buy CE,
    "Crossed below" for a Buy PE). Both count: the Off / On the line / Crossed above-below / Both
-   switch left the page on 16 October (the owner's ask), Both is the one setting. When
+   switch left the page on 16 October (the owner's ask), and so did the lone Both button later that day; Both is the setting. When
    one candle signals at several levels, the one nearest its close counts: one
    candle, one call **(owner to decide)**. A level that has given a call in a
    direction gives no more that way until the index has closed back across it
