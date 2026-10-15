@@ -53,6 +53,7 @@
 
   header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 20px; }
   h1 { font-size: 20px; font-weight: 600; margin: 0; }
+  .top-right { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
   #status { color: var(--ink-2); font-size: 14px; }
   #status.error { color: var(--down); }
   header a.page { color: var(--ink-2); font-size: 14px; text-decoration: none; }
@@ -61,7 +62,7 @@
   #mode.on { display: inline-block; }
   #missing { flex-basis: 100%; color: var(--down); font-size: 14px; }
   #logout {
-    margin-left: auto; align-self: center; font: inherit; font-size: 14px; font-weight: 500;
+    align-self: flex-end; font: inherit; font-size: 14px; font-weight: 600;
     color: var(--ink); background: var(--surface); border: 1px solid var(--border);
     border-radius: 999px; padding: 4px 14px; cursor: pointer;
   }
@@ -103,10 +104,12 @@
 <body>
 <main>
   <header>
-    <h1>Indian market indices</h1>
+    <h1>My-Trade</h1>
     <span id="mode">SIMULATED DATA</span>
-    <span id="status">Connecting…</span>
-    <button id="logout" type="button" hidden>Log out</button>
+    <div class="top-right">  <!-- the Log out button, and the "Live · updated" line under it (the owner, 16 October) -->
+      <button id="logout" type="button" hidden>Log out</button>
+      <span id="status">Connecting…</span>
+    </div>
     <span id="missing"></span>
     <span id="open-warning" hidden>No password is set, so anyone who can reach this address can see this page. Fine on your own laptop; set DASHBOARD_PASSWORD before putting it online.</span>
   </header>
