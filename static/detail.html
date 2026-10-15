@@ -193,9 +193,11 @@
   #empty[hidden] { display: none; }
   #chart { height: 420px; }
   /* the names of the previous close's lines, in a column left of the chart, level with their lines, as the prices on the right (15 October) */
-  .chart-area.left-tags #chart { margin-left: 64px; }
-  #line-tags { position: absolute; top: 0; bottom: 0; left: 0; width: 62px; pointer-events: none; overflow: hidden; z-index: 2; }
-  #line-tags span { position: absolute; right: 4px; transform: translateY(-50%); font: 700 11px/1.2 system-ui, sans-serif; white-space: nowrap; }
+  .chart-area.left-tags #chart { margin-left: 124px; }  /* the name and the price of each line (the owner, 16 October: "values of levels can be shown to the left end") */
+  #line-tags { position: absolute; top: 0; bottom: 0; left: 0; width: 122px; pointer-events: none; overflow: hidden; z-index: 2; }
+  #line-tags span { position: absolute; right: 4px; transform: translateY(-50%); font: 700 11px/1.2 system-ui, sans-serif; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #line-tags span small { font-size: 11px; font-weight: 500; margin-left: 5px; }
+  @media (max-width: 600px) { .chart-area.left-tags #chart { margin-left: 116px; } #line-tags { width: 114px; } #line-tags span, #line-tags span small { font-size: 10px; } #line-tags span small { margin-left: 4px; } }
   #popup {
     display: none; position: absolute; z-index: 5; min-width: 170px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
@@ -401,7 +403,7 @@
     box.parentElement.classList.toggle("left-tags", lv.length > 0);  // the chart makes room on its left for the column (it sizes itself to its box)
     const key = JSON.stringify(lv);
     if (box.dataset.key !== key) {
-      box.innerHTML = lv.map(l => `<span style="color:${cssVar(l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2")}">${Rules.levelName(l.ratio, true)}</span>`).join("");  // the name only, no price (the owner, 15 October: "Remove the index numbers from the febonachi lines. Just keep the percentage")
+      box.innerHTML = lv.map(l => `<span style="color:${cssVar(l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2")}">${Rules.levelName(l.ratio, true)}<small>${fmt.format(l.price)}</small></span>`).join("");  // the name and the price (the owner, 16 October: "values of levels can be shown to the left end"; until then the name only, 15 October: "Remove the index numbers from the febonachi lines. Just keep the percentage")
       box.dataset.key = key;
     }
     // level with each line; when two lines are closer than a name is tall, the lower name moves down just enough, as the price scale does
