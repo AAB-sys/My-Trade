@@ -240,17 +240,17 @@ their prices from the option's one-minute candles on Dhan when it has them
 and of the minute it was sold in. The header
 row stays in view while the page scrolls (owner's ask, 7 October). The list is in time order, the newest call at the
 top, open or finished alike (owner's ask, 7 October: an open call listed above a
-later one read as if it had been given later); one line keeps the score (owner's
-ask, 7 October: the list must say what is happening and what action is needed). Paper only: nothing is sent anywhere, and
-the list is worked out afresh from the candles every minute. **Download CSV**
-saves it as a file for the owner's own record, one session at a time.
+later one read as if it had been given later). One line kept the score from 7 October (owner's
+ask: the list must say what is happening and what action is needed) to 16 October, when the owner took it off the page
+with the Download CSV button and the no-call notes ("remove all the red marked boxed things"). Paper only: nothing is
+sent anywhere, and the list is worked out afresh from the candles every minute.
 
 The rule, in the order it is applied:
 
 1. **Signal** - a closed candle that **held** a level (the owner's words since 12
    October: "On the line") or **crossed** one ("Crossed above" for a Buy CE,
-   "Crossed below" for a Buy PE; the switch: "Crossed above / below"), or either ("Both"), as the
-   switch says. The switch is remembered per browser; *Off* hides the list. When
+   "Crossed below" for a Buy PE). Both count: the Off / On the line / Crossed above-below / Both
+   switch left the page on 16 October (the owner's ask), Both is the one setting. When
    one candle signals at several levels, the one nearest its close counts: one
    candle, one call **(owner to decide)**. A level that has given a call in a
    direction gives no more that way until the index has closed back across it
@@ -329,8 +329,8 @@ The rule, in the order it is applied:
    candle (30 minutes, the signal candle too) went below the day's low before
    it, and none went above the day's high (for a Buy PE the other way round).
    A call the same way as the fresh run still comes; a call given live stays;
-   the signals given no call are listed under the table ("No call against a
-   fresh run"), and their lines stay free. Found from the saved days 29
+   the signals given no call go into the result's `skipped` (listed under the table as "No call
+   against a fresh run" until 16 October), and their lines stay free. Found from the saved days 29
    September to 9 October: NIFTY 50's calls against a fresh low or high made
    money on 5 of the 8 days but lost −790 on 8 October (Buy CE after Buy CE
    bounced into the fall); NIFTY BANK's made money on all 8 days, so NIFTY
@@ -381,9 +381,9 @@ The rule, in the order it is applied:
    either, and that line is then used that way. On-the-line calls and the
    call past the day's high or low (which has no next line) are left as they
    are by idea 8; idea 5 stops any Crossed call the other way. The signals
-   they give no call are listed under the table, as idea 13's: "No call, the
+   they give no call go into `skipped`, as idea 13's (under the table until 16 October: "No call, the
    candle closed too near the line" and "No call while a call the other way
-   is held". 13 October, today-so-far lines: 10 calls, +395.20 → 5 calls,
+   is held"). 13 October, today-so-far lines: 10 calls, +395.20 → 5 calls,
    +509.40 (the 9:25 Buy CE past the day's high, and Buy CE On the line
    23.6% at 10:30, 10:50, 11:55 and 12:15, all to their target; the 12:10
    Buy CE Crossed above 23.6%, +205.05, closed only 3.68 past the line and
@@ -494,7 +494,7 @@ The rule, in the order it is applied:
    `candles_say` (carry or exit), `exit_said_at_ist` (the first candle that said
    exit) and `candles_why` (the reason), from the page and from the server's
    watcher alike (`rule.read_of`, the same code in Python, kept the same by
-   `check_rule.py`); the page's CSV download carries the three too. Beside
+   `check_rule.py`); the page's CSV download carried the three too, until 16 October. Beside
    them, the *carry read* (idea P5's question, `Rules.carryOf` and
    `rule.carry_of`, 7 October evening): for a call that reached its target,
    `carry_deep` says whether the candle that reached it closed at least a

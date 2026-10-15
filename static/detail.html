@@ -152,14 +152,7 @@
   #feed-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
   #paper[hidden] { display: none; }
   #paper-box .controls { margin: 0 0 8px; }
-  #paper-score { font-size: 13px; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
-  #paper-skipped { font-size: 12px; color: var(--muted); margin-bottom: 8px; line-height: 1.5; }
   .scroll { overflow-x: auto; }
-  #csv {
-    font: inherit; font-size: 13px; padding: 6px 12px; cursor: pointer; margin-left: auto;
-    color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-  }
-  #csv:hover { border-color: var(--ink-2); }
   .seg { display: inline-flex; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer; white-space: nowrap;
@@ -307,18 +300,14 @@
   <section id="paper-box" aria-label="Paper calls" hidden>
     <h2>Paper calls</h2>
     <div class="controls levels">
+      <!-- 16 October, the owner's ask ("remove all the red marked boxed things"): the Off, On the line and Crossed
+           choices and the Download CSV button are gone; Both is the one signal setting -->
       <div class="seg" id="signal" aria-label="Signal">
-        <button data-signal="off">Off</button>
-        <button data-signal="held" class="on">On the line</button>
-        <button data-signal="crossed">Crossed above / below</button>
-        <button data-signal="both">Both</button>
+        <button data-signal="both" class="on" type="button">Both</button>
       </div>
-      <button id="csv" type="button" title="Save the list below as a spreadsheet file">Download CSV</button>
     </div>
     <div id="paper-note"></div>
     <div id="feed-note" hidden></div>
-    <div id="paper-score"></div>
-    <div id="paper-skipped" hidden></div>
     <div class="scroll">
       <table id="paper">
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th>Candle status</th></tr></thead>
@@ -345,8 +334,7 @@
   state.period = "today";
   try { const p = localStorage.getItem("period"); if (p in PERIODS) state.period = p; } catch (e) {}
   state.move = PERIODS[state.period].move;
-  state.signal = "held";  // layer 3's switch: off, held or crossed
-  try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
+  state.signal = "both";  // layer 3's signal: On the line and Crossed both count (the switch left the page on 16 October)
   const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute", "1d": "1-day", "1w": "1-week" };
   // The Time frame drop-down (15 October, the owner's list): the first five choices are a candle size over the last five
   // days (three months for 1 day); the rest say how far back the chart shows, each with its candle size. Where the
@@ -679,9 +667,8 @@
   //             call that way. Not on day candles. Rule 2 of the owner's specification (9 October; Rules.TRAIL): once a candle closes
   //             beyond a further line, the stop moves to that line, line by line, and a close back past it sells
   const dayOf = Rules.dayOf, dayOver = Rules.dayOver;
-  const HOW = { target: "Target", "day end": "Day end", candle: "Exit", back: "Closed back", retouch: "Came back", trail: "Closed back past the moved stop", sold: "Sold at the Sell mark", open: "Still open", pending: "Enters at the next open" };  // the CSV's words
   const lineName = (ratio) => Rules.levelName(ratio, state.move === "close");  // a line's name: "23.6%"; on the previous close's lines "+23.6%" above the close, "-23.6%" below it
-  const pctOf = (t) => lineName(t.ratio);  // the level's ratio, as the rows and the CSV show it
+  const pctOf = (t) => lineName(t.ratio);  // the level's ratio, as the rows show it
   let lastPaper = { trades: [], levels: [] };
 
   // The rule is Rules.paperTrades in /static/rules.js; this page hands it the session's candles, the levels on the
@@ -716,34 +703,13 @@
     const box = document.getElementById("paper-box");
     if (!levels.length) { box.hidden = true; lastPaper = { trades: [], levels: [] }; return; }
     box.hidden = false;
-    const table = document.getElementById("paper"), note = document.getElementById("paper-note"), score = document.getElementById("paper-score");
-    if (state.signal === "off") {
-      table.hidden = true; lastPaper = { trades: [], levels };
-      score.textContent = "";
-      note.textContent = "Off. Pick a signal to see the calls it would have given in this session.";
-      return;
-    }
-    const { trades, closed, skipped } = paperTrades(levels);
+    const table = document.getElementById("paper"), note = document.getElementById("paper-note");
+    // the score line and the no-call notes (idea 13, ideas 8 and 5) stood here until 16 October: the owner took them off
+    // the page with the Download CSV button ("remove all the red marked boxed things"); the rule gives the same calls
+    const { trades } = paperTrades(levels);
     markSold(trades);
     lastPaper = { trades, levels };
-    const done = trades.filter(t => t.exit != null);
-    const won = done.filter(t => t.points > 0).length, lost = done.filter(t => t.points < 0).length;
-    const net = Math.round(done.reduce((s, t) => s + t.points, 0) * 100) / 100;
-    const running = trades.filter(t => t.how === "open").length, waiting = trades.some(t => t.how === "pending");
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
-    score.textContent = (done.length
-      ? `${done.length} finished call${done.length === 1 ? "" : "s"} in the ${closed} closed candles of ${sessionName(currentSession())}: ${won} won, ${lost} lost, net ${signed.format(net)} points.`
-      : `No finished call in the ${closed} closed candles of ${sessionName(currentSession())}.`)
-      + (running ? ` ${running} still open.` : "") + (waiting ? " One is waiting to enter." : "");
-    // the signals given no call, newest first, in plain words, one line per reason: idea 13 (12 October), ideas 8 and 5 (13 October)
-    const skippedBox = document.getElementById("paper-skipped"), groups = [
-      ["No call against a fresh run", x => x.why === "new low" || x.why === "new high", x => `${name} made a ${x.why} in the last 30 minutes`],
-      ["No call, the candle closed too near the line", x => x.why === "not clear", () => "less than a quarter of the way to the next line"],
-      ["No call while a call the other way is held", x => x.why === "held other way", x => `a Buy ${x.side === "CE" ? "PE" : "CE"} was held`]];
-    const said = groups.map(([head, is, why]) => { const L = (skipped || []).filter(is);
-      return L.length ? `<b>${head} (${L.length}):</b> ` + L.slice().reverse().map(x => `${callTime(x.signalTime)} Buy ${x.side} (${signalWord(x)} ${lineName(x.ratio)}: ${why(x)})`).join(" · ") : ""; }).filter(Boolean);
-    skippedBox.hidden = !said.length;
-    skippedBox.innerHTML = said.join("<br>");
     table.hidden = !trades.length;
     const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
     table.classList.toggle("no-options", !withOptions);
@@ -857,7 +823,7 @@
   // candle has closed beyond a further line (Rule 2: t.trail.line, the line the stop moved for), the target shown is the next
   // line beyond that one, on the lines as they stood at the candle that sold the call (an open call: as the chart draws them
   // now); with no line beyond it, that line itself. Only the table moves it: a held break is not sold at its target, and the
-  // rule, the server and the CSV keep the target the call was given
+  // rule and the server keep the target the call was given
   function movedTarget(t) {
     if (!t.hold || !t.trail || t.trail.line == null) return null;
     const bars = sessionBars(), i = t.exit != null ? bars.findIndex(b => b.time === t.exitTime) : -1;
@@ -905,8 +871,8 @@
 
   // The candle verdict (owner's ask, 7 October; Rules.readOf, LOGIC.md layer 3): CARRY or EXIT with its reason. On the
   // table as "Candle status" (off it on 7 October evening, back on 8 October as the owner's exit signal); the page also
-  // sends it with every call it records (the server's watcher does the same with rule.read_of), and the CSV download
-  // carries it. It changes nothing about a call
+  // sends it with every call it records (the server's watcher does the same with rule.read_of). It changes nothing
+  // about a call
   function candleRead(t) {
     const rd = Rules.readOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
     return rd ? { say: rd.word, exitAt: rd.exitAt, why: rd.why } : null;
@@ -940,13 +906,6 @@
     const pct = lineName(t.ratio);
     if (went >= 0.25 * gap) return { watch: true };
     return { watch: false, why: went <= 0 ? `price is back ${t.side === "CE" ? "above" : "below"} the ${pct} level` : `price is near the ${pct} level again` };
-  }
-
-  // The carry read (idea P5's question, 7 October evening; Rules.carryOf): at the candle that reached the target, did the
-  // close go a quarter into the next gap, and was the level beyond reached later. For the CSV and the research engine only
-  function carryRead(t) {
-    const c = Rules.carryOf({ trade: t, bars: sessionBars(), seconds: SECONDS[state.interval], now: serverNow() });
-    return c ? { deep: c.deep ? "yes" : "no", beyond: c.beyond, reached: c.reached ? "yes" : "no" } : null;
   }
 
   // paid → now while the call is open; paid → at exit once it has ended, with the Sell mark (LOGIC.md, "Exit by premium"):
@@ -1469,33 +1428,6 @@
     setBars(shownBars());
     drawLevels();
   });
-  document.getElementById("signal").addEventListener("click", e => {
-    const signal = e.target.dataset.signal;
-    if (!signal || signal === state.signal) return;
-    state.signal = signal;
-    try { localStorage.setItem("signal", signal); } catch (err) {}
-    [...e.currentTarget.children].forEach(b => b.classList.toggle("on", b.dataset.signal === signal));
-    drawLevels();
-  });
-  document.getElementById("csv").addEventListener("click", () => {  // the list as a file, for the owner's own record
-    const stamp = (t) => new Date(t * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-    const head = ["signal_time_ist", "level", "level_price", "signal", "option_bought", "index_at_entry", "target", "index_at_exit", "points", "ended_by",
-                  "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium", "candles_say", "exit_said_at_ist", "candles_why",
-                  "carry_deep", "beyond_level", "beyond_reached"];
-    const rows = lastPaper.trades.map(t => {
-      const r = optionRecords[callKey(t)], cr = candleRead(t), ca = carryRead(t);
-      return [stamp(t.signalTime), lineName(t.ratio), t.level, t.kind, t.side, t.entry ?? "", t.target, t.exit ?? "", t.points ?? "", t.how,
-              r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", r ? r.premium_paid : "", r ? r.premium_now : "", r ? r.sell_below : "", r && r.sold ? r.sold.premium : "",
-              cr ? cr.say : "", cr && cr.exitAt ? stamp(cr.exitAt) : "", cr ? `"${cr.why}"` : "",  // the reason holds a comma, so it is quoted
-              ca ? ca.deep : "", ca ? ca.beyond : "", ca ? ca.reached : ""];
-    });
-    const blob = new Blob([[head, ...rows].map(r => r.join(",")).join("\n") + "\n"], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `paper-calls ${name} ${currentSession() || "today"} ${state.interval} ${state.signal}.csv`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  });
   document.getElementById("interval").addEventListener("change", e => {
     const before = VIEWS[state.view];
     state.view = e.target.value;
@@ -1509,7 +1441,6 @@
 
   document.getElementById("move").value = state.period;
   document.getElementById("interval").value = state.view;
-  [...document.getElementById("signal").children].forEach(b => b.classList.toggle("on", b.dataset.signal === state.signal));
   load();
 </script>
 </body>

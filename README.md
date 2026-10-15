@@ -201,7 +201,8 @@ repository.
 
 `android/` is the dashboard as a phone app: one full-screen view of the owner's
 server, the screen kept awake while it is open, the login's tab note carried
-from page to page, Download CSV saved to the phone's Downloads. GitHub builds it
+from page to page (it can save a file a page offers; no page offers one since the
+Download CSV button went on 16 October). GitHub builds it
 (`.github/workflows/android.yml`) and publishes **My-Trade.apk** on the
 repository's Releases page under `app-latest`; install it from there on the
 phone. Details in `android/README.md`.
@@ -288,7 +289,7 @@ The app is ready to run on a platform that deploys from GitHub:
   +100% above it and -23.6% to -100% below it, 100% being 1.5% of the close,
   drawn again on today's range only after a candle closes beyond +100% or -100%); its
   second, whether a closed candle held or crossed a level, is the signal of its
-  third, the paper trades that rule would have given on those candles (a Held/Crossed/Both switch, the call the
+  third, the paper trades that rule would have given on those candles (On the line and Crossed signals both, the switch gone on 16 October; the call the
   moment the signal candle closes, buy a CE or a PE, entry at the next price, the next level as
   target and no stop, one call per level (by its price) and direction until the index closes
   back across it, closed at the day's end; a call from a break is held through its
@@ -300,7 +301,7 @@ The app is ready to run on a platform that deploys from GitHub:
   target (the next line on the chart in the call's direction, following the lines
   as they move; with "hit" or "not reached" once ended), premium paid -> now and
   candle status (the candle verdict, HOLD or SELL with its reason), under
-  a header row that stays in view; scored, and downloadable as a CSV file. The
+  a header row that stays in view (the score line and the CSV download left the page on 16 October, the owner's ask). The
   candle verdict also goes with every call into the day's calls CSV for the
   research engine, and so does the carry read (did the candle that reached the target close a quarter
   into the next gap, and was the level beyond reached).
