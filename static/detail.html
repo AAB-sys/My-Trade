@@ -479,16 +479,22 @@
   //   shift + wheel / two-finger swipe left-right -> earlier or later
   //   ctrl + wheel / touchpad pinch         -> zoom (browsers send a pinch as ctrl + wheel)
   // Move the pointer off the chart to scroll the page.
+  // A mouse wheel can report its turn in lines (Firefox) or in screens (Windows set to scroll one screen at a time)
+  // instead of pixels; taken as pixels, a notch of 3 lines moved the view by 3 pixels, as good as nothing (the owner,
+  // 16 October: "external mouse scroll up down is not happening"). A notch of three lines now moves as 100 pixels do
+  // (a notch of a Chrome mouse wheel), a screen as the chart's height
   document.getElementById("chart").addEventListener("wheel", e => {
     e.preventDefault();
     const box = e.currentTarget.getBoundingClientRect();
+    const unit = e.deltaMode === 1 ? 100 / 3 : e.deltaMode === 2 ? box.height : 1;
+    const dx = e.deltaX * unit, dy = e.deltaY * unit;
     if (e.ctrlKey || e.metaKey) {
-      zoomBy(Math.exp(Math.max(-100, Math.min(100, e.deltaY)) / 250));   // a wheel notch of 100 -> x1.5; a pinch step is gentler
-    } else if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      const px = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX;
+      zoomBy(Math.exp(Math.max(-100, Math.min(100, dy)) / 250));          // a wheel notch of 100 -> x1.5; a pinch step is gentler
+    } else if (e.shiftKey || Math.abs(dx) > Math.abs(dy)) {
+      const px = e.shiftKey && !dx ? dy : dx;
       moveTime(px / box.width);                                            // one pixel of wheel = one pixel of chart
     } else {
-      movePrice(-e.deltaY / box.height);                                   // wheel down shows lower prices
+      movePrice(-dy / box.height);                                         // wheel down shows lower prices
     }
   }, { passive: false });
   let series = null;
