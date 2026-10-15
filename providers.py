@@ -17,6 +17,7 @@ RETRIES = 3
 RANGES = {
     "today": {"range": "1d", "days": 1},
     "5d": {"range": "5d", "days": 5},
+    "2w": {"range": "1mo", "days": 10},  # the last ten sessions: this week and last (15 October, "Previous week" under Levels)
     "3mo": {"range": "3mo", "days": 66},  # for day candles: about three months of sessions
     # the longer views (the owner, 15 October night: "1 week, 3 months, 6 months, 1 yr, 2yr, 3yr, 5yr"): days = sessions
     # to show, cal_days = how far back Dhan is asked. Where the data does not reach back, the chart shows what there is
