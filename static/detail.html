@@ -109,7 +109,8 @@
 
   .controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
-  .lbl { font-size: 13px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; min-width: 72px; }  /* bold and bigger (the owner, 15 October) */
+  .lbl { font-size: 13px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; min-width: 96px; }  /* bold and bigger (the owner, 15 October); wide enough for "Time frame", so the controls line up under each other */
+  .pair { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; max-width: 100%; }  /* a label and its control move to the next line together (the owner, 16 October, the phone: "it should align", "time frame") */
   #session-row[hidden] { display: none; }
   #paper-box { margin-top: 16px; }
   #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
@@ -232,11 +233,14 @@
   <section class="summary" id="summary" aria-label="Summary"></section>
 
   <div class="controls levels">
+    <span class="pair">
     <span class="lbl">Chart</span>
     <div class="seg" id="kind" aria-label="Chart kind">
       <button data-kind="line" class="on">Line</button>
       <button data-kind="candles">Candles</button>
     </div>
+    </span>
+    <span class="pair">
     <span class="lbl">Time frame</span>
     <select class="pick" id="interval" aria-label="Time frame: the size of one candle">
       <option value="1m">1 min</option>
@@ -252,9 +256,11 @@
       <option value="3y">3 yr</option>
       <option value="5y">5 yr</option>
     </select>
+    </span>
   </div>
 
   <div class="controls levels">
+    <span class="pair">
     <span class="lbl">Levels</span>
     <select class="pick" id="move" aria-label="Levels: the days shown, with the lines over them">
       <option value="today" selected>Today so far</option>
@@ -263,6 +269,7 @@
       <option value="prevweek">Previous week</option>
       <option value="all">All</option>
     </select>
+    </span>
   </div>
 
   <div class="controls levels" id="session-row" hidden>
