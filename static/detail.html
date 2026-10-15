@@ -72,23 +72,21 @@
   main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
 
   .top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
-  .top a { color: var(--ink-2); font-size: 14px; text-decoration: none; }
-  .top a:hover { color: var(--ink); }
   #status { color: var(--ink-2); font-size: 14px; margin-left: auto; }
-  #logout {
-    align-self: center; font: inherit; font-size: 14px; font-weight: 500;
+  #dashboard, #logout {  /* the two pills, one format (the owner, 15 October: "Make dashboard word bold same as a format with log out button") */
+    align-self: center; font: inherit; font-size: 14px; font-weight: 600; text-decoration: none;
     color: var(--ink); background: var(--surface); border: 1px solid var(--border);
     border-radius: 999px; padding: 4px 14px; cursor: pointer;
   }
-  #logout:hover { border-color: var(--ink-2); }
+  #dashboard:hover, #logout:hover { border-color: var(--ink-2); }
   #logout[hidden] { display: none; }
   #status.error { color: var(--down); }
   #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
   #mode.on { display: inline-block; }
 
   .hero { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin: 12px 0 18px; }
-  h1 { font-size: 22px; font-weight: 600; margin: 0; }
-  #last { font-size: 40px; font-weight: 600; line-height: 1.1; }
+  h1 { font-size: 26px; font-weight: 700; margin: 0; }
+  #last { font-size: 22px; font-weight: 600; line-height: 1.1; }  /* smaller than the index name (the owner, 15 October) */
   #delta { font-size: 16px; font-weight: 500; }
   #delta.up { color: var(--up); }
   #delta.down { color: var(--down); }
@@ -109,7 +107,7 @@
 
   .controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
-  .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; min-width: 54px; }
+  .lbl { font-size: 13px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; min-width: 72px; }  /* bold and bigger (the owner, 15 October) */
   #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   #session-row[hidden] { display: none; }
   #paper-box { margin-top: 16px; }
@@ -212,7 +210,7 @@
   #popup .row.down b { color: var(--down); }
   #popup .x { position: absolute; top: 2px; right: 7px; cursor: pointer; color: var(--muted); font-size: 16px; line-height: 1; }
   #popup .x:hover { color: var(--ink); }
-  @media (max-width: 600px) { #chart { height: 300px; } #last { font-size: 32px; } }
+  @media (max-width: 600px) { #chart { height: 300px; } h1 { font-size: 22px; } #last { font-size: 19px; } }
 
   footer { margin-top: 24px; font-size: 12px; color: var(--muted); }
 </style>
@@ -220,7 +218,7 @@
 <body>
 <main>
   <div class="top">
-    <a href="/">&larr; Dashboard</a>
+    <a href="/" id="dashboard">Dashboard</a>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Loading…</span>
     <button id="logout" type="button" hidden>Log out</button>
