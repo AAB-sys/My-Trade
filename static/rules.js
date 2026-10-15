@@ -317,7 +317,8 @@
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
     const atr = trail && trail.buffer === "atr" ? atrBefore(closed, trail.period || 14) : null;
     const bufferAt = (i) => !trail ? 0 : trail.buffer === "fixed" ? trail.points : trail.buffer === "atr" ? (atr[i] != null ? trail.mult * atr[i] : trail.points || 0) : 0;  // Rule 2's buffer for closed candle i
-    const trailLines = (levels) => trail.lines === "all" ? levels : levels.filter(l => l.ratio !== 0 && Math.abs(l.ratio) !== 1);  // the lines that move Rule 2's stop (the ends: 1, and -1 on the previous close's lines)
+    const trailLines = (levels) => trail.lines === "all" ? levels : levels.filter(l => l.ratio !== 0 && Math.abs(l.ratio) !== 1);  // the lines that move Rule 2's stop (setting "middle": without 0% and 100%, and -100% on the previous close's lines, where 0% is
+  // the middle line; only research settings use it, the page, the watcher and the replays run "all")
     const gain = (t, price) => round2(t.side === "CE" ? price - t.entry : t.entry - price);  // index points
     const end = (t, price, bar, how) => { t.exit = price; t.exitTime = bar.time; t.how = how; t.points = gain(t, price); };
     const reaches = (t, bar) => t.side === "CE" ? bar.high >= t.target : bar.low <= t.target;
