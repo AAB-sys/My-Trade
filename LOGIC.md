@@ -108,11 +108,12 @@ turn after a move. Whether that holds is for the owner's own record to show.
 **Ratios**: the seven above **(owner to decide: add or remove)**.
 
 **Which days** (15 October night, the owner's five under *Levels*: "today so far, previous day,
-current week, previous week, All"): *Today so far* shows the latest day with its own range so far;
-*Previous day* the day before it with its own range; *Current week* this week's days with the
-week's lowest low and highest high as 0% and 100%; *Previous week* last week's days the same way
-(blank until the data reaches back); *All* every day loaded (the last ten sessions) with its range.
-The *Session* drop-down below went with it.
+current week, previous week, All"): *Today so far* shows the latest day; *Previous day* the day
+before it; *Current week* this week's days; *Previous week* last week's days (blank until the data
+reaches back); *All* every day loaded (the last ten sessions). Every one of them draws the previous
+close's lines above (the owner, 16 October: "rework it with the new lines in all five"): 0% at the
+close before the first day shown, drawn again over the days shown by the same rule; the calls are the
+latest day's of them. The *Session* drop-down below went with it.
 
 **Which session** (until 15 October): today by default (the latest trading day among the candles
 loaded, which are the last five days). The *Session* drop-down picks another of

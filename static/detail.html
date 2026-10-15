@@ -332,8 +332,10 @@
   // The Levels drop-down (15 October night, the owner's five): which days the chart shows, each with its lines over them.
   // today: the latest day, its own range so far; prev: the day before it, its own range; week: this week's days, the
   // week's range; prevweek: last week's days, that week's range (blank until the data reaches back); all: every day
-  // loaded, its range. The lines over a week or all days are the lowest low and highest high shown ("bars shown").
-  const PERIODS = { today: { move: "today" }, prev: { move: "today" }, week: { move: "shown" }, prevweek: { move: "shown" }, all: { move: "shown" } };
+  // loaded. Every one of them draws the previous close's lines (the owner's lines of 15 October, Rules.closeLevelsAt):
+  // 0% at the close before the first day shown, 100% 1.5% of it above and below, drawn again only after a candle closes
+  // beyond the outermost line; the lines run over all the days shown, and the calls are the latest day's of them.
+  const PERIODS = { today: { move: "close" }, prev: { move: "close" }, week: { move: "close" }, prevweek: { move: "close" }, all: { move: "close" } };
   state.period = "today";
   try { const p = localStorage.getItem("period"); if (p in PERIODS) state.period = p; } catch (e) {}
   state.move = PERIODS[state.period].move;
@@ -419,13 +421,13 @@
   // October: "If febonachi lines are redrawn put a small message below chart and above paper calls that febonachi levels redrawn
   // and the reason for it"): the last time, which way, the candle and the line it closed beyond, and where 0% and 100% are now
   function drawRedraw(at) {
-    const el = document.getElementById("redraw-note"), bars = sessionBars(), now = serverNow();
+    const el = document.getElementById("redraw-note"), bars = shownBars(), now = serverNow();
     const n = at ? bars.filter(b => endOf(b) <= now).length : 0;
     let count = 0, last = 0;
     for (let i = 1; i <= n; i++) if (at(i) !== at(i - 1)) { count++; last = i; }  // the same lines are the same array: a new one is a redraw
     if (!last) { el.hidden = true; el.textContent = ""; return; }
     const before = at(last - 1), after = at(last), bar = bars[last - 1], up = bar.close > before[before.length - 1].price;
-    const line = up ? before[before.length - 1] : before[0], day = isToday(currentSession()) ? "today's" : "the day's";
+    const line = up ? before[before.length - 1] : before[0], day = periodWord();
     const zero = up ? after[0].price : after[after.length - 1].price, end = up ? after[after.length - 1].price : after[0].price;
     el.className = up ? "up" : "down";
     el.innerHTML = `<b>Fibonacci levels redrawn ${up ? "upward" : "downward"} at ${callTime(bar.time + SECONDS[state.interval])}</b>${count > 1 ? ` (${count} times so far)` : ""}. `
@@ -593,7 +595,8 @@
       return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
     }
     if (state.move === "close") {  // the owner's lines of 15 October: 0% at the previous day's close, 100% 1.5% of it, above (+) and below (-); drawn again only after a close beyond the outermost line (Rules.closeLevelsAt)
-      const day = key ? dayBefore(key) : null;
+      const first = shownBars()[0];  // several days shown (a week, all): the close before the first of them; one day: the day before it
+      const day = (first ? dayBefore(dateKey(first.time)) : null) || (key ? dayBefore(key) : null);
       if (day && day.close != null) return { close: day.close, what: `previous close (${dayLabel(day.date)})` };
       if (key || s.previous_close == null) return null;
       return { close: s.previous_close, what: "previous close" };  // no candles at all (a holiday, before the open): the last session's close, as the tiles show it
@@ -623,8 +626,13 @@
   function closeLinesAt(bars) {
     if (state.move !== "close" || longCandles() || currentSession() === "all") return null;
     const m = theMove();
-    return m && m.close != null ? Rules.closeLevelsAt(bars, m.close) : null;
+    if (!m || m.close == null) return null;
+    const all = shownBars();  // the lines run over all the days shown (a week, all the days): one day shown, the day itself
+    const at = Rules.closeLevelsAt(all, m.close);
+    const off = bars.length && all.length ? all.findIndex(b => b.time === bars[0].time) : 0;  // the day's candles inside the days shown
+    return off > 0 ? (i) => at(off + i) : at;
   }
+  const periodWord = () => state.view === "1w" ? "the five days'" : state.period === "week" ? "this week's" : state.period === "prevweek" ? "last week's" : state.period === "all" ? "the period's" : isToday(currentSession()) ? "today's" : "the day's";
   // the lines in force while candle i forms: the chart's for "today so far", the previous close's as redrawn, else the levels shown
   function linesOfCandle(bars, i) {
     if (judgedToday() && i >= 0) return Rules.todayLinesAt(bars)(i);
@@ -680,7 +688,7 @@
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : fromClose || (() => levels), targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: longCandles(), signal: state.signal, holdBreaks: !longCandles(), trail: Rules.TRAIL,
-                               given: longCandles() ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
+                               given: longCandles() || state.view === "1w" || !["today", "prev"].includes(state.period) ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
                                newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                clearCross: state.interval === "5m" && !!Rules.CLEAR_CROSS[name], oneWay: state.interval === "5m" && !!Rules.ONE_WAY[name] });  // ideas 8 and 5, NIFTY 50 (13 October)
   }
@@ -1037,8 +1045,8 @@
     drawSessions();
     const m = theMove();
     let levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
-    const fromClose = m && m.close != null ? closeLinesAt(sessionBars()) : null;
-    if (fromClose) { const now = serverNow(); levels = fromClose(sessionBars().filter(b => endOf(b) <= now).length); }  // as redrawn by the candles closed so far
+    const fromClose = m && m.close != null ? closeLinesAt(shownBars()) : null;
+    if (fromClose) { const now = serverNow(); levels = fromClose(shownBars().filter(b => endOf(b) <= now).length); }  // as redrawn by the candles closed so far, over the days shown
     drawRedraw(fromClose);
     lastLevels = { m, levels };  // before the chart refits, so the previous close's lines are all in view
     drawPaper(levels);
@@ -1075,7 +1083,7 @@
     const nearest = levels.reduce((a, b) => Math.abs(b.price - last) < Math.abs(a.price - last) ? b : a);
     const gap = Math.round((last - nearest.price) * 100) / 100;
     const redrawn = m.close != null && levels.length === 7;  // the previous close's lines, drawn again on the day's range after a close beyond +100% or -100%
-    const up = redrawn && levels[levels.length - 1].ratio === 1, day = isToday(currentSession()) ? "today's" : "the day's";  // a past session picked: that day's low and high
+    const up = redrawn && levels[levels.length - 1].ratio === 1, day = periodWord();  // a past session picked: that day's low and high
     const head = redrawn
       ? `Redrawn ${up ? "upward after a candle closed above the highest" : "downward after a candle closed below the lowest"} line: 0% at ${day} ${up ? "low" : "high"} ${fmt.format(up ? levels[0].price : levels[levels.length - 1].price)}, ${up ? "+" : "-"}100% at ${day} ${up ? "high" : "low"} ${fmt.format(up ? levels[levels.length - 1].price : levels[0].price)}. `
       : m.close != null
