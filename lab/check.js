@@ -485,27 +485,42 @@ console.log("rules unit checks passed");
   console.log("ideas 5 and 8 checks passed");
 }
 
-// "Previous close" lines (the owner, 15 October): 0% at the previous day's close, 100% 1% of it, the Fibonacci shares above (+)
-// and below (-), 13 lines that stand still all day; the other levels modes untouched
+// "Previous close" lines (the owner, 15 October): 0% at the previous day's close, 100% 1.2% of it, the Fibonacci shares above (+)
+// and below (-): 13 lines; drawn again only after a candle closes above +100% (today's low 0% to today's high +100%) or below
+// -100% (today's high 0% to today's low -100%); the other levels modes untouched
 {
   const lv = R.closeLevels(22622.7), names = lv.map(l => R.levelName(l.ratio, l.signed));
   assert(lv.length === 13 && JSON.stringify(names) === JSON.stringify(["-100.0%", "-78.6%", "-61.8%", "-50.0%", "-38.2%", "-23.6%", "0.0%", "+23.6%", "+38.2%", "+50.0%", "+61.8%", "+78.6%", "+100.0%"]),
     "the previous close's 13 lines, named -100% to +100%: " + names);
-  assert(JSON.stringify(lv.map(l => l.price)) === JSON.stringify([22396.47, 22444.89, 22482.89, 22509.59, 22536.28, 22569.31, 22622.7, 22676.09, 22709.12, 22735.81, 22762.51, 22800.51, 22848.93]),
-    "15 October's lines from 14 October's close, 22,622.70: " + lv.map(l => l.price));
-  assert(R.closeLevels(null) === null && R.closeLevels(0) === null, "no close, no lines");
+  assert(JSON.stringify(lv.map(l => l.price)) === JSON.stringify([22351.23, 22409.32, 22454.93, 22486.96, 22519, 22558.63, 22622.7, 22686.77, 22726.4, 22758.44, 22790.47, 22836.08, 22894.17]),
+    "15 October's lines from 14 October's close, 22,622.70, 100% = 1.2%: " + lv.map(l => l.price));
+  assert(R.closeLevels(null) === null && R.closeLevels(0) === null && R.closeLevelsAt([], null) === null, "no close, no lines");
   assert(R.levelName(0.236) === "23.6%" && R.levelName(0.236, false) === "23.6%", "the other lines keep their names");
   const t0 = 1760000000 - (1760000000 + 19800) % 86400 + 9 * 3600 + 15 * 60;
   const bar = (i, o, h, l, c) => ({ time: t0 + i * 300, open: o, high: h, low: l, close: c });
-  const day = [bar(0, 22650, 22690, 22640, 22685), bar(1, 22685, 22700, 22670, 22672), bar(2, 22672, 22690, 22660, 22688), bar(3, 22688, 22720, 22686, 22715), bar(4, 22715, 22716, 22700, 22705)];
+  // up: 2 closes inside, 3 goes above +100% but closes below it (no redraw), 4 closes above it (redraw from the next candle),
+  // 6 closes above the new +100% (today's high): drawn again
+  const up = [bar(0, 22650, 22690, 22640, 22685), bar(1, 22685, 22760, 22670, 22750), bar(2, 22750, 22850, 22745, 22840), bar(3, 22840, 22900, 22830, 22880),
+              bar(4, 22880, 22930, 22875, 22920), bar(5, 22920, 22925, 22890, 22900), bar(6, 22900, 22960, 22895, 22950), bar(7, 22950, 22955, 22930, 22940)];
+  const at = R.closeLevelsAt(up, 22622.7), same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  assert([0, 1, 2, 3, 4].every(i => same(at(i), lv)), "the 13 lines stand still until a candle closes above +100% (the 3rd only went above it)");
+  assert(same(at(5), R.rangeLevels(22640, 22930, true)) && same(at(6), at(5)), "after the close above +100%: 0% at today's low 22,640, +100% at today's high 22,930");
+  assert(same(at(7), R.rangeLevels(22640, 22960, true)) && same(at(99), at(7)), "a close above that +100% (a new high): drawn again to 22,960");
+  assert(same(at(5).map(l => R.levelName(l.ratio, l.signed)), ["0.0%", "+23.6%", "+38.2%", "+50.0%", "+61.8%", "+78.6%", "+100.0%"]) && at(5)[1].price === 22708.44,
+    "redrawn up: 7 lines, +23.6% 23.6% of the way up from the low: " + at(5).map(l => l.price));
+  const down = [bar(0, 22600, 22610, 22560, 22570), bar(1, 22570, 22575, 22400, 22420), bar(2, 22420, 22425, 22330, 22340), bar(3, 22340, 22360, 22320, 22350)];
+  const dn = R.closeLevelsAt(down, 22622.7);
+  assert(same(dn(2), lv) && same(dn(3), R.rangeLevels(22330, 22610, false)), "a close below -100%: 0% at today's high 22,610, -100% at today's low 22,330");
+  assert(same(dn(3).map(l => R.levelName(l.ratio, l.signed)), ["-100.0%", "-78.6%", "-61.8%", "-50.0%", "-38.2%", "-23.6%", "0.0%"]) && dn(3)[5].price === 22543.92, "redrawn down: " + dn(3).map(l => l.price));
   const prev = { open: 22700, high: 22760, low: 22560, close: 22622.7 };
-  const r = R.replayDay({ bars: day, move: "close", previous: prev, seconds: 300, signal: "both" }).trades;
-  assert(r.length && r.every(t => t.signed === true && lv.some(l => l.price === t.level)), "a call on the previous close's lines carries signed, on one of its lines: " + JSON.stringify(r.map(t => [t.level, t.ratio, t.kind, t.side])));
-  const fixed = R.replayDay({ bars: day, move: "close", previous: { ...prev, high: 30000, low: 1 }, seconds: 300, signal: "both" }).trades;
-  assert(JSON.stringify(fixed.map(t => [t.signalTime, t.level, t.side])) === JSON.stringify(r.map(t => [t.signalTime, t.level, t.side])), "only the close counts, not the previous day's high or low");
-  assert(R.replayDay({ bars: day, move: "prev", previous: prev, seconds: 300, signal: "both" }).trades.every(t => !("signed" in t)), "the previous day's lines are as before");
-  assert(R.replayDay({ bars: day, move: "close", previous: null, seconds: 300, signal: "both" }).trades.length === 0, "no previous day, no lines");
-  const rd = r.map(t => R.readOf({ trade: t, bars: day, seconds: 300, now: Infinity })).filter(Boolean);
+  const r = R.replayDay({ bars: up, move: "close", previous: prev, seconds: 300, signal: "both" }).trades;
+  assert(r.length && r.every(t => t.signed === true), "calls on these lines carry signed: " + JSON.stringify(r.map(t => [(t.signalTime - t0) / 300, t.level, t.ratio, t.kind, t.side])));
+  assert(r.every(t => at((t.signalTime - t0) / 300).some(l => l.price === t.level)), "each call is on a line in force at its candle");
+  const other = R.replayDay({ bars: up, move: "close", previous: { ...prev, high: 30000, low: 1 }, seconds: 300, signal: "both" }).trades;
+  assert(same(other.map(t => [t.signalTime, t.level, t.side]), r.map(t => [t.signalTime, t.level, t.side])), "only the close counts, not the previous day's high or low");
+  assert(R.replayDay({ bars: up, move: "prev", previous: prev, seconds: 300, signal: "both" }).trades.every(t => !("signed" in t)), "the previous day's lines are as before");
+  assert(R.replayDay({ bars: up, move: "close", previous: null, seconds: 300, signal: "both" }).trades.length === 0, "no previous day, no lines");
+  const rd = r.map(t => R.readOf({ trade: t, bars: up, seconds: 300, now: Infinity })).filter(Boolean);
   assert(rd.every(x => !/the \d/.test(x.why)), "the candle verdict names a previous close's line with its + or -: " + rd.map(x => x.why));
   console.log("previous close lines checks passed");
 }

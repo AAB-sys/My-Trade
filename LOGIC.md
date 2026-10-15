@@ -35,16 +35,29 @@ turn after a move. Whether that holds is for the owner's own record to show.
   till the 100% level with the help of febonachib 7 levels calculation. And 0% from
   above should have + mark and 0 from below should have - mark"; the distance: "U
   have to calculate those levels. Dont tk any reference. Referenc is only for 0%
-  level"). 0% is the previous trading day's close. The only reference is that
-  close, so the distance is a share of it: **100% is 1% of the close**, and each
-  line is the Fibonacci share of that 1%, above the close (named +23.6%, +38.2%,
-  +50%, +61.8%, +78.6%, +100%) and below it (-23.6% to -100%): 13 lines that
-  stand still all day, as the previous day's do. 15 October: 14 October closed at
-  22,622.70, so 100% is 226.23 points; +23.6% is 22,676.09, +100% 22,848.93,
-  -23.6% 22,569.31, -100% 22,396.47. A call on these lines is the same rule as on
-  the others (On the line, Crossed above, Crossed below, the target the next line,
-  the same exits); a close beyond +100% or -100% has no line beyond it and gives no
-  call that way. A new choice on the index page; the other choices are unchanged.
+  level"; then "1.2% is fine. And it should be always fix"). 0% is the previous
+  trading day's close. The only reference is that close, so the distance is a
+  share of it: **100% is 1.2% of the close**, and each line is the Fibonacci share
+  of that, above the close (named +23.6%, +38.2%, +50%, +61.8%, +78.6%, +100%)
+  and below it (-23.6% to -100%): 13 lines. 15 October: 14 October closed at
+  22,622.70, so 100% is 271.47 points; +23.6% is 22,686.77, +100% 22,894.17,
+  -23.6% 22,558.63, -100% 22,351.23. **They stay as they are, with one exception**
+  (the owner, the same day: "redraw it only if candle crosses +100% line and make
+  high above +100% then redraw the febonachi 7 lines again considering today's low
+  as 0% line and today's high as +100% line. Same logic applies for -100% line
+  crossed"): once a candle closes above the +100% line ("Crossed above", the
+  owner's word for a close beyond a line), from the next candle the 7 lines run
+  from today's low (0%) to today's high (+100%), the high that candle made
+  included; each later close above that +100% line (a new high) draws them again
+  the same way. A close below -100%: from today's high (0%) to today's low
+  (-100%). 15 October: the 10:10 candle closed at 22,901.50, above +100%
+  (22,894.17); from 10:15 the lines ran from 22,637.40 (0%) to 22,904.40
+  (+100%), and twelve closes above the day's high redrew them up to 23,029.85 by
+  1:30 PM. A call on these lines is the same rule as on the others (On the line,
+  Crossed above, Crossed below, the target the next line, the same exits). On the
+  chart all the lines are in view, + lines green, - lines red, 0% dark and
+  thicker, each with its name and price written on the line. A new choice on the
+  index page; the other choices are unchanged.
 - *Today so far* (default, owner's choice of 6 October): the session's own low to
   high so far, an up move when its last price is above its open **(owner to
   decide)**. Blank until it has traded. **Each candle is judged against the

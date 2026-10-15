@@ -9,7 +9,7 @@ IST_OFFSET = 19800
 SESSION_END = 15 * 3600 + 30 * 60
 SESSION_START = 9 * 3600 + 15 * 60
 RATIOS = (0, 0.236, 0.382, 0.5, 0.618, 0.786, 1)
-CLOSE_STEP = 0.01  # "Previous close": 100% is 1% of the previous day's close (the owner, 15 October; see static/rules.js closeLevels)
+CLOSE_STEP = 0.012  # "Previous close": 100% is 1.2% of the previous day's close (the owner, 15 October; see static/rules.js closeLevels)
 INF = float("inf")
 
 
@@ -64,8 +64,8 @@ def today_lines_at(bars: list):
 
 
 def close_levels(close):
-    """"Previous close" (the owner, 15 October; see static/rules.js closeLevels): 0% at the previous day's close, 100% 1% of it
-    (CLOSE_STEP), each line the Fibonacci share of that, above (+) and below (-): 13 lines that stand still all day."""
+    """"Previous close" (the owner, 15 October; see static/rules.js closeLevels): 0% at the previous day's close, 100% 1.2% of it
+    (CLOSE_STEP), each line the Fibonacci share of that, above (+) and below (-): 13 lines."""
     if close is None or not close > 0:
         return None
     step, out = close * CLOSE_STEP, []
@@ -74,6 +74,31 @@ def close_levels(close):
         if r > 0:
             out.append({"ratio": -r, "price": round2(close - r * step), "signed": True})
     return sorted(out, key=lambda l: l["price"])
+
+
+def range_levels(low: float, high: float, up: bool) -> list:
+    """The 7 lines of today's range as the previous close's lines are redrawn: up, 0% at today's low and +100% at its high;
+    down, 0% at today's high and -100% at its low (see static/rules.js rangeLevels)."""
+    span = high - low
+    levels = [{"ratio": r, "price": round2(low + r * span), "signed": True} if up else {"ratio": -r if r else 0, "price": round2(high - r * span), "signed": True} for r in RATIOS]
+    return sorted(levels, key=lambda l: l["price"])
+
+
+def close_levels_at(bars: list, close):
+    """The lines candle i is judged on (the owner, 15 October; see static/rules.js closeLevelsAt): the previous close's 13 lines,
+    redrawn after a candle closes above the +100% line (today's low 0% to today's high +100%) or below the -100% line (today's
+    high 0% to today's low -100%)."""
+    first = close_levels(close)
+    if not first:
+        return None
+    at, low, high = [first], math.inf, -math.inf
+    for k, b in enumerate(bars):
+        lv = at[k]
+        top, bottom = lv[-1], lv[0]
+        low, high = min(low, b["low"]), max(high, b["high"])
+        at.append(range_levels(low, high, True) if top["ratio"] == 1 and b["close"] > top["price"]
+                  else range_levels(low, high, False) if bottom["ratio"] == -1 and b["close"] < bottom["price"] else lv)
+    return lambda i: at[max(0, min(i, len(at) - 1))]
 
 
 def level_name(ratio, signed=False) -> str:
@@ -532,14 +557,14 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
     setting is given (None: Rule 1 alone); idea 13 when asked for, idea 24 the same way, on "today so far" lines only, and
     ideas 5 and 8 the same way."""
-    still = move in ("prev", "close")  # lines that stand still all day: the previous day's, or the previous close's (15 October)
-    fixed = ((levels_of(move_of_day(previous)) if previous else None) if move == "prev"
-             else (close_levels(previous.get("close")) if previous else None) if move == "close" else None)
-    if still and not fixed:
+    own = move in ("prev", "close")  # the previous day's lines, or the previous close's (15 October): not today's range so far
+    fixed = (levels_of(move_of_day(previous)) if previous else None) if move == "prev" else None
+    from_close = close_levels_at(bars, previous.get("close")) if move == "close" and previous else None
+    if (move == "prev" and not fixed) or (move == "close" and not from_close):
         return {"trades": [], "closed": 0}
-    levels_at = (lambda i: fixed) if still else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if still else today_lines_at(bars), True, trail, None, bool(fresh_run),
-                        not still and bool(new_high_low), bool(clear_cross), bool(one_way))
+    levels_at = (lambda i: fixed) if move == "prev" else from_close if move == "close" else today_levels_at(bars)
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if own else today_lines_at(bars), True, trail, None, bool(fresh_run),
+                        not own and bool(new_high_low), bool(clear_cross), bool(one_way))
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},

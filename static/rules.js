@@ -42,12 +42,12 @@
   // "Previous close" (the owner, 15 October: "put the febonachi 7 lines starting from previous days closing point so that should
   // be the 0% line always and you should calculate above it till 100 % level and from the same point below till the 100% level
   // with the help of febonachib 7 levels calculation. And 0% from above should have + mark and 0 from below should have - mark";
-  // the distance: "U have to calculate those levels. Dont tk any reference. Referenc is only for 0% level"). The one reference is
-  // the close, so the distance is a share of it: 100% is 1% of the previous day's close (CLOSE_STEP), each line the Fibonacci
-  // share of that, above the close (+) and below it (-): 13 lines that stand still all day, as the previous day's do. 15 October:
-  // 14 October closed at 22,622.70, so 100% is 226.23 points, +23.6% is 22,676.09 and -23.6% is 22,569.31. These levels carry
-  // signed, so their names show the + (levelName); every other levels mode is as before
-  const CLOSE_STEP = 0.01;
+  // the distance: "U have to calculate those levels. Dont tk any reference. Referenc is only for 0% level"; then "1.2% is fine.
+  // And it should be always fix"). The one reference is the close, so the distance is a share of it: 100% is 1.2% of the
+  // previous day's close (CLOSE_STEP), each line the Fibonacci share of that, above the close (+) and below it (-): 13 lines.
+  // 15 October: 14 October closed at 22,622.70, so 100% is 271.47 points, +23.6% is 22,686.77 and -23.6% is 22,558.63. These
+  // levels carry signed, so their names show the + (levelName); every other levels mode is as before
+  const CLOSE_STEP = 0.012;
   function closeLevels(close) {
     if (close == null || !(close > 0)) return null;
     const step = close * CLOSE_STEP, out = [];
@@ -55,6 +55,32 @@
     return out.sort((a, b) => a.price - b.price);
   }
   const levelName = (ratio, signed) => (signed && ratio > 0 ? "+" : "") + (ratio * 100).toFixed(1) + "%";  // "+23.6%" above the close, "-23.6%" below it
+  // The 7 lines of today's range, as the previous close's lines are redrawn (below): up, 0% at today's low and +100% at its
+  // high, +23.6% being 23.6% of the way up from the low; down, 0% at today's high and -100% at its low
+  function rangeLevels(low, high, up) {
+    const span = high - low;
+    return RATIOS.map(r => up ? { ratio: r, price: round2(low + r * span), signed: true } : { ratio: r ? -r : 0, price: round2(high - r * span), signed: true })
+      .sort((a, b) => a.price - b.price);
+  }
+  // The lines candle i of one session is judged on (the owner, 15 October: "add new logic to redraw it only if candle crosses
+  // +100% line and make high above +100% then redraw the febonachi 7 lines again considering today's low as 0% line and today's
+  // high as +100% line. Same logic applies for -100% line crossed"). They begin as the previous close's 13 lines and stay as
+  // they are, until a closed candle closes above the +100% line ("Crossed above", the owner's own word for a close beyond a
+  // line): from the next candle the 7 lines run from today's low (0%) to today's high (+100%), the high that candle made
+  // included. A close above that +100% line again (a new high) draws them again the same way. A close below the -100% line:
+  // from today's high (0%) to today's low (-100%). Each candle is judged on the lines as they stood when it began
+  function closeLevelsAt(bars, close) {
+    const first = closeLevels(close);
+    if (!first) return null;
+    const at = [first];  // at[i]: the lines candle i is judged on
+    let low = Infinity, high = -Infinity;
+    bars.forEach((b, k) => {
+      const lv = at[k], top = lv[lv.length - 1], bottom = lv[0];
+      low = Math.min(low, b.low); high = Math.max(high, b.high);
+      at.push(top.ratio === 1 && b.close > top.price ? rangeLevels(low, high, true) : bottom.ratio === -1 && b.close < bottom.price ? rangeLevels(low, high, false) : lv);
+    });
+    return (i) => at[Math.max(0, Math.min(i, at.length - 1))];
+  }
 
   // ---- Layer 2, the judgement, inside layer 3's signal: a closed candle HELD a level (reached it and closed
   // back on the side it came from) or CROSSED one (closed on the other side of it from the previous close).
@@ -418,12 +444,12 @@
   // asked for (the caller asks for it on NIFTY 50, 5-minute candles), idea 24 the same way, on "today so far" lines only, and
   // ideas 5 and 8 the same way, on both kinds of lines
   function replayDay({ bars, move, previous, seconds, signal, ideas, trail, freshRun, newHighLow, clearCross, oneWay }) {
-    const still = move === "prev" || move === "close";  // lines that stand still all day: the previous day's, or the previous close's (15 October)
-    const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : move === "close" ? (previous ? closeLevels(previous.close) : null) : null;
-    if (still && !fixed) return { trades: [], closed: 0 };
-    const levelsAt = still ? () => fixed : todayLevelsAt(bars), targetsAt = still ? null : todayLinesAt(bars);
+    const own = move === "prev" || move === "close";  // the previous day's lines, or the previous close's (15 October): not today's range so far
+    const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null, fromClose = move === "close" && previous ? closeLevelsAt(bars, previous.close) : null;
+    if ((move === "prev" && !fixed) || (move === "close" && !fromClose)) return { trades: [], closed: 0 };
+    const levelsAt = move === "prev" ? () => fixed : move === "close" ? fromClose : todayLevelsAt(bars), targetsAt = own ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
-                         trail: trail === undefined ? TRAIL : trail, freshRun: !!freshRun, newHighLow: !still && !!newHighLow,
+                         trail: trail === undefined ? TRAIL : trail, freshRun: !!freshRun, newHighLow: !own && !!newHighLow,
                          clearCross: !!clearCross, oneWay: !!oneWay });
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
@@ -577,7 +603,7 @@
     return { deep, beyond, reached: reachedAt != null, reachedAt };
   }
 
-  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, signalAt, paperTrades, replayDay, readOf, carryOf,
+  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, FRESH_RUN, FRESH_CANDLES, freshOf, NEW_HIGH_LOW, pastEdgeAt, CLEAR_CROSS, CLEAR_SHARE, ONE_WAY,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf };
 })(typeof window !== "undefined" ? window : globalThis);

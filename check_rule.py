@@ -21,6 +21,8 @@ const out = jobs.map(j => {
   const levels = j.levels;  // the live page: the levels as they stand now, for every candle
   const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined,
                                                  trail: "trail" in j ? j.trail : undefined, freshRun: !!j.freshRun, newHighLow: !!j.newHighLow, clearCross: !!j.clearCross, oneWay: !!j.oneWay })  // Rule 2: as the page runs it, or another setting, or null (Rule 1 alone)
+    : j.mode === "live-close" ? R.paperTrades({ bars: j.bars, levelsAt: R.closeLevelsAt(j.bars, j.close), now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, holdBreaks: true,
+                                                trail: R.TRAIL, given: j.given || undefined, freshRun: !!j.freshRun, clearCross: !!j.clearCross, oneWay: !!j.oneWay })  // the previous close's lines, redrawn (15 October)
     : j.mode === "live-today" ? R.paperTrades({ bars: j.bars, levelsAt: R.todayLevelsAt(j.bars), targetsAt: R.todayLinesAt(j.bars), now: j.now, seconds: j.seconds,
                                                 dayCandles: false, signal: j.signal, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined, freshRun: !!j.freshRun,
                                                 newHighLow: !!j.newHighLow, clearCross: !!j.clearCross, oneWay: !!j.oneWay })  // the index page and the watcher today
@@ -49,6 +51,9 @@ def py_run(jobs: list) -> list:
         if j["mode"] == "replay":
             res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL, bool(j.get("freshRun")),
                                   bool(j.get("newHighLow")), bool(j.get("clearCross")), bool(j.get("oneWay")))
+        elif j["mode"] == "live-close":
+            res = rule.paper_trades(j["bars"], rule.close_levels_at(j["bars"], j["close"]), j["now"], j["seconds"], False, j["signal"], None, None, True, rule.TRAIL, given_of(j),
+                                    bool(j.get("freshRun")), False, bool(j.get("clearCross")), bool(j.get("oneWay")))
         elif j["mode"] == "live-today":
             res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j),
                                     bool(j.get("freshRun")), bool(j.get("newHighLow")), bool(j.get("clearCross")), bool(j.get("oneWay")))
@@ -117,6 +122,7 @@ def main() -> int:
               {"buffer": "atr", "mult": 0.25, "points": 10, "place": "at"}, {"buffer": "atr", "mult": 0.5, "points": 10, "place": "back"},
               {"buffer": "atr", "mult": 0.5, "period": 5, "place": "at"}, {"lines": "all", "buffer": "none", "place": "at"}, {"lines": "all", "buffer": "fixed", "points": 10, "place": "back"}]
     kept = random.Random(11)  # the calls given live of the jobs below
+    extra = random.Random(13)  # the previous close's lines (15 October), apart from the stream the other random days are drawn from
     # 1. the saved days, replayed in every setting
     days = saved_days(folder) if folder.exists() else []
     for d in days:
@@ -197,12 +203,12 @@ def main() -> int:
         cut = rnd.randrange(2, len(bars))
         shown = bars[:cut + 1]
         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of(shown)), "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live"})
-        close_lv = rule.close_levels(prev["close"] + (shown[0]["open"] - 22500))  # the previous close's lines, near the day's prices (15 October)
-        jobs.append({"mode": "live", "bars": shown, "levels": close_lv, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": ("held", "crossed", "both")[k % 3], "what": f"random {k} live close"})
+        close = round(shown[0]["open"] * (1 + extra.uniform(-0.015, 0.015)), 2)  # the previous close's lines near the day's prices, redrawn when it runs past +-1.2% (15 October); its own random stream, so the other random days stay as they were
+        jobs.append({"mode": "live-close", "bars": shown, "close": close, "now": shown[-1]["time"] + extra.randrange(1, 300), "seconds": 300, "signal": ("held", "crossed", "both")[k % 3], "what": f"random {k} live close"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live today"})
         given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(5, len(shown) - 2))} if len(shown) > 2 else {}
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "what": f"random {k} live today given"})
-        jobs.append({"mode": "live", "bars": shown, "levels": close_lv, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "clearCross": True, "oneWay": True,
+        jobs.append({"mode": "live-close", "bars": shown, "close": close, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "clearCross": True, "oneWay": True,
                      "what": f"random {k} live close given ideas 13, 5 and 8"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "what": f"random {k} live today given idea 13"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "newHighLow": True,

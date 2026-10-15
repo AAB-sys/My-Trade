@@ -187,6 +187,10 @@
   }
   #empty[hidden] { display: none; }
   #chart { height: 420px; }
+  /* the names of the previous close's lines, written on the lines at the left of the chart (15 October) */
+  #line-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
+  #line-tags span { position: absolute; left: 4px; transform: translateY(-100%); font: 700 11px/1.25 system-ui, sans-serif; padding: 0 2px; white-space: nowrap;
+                    text-shadow: 0 0 2px var(--surface), 0 0 2px var(--surface), 0 0 3px var(--surface); }  /* no box: the candles behind stay in sight */
   #popup {
     display: none; position: absolute; z-index: 5; min-width: 170px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
@@ -277,6 +281,7 @@
     <div class="chart-area">
       <div id="empty" hidden></div>
       <div id="chart"></div>
+      <div id="line-tags" aria-hidden="true"></div>
       <div id="popup"></div>
     </div>
   </div>
@@ -353,9 +358,30 @@
 
   // ---- zoom and move
   let priceShift = 0;   // how far the price view has been moved up (+) or down (-), in price units
+  let lastLevels = { m: null, levels: [] };  // the move and the levels drawn now (declared here: the chart's autoscale reads it)
+  // The names of the previous close's lines, each written on its own line at the left of the chart (the owner, 15 October: "levels
+  // are also not clearly visible"): + lines green, - lines red, 0% dark, with the price. Placed again whenever the chart fits its
+  // view; the other levels keep the price scale's own labels
+  let tagsQueued = false;
+  function queueTags() { if (tagsQueued) return; tagsQueued = true; requestAnimationFrame(() => { tagsQueued = false; placeTags(); }); }
+  function placeTags() {
+    const box = document.getElementById("line-tags");
+    const lv = state.move === "close" && series ? lastLevels.levels.filter(l => l.signed) : [];
+    const key = JSON.stringify(lv);
+    if (box.dataset.key !== key) {
+      box.innerHTML = lv.map(l => `<span style="color:${cssVar(l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2")}">${Rules.levelName(l.ratio, true)} · ${fmt.format(l.price)}</span>`).join("");
+      box.dataset.key = key;
+    }
+    [...box.children].forEach((el, k) => { const y = series.priceToCoordinate(lv[k].price); el.hidden = y == null || y < 0; if (!el.hidden) el.style.top = y + "px"; });
+  }
+  window.addEventListener("resize", queueTags);
   let priceHeight = 0;  // the height of the auto-fitted price view, learnt from the chart
   const autoscale = (original) => {  // the chart's own fit, shifted by the buttons
     const info = original();
+    const lv = state.move === "close" ? lastLevels.levels : null;  // the previous close's lines (15 October): all of them in view, so each one can be read
+    if (info && info.priceRange && lv && lv.length)
+      info.priceRange = { minValue: Math.min(info.priceRange.minValue, lv[0].price), maxValue: Math.max(info.priceRange.maxValue, lv[lv.length - 1].price) };
+    if (lv) queueTags();  // the chart is fitting its price view again: the lines' names follow
     if (info && info.priceRange) {
       priceHeight = info.priceRange.maxValue - info.priceRange.minValue;
       if (priceShift) info.priceRange = { minValue: info.priceRange.minValue + priceShift, maxValue: info.priceRange.maxValue + priceShift };
@@ -516,6 +542,20 @@
   // (Rules.todayLevelsAt), a call's target on the lines the chart draws (Rules.todayLinesAt); a day candle or several
   // sessions shown keep the lines of the whole range shown
   const judgedToday = () => state.move === "today" && state.interval !== "1d" && currentSession() !== "all";
+  // "Previous close" on one session's intraday candles (the owner, 15 October): the 13 lines from the previous close, drawn again
+  // only after a candle closes above +100% (today's low 0% to today's high +100%) or below -100%: Rules.closeLevelsAt, the lines
+  // each candle is judged on. A day candle or several sessions shown keep the 13 lines
+  function closeLinesAt(bars) {
+    if (state.move !== "close" || state.interval === "1d" || currentSession() === "all") return null;
+    const m = theMove();
+    return m && m.close != null ? Rules.closeLevelsAt(bars, m.close) : null;
+  }
+  // the lines in force while candle i forms: the chart's for "today so far", the previous close's as redrawn, else the levels shown
+  function linesOfCandle(bars, i) {
+    if (judgedToday() && i >= 0) return Rules.todayLinesAt(bars)(i);
+    const at = i >= 0 ? closeLinesAt(bars) : null;
+    return at ? at(i) : lastPaper.levels;
+  }
 
   // ---- Layer 2 of the owner's logic, held and crossed (see LOGIC.md), is judged inside the paper
   // calls below; its own table came off the page on 6 October (owner's choice).
@@ -561,8 +601,8 @@
   // (Buy CE after Buy CE on a falling day). The chart shows the day's range with the candle forming now, worked out again
   // at once on a new high or low; a call's target follows those lines.
   function paperTrades(levels) {
-    const bars = sessionBars();
-    const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : () => levels, targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
+    const bars = sessionBars(), fromClose = closeLinesAt(bars);
+    const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : fromClose || (() => levels), targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL,
                                given: state.interval === "1d" ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
@@ -733,7 +773,7 @@
   // on the lines as they stood at the candle that sold the call; null when no line sits at that price
   function targetPct(t) {
     const bars = sessionBars(), i = bars.findIndex(b => b.time === t.exitTime);
-    const lines = judgedToday() && i >= 0 ? Rules.todayLinesAt(bars)(i) : lastPaper.levels;
+    const lines = linesOfCandle(bars, i);
     const at = (lines || []).find(l => Math.abs(l.price - t.target) < 0.006);
     return at ? lineName(at.ratio) : null;
   }
@@ -748,7 +788,7 @@
   function movedTarget(t) {
     if (!t.hold || !t.trail || t.trail.line == null) return null;
     const bars = sessionBars(), i = t.exit != null ? bars.findIndex(b => b.time === t.exitTime) : -1;
-    const lines = judgedToday() && i >= 0 ? Rules.todayLinesAt(bars)(i) : lastPaper.levels, d = t.side === "CE" ? 1 : -1;
+    const lines = linesOfCandle(bars, i), d = t.side === "CE" ? 1 : -1;
     const ahead = (lines || []).filter(l => d * (l.price - t.trail.line) > 0.005);
     const next = ahead.length ? ahead.reduce((a, b) => (d * (b.price - a.price) < 0 ? b : a)) : null;
     return { passed: t.trail.ratio, next, price: next ? next.price : t.trail.line };
@@ -939,25 +979,31 @@
     const note = document.getElementById("levels-note");
     drawSessions();
     const m = theMove();
-    const levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
+    let levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
+    const fromClose = m && m.close != null ? closeLinesAt(sessionBars()) : null;
+    if (fromClose) { const now = serverNow(); levels = fromClose(sessionBars().filter(b => endOf(b) <= now).length); }  // as redrawn by the candles closed so far
+    lastLevels = { m, levels };  // before the chart refits, so the previous close's lines are all in view
     drawPaper(levels);
     const key = JSON.stringify([state.move, currentSession(), levels]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
       priceLines = levels.map(l => series.createPriceLine({
         price: l.price, title: Rules.levelName(l.ratio, l.signed),
-        color: cssVar(l.ratio === 0 || Math.abs(l.ratio) === 1 ? "--ink-2" : "--muted"), lineWidth: 1,
+        // the previous close's lines (15 October): + lines green, - lines red, 0% thicker; the other levels as before
+        color: cssVar(l.signed ? (l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2") : l.ratio === 0 || Math.abs(l.ratio) === 1 ? "--ink-2" : "--muted"),
+        lineWidth: l.signed && l.ratio === 0 ? 2 : 1,
         lineStyle: l.ratio === 0 || Math.abs(l.ratio) === 1 ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dashed,
-        axisLabelVisible: true,
+        axisLabelVisible: !l.signed,  // the previous close's lines carry their names on the lines themselves (placeTags): the scale's own labels stack and slide off their lines
       }));
       lastLevelsKey = key;
+      if (state.move === "close") refit();  // the view takes in all the lines
     }
     note.dataset.count = priceLines.length;  // lines actually on the chart
+    queueTags();
     lastLevels = { m, levels };
     refreshLevelsNote();
   }
 
-  let lastLevels = { m: null, levels: [] };
   function refreshLevelsNote() {
     const note = document.getElementById("levels-note");
     const { m, levels } = lastLevels;
@@ -967,10 +1013,15 @@
       return;
     }
     const last = state.summary.last;
+    if (!levels.length) { note.textContent = "No levels: nothing to measure yet."; return; }
     const nearest = levels.reduce((a, b) => Math.abs(b.price - last) < Math.abs(a.price - last) ? b : a);
     const gap = Math.round((last - nearest.price) * 100) / 100;
-    const head = m.close != null
-      ? `${m.what[0].toUpperCase() + m.what.slice(1)}: 0% at ${fmt.format(m.close)}, 100% is 1% of it (${fmt.format(Math.round(m.close * Rules.CLOSE_STEP * 100) / 100)} points) above and below. `
+    const redrawn = m.close != null && levels.length === 7;  // the previous close's lines, drawn again on today's range after a close beyond +100% or -100%
+    const up = redrawn && levels[levels.length - 1].ratio === 1;
+    const head = redrawn
+      ? `Redrawn after a candle closed ${up ? "above +100%" : "below -100%"}: 0% at today's ${up ? "low" : "high"} ${fmt.format(up ? levels[0].price : levels[levels.length - 1].price)}, ${up ? "+" : "-"}100% at today's ${up ? "high" : "low"} ${fmt.format(up ? levels[levels.length - 1].price : levels[0].price)}. `
+      : m.close != null
+      ? `${m.what[0].toUpperCase() + m.what.slice(1)}: 0% at ${fmt.format(m.close)}, 100% is ${Rules.CLOSE_STEP * 100}% of it (${fmt.format(Math.round(m.close * Rules.CLOSE_STEP * 100) / 100)} points) above and below. `
       : `${m.what[0].toUpperCase() + m.what.slice(1)}: ${m.up ? "up" : "down"} move ${fmt.format(m.low)} → ${fmt.format(m.high)}. `;
     note.textContent = head + `Last ${fmt.format(last)} is ${fmt.format(Math.abs(gap))} ${gap >= 0 ? "above" : "below"} the ${lineName(nearest.ratio)} level (${fmt.format(nearest.price)}).`;
   }
