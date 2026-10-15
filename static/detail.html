@@ -110,7 +110,6 @@
   .controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
   .controls.levels { justify-content: flex-start; align-items: center; }
   .lbl { font-size: 13px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.04em; min-width: 72px; }  /* bold and bigger (the owner, 15 October) */
-  #levels-note { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
   #session-row[hidden] { display: none; }
   #paper-box { margin-top: 16px; }
   #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
@@ -265,7 +264,6 @@
       <option value="prevweek">Previous week</option>
       <option value="all">All</option>
     </select>
-    <span id="levels-note"></span>
   </div>
 
   <div class="controls levels" id="session-row" hidden>
@@ -1016,7 +1014,6 @@
   }
 
   function drawLevels() {
-    const note = document.getElementById("levels-note");
     drawSessions();
     const m = theMove();
     let levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
@@ -1039,33 +1036,11 @@
       lastLevelsKey = key;
       if (state.move === "close") refit();  // the view takes in all the lines
     }
-    note.dataset.count = priceLines.length;  // lines actually on the chart
     queueTags();
     lastLevels = { m, levels };
-    refreshLevelsNote();
   }
-
-  function refreshLevelsNote() {
-    const note = document.getElementById("levels-note");
-    const { m, levels } = lastLevels;
-    if (state.move === "off") { note.textContent = ""; return; }
-    if (!m) {
-      note.textContent = state.move === "today" ? "No levels yet: the market has not traded today." : "No levels: nothing to measure yet.";
-      return;
-    }
-    const last = state.summary.last;
-    if (!levels.length) { note.textContent = "No levels: nothing to measure yet."; return; }
-    const nearest = levels.reduce((a, b) => Math.abs(b.price - last) < Math.abs(a.price - last) ? b : a);
-    const gap = Math.round((last - nearest.price) * 100) / 100;
-    const redrawn = m.close != null && levels.length === 7;  // the previous close's lines, drawn again on the day's range after a close beyond +100% or -100%
-    const up = redrawn && levels[levels.length - 1].ratio === 1, day = periodWord();  // a past session picked: that day's low and high
-    const head = redrawn
-      ? `Redrawn ${up ? "upward after a candle closed above the highest" : "downward after a candle closed below the lowest"} line: 0% at ${day} ${up ? "low" : "high"} ${fmt.format(up ? levels[0].price : levels[levels.length - 1].price)}, ${up ? "+" : "-"}100% at ${day} ${up ? "high" : "low"} ${fmt.format(up ? levels[levels.length - 1].price : levels[0].price)}. `
-      : m.close != null
-      ? `${m.what[0].toUpperCase() + m.what.slice(1)}: 0% at ${fmt.format(m.close)}, 100% is ${Rules.CLOSE_STEP * 100}% of it (${fmt.format(Math.round(m.close * Rules.CLOSE_STEP * 100) / 100)} points) above and below. `
-      : `${m.what[0].toUpperCase() + m.what.slice(1)}: ${m.up ? "up" : "down"} move ${fmt.format(m.low)} → ${fmt.format(m.high)}. `;
-    note.textContent = head + `Last ${fmt.format(last)} is ${fmt.format(Math.abs(gap))} ${gap >= 0 ? "above" : "below"} the ${lineName(nearest.ratio)} level (${fmt.format(nearest.price)}).`;
-  }
+  // The line of text beside the Levels drop-down (the move, where 0% and 100% stood, how far the last price was from the
+  // nearest line) stood here until 16 October: the owner took it off ("remove it, red marked")
 
   function showLegend(bar) {
     const el = document.getElementById("legend");
@@ -1212,7 +1187,7 @@
       drawFeedNote();
     }
     const bar = t.bars && t.bars[state.interval];
-    if (!bar || !series || !bars.length) { refreshLevelsNote(); return; }
+    if (!bar || !series || !bars.length) return;
     const last = bars[bars.length - 1];
     if (last.time === bar.time) {  // the candle forming now: Dhan's open stays, the tick moves the rest
       const before = state.move === "today" || state.move === "shown" ? theMove() : null;  // levels built from the live candles
@@ -1230,12 +1205,10 @@
       clearTimeout(state.timer);
       state.timer = setTimeout(load, 1500);  // the candle before it just closed: fetch and judge it
     } else {
-      refreshLevelsNote();
       return;  // this page is on another day or far behind: the next load sorts the candles out
     }
     showLegend(bars[bars.length - 1]);
     refreshPopup();
-    refreshLevelsNote();
   }
 
   function renderSummary(s) {

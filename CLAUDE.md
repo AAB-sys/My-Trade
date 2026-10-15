@@ -117,7 +117,7 @@ their own logic. Read this before touching the code.
   candle forming now (`live`) and pushed to those pages as `{"tick": ...,
   "via": "stream"}`; `tick_forever()` polls the last price every
   `DHAN_TICK_SECONDS` only while the stream is quiet (`via: "poll"`). The page
-  moves the price, the last candle and the levels note on each tick, shows
+  moves the price and the last candle on each tick (the levels note beside the drop-down left the page on 16 October), shows
   "Live · stream" or "Live · tick", and fetches the candles when a new one begins.
 - `static/login.html` - the login page. `Procfile` - the host's start command.
   Hosting: one instance, secrets in the host's environment, `/health` for checks.
@@ -138,7 +138,7 @@ their own logic. Read this before touching the code.
   the tile; a tile keeps its last figures when a read fails, `/health` says
   `feed.tiles_problem`) and in market hours move every second: `live_forever` sends `{"live": {...}}` to
   the dashboard sockets (`dash_subs`) once a second, `applyLive` redraws the
-  tile in place; the footer says which tiles are Dhan's and which Yahoo's.
+  tile in place; each tile's own line says whether it is Dhan's or Yahoo's (the footer line under the tiles left the page on 16 October).
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
   (`readOf()`: the candle verdict of 7 October, CARRY or EXIT with the reason, for
   whichever level gave the call, sent with every recorded call into the calls CSV;
