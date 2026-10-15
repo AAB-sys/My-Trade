@@ -35,13 +35,14 @@ turn after a move. Whether that holds is for the owner's own record to show.
   till the 100% level with the help of febonachib 7 levels calculation. And 0% from
   above should have + mark and 0 from below should have - mark"; the distance: "U
   have to calculate those levels. Dont tk any reference. Referenc is only for 0%
-  level"; then "1.2% is fine. And it should be always fix"). 0% is the previous
-  trading day's close. The only reference is that close, so the distance is a
-  share of it: **100% is 1.2% of the close**, and each line is the Fibonacci share
-  of that, above the close (named +23.6%, +38.2%, +50%, +61.8%, +78.6%, +100%)
-  and below it (-23.6% to -100%): 13 lines. 15 October: 14 October closed at
-  22,622.70, so 100% is 271.47 points; +23.6% is 22,686.77, +100% 22,894.17,
-  -23.6% 22,558.63, -100% 22,351.23. **They stay as they are, with one exception**
+  level"; then "1.2% is fine. And it should be always fix"; then "make 100% is
+  1.5% of that close"). 0% is the previous trading day's close. The only
+  reference is that close, so the distance is a share of it: **100% is 1.5% of
+  the close**, and each line is the Fibonacci share of that, above the close
+  (named +23.6%, +38.2%, +50%, +61.8%, +78.6%, +100%) and below it (-23.6% to
+  -100%): 13 lines. 15 October: 14 October closed at 22,622.70, so 100% is 339.34
+  points; +23.6% is 22,702.78, +100% 22,962.04, -23.6% 22,542.62, -100%
+  22,283.36. **They stay as they are, with one exception**
   (the owner, the same day: "redraw it only if candle crosses +100% line and make
   high above +100% then redraw the febonachi 7 lines again considering today's low
   as 0% line and today's high as +100% line. Same logic applies for -100% line
@@ -55,13 +56,12 @@ turn after a move. Whether that holds is for the owner's own record to show.
   today's low) draws them downward, 0% at today's high and -100% at today's low;
   a close above the highest line of lines drawn downward draws them upward. So a
   close beyond the outermost line always draws the 7 lines again on today's range.
-  5 October, NIFTY BANK (the one saved day where it turns): the 9:15 candle closed
-  above +100% (55,104.16), lines up from 54,719.35 to 55,187.80; the 10:50 candle
-  closed at 54,661.35 below that 0%, lines down from 55,192.65 (0%) to 54,659.45
-  (-100%). 15 October: the 10:10 candle closed at 22,901.50, above +100%
-  (22,894.17); from 10:15 the lines ran from 22,637.40 (0%) to 22,904.40
-  (+100%), and twelve closes above the day's high redrew them up to 23,029.85 by
-  1:30 PM. A call on these lines is the same rule as on the others (On the line,
+  (With 1.5% no saved day turns; lab/check.js has a made-up day that does.)
+  15 October: the 11:40 candle closed at 22,964.40, above +100% (22,962.04); from
+  11:45 the lines ran from 22,637.40 (0%) to 22,972.45 (+100%), and each later
+  close above the day's high drew them again. 8 October: the 13:15 candle closed
+  at 22,243.65, below -100% (22,264.00); from 13:20 the lines ran from 22,599.05
+  (0%) down to 22,243.30 (-100%). A call on these lines is the same rule as on the others (On the line,
   Crossed above, Crossed below, the target the next line, the same exits). On the
   chart all the lines are in view, + lines green, - lines red, 0% dark and
   thicker, each line's percentage in a column left of the chart, level with the

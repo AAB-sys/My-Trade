@@ -43,11 +43,11 @@
   // be the 0% line always and you should calculate above it till 100 % level and from the same point below till the 100% level
   // with the help of febonachib 7 levels calculation. And 0% from above should have + mark and 0 from below should have - mark";
   // the distance: "U have to calculate those levels. Dont tk any reference. Referenc is only for 0% level"; then "1.2% is fine.
-  // And it should be always fix"). The one reference is the close, so the distance is a share of it: 100% is 1.2% of the
-  // previous day's close (CLOSE_STEP), each line the Fibonacci share of that, above the close (+) and below it (-): 13 lines.
-  // 15 October: 14 October closed at 22,622.70, so 100% is 271.47 points, +23.6% is 22,686.77 and -23.6% is 22,558.63. These
-  // levels carry signed, so their names show the + (levelName); every other levels mode is as before
-  const CLOSE_STEP = 0.012;
+  // And it should be always fix"; then "make 100% is 1.5% of that close"). The one reference is the close, so the distance is a
+  // share of it: 100% is 1.5% of the previous day's close (CLOSE_STEP), each line the Fibonacci share of that, above the close
+  // (+) and below it (-): 13 lines. 15 October: 14 October closed at 22,622.70, so 100% is 339.34 points, +23.6% is 22,702.78
+  // and -23.6% is 22,542.62. These levels carry signed, so their names show the + (levelName); every other levels mode is as before
+  const CLOSE_STEP = 0.015;
   function closeLevels(close) {
     if (close == null || !(close > 0)) return null;
     const step = close * CLOSE_STEP, out = [];

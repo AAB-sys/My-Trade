@@ -9,7 +9,7 @@ IST_OFFSET = 19800
 SESSION_END = 15 * 3600 + 30 * 60
 SESSION_START = 9 * 3600 + 15 * 60
 RATIOS = (0, 0.236, 0.382, 0.5, 0.618, 0.786, 1)
-CLOSE_STEP = 0.012  # "Previous close": 100% is 1.2% of the previous day's close (the owner, 15 October; see static/rules.js closeLevels)
+CLOSE_STEP = 0.015  # "Previous close": 100% is 1.5% of the previous day's close (the owner, 15 October; see static/rules.js closeLevels)
 INF = float("inf")
 
 
@@ -64,7 +64,7 @@ def today_lines_at(bars: list):
 
 
 def close_levels(close):
-    """"Previous close" (the owner, 15 October; see static/rules.js closeLevels): 0% at the previous day's close, 100% 1.2% of it
+    """"Previous close" (the owner, 15 October; see static/rules.js closeLevels): 0% at the previous day's close, 100% 1.5% of it
     (CLOSE_STEP), each line the Fibonacci share of that, above (+) and below (-): 13 lines."""
     if close is None or not close > 0:
         return None

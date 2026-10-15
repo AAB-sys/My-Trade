@@ -300,7 +300,7 @@ The app is ready to run on a platform that deploys from GitHub:
   levels of a chosen move, the seven Fibonacci lines on the chart with a one-line
   readout (with "today so far", the range up to the candle forming now; with
   "previous close", 13 lines from the previous day's close, 0%, then +23.6% to
-  +100% above it and -23.6% to -100% below it, 100% being 1.2% of the close,
+  +100% above it and -23.6% to -100% below it, 100% being 1.5% of the close,
   drawn again on today's range only after a candle closes beyond +100% or -100%); its
   second, whether a closed candle held or crossed a level, is the signal of its
   third, the paper trades that rule would have given on those candles (a Held/Crossed/Both switch, the call the
