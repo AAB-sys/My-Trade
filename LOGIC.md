@@ -64,7 +64,8 @@ turn after a move. Whether that holds is for the owner's own record to show.
   1:30 PM. A call on these lines is the same rule as on the others (On the line,
   Crossed above, Crossed below, the target the next line, the same exits). On the
   chart all the lines are in view, + lines green, - lines red, 0% dark and
-  thicker, each with its percentage written on the line. Once the lines have been
+  thicker, each line's percentage in a column left of the chart, level with the
+  line, as the prices are on the right. Once the lines have been
   drawn again, a short message under the chart, above the paper calls, says so
   (the owner: "put a small message below chart and above paper calls that
   febonachi levels redrawn and the reason for it"): when, upward or downward, the

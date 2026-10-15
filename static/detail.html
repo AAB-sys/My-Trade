@@ -191,10 +191,10 @@
   }
   #empty[hidden] { display: none; }
   #chart { height: 420px; }
-  /* the names of the previous close's lines, written on the lines at the left of the chart (15 October) */
-  #line-tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
-  #line-tags span { position: absolute; left: 4px; transform: translateY(-100%); font: 700 11px/1.25 system-ui, sans-serif; padding: 0 2px; white-space: nowrap;
-                    text-shadow: 0 0 2px var(--surface), 0 0 2px var(--surface), 0 0 3px var(--surface); }  /* no box: the candles behind stay in sight */
+  /* the names of the previous close's lines, in a column left of the chart, level with their lines, as the prices on the right (15 October) */
+  .chart-area.left-tags #chart { margin-left: 64px; }
+  #line-tags { position: absolute; top: 0; bottom: 0; left: 0; width: 62px; pointer-events: none; overflow: hidden; z-index: 2; }
+  #line-tags span { position: absolute; right: 4px; transform: translateY(-50%); font: 700 11px/1.2 system-ui, sans-serif; white-space: nowrap; }
   #popup {
     display: none; position: absolute; z-index: 5; min-width: 170px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
@@ -372,12 +372,20 @@
   function placeTags() {
     const box = document.getElementById("line-tags");
     const lv = state.move === "close" && series ? lastLevels.levels.filter(l => l.signed) : [];
+    box.parentElement.classList.toggle("left-tags", lv.length > 0);  // the chart makes room on its left for the column (it sizes itself to its box)
     const key = JSON.stringify(lv);
     if (box.dataset.key !== key) {
       box.innerHTML = lv.map(l => `<span style="color:${cssVar(l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2")}">${Rules.levelName(l.ratio, true)}</span>`).join("");  // the name only, no price (the owner, 15 October: "Remove the index numbers from the febonachi lines. Just keep the percentage")
       box.dataset.key = key;
     }
-    [...box.children].forEach((el, k) => { const y = series.priceToCoordinate(lv[k].price); el.hidden = y == null || y < 0; if (!el.hidden) el.style.top = y + "px"; });
+    // level with each line; when two lines are closer than a name is tall, the lower name moves down just enough, as the price scale does
+    let below = -Infinity;
+    for (let k = lv.length - 1; k >= 0; k--) {  // the levels are sorted by price: from the top line down
+      const el = box.children[k], y = series.priceToCoordinate(lv[k].price);
+      el.hidden = y == null || y < 0 || y > box.clientHeight;
+      if (el.hidden) continue;
+      const at = Math.max(y, below + 14); el.style.top = at + "px"; below = at;
+    }
   }
   window.addEventListener("resize", queueTags);
   // The message under the chart, above the paper calls, once the previous close's lines have been drawn again (the owner, 15
