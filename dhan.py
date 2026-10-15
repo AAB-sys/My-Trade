@@ -340,8 +340,8 @@ def intraday(name: str, minutes: int, days_back: int = 8) -> list:
     """Minute candles of an index inside market hours, oldest first, refreshed at most every 10 s.
     Dhan has no 30-minute candles: two 15-minute ones make one, from 9:15."""
     if minutes == 30:
-        return cached(("intraday", name, 30), 10, lambda: fold(intraday(name, 15, days_back), 1800))
-    return cached(("intraday", name, minutes), 10,
+        return cached(("intraday", name, 30, days_back), 10, lambda: fold(intraday(name, 15, days_back), 1800))
+    return cached(("intraday", name, minutes, days_back), 10,
                   lambda: [b for b in _chart("/charts/intraday", name, {"interval": str(minutes)}, days_back) if in_session(b)])
 
 
@@ -386,7 +386,7 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     shares Dhan's one-a-second allowance with the price poll."""
     seconds = intervals[interval_key]["bar_seconds"]
     minutes = 5 if seconds >= 86400 else seconds // 60  # day candles come from the daily list; 5-minute candles fill in today
-    all_candles = intraday(name, minutes)
+    all_candles = intraday(name, minutes, 16 if ranges[range_key]["days"] > 5 else 8)  # two weeks of days for the "2w" range (15 October)
     today = today_ist()
     bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
     sessions = sorted({bar_date(b) for b in all_candles})

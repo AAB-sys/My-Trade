@@ -259,12 +259,12 @@
 
   <div class="controls levels">
     <span class="lbl">Levels</span>
-    <select class="pick" id="move" aria-label="Levels measured from">
-      <option value="off">No levels</option>
-      <option value="prev">Previous day</option>
-      <option value="close">Previous close</option>
+    <select class="pick" id="move" aria-label="Levels: the days shown, with the lines over them">
       <option value="today" selected>Today so far</option>
-      <option value="shown">Bars shown</option>
+      <option value="prev">Previous day</option>
+      <option value="week">Current week</option>
+      <option value="prevweek">Previous week</option>
+      <option value="all">All</option>
     </select>
     <span id="levels-note"></span>
   </div>
@@ -329,15 +329,22 @@
   const name = decodeURIComponent(location.pathname.split("/").pop());
   const state = { kind: "line", interval: "5m", pollMs: 60000, timer: null, lastTimes: "", move: "today", summary: null, days: [], candles: [], session: null,
                   feed: "", dhan: null, optionStatus: "" };  // candles: the last five days loaded (three months on day candles); session: null = the latest day, a date, or "all"
-  try { const m = localStorage.getItem("levels"); if (["off", "prev", "close", "today", "shown"].includes(m)) state.move = m; } catch (e) {}  // owner's choice, 6 October: today's own move by default
+  // The Levels drop-down (15 October night, the owner's five): which days the chart shows, each with its lines over them.
+  // today: the latest day, its own range so far; prev: the day before it, its own range; week: this week's days, the
+  // week's range; prevweek: last week's days, that week's range (blank until the data reaches back); all: every day
+  // loaded, its range. The lines over a week or all days are the lowest low and highest high shown ("bars shown").
+  const PERIODS = { today: { move: "today" }, prev: { move: "today" }, week: { move: "shown" }, prevweek: { move: "shown" }, all: { move: "shown" } };
+  state.period = "today";
+  try { const p = localStorage.getItem("period"); if (p in PERIODS) state.period = p; } catch (e) {}
+  state.move = PERIODS[state.period].move;
   state.signal = "held";  // layer 3's switch: off, held or crossed
   try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
   const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute", "1d": "1-day", "1w": "1-week" };
   // The Time frame drop-down (15 October, the owner's list): the first five choices are a candle size over the last five
   // days (three months for 1 day); the rest say how far back the chart shows, each with its candle size. Where the
   // data does not reach back, the chart shows what there is and fills in as the days pass.
-  const VIEWS = { "1m": { interval: "1m", range: "5d" }, "5m": { interval: "5m", range: "5d" }, "15m": { interval: "15m", range: "5d" }, "30m": { interval: "30m", range: "5d" },
-    "1d": { interval: "1d", range: "3mo", label: "Last 3 months, a candle a day" }, "1w": { interval: "15m", range: "5d", session: "all" },
+  const VIEWS = { "1m": { interval: "1m", range: "2w" }, "5m": { interval: "5m", range: "2w" }, "15m": { interval: "15m", range: "2w" }, "30m": { interval: "30m", range: "2w" },
+    "1d": { interval: "1d", range: "3mo", label: "Last 3 months, a candle a day" }, "1w": { interval: "15m", range: "2w", session: "all" },
     "3mo": { interval: "1d", range: "3mo", label: "Last 3 months, a candle a day" }, "6mo": { interval: "1d", range: "6mo", label: "Last 6 months, a candle a day" },
     "1y": { interval: "1w", range: "1y", label: "Last year, a candle a week" }, "2y": { interval: "1w", range: "2y", label: "Last 2 years, a candle a week" },
     "3y": { interval: "1w", range: "3y", label: "Last 3 years, a candle a week" }, "5y": { interval: "1w", range: "5y", label: "Last 5 years, a candle a week" } };
@@ -538,10 +545,22 @@
   const dateKey = (t) => new Date((t + IST_OFFSET) * 1000).toISOString().slice(0, 10);  // the IST date
   const sessionOf = (b) => longCandles() ? "all" : dateKey(b.time);
   const sessions = () => [...new Set(state.candles.map(sessionOf))];
-  const currentSession = () => { const list = sessions(); return list.includes(state.session) ? state.session : list[list.length - 1] || null; };
+  const weekOf = (t) => { const d = Math.floor((t + IST_OFFSET) / 86400); return d - (d + 3) % 7; };  // the Monday's day number of t's week (day 0 was a Thursday)
+  const weekOfDay = (key) => weekOf(Date.parse(key + "T00:00:00Z") / 1000 + 43200);
+  const shownWeek = () => { const last = state.candles[state.candles.length - 1]; return last ? weekOf(last.time) - (state.period === "prevweek" ? 7 : 0) : null; };
+  // the session the calls are judged on: the latest day; for "Previous day" the day before it; for "Previous week" the
+  // last day of that week. Day and week candles are one session together
+  const currentSession = () => { const list = sessions(); if (!list.length) return null; if (longCandles() || state.view === "1w") return list[list.length - 1];
+    if (state.period === "prev") return list.length > 1 ? list[list.length - 2] : null;
+    if (state.period === "prevweek") { const wk = shownWeek(), days = list.filter(d => weekOfDay(d) === wk); return days[days.length - 1] || null; }
+    return list[list.length - 1]; };
   const sessionBars = () => { const key = currentSession(); return key ? state.candles.filter(b => sessionOf(b) === key) : []; };
-  const shownBars = () => longCandles() || state.session === "all" ? state.candles.slice() : sessionBars();  // what the chart draws
-  const withDate = () => longCandles() || state.session === "all";  // times on the page carry the day when several days show
+  const shownBars = () => {  // what the chart draws
+    if (longCandles() || state.period === "all") return state.candles.slice();
+    if (state.view === "1w") { const keep = new Set(sessions().slice(-5)); return state.candles.filter(b => keep.has(sessionOf(b))); }  // the 1 week time frame: the last five days
+    if (state.period === "week" || state.period === "prevweek") { const wk = shownWeek(); return wk == null ? [] : state.candles.filter(b => weekOf(b.time) === wk); }
+    return sessionBars(); };
+  const withDate = () => longCandles() || state.view === "1w" || ["week", "prevweek", "all"].includes(state.period);  // times on the page carry the day when several days show
   const sessionDate = (key) => key === "all" && state.candles.length ? dateKey(state.candles[state.candles.length - 1].time) : key;  // day candles: the last day
   const isToday = (key) => key === dateKey(serverNow());
   const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
@@ -549,7 +568,7 @@
   const dayBefore = (key) => { const earlier = state.days.filter(d => d.date < sessionDate(key)); return earlier[earlier.length - 1] || null; };
   function drawSessions() {
     const list = sessions(), key = currentSession(), pick = document.getElementById("session");
-    document.getElementById("session-row").hidden = !list.length;
+    document.getElementById("session-row").hidden = true;  // the Levels choice picks the days since 15 October; the row stays for its code paths
     const options = longCandles()
       ? [["all", VIEWS[state.view].label || "A candle a day"]]
       : [...list.slice().reverse().map(d => [d, isToday(d) ? `Today (${dayLabel(d)})` : dayLabel(d)]), ...(list.length > 1 ? [["all", `All ${list.length} days`]] : [])];
@@ -590,7 +609,7 @@
     if (!bars.length) return null;
     let hi = 0, lo = 0;
     bars.forEach((b, i) => { if (b.high > bars[hi].high) hi = i; if (b.low < bars[lo].low) lo = i; });
-    return { high: bars[hi].high, low: bars[lo].low, up: lo < hi, what: "bars shown" };  // whichever end came first
+    return { high: bars[hi].high, low: bars[lo].low, up: lo < hi, what: state.period === "week" ? "this week" : state.period === "prevweek" ? "last week" : state.period === "all" ? "all the days shown" : "bars shown" };  // whichever end came first
   }
 
   const levelsOf = Rules.levelsOf;
@@ -1419,8 +1438,10 @@
     makeSeries();
   });
   document.getElementById("move").addEventListener("change", e => {
-    state.move = e.target.value;
-    try { localStorage.setItem("levels", state.move); } catch (err) {}
+    state.period = e.target.value; state.move = PERIODS[state.period].move;
+    try { localStorage.setItem("period", state.period); } catch (err) {}
+    state.lastTimes = "";
+    setBars(shownBars());
     drawLevels();
   });
   document.getElementById("session").addEventListener("change", e => {
@@ -1468,7 +1489,7 @@
     load();
   });
 
-  document.getElementById("move").value = state.move;
+  document.getElementById("move").value = state.period;
   document.getElementById("interval").value = state.view;
   [...document.getElementById("signal").children].forEach(b => b.classList.toggle("on", b.dataset.signal === state.signal));
   load();
