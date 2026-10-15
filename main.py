@@ -21,7 +21,6 @@ import websockets
 
 import dhan
 import memwatch
-import study
 from providers import INDICES, INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 import rule
 
@@ -158,7 +157,7 @@ logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "
 revoked: set[str] = set()  # tokens logged out on this server: never revived from the cookie
 ws_pages: dict[WebSocket, tuple[str, str]] = {}  # socket -> (token, page id)
 PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
-PAGE_EXACT = ("/study", "/study/")  # pages too; everything else under /study/ is data and needs the note
+PAGE_EXACT = ()  # no other page paths: the Study page went on 15 October (the owner: "remove this study tab and everything under it")
 
 
 # ---------------------------------------------------------------- login
@@ -763,8 +762,6 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "contract": f"{round(rec['strike'])} {rec['side']} {rec['expiry']}" if rec else "", "premium_paid": rec["premium_paid"] if rec else None,
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None})
-    if rows:
-        study.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
 
 
@@ -928,8 +925,7 @@ async def lifespan(app: FastAPI):
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
     tasks = [asyncio.create_task(give_memory_back_forever()),
-             asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever()),
-             asyncio.create_task(study.study_forever(DHAN_ON))]
+             asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever())]
     if DHAN_ON:
         tasks.append(asyncio.create_task(warm_option_ids()))
         tasks.append(asyncio.create_task(token_forever()))
@@ -1000,9 +996,9 @@ def memory_mb() -> dict:
 
 @app.get("/health")
 def health():
-    """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads whether the
-    day's session was saved. No secret in here: dates, and a problem said in plain words."""
-    return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "study": study.summary(), "memory_mb": memory_mb(),
+    """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads the token's
+    state. No secret in here: dates, and a problem said in plain words. (Until 15 October it also carried the day's save.)"""
+    return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "memory_mb": memory_mb(),
             "memory": memwatch.summary(),  # where the memory goes (9 October): threads, the allocator, the most numerous objects, the biggest jumps
             "feed": feed_state(), "keep_awake": {k: v for k, v in keep_awake_state.items() if k != "url"} | {"on": bool(SELF_URL)}}
 
@@ -1207,67 +1203,8 @@ async def options_ended(name: str, request: Request):
     return record
 
 
-# ---------------------------------------------------------------- the record of each session, and the study of it (study.py)
-
-@app.get("/study/")
-@app.get("/study", include_in_schema=False)
-def study_page():
-    return FileResponse(STATIC / "study.html", headers=NO_CACHE)
-
-
-@app.get("/study/days")
-def study_days():
-    """The saved days, newest first, and where they are kept."""
-    return {"days": study.saved_days(), "store": {**study.state, "dhan": DHAN_ON, "save_at": study.SAVE_AT}, "today": dhan.today_ist().isoformat()}
-
-
-@app.get("/study/days/{day}")
-def study_day(day: str):
-    try:
-        when = datetime.strptime(day, "%Y-%m-%d").date()
-    except ValueError:
-        raise HTTPException(status_code=400, detail="the day must be YYYY-MM-DD")
-    data = study.read_day(when)
-    if data is None:
-        raise HTTPException(status_code=404, detail=f"no record of {day}")
-    return data
-
-
-LEVEL_MODES, SIGNAL_MODES = ("off", "prev", "close", "today", "shown"), ("off", "held", "crossed", "both")  # close: the previous close's lines (15 October)
-
-
-@app.post("/calls/{name}")
-async def calls_record(name: str, request: Request):
-    """The index page tells the server the calls it shows for today's session (every call, as drawn), so the day's
-    record carries each and every call that was suggested (study.record_calls, the owner's ask of 7 October)."""
-    key = known_index(name)
-    body = await request.json()
-    interval, levels, signal = str(body.get("interval", "")), str(body.get("levels", "")), str(body.get("signal", ""))
-    try:
-        session = datetime.strptime(str(body.get("session", "")), "%Y-%m-%d").date().isoformat()
-    except ValueError:
-        raise HTTPException(status_code=400, detail="session must be YYYY-MM-DD")
-    calls = body.get("calls")
-    if interval not in INTERVALS or levels not in LEVEL_MODES or signal not in SIGNAL_MODES or not isinstance(calls, list) or len(calls) > 500:
-        raise HTTPException(status_code=400, detail="interval, levels, signal and a list of at most 500 calls are required")
-    return {"new": study.record_calls(key, interval, levels, signal, session, calls), "recorded": len(calls)}
-
-
-@app.post("/study/save")
-async def study_save():
-    """Saves today now (a partial copy during the session, the final one after it), and says how it went."""
-    if not DHAN_ON:
-        raise HTTPException(status_code=409, detail="Only sessions on Dhan are recorded, and Dhan is not set up here.")
-    now = datetime.now(dhan.IST)
-    complete = now.weekday() < 5 and (now.hour, now.minute) >= study.save_time()
-    try:
-        data = await asyncio.to_thread(study.save_day, now.date(), complete)
-    except study.StudyError as exc:
-        return {"saved": False, "problem": str(exc), "reason": ""}
-    if data is None:
-        return {"saved": False, "problem": study.state["problem"], "reason": "Dhan has no candle for today yet: nothing to save."}
-    return {"saved": True, "date": data["date"], "complete": complete, "candles": len(data["indices"].get("NIFTY 50", {}).get("candles", {}).get("1m", [])),
-            "problem": study.state["problem"], "pushed_at": study.state["pushed_at"]}
+# The Study page, the day's save (candles and the calls CSV) and the options records backup were taken off on 15 October
+# (the owner: "remove this study tab and everything under it ... never update it from tomorrows session").
 
 
 @app.get("/indices/{name}")

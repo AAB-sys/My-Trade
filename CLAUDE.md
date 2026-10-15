@@ -44,6 +44,10 @@ their own logic. Read this before touching the code.
   page only after about 20 saved days still show it ahead, and only when the
   owner says so. A study round never changes the index page's logic. The lab
   (`lab/replay.js`, `lab/findings.md`) is the record of what was tested.
+  **15 October: the Study page, the daily save and the research rounds are off**
+  (the owner: "remove this study tab and everything under it"; "close every
+  research engine, every data backup, every excel csv file backup"). Nothing is
+  studied, saved or proposed unless the owner asks in the chat.
 
 ## Shape of the project
 
@@ -99,10 +103,9 @@ their own logic. Read this before touching the code.
   value by one caller at a time); `fetch_detail` takes the live price
   the server holds, so it needs no quote request while ticks flow; the record of each paper call's option (strike
   one in the money, nearest expiry, premium paid, premium now, the Sell mark) in
-  `paper_calls.json` (and on the data branch as `records/<date>.json`, pushed by
-  `study.py` when `records_version()` moves and pulled at start, so a restart
-  keeps the premium paid; `end_day()` at the day's final save marks every record
-  of the day still open as ended, nothing carries overnight), with the contract's security id from Dhan's instrument list
+  `paper_calls.json` (until 15 October also on the data branch as `records/<date>.json`,
+  pushed by `study.py`; that backup went with the Study page, so a restart of the
+  host starts the day's records afresh), with the contract's security id from Dhan's instrument list
   (`option_ids()`, a CSV at `DHAN_SCRIP_MASTER_URL`) so the feed and the poll in
   `main.py` carry its premium tick by tick (`note_premium`, `open_options`); `status()`/`deep_checks()` in plain words for
   `check_dhan.py`/`check_dhan.bat`. `main.py` serves NIFTY 50/NIFTY BANK details
@@ -160,18 +163,10 @@ their own logic. Read this before touching the code.
   saved and pushed, or when the token is refused or expires before the next
   trading day's close. The owner does not look after the saving (6 October);
   Claude does; the token is the one thing only the owner can renew.
-- `study.py` - layer 4: the record of each session's candles
-  (`data/sessions/<date>.json`, git-ignored; written after the close and every
-  few minutes during it) and of every call the index page suggested that day
-  (`<date>-calls.csv`, from `record_calls()`, fed by the page's `POST
-  /calls/{name}`; the owner's ask of 7 October) and their copy
-  on the `data` branch of the owner's repository through the GitHub API
-  (`GITHUB_DATA_TOKEN`; the branch holds data only and is never merged into
-  `main`); `study_forever()` runs it, `pull_missing()` fetches the days a fresh
-  host lacks. `main.py` serves `/study/` (`static/study.html`: every saved day
-  replayed in every setting, each day's pattern, the candles at the levels, the
-  high and low breaks, the learning step on the candles' facts gated on 100 calls
-  over 10 days), `/study/days`, `/study/days/{day}` and `POST /study/save`.
+- `study.py` and `static/study.html` - removed on 15 October (the owner: "remove this
+  study tab and everything under it"): the record of each session's candles and
+  calls CSV on the `data` branch, the options records backup, the Study page and
+  its routes. The days saved up to 15 October stay on the `data` branch as history.
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
@@ -196,7 +191,7 @@ their own logic. Read this before touching the code.
 
 The owner's rule (6 October): every pull request is one of two kinds, never
 both. A **website** pull request touches the dashboard the Render link and the
-laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `study.py`, `lab/`,
+laptop serve: `static/`, `main.py`, `dhan.py`, `providers.py`, `lab/`,
 `.github/workflows/wake.yml`, the docs. An
 **Android app** pull request touches `android/` and `.github/workflows/android.yml`
 only. Say in the title which kind it is when it is not obvious.
