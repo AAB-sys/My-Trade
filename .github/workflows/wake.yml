@@ -20,9 +20,11 @@ jobs:
     steps:
       - name: Wake the server
         run: |
-          # a sleeping Render service takes up to a minute to come back; the first knock may time out, that is fine
-          curl -s -o /dev/null --max-time 120 "$SITE/health" || true
-          sleep 100
+          # a sleeping Render service takes up to a minute to come back; the first knock may time out, that is fine.
+          # When the first knock gets a proper answer the server is awake already, and the wait is skipped (the owner,
+          # 16 October: "why health check is taking too much time?")
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 120 "$SITE/health" || true)
+          if [ "$code" = "200" ]; then echo "the server answered at once (200): no wait"; else echo "first knock: ${code:-no answer}; waiting 100 s for the server to come back"; sleep 100; fi
       - name: Read the server's health
         run: |
           curl -s --max-time 60 "$SITE/health" | tee health.json
