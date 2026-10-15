@@ -298,7 +298,9 @@ The app is ready to run on a platform that deploys from GitHub:
 - `LOGIC.md` is the owner's own trading logic in plain words: what is built, what
   is still the owner's to decide. The index page draws its first layer, Fibonacci
   levels of a chosen move, the seven Fibonacci lines on the chart with a one-line
-  readout (with "today so far", the range up to the candle forming now); its
+  readout (with "today so far", the range up to the candle forming now; with
+  "previous close", 13 lines from the previous day's close, 0%, then +23.6% to
+  +100% above it and -23.6% to -100% below it, 100% being 1% of the close); its
   second, whether a closed candle held or crossed a level, is the signal of its
   third, the paper trades that rule would have given on those candles (a Held/Crossed/Both switch, the call the
   moment the signal candle closes, buy a CE or a PE, entry at the next price, the next level as

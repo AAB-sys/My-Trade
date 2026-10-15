@@ -1215,7 +1215,7 @@ def study_day(day: str):
     return data
 
 
-LEVEL_MODES, SIGNAL_MODES = ("off", "prev", "today", "shown"), ("off", "held", "crossed", "both")
+LEVEL_MODES, SIGNAL_MODES = ("off", "prev", "close", "today", "shown"), ("off", "held", "crossed", "both")  # close: the previous close's lines (15 October)
 
 
 @app.post("/calls/{name}")

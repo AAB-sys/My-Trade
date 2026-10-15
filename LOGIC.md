@@ -29,6 +29,22 @@ turn after a move. Whether that holds is for the owner's own record to show.
   session being looked at. Only the day's open, high, low and close are known, so
   the day is taken as an up move when it closed above its open, else a down move
   **(owner to decide)**.
+- *Previous close* (owner's decision, 15 October: "put the febonachi 7 lines
+  starting from previous days closing point so that should be the 0% line always
+  and you should calculate above it till 100 % level and from the same point below
+  till the 100% level with the help of febonachib 7 levels calculation. And 0% from
+  above should have + mark and 0 from below should have - mark"; the distance: "U
+  have to calculate those levels. Dont tk any reference. Referenc is only for 0%
+  level"). 0% is the previous trading day's close. The only reference is that
+  close, so the distance is a share of it: **100% is 1% of the close**, and each
+  line is the Fibonacci share of that 1%, above the close (named +23.6%, +38.2%,
+  +50%, +61.8%, +78.6%, +100%) and below it (-23.6% to -100%): 13 lines that
+  stand still all day, as the previous day's do. 15 October: 14 October closed at
+  22,622.70, so 100% is 226.23 points; +23.6% is 22,676.09, +100% 22,848.93,
+  -23.6% 22,569.31, -100% 22,396.47. A call on these lines is the same rule as on
+  the others (On the line, Crossed above, Crossed below, the target the next line,
+  the same exits); a close beyond +100% or -100% has no line beyond it and gives no
+  call that way. A new choice on the index page; the other choices are unchanged.
 - *Today so far* (default, owner's choice of 6 October): the session's own low to
   high so far, an up move when its last price is above its open **(owner to
   decide)**. Blank until it has traded. **Each candle is judged against the

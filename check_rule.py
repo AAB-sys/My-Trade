@@ -125,8 +125,8 @@ def main() -> int:
             prev = idx.get("previous") or d.get("previous", {}).get(name)
             for key, seconds in (("5m", 300), ("15m", 900), ("30m", 1800)):
                 bars = candles.get(key) or fold(candles["5m"], seconds)
-                for move in ("prev", "today"):
-                    if move == "prev" and not prev:
+                for move in ("prev", "close", "today"):  # close: the previous close's lines (15 October)
+                    if move in ("prev", "close") and not prev:
                         continue
                     for signal in ("held", "crossed", "both"):
                         for ideas in IDEAS:
@@ -183,29 +183,33 @@ def main() -> int:
         jobs.append({"mode": "replay", "bars": hand, "move": "prev", "previous": prev_day, "seconds": 300, "signal": signal, "what": f"hand-made {signal}"})
         jobs.append({"mode": "replay", "bars": hand, "move": "today", "previous": None, "seconds": 300, "signal": signal, "what": f"hand-made today {signal}"})
         jobs.append({"mode": "replay", "bars": hand, "move": "today", "previous": None, "seconds": 300, "signal": signal, "newHighLow": True, "what": f"hand-made today {signal} idea 24"})
-        for move in ("prev", "today"):
+        for move in ("prev", "close", "today"):
             jobs.append({"mode": "replay", "bars": hand, "move": move, "previous": prev_day, "seconds": 300, "signal": signal, "clearCross": True, "oneWay": True, "what": f"hand-made {move} {signal} ideas 5 and 8"})
     # 4. random days: the walk, every setting, replayed and live
     rnd = random.Random(7)
     for k in range(int(os.environ.get("CHECK_RULE_RANDOM", "150"))):
         bars = random_day(rnd, t0, 75, 22600 + rnd.uniform(-300, 300))
         prev = {"open": 22500, "high": 22500 + rnd.uniform(50, 400), "low": 22500 - rnd.uniform(50, 400), "close": 22500 + rnd.uniform(-150, 150)}
-        for move in ("prev", "today"):
+        for move in ("prev", "close", "today"):
             for signal in ("held", "crossed", "both"):
                 jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": 300, "signal": signal, "ideas": IDEAS[k % len(IDEAS)], "what": f"random {k} {move} {signal}"})
                 jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": 300, "signal": signal, "trail": TRAILS[k % len(TRAILS)], "what": f"random {k} {move} {signal} trail"})
         cut = rnd.randrange(2, len(bars))
         shown = bars[:cut + 1]
         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of(shown)), "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live"})
+        close_lv = rule.close_levels(prev["close"] + (shown[0]["open"] - 22500))  # the previous close's lines, near the day's prices (15 October)
+        jobs.append({"mode": "live", "bars": shown, "levels": close_lv, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": ("held", "crossed", "both")[k % 3], "what": f"random {k} live close"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live today"})
         given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(5, len(shown) - 2))} if len(shown) > 2 else {}
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "what": f"random {k} live today given"})
+        jobs.append({"mode": "live", "bars": shown, "levels": close_lv, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "clearCross": True, "oneWay": True,
+                     "what": f"random {k} live close given ideas 13, 5 and 8"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "what": f"random {k} live today given idea 13"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "newHighLow": True,
                      "what": f"random {k} live today given ideas 13 and 24"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "freshRun": True, "newHighLow": True, "clearCross": True, "oneWay": True,
                      "what": f"random {k} live today given ideas 13, 24, 5 and 8"})
-        for move in ("prev", "today"):
+        for move in ("prev", "close", "today"):
             jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": 300, "signal": "both", "freshRun": True, "what": f"random {k} {move} idea 13"})
             jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": 300, "signal": ("held", "crossed", "both")[k % 3], "freshRun": True, "newHighLow": True,
                          "ideas": IDEAS[k % len(IDEAS)], "what": f"random {k} {move} ideas 13 and 24"})

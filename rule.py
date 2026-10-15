@@ -9,6 +9,7 @@ IST_OFFSET = 19800
 SESSION_END = 15 * 3600 + 30 * 60
 SESSION_START = 9 * 3600 + 15 * 60
 RATIOS = (0, 0.236, 0.382, 0.5, 0.618, 0.786, 1)
+CLOSE_STEP = 0.01  # "Previous close": 100% is 1% of the previous day's close (the owner, 15 October; see static/rules.js closeLevels)
 INF = float("inf")
 
 
@@ -62,6 +63,24 @@ def today_lines_at(bars: list):
     return lambda i: levels_of(move_of(bars[:i + 1]))
 
 
+def close_levels(close):
+    """"Previous close" (the owner, 15 October; see static/rules.js closeLevels): 0% at the previous day's close, 100% 1% of it
+    (CLOSE_STEP), each line the Fibonacci share of that, above (+) and below (-): 13 lines that stand still all day."""
+    if close is None or not close > 0:
+        return None
+    step, out = close * CLOSE_STEP, []
+    for r in RATIOS:
+        out.append({"ratio": r, "price": round2(close + r * step), "signed": True})
+        if r > 0:
+            out.append({"ratio": -r, "price": round2(close - r * step), "signed": True})
+    return sorted(out, key=lambda l: l["price"])
+
+
+def level_name(ratio, signed=False) -> str:
+    """A line's name: "23.6%", and on the previous close's lines "+23.6%" above the close, "-23.6%" below it."""
+    return ("+" if signed and ratio > 0 else "") + f"{ratio * 100:.1f}%"
+
+
 def move_of_day(d):
     """"Previous day": only the day's four figures are known, so it is an up move when it closed above its open."""
     return {"high": d["high"], "low": d["low"], "up": d["close"] >= d["open"]} if d else None
@@ -94,9 +113,12 @@ def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, frm
     nxt = next((l for l in levels if l["price"] > at["price"]), None) if side == "CE" else next((l for l in reversed(levels) if l["price"] < at["price"]), None)
     if nxt is None:
         return None  # a signal pointing outward from the 0% or 100% level has no next level
-    return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
-            "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
-            "prices": [l["price"] for l in levels]}
+    out = {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
+           "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
+           "prices": [l["price"] for l in levels]}
+    if at.get("signed"):
+        out["signed"] = True  # a line of the previous close (15 October): its name shows the + (level_name)
+    return out
 
 
 def kept_at(bar: dict, levels: list, frm, side: str):
@@ -113,9 +135,12 @@ def kept_at(bar: dict, levels: list, frm, side: str):
     p = frm(at["price"])
     kind = "crossed" if (p < at["price"] if side == "CE" else p > at["price"]) else "held"
     nxt = next((l for l in levels if l["price"] > at["price"]), None) if side == "CE" else next((l for l in reversed(levels) if l["price"] < at["price"]), None)
-    return {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
-            "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
-            "kept": True, "prices": [l["price"] for l in levels]}
+    out = {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
+           "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
+           "kept": True, "prices": [l["price"] for l in levels]}
+    if at.get("signed"):
+        out["signed"] = True
+    return out
 
 
 # Idea 24, a call past the day's high or low (the owner, 13 October evening: "yes, build way 1"; see static/rules.js NEW_HIGH_LOW
@@ -275,7 +300,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
     def trail_lines(levels):
         """The lines that move Rule 2's stop: the specification's, 23.6% to 78.6%, or all seven."""
-        return levels if trail.get("lines") == "all" else [l for l in levels if l["ratio"] != 0 and l["ratio"] != 1]
+        return levels if trail.get("lines") == "all" else [l for l in levels if l["ratio"] != 0 and abs(l["ratio"]) != 1]
 
     def buffer_at(i):
         """Rule 2's buffer for closed candle i."""
@@ -507,12 +532,14 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
     setting is given (None: Rule 1 alone); idea 13 when asked for, idea 24 the same way, on "today so far" lines only, and
     ideas 5 and 8 the same way."""
-    fixed = (levels_of(move_of_day(previous)) if previous else None) if move == "prev" else None
-    if move == "prev" and not fixed:
+    still = move in ("prev", "close")  # lines that stand still all day: the previous day's, or the previous close's (15 October)
+    fixed = ((levels_of(move_of_day(previous)) if previous else None) if move == "prev"
+             else (close_levels(previous.get("close")) if previous else None) if move == "close" else None)
+    if still and not fixed:
         return {"trades": [], "closed": 0}
-    levels_at = (lambda i: fixed) if move == "prev" else today_levels_at(bars)
-    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if move == "prev" else today_lines_at(bars), True, trail, None, bool(fresh_run),
-                        move != "prev" and bool(new_high_low), bool(clear_cross), bool(one_way))
+    levels_at = (lambda i: fixed) if still else today_levels_at(bars)
+    return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if still else today_lines_at(bars), True, trail, None, bool(fresh_run),
+                        not still and bool(new_high_low), bool(clear_cross), bool(one_way))
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},
@@ -550,7 +577,7 @@ def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
         return None
     if t.get("hold"):  # a held break: the verdict is the owner's exit rule itself, worded for the line its stop is on (Rule 2: the line it moved to)
         ratio = t["trail"]["stopRatio"] if t.get("trail") else t.get("ratio")
-        name = "the level" if ratio is None else f"the {ratio * 100:.1f}% level"
+        name = "the level" if ratio is None else f"the {level_name(ratio, t.get('signed'))} level"
         pe, how = t["side"] == "PE", t.get("how")
         word = "exit" if how in ("back", "retouch", "trail") else "carry"
         why = (f"price closed back {'above' if pe else 'below'} {name}" if how in ("back", "trail") else f"price came back to where the {'fall' if pe else 'rise'} started" if how == "retouch"
@@ -582,7 +609,7 @@ def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
     back = round2(back)
     strength = "strong" if depth >= 0.5 or body >= 1 else "fair" if depth >= 0.25 or body >= 0.5 else "weak"
     word = "exit" if exit_at is not None else "carry"
-    level = "the level" if t.get("ratio") is None else f"the {t['ratio'] * 100:.1f}% level"
+    level = "the level" if t.get("ratio") is None else f"the {level_name(t['ratio'], t.get('signed'))} level"
     good, bad = ("above", "below") if t["side"] == "CE" else ("below", "above")
     held = t.get("kind") == "held"
     size = ({"strong": "strong bounce", "fair": "bounce", "weak": "small bounce"} if held else {"strong": "big candle", "fair": "candle", "weak": "small candle"})[strength]
