@@ -22,6 +22,7 @@
     --candle-up: #0ca30c;
     --candle-down: #d03b3b;
     --line: #2a78d6;
+    --now-line: #8cc4f5; --now-box: #d6ebfc; --now-text: #1558b0;  /* the price now: a light blue line, a light blue box, blue figures (15 October) */
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -39,6 +40,7 @@
       --candle-up: #0ca30c;
       --candle-down: #e66767;
       --line: #3987e5;
+      --now-line: #8cc4f5; --now-box: #d6ebfc; --now-text: #1558b0;
     }
   }
   :root[data-theme="dark"] {
@@ -56,6 +58,7 @@
     --candle-up: #0ca30c;
     --candle-down: #e66767;
     --line: #3987e5;
+    --now-line: #8cc4f5; --now-box: #d6ebfc; --now-text: #1558b0;
   }
 
   * { box-sizing: border-box; }
@@ -465,6 +468,7 @@
     }
   }, { passive: false });
   let series = null;
+  let nowLine = null;  // the price now, a light blue line (markNow)
   let bars = [];
 
   function applyTheme() {
@@ -493,8 +497,10 @@
           wickUpColor: cssVar("--candle-up"), wickDownColor: cssVar("--candle-down"),
         })
       : chart.addSeries(LightweightCharts.LineSeries, { color: cssVar("--line"), lineWidth: 2, crosshairMarkerRadius: 4 });
-    series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o) });
+    series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o), lastValueVisible: false, priceLineVisible: false });  // the price now is drawn by markNow
+    nowLine = null;  // it went with the old series
     series.setData(toPoints(bars));
+    markNow();
     chart.timeScale().fitContent();
     showLegend(bars[bars.length - 1]);
     priceLines = []; lastLevelsKey = "";  // they went with the old series: draw them again
@@ -1123,11 +1129,23 @@
   document.addEventListener("keydown", e => { if (e.key === "Escape") hidePopup(); });
 
   // ---- data
+  // The price now (the owner, 15 October: "The current running index level line shoukd have light blue box and blue font and
+  // plane light blue line"): a plain light blue line at the last price, its figure in blue in a light blue box on the price scale.
+  // The chart's own last-price line chooses its own text colour, so this one is a price line of ours (nowLine), moved with every price
+  function markNow() {
+    if (!series) return;
+    if (!bars.length) { if (nowLine) { series.removePriceLine(nowLine); nowLine = null; } return; }
+    const price = bars[bars.length - 1].close;
+    if (nowLine) { nowLine.applyOptions({ price }); return; }
+    nowLine = series.createPriceLine({ price, color: cssVar("--now-line"), lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Solid, axisLabelVisible: true,
+                                       axisLabelColor: cssVar("--now-box"), axisLabelTextColor: cssVar("--now-text"), title: "" });
+  }
   function setBars(list) {
     const empty = document.getElementById("empty");
     if (!list.length) {  // a holiday, a weekend, or before the open: nothing to draw yet
       bars = [];
       if (series) series.setData([]);
+      markNow();
       state.lastTimes = "";
       showLegend(null);
       hidePopup();
@@ -1142,6 +1160,7 @@
     if (!series) { makeSeries(); }
     else if (sameShape) { series.update(toPoints([list[list.length - 1]])[0]); }
     else { series.setData(toPoints(list)); if (state.lastTimes === "") chart.timeScale().fitContent(); }
+    markNow();
     state.lastTimes = times;
     showLegend(list[list.length - 1]);
     refreshPopup();
@@ -1196,6 +1215,7 @@
       const before = state.move === "today" || state.move === "shown" ? theMove() : null;  // levels built from the live candles
       last.high = Math.max(last.high, bar.high); last.low = Math.min(last.low, bar.low); last.close = bar.close;
       series.update(toPoints([last])[0]);
+      markNow();
       const after = before && theMove();
       if (after && (after.high !== before.high || after.low !== before.low || after.up !== before.up)) drawLevels();  // a new high or low, or the move turned: the lines move with the tick (owner's choice, 6 October)
     } else if (bar.time > last.time && bar.time - last.time <= SECONDS[state.interval] * 3) {  // a new candle began
@@ -1203,6 +1223,7 @@
       state.candles.push(bars[bars.length - 1]);  // the chart's list is a copy of the session's
       state.lastTimes = bars.map(b => b.time).join(",");
       series.update(toPoints([bar])[0]);
+      markNow();
       clearTimeout(state.timer);
       state.timer = setTimeout(load, 1500);  // the candle before it just closed: fetch and judge it
     } else {
