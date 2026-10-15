@@ -335,7 +335,7 @@ The app is ready to run on a platform that deploys from GitHub:
 ## Phases
 
 1. **The API** - done. Menu, real data from Yahoo, proper errors, on GitHub.
-2. **The dashboard** - done. Tiles, NIFTY 50 and SENSEX pinned, gainers to losers,
+2. **The dashboard** - done. Three tiles, NIFTY 50, NIFTY BANK and SENSEX (the other indices, gainers to losers, were taken off on 15 October),
    light and dark, phone-friendly, failures named rather than hidden.
 3. **Real time**
    - 3a - done. Streaming plumbing: in-memory store, background refresh,

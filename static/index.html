@@ -113,8 +113,8 @@
   </header>
 
   <section class="grid" id="featured" aria-label="Headline indices"></section>
-  <h2>All indices, gainers to losers</h2>
-  <section class="grid" id="others" aria-label="Other indices"></section>
+  <!-- The other indices (NIFTY IT, BSE 100 and the rest, gainers to losers) were shown under the three tiles until
+       15 October; taken off at the owner's ask ("remove all the tiles"). The server still reads their quotes. -->
 
   <footer id="footer"></footer>
 </main>
@@ -172,14 +172,8 @@
   function render(quotes) {
     const byName = Object.fromEntries(quotes.map(q => [q.name, q]));
     lastQuotes = byName;
-    const featured = PINNED.map(n => byName[n]).filter(Boolean).map(withLive);
-    const others = quotes
-      .filter(q => !PINNED.includes(q.name))
-      .map(withLive)
-      .sort((a, b) => b.change_percent - a.change_percent);
-
+    const featured = PINNED.map(n => byName[n]).filter(Boolean).map(withLive);  // the three tiles only (15 October)
     document.getElementById("featured").replaceChildren(...featured.map(q => tile(q, true)));
-    document.getElementById("others").replaceChildren(...others.map(q => tile(q, false)));
   }
 
   // The login's "tab" note: kept in this tab only, so a freshly opened tab has none and is asked for the password.
