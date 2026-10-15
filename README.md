@@ -17,7 +17,7 @@ dashboard that shows them and updates the moment they change.
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
 | GET    | `/indices/all`    | nothing       | the latest snapshot: `quotes`, `failed`, `source`, `updated_at` |
 | GET    | `/indices/{name}` | an index name | that index's latest quote (503 until the first refresh lands) |
-| GET    | `/indices/{name}/detail` | an index name, `?range=today`, `5d` or `3mo`, `&interval=1m`, `5m` (default), `15m`, `30m` or `1d` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range), `candles` of that size and `days` (a month of daily OHLC, for each session's own previous-day levels) |
+| GET    | `/indices/{name}/detail` | an index name, `?range=today`, `5d`, `3mo`,, `6mo`, `1y`, `2y`, `3y` or `5y`, `&interval=1m`, `5m` (default), `15m`, `30m`, `1d` or `1w` (a week candle, from the day candles) | `summary` (previous day OHLC, today's OHL, last, change, 52-week range), `candles` of that size and `days` (a month of daily OHLC, for each session's own previous-day levels) |
 | GET    | `/options/{name}` | an index name | the Dhan feed's state and today's option records of the index's paper calls (Dhan only) |
 | POST   | `/options/{name}/calls`, `/options/{name}/calls/ended` | JSON `{key, side, index_at_entry, ...}` / `{key, how}` | the index page reports a call entering or ending; the server records the contract and premiums |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |

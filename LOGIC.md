@@ -116,7 +116,12 @@ today's). With all five days on the chart the levels and the calls are the lates
 day's.
 
 **Which time frame**: the *Time frame* drop-down sets the size of one candle: 1, 5,
-15 or 30 minutes, or 1 day. Everything below is judged on the candles of that size.
+15 or 30 minutes, or 1 day. Since 15 October (the owner: "add more options in the dropdown of time frame
+after 1 day: 1 week, 3 months, 6 months, 1 yr, 2yr, 3yr, 5yr") it goes on with how far back the
+chart shows: *1 week* (15-minute candles, the five days on one chart), *3 months* and *6 months* (a
+candle a day), *1 yr*, *2 yr*, *3 yr* and *5 yr* (a candle a week, Monday to Friday, built from the
+day candles). Where the data does not reach back, the chart shows what there is and fills in as the
+days pass. Everything below is judged on the candles of that size.
 On day candles the chart holds the last three months, those days are one session
 together (the "previous day" is the day before the last candle), and a call has no
 day end: there a day is one candle, so a call runs on until its target.

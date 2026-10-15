@@ -407,7 +407,13 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
     days = with_recent(daily(name))
     year = with_recent(cached(("year", name), 3600, lambda: daily(name, 370)))
     if seconds >= 86400:
-        candles = year[-ranges[range_key]["days"]:]
+        cal_days = ranges[range_key].get("cal_days", 370)
+        # the longer views (15 October): Dhan asked once an hour for as far back as the view needs; where its list
+        # does not reach, the chart shows what there is
+        source = year if cal_days <= 370 else with_recent(cached(("long", name, cal_days), 3600, lambda: daily(name, cal_days)))
+        candles = source[-ranges[range_key]["days"]:]
+        if seconds >= 7 * 86400:
+            candles = fold(candles, seconds)  # a candle a week, Monday to Friday
     elif range_key == "today":
         candles = [b for b in all_candles if bar_date(b) == today]
     else:

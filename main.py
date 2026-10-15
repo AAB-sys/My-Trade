@@ -21,7 +21,7 @@ import websockets
 
 import dhan
 import memwatch
-from providers import INDICES, INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
+from providers import INDICES, INTERVALS, LONG_INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
 import rule
 
 BASE = Path(__file__).parent
@@ -649,7 +649,7 @@ WATCH_INTERVAL = os.environ.get("WATCH_INTERVAL", "5m")                  # the t
 WATCH_LEVELS = tuple(m.strip() for m in os.environ.get("WATCH_LEVELS", "today,prev,close").split(",") if m.strip())
 WATCH_SIGNAL = os.environ.get("WATCH_SIGNAL", "both")                     # "held", "crossed" or "both"
 WATCH_SECONDS = float(os.environ.get("WATCH_SECONDS", "5"))
-WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL != "1d" and bool(WATCH_LEVELS) and all(m in ("today", "prev", "close") for m in WATCH_LEVELS) and WATCH_SIGNAL in ("held", "crossed", "both")
+WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL not in LONG_INTERVALS and bool(WATCH_LEVELS) and all(m in ("today", "prev", "close") for m in WATCH_LEVELS) and WATCH_SIGNAL in ("held", "crossed", "both")
 WATCH_SETTING = f"{WATCH_INTERVAL} {'+'.join(WATCH_LEVELS)} {WATCH_SIGNAL}"  # as /health shows it
 # The live feed (the stream, and the poll behind it) used to run only while an index page was open. The watcher needs the
 # candle forming now and the open calls' premiums whether or not a page is open, so in market hours the feed runs for the
@@ -1184,7 +1184,7 @@ async def options_register(name: str, request: Request):
     if not call_key or side not in ("CE", "PE"):
         raise HTTPException(status_code=400, detail="key and side (CE or PE) are required")
     parts, entry_time = call_key.split("|"), None
-    if len(parts) == 5 and parts[1] in INTERVALS and parts[1] != "1d" and parts[2].isdigit():
+    if len(parts) == 5 and parts[1] in INTERVALS and parts[1] not in LONG_INTERVALS and parts[2].isdigit():
         entry_time = int(parts[2]) + INTERVALS[parts[1]]["bar_seconds"]  # the open of the candle after the signal candle: a page seeing the call late gets its entry minute's premium
     try:
         return await asyncio.to_thread(dhan.register_call, key, call_key, side, level, entry_time)

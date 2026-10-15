@@ -249,6 +249,13 @@
       <option value="15m">15 min</option>
       <option value="30m">30 min</option>
       <option value="1d">1 day</option>
+      <option value="1w">1 week</option>
+      <option value="3mo">3 months</option>
+      <option value="6mo">6 months</option>
+      <option value="1y">1 yr</option>
+      <option value="2y">2 yr</option>
+      <option value="3y">3 yr</option>
+      <option value="5y">5 yr</option>
     </select>
   </div>
 
@@ -327,14 +334,24 @@
   try { const m = localStorage.getItem("levels"); if (["off", "prev", "close", "today", "shown"].includes(m)) state.move = m; } catch (e) {}  // owner's choice, 6 October: today's own move by default
   state.signal = "held";  // layer 3's switch: off, held or crossed
   try { const s = localStorage.getItem("signal"); if (["off", "held", "crossed", "both"].includes(s)) state.signal = s; } catch (e) {}
-  const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute", "1d": "1-day" };
+  const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute", "1d": "1-day", "1w": "1-week" };
+  // The Time frame drop-down (15 October, the owner's list): the first five choices are a candle size over the last five
+  // days (three months for 1 day); the rest say how far back the chart shows, each with its candle size. Where the
+  // data does not reach back, the chart shows what there is and fills in as the days pass.
+  const VIEWS = { "1m": { interval: "1m", range: "5d" }, "5m": { interval: "5m", range: "5d" }, "15m": { interval: "15m", range: "5d" }, "30m": { interval: "30m", range: "5d" },
+    "1d": { interval: "1d", range: "3mo", label: "Last 3 months, a candle a day" }, "1w": { interval: "15m", range: "5d", session: "all" },
+    "3mo": { interval: "1d", range: "3mo", label: "Last 3 months, a candle a day" }, "6mo": { interval: "1d", range: "6mo", label: "Last 6 months, a candle a day" },
+    "1y": { interval: "1w", range: "1y", label: "Last year, a candle a week" }, "2y": { interval: "1w", range: "2y", label: "Last 2 years, a candle a week" },
+    "3y": { interval: "1w", range: "3y", label: "Last 3 years, a candle a week" }, "5y": { interval: "1w", range: "5y", label: "Last 5 years, a candle a week" } };
+  state.view = "5m";
+  const longCandles = () => state.interval === "1d" || state.interval === "1w";  // a candle a day or a week: the days shown are one session, no day end
   // The server's clock, not the device's: a laptop or phone clock that runs minutes slow made the page judge
   // candles closed minutes late, so the calls came late (6 October). Every refresh and every tick carries the
   // server's time; the difference to the device's clock is kept and applied wherever "now" matters.
   let clockOffset = 0;  // seconds to add to the device's clock
   const serverNow = () => Date.now() / 1000 + clockOffset;
   const learnClock = (iso) => { const t = Date.parse(iso); if (!isNaN(t)) clockOffset = t / 1000 - Date.now() / 1000; };
-  const rangeFor = () => state.interval === "1d" ? "3mo" : "5d";  // what the server is asked for: the last five days, or three months of day candles
+  const rangeFor = () => VIEWS[state.view].range;  // what the server is asked for: the last five days, or the view's months or years of day or week candles
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
@@ -521,12 +538,12 @@
   // evidence table and the calls are for that session, whose "previous day" is the trading day
   // before it, not the day before today. On day candles the days shown are one session together.
   const dateKey = (t) => new Date((t + IST_OFFSET) * 1000).toISOString().slice(0, 10);  // the IST date
-  const sessionOf = (b) => state.interval === "1d" ? "all" : dateKey(b.time);
+  const sessionOf = (b) => longCandles() ? "all" : dateKey(b.time);
   const sessions = () => [...new Set(state.candles.map(sessionOf))];
   const currentSession = () => { const list = sessions(); return list.includes(state.session) ? state.session : list[list.length - 1] || null; };
   const sessionBars = () => { const key = currentSession(); return key ? state.candles.filter(b => sessionOf(b) === key) : []; };
-  const shownBars = () => state.interval === "1d" || state.session === "all" ? state.candles.slice() : sessionBars();  // what the chart draws
-  const withDate = () => state.interval === "1d" || state.session === "all";  // times on the page carry the day when several days show
+  const shownBars = () => longCandles() || state.session === "all" ? state.candles.slice() : sessionBars();  // what the chart draws
+  const withDate = () => longCandles() || state.session === "all";  // times on the page carry the day when several days show
   const sessionDate = (key) => key === "all" && state.candles.length ? dateKey(state.candles[state.candles.length - 1].time) : key;  // day candles: the last day
   const isToday = (key) => key === dateKey(serverNow());
   const dayLabel = (key) => new Date(key + "T00:00:00Z").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "UTC" });
@@ -535,15 +552,15 @@
   function drawSessions() {
     const list = sessions(), key = currentSession(), pick = document.getElementById("session");
     document.getElementById("session-row").hidden = !list.length;
-    const options = state.interval === "1d"
-      ? [["all", "Last 3 months, a candle a day"]]
+    const options = longCandles()
+      ? [["all", VIEWS[state.view].label || "A candle a day"]]
       : [...list.slice().reverse().map(d => [d, isToday(d) ? `Today (${dayLabel(d)})` : dayLabel(d)]), ...(list.length > 1 ? [["all", `All ${list.length} days`]] : [])];
     const shape = options.map(o => o.join("=")).join("|");
     if (pick.dataset.shape !== shape) {  // rebuilt only when the days change, so an open drop-down is left alone
       pick.replaceChildren(...options.map(([value, label]) => { const o = document.createElement("option"); o.value = value; o.textContent = label; return o; }));
       pick.dataset.shape = shape;
     }
-    pick.value = state.session === "all" || state.interval === "1d" ? "all" : key;
+    pick.value = state.session === "all" || longCandles() ? "all" : key;
   }
 
   function theMove() {
@@ -582,12 +599,12 @@
   // "Today so far" on one session's intraday candles: each candle judged against the seven lines as they stood when it began
   // (Rules.todayLevelsAt), a call's target on the lines the chart draws (Rules.todayLinesAt); a day candle or several
   // sessions shown keep the lines of the whole range shown
-  const judgedToday = () => state.move === "today" && state.interval !== "1d" && currentSession() !== "all";
+  const judgedToday = () => state.move === "today" && !longCandles() && currentSession() !== "all";
   // "Previous close" on one session's intraday candles (the owner, 15 October): the 13 lines from the previous close, drawn again
   // only after a candle closes above +100% (today's low 0% to today's high +100%) or below -100%: Rules.closeLevelsAt, the lines
   // each candle is judged on. A day candle or several sessions shown keep the 13 lines
   function closeLinesAt(bars) {
-    if (state.move !== "close" || state.interval === "1d" || currentSession() === "all") return null;
+    if (state.move !== "close" || longCandles() || currentSession() === "all") return null;
     const m = theMove();
     return m && m.close != null ? Rules.closeLevelsAt(bars, m.close) : null;
   }
@@ -600,7 +617,7 @@
 
   // ---- Layer 2 of the owner's logic, held and crossed (see LOGIC.md), is judged inside the paper
   // calls below; its own table came off the page on 6 October (owner's choice).
-  const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1d": 86400 };
+  const SECONDS = { "1m": 60, "5m": 300, "15m": 900, "30m": 1800, "1d": 86400, "1w": 7 * 86400 };
   const endOf = (b) => Rules.endOf(b, SECONDS[state.interval]);  // when a candle closes (never past 3:30 pm of its day)
 
   // ---- Layer 3 of the owner's logic: paper calls (see LOGIC.md)
@@ -645,8 +662,8 @@
     const bars = sessionBars(), fromClose = closeLinesAt(bars);
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : fromClose || (() => levels), targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
-                               dayCandles: state.interval === "1d", signal: state.signal, holdBreaks: state.interval !== "1d", trail: Rules.TRAIL,
-                               given: state.interval === "1d" ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
+                               dayCandles: longCandles(), signal: state.signal, holdBreaks: !longCandles(), trail: Rules.TRAIL,
+                               given: longCandles() ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
                                newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                clearCross: state.interval === "5m" && !!Rules.CLEAR_CROSS[name], oneWay: state.interval === "5m" && !!Rules.ONE_WAY[name] });  // ideas 8 and 5, NIFTY 50 (13 October)
   }
@@ -1443,14 +1460,18 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
   document.getElementById("interval").addEventListener("change", e => {
-    state.interval = e.target.value;
+    const before = VIEWS[state.view];
+    state.view = e.target.value;
+    state.interval = VIEWS[state.view].interval;
+    if (VIEWS[state.view].session) state.session = VIEWS[state.view].session;  // 1 week: the five days on one chart
+    else if (before && before.session) state.session = null;  // back from it: the latest day again
     state.lastTimes = "";
-    chart.applyOptions({ timeScale: { timeVisible: state.interval !== "1d" } });  // day candles: dates only
+    chart.applyOptions({ timeScale: { timeVisible: !longCandles() } });  // day and week candles: dates only
     load();
   });
 
   document.getElementById("move").value = state.move;
-  document.getElementById("interval").value = state.interval;
+  document.getElementById("interval").value = state.view;
   [...document.getElementById("signal").children].forEach(b => b.classList.toggle("on", b.dataset.signal === state.signal));
   load();
 </script>
