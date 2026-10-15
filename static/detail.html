@@ -221,7 +221,6 @@
 <main>
   <div class="top">
     <a href="/">&larr; Dashboard</a>
-    <a href="/study/" id="study-link" title="The rules run over every saved day">Study</a>
     <span id="mode">SIMULATED DATA</span>
     <span id="status">Loading…</span>
     <button id="logout" type="button" hidden>Log out</button>
@@ -513,7 +512,7 @@
   }
 
   // ---- Layer 1 of the owner's logic: Fibonacci levels of one move (see LOGIC.md). The rule itself lives
-  // in /static/rules.js (Rules), shared with the study page, so both run one and the same rule.
+  // in /static/rules.js (Rules); the server's rule.py is its twin, so both run one and the same rule.
   let priceLines = [];
   let lastLevelsKey = "";
 
@@ -636,7 +635,7 @@
   // The rule is Rules.paperTrades in /static/rules.js; this page hands it the session's candles, the levels on the
   // chart (which stand still within one run; the live page redraws them on a new high or low) and the server's clock
   // "Today so far" levels (8 October): each candle is judged against the levels as they stood when it began (the day's range
-  // up to the candle before it), exactly as the Study page replays a day (Rules.replayDay) and
+  // up to the candle before it), exactly as a saved day is replayed (Rules.replayDay) and
   // as the server's watcher records the calls. Until that morning every candle was judged against the levels of this
   // moment, so each new high or low of the day redrew the whole morning's calls; from then until the afternoon each candle
   // was judged with its own high and low in the range, so every candle making a new low "held" the 0% line it drew itself
@@ -710,7 +709,6 @@
       return tr;
     }));
     syncOptions(trades);
-    recordCalls(trades);
   }
 
   // A call sold at its Sell mark (the owner, 9 October: "if it is sold at 67 then ... it should stop there"): the server
@@ -731,25 +729,6 @@
   // Every call this page suggests for today goes to the server as drawn (the owner's ask, 7 October), so the day's
   // record carries each and every one: sent when the list's shape changes (a call enters, ends or is marked sold),
   // else at most once a minute, so the points and premiums on the record stay fresh without a flood.
-  let lastShape = "", lastSent = 0;
-  async function recordCalls(trades) {
-    const session = currentSession();
-    if (state.simulated || !trades.length || !session || session === "all" || !isToday(session)) return;
-    const rows = trades.map(t => { const r = optionRecords[callKey(t)], cr = candleRead(t), ca = carryRead(t); return {
-      signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
-      target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
-      candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
-      carry_deep: ca ? ca.deep : "", beyond_level: ca ? ca.beyond : null, beyond_reached: ca ? ca.reached : "",
-      contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
-      sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
-    const shape = rows.map(r => `${r.signal_time}${r.side}${r.how}${r.sold_at ?? ""}${r.contract}`).join(",");
-    if (shape === lastShape && Date.now() - lastSent < 60000) return;
-    lastShape = shape; lastSent = Date.now();
-    try {
-      await fetch(`/calls/${encodeURIComponent(name)}`, { method: "POST", headers: { "Content-Type": "application/json", ...withTab().headers },
-        body: JSON.stringify({ interval: state.interval, levels: state.move, signal: state.signal, session, calls: rows }) });
-    } catch (err) { lastShape = ""; }  // the next draw tries again
-  }
 
   // One row reads left to right, in the owner's format of 7 October: the time, the call with its contract, the signal,
   // the entry (the strike number bought; the index at entry only where there is no strike), the target level (with

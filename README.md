@@ -20,10 +20,6 @@ dashboard that shows them and updates the moment they change.
 | GET    | `/indices/{name}/detail` | an index name, `?range=today`, `5d` or `3mo`, `&interval=1m`, `5m` (default), `15m`, `30m` or `1d` | `summary` (previous day OHLC, today's OHL, last, change, 52-week range), `candles` of that size and `days` (a month of daily OHLC, for each session's own previous-day levels) |
 | GET    | `/options/{name}` | an index name | the Dhan feed's state and today's option records of the index's paper calls (Dhan only) |
 | POST   | `/options/{name}/calls`, `/options/{name}/calls/ended` | JSON `{key, side, index_at_entry, ...}` / `{key, how}` | the index page reports a call entering or ending; the server records the contract and premiums |
-| GET    | `/study/`         | nothing       | the study page: the rules replayed over every saved day            |
-| GET    | `/study/days`, `/study/days/{date}` | a date as YYYY-MM-DD | the saved days (newest first) and where they are kept; one day's record |
-| POST   | `/calls/{name}`   | JSON `{interval, levels, signal, session, calls: [...]}` | the index page reports the calls it shows for today; the server records each and every one for the day's CSV |
-| POST   | `/study/save`     | nothing       | saves today now (a partial copy during the session, the final one after it) |
 | WS     | `/ws`             | nothing       | the snapshot on connect, then every new snapshot as it lands  |
 
 Try `/docs` for the interactive version of this table.
@@ -147,23 +143,13 @@ share of the premium paid.
 After every session the server saves the day's candles (NIFTY 50 and NIFTY
 BANK, in 1, 5, 15 and 30 minutes, with the day's and the previous day's open,
 high, low and close) to `data/sessions/<date>.json`, and beside it every call
-the index page suggested that day to `data/sessions/<date>-calls.csv` (the page
-sends its list as it draws it, `POST /calls/{name}`), with a partial copy of
+the index page suggested that day to `data/sessions/<date>-calls.csv`, with a partial copy of
 both every few minutes during the session, and the options behind the day's
-calls to `records/<date>.json` as they change. **Study**
-(linked from the dashboard and the index page, `/study/`) replays your rules
-over every saved day: pick the index, the time frame, the levels and the signal,
-and read the paper calls day by day, by hour, by level, by side, and every
-setting side by side; then each day's pattern (the gap at the open, the range,
-when the high and the low came, breaks of the previous day's high and low), how
-the candles behave at every Fibonacci level (touched, held, crossed, and whether
-the price then reached the next level), and the candle high and low breaks. A
-learning step on the candles' facts switches on once a setting has 100 finished
-calls over 10 days (`LOGIC.md`, layer 4). **Ideas under test** (`LOGIC.md`, layer
-5) are switches on the Study page only, each scored against your rule on every
-saved day in the table "Your rule against the ideas under test"; the index page
-does not use them. `lab/replay.js` replays every idea tried so far over the saved
-days, and `lab/findings.md` is the log of each round.
+calls to `records/<date>.json` as they change (all of this until 15 October). **The Study page is gone** (15 October, the owner: "remove this study tab and everything under it ... never
+update it from tomorrows session"): with it the daily save of the session's candles and the calls CSV, the
+options records backup, and the ideas under test as switches. The days saved up to 15 October stay on the
+`data` branch as history; nothing new is written there. `lab/replay.js` and `lab/findings.md` remain as the
+offline record of what was tested.
 
 Render's files do not last (a restart wipes them), so each day is also pushed to
 the `data` branch of your own repository. That needs one more secret, made once:
@@ -291,10 +277,9 @@ The app is ready to run on a platform that deploys from GitHub:
 - `static/index.html` opens the WebSocket, redraws on every message, and
   reconnects by itself if the connection drops. Every tile is a link to that
   index's detail page, opened in a new tab.
-- `study.py` keeps the record of each session's candles (`data/sessions/`, and
-  the `data` branch on GitHub) and `static/study.html` replays the rules over
-  it and reads the candles' patterns, with the same `static/rules.js` the index
-  page runs.
+- `study.py` and `static/study.html` (the record of each session's candles and
+  the Study page that replayed the rules over it) were removed on 15 October at
+  the owner's ask; the saved days up to then stay on the `data` branch.
 - `LOGIC.md` is the owner's own trading logic in plain words: what is built, what
   is still the owner's to decide. The index page draws its first layer, Fibonacci
   levels of a chosen move, the seven Fibonacci lines on the chart with a one-line

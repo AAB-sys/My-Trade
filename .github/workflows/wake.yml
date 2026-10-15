@@ -1,15 +1,16 @@
-# The owner's instruction (6 October): saving each day's session is not the owner's job. The server saves the day at
-# 15:40 IST, but the free host puts it to sleep when nobody is on a page, and a sleeping server saves nothing. So
-# this workflow knocks on the server's door after the close (which wakes it; it then saves the day on its own and
-# pushes it to the data branch), and a little later reads the server's open health address to check that the day
-# is saved. A failed check is a red run here, and GitHub emails the owner about failed runs. Website side only.
+# A server check after the close (the owner, 15 October: "server check should happen only from 6:00 AM in the morning
+# till 4.30 PM everyday. server check should not be off anytime"). It knocks on the server's door (which wakes a
+# sleeping free host), then reads the server's open health address: the server answered, and the Dhan token is good
+# and will still be good at the next trading day's close. A failed check is a red run here, and GitHub emails the
+# owner about failed runs. Until 15 October it also checked that the day's session was saved; that save is gone with
+# the Study page (the owner's ask). Website side only.
 name: Wake the server after the close
 
 on:
   schedule:
-    - cron: "12 10 * * 1-5"   # 15:42 IST, Monday to Friday: wake the server so it saves the day
-    - cron: "40 10 * * 1-5"   # 16:10 IST: check that the day was saved
-  workflow_dispatch:           # or by hand, from the Actions tab
+    - cron: "12 10 * * *"   # 15:42 IST, every day
+    - cron: "40 10 * * *"   # 16:10 IST, every day
+  workflow_dispatch:         # or by hand, from the Actions tab
 
 jobs:
   wake:
@@ -26,7 +27,7 @@ jobs:
         run: |
           curl -s --max-time 60 "$SITE/health" | tee health.json
           echo
-      - name: Check the Dhan token, and that the day was saved (the 16:10 run)
+      - name: Check that the server answered and the Dhan token is good
         run: |
           python3 - <<'PY'
           import json, sys
@@ -37,8 +38,10 @@ jobs:
               health = json.load(open("health.json"))
           except Exception as exc:
               sys.exit(f"The server did not answer its health address: {exc}")
-          study, token = health.get("study") or {}, health.get("token") or {}
-          print("server says:", json.dumps(study))
+          if health.get("status") != "ok":
+              sys.exit(f"The server answered, but not with status ok: {json.dumps(health)[:300]}")
+          print("server:", health.get("status"), "commit", health.get("commit"), "memory MB", json.dumps(health.get("memory_mb")))
+          token = health.get("token") or {}
           # the token: the one thing only the owner can renew. Red when it is refused, or will have expired before the next trading day's close
           warn = None
           if token:
@@ -53,25 +56,12 @@ jobs:
                       close = nxt.replace(hour=15, minute=40, second=0, microsecond=0)
                       print(f"The token is valid till {till.strftime('%d %b %H:%M')} IST.")
                       if till < close:
-                          warn = f"The token expires at {till.strftime('%d %b %H:%M')} IST, before the next trading day's close ({close.strftime('%d %b %H:%M')}). Paste a fresh DHAN_ACCESS_TOKEN into Render's Environment page before then, or that day will not be saved."
+                          warn = f"The token expires at {till.strftime('%d %b %H:%M')} IST, before the next trading day's close ({close.strftime('%d %b %H:%M')}). Paste a fresh DHAN_ACCESS_TOKEN into Render's Environment page before then."
                   except ValueError:
                       print("The token's validity could not be read:", token["valid_till"])
-          if now.hour < 16:
-              print("The wake-up run: the server is up; it saves the day at 15:40 on its own.")
-              sys.exit(warn or 0)
-          if now.weekday() >= 5:
-              print("A weekend: nothing to save."); sys.exit(0)
-          today = now.date().isoformat()
-          pushed_today = (study.get("pushed_at") or "")[:10] == today
-          # a restart after the push (an evening merge) clears pushed_at: the server then pulled the complete day back
-          # from GitHub at start, so the day is there; only a push problem, or no token, means "on the server only"
-          on_github = pushed_today or (study.get("github") and not study.get("problem") and not study.get("pushed_at"))
-          if study.get("last_complete") == today:
-              print(f"Today's session ({today}) is saved" + (" and pushed to GitHub." if pushed_today else " and on GitHub (pushed before the server's last restart)." if on_github else ", but on the server only: " + str(study.get("problem") or "no GitHub token set") + "."))
-              sys.exit((warn or 0) if on_github else 1)
-          if study.get("checked") == today:
-              print(f"The server looked after the close and Dhan had no candle for today ({today}): a market holiday."); sys.exit(warn or 0)
-          if not health.get("dhan"):
-              sys.exit("Dhan is not set up on the server (DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN missing), so nothing is saved.")
-          sys.exit(f"Today's session ({today}) is NOT saved yet. The server says: {study.get('problem') or 'no problem reported; it may still be fetching the day, run this again in a few minutes'}")
+          elif health.get("dhan"):
+              print("The token has not been checked yet (the server just started).")
+          else:
+              print("Dhan is not set up on this server.")
+          sys.exit(warn or 0)
           PY

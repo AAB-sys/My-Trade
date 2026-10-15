@@ -657,7 +657,11 @@ GitHub repository (data only, never merged into `main`) when
 from there. Only sessions on Dhan are recorded; nothing is sent anywhere but the
 owner's own repository.
 
-**The study** (`/study/`, linked from the dashboard and the index page) is one
+**Removed on 15 October** (the owner: "remove this study tab and everything under it. i dont want it now ... never
+update it from tomorrows session"): the Study page, the daily save of the session and the calls CSV, and the options
+records backup. What follows describes it as it was; the days saved up to 15 October stay on the `data` branch.
+
+**The study** (`/study/`, linked from the dashboard and the index page) was one
 page over every saved day, for the index, time frame, levels and signal picked:
 
 - *The paper calls* the rules above give on those candles, with the same code
@@ -696,7 +700,7 @@ pattern of those days and would mislead, so until then the page shows the
 counter. It never fires a call and never changes a rule: it is evidence for the
 owner's own decisions, and it says nothing a plain reading of the tables cannot.
 
-## Layer 5: Ideas under test - the Study page only
+## Layer 5: Ideas under test - the Study page only (the page removed on 15 October)
 
 The owner's standing instruction (6 October): Claude may read the saved candles
 and propose rules of its own, built from this framework and these candles, not

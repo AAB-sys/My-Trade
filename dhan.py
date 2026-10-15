@@ -685,8 +685,9 @@ def itm_strike(strikes: dict, side: str, level: float) -> float | None:
 
 _records: dict = {}   # key -> record
 _records_lock = threading.Lock()
-_records_version = 0  # bumped when a record is made, gets its contract id, its Sell mark or its end (not on a premium tick):
-                      # study.py pushes the day's records to the data branch when it changes, so a restart loses none
+_records_version = 0  # bumped when a record is made, gets its contract id, its Sell mark or its end (not on a premium tick).
+                      # Until 15 October study.py pushed the day's records to the data branch on each change; that backup is
+                      # gone with the Study page (the owner's ask), so a restart of the host starts the day's records afresh
 
 
 def records_version() -> int:
