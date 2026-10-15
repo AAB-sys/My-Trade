@@ -13,7 +13,8 @@
   const dayOver = (day, now) => { const n = now + IST_OFFSET; return day < Math.floor(n / 86400) || n % 86400 >= SESSION_END; };
   // when a candle closes: its size on, but never past 3:30 pm of its day (the day's last 30-minute candle is a
   // half one, and a day candle ends at the close)
-  const endOf = (b, seconds) => Math.min(b.time + seconds, dayOf(b.time) * 86400 - IST_OFFSET + SESSION_END);
+  const endOf = (b, seconds) => seconds >= 7 * 86400 ? b.time + 4 * 86400 + (SESSION_END - SESSION_START)  // a week candle: its Friday's 3:30 pm (15 October)
+    : Math.min(b.time + seconds, dayOf(b.time) * 86400 - IST_OFFSET + SESSION_END);
   const sessionShare = (t) => Math.min(1, Math.max(0, ((t + IST_OFFSET) % 86400 - SESSION_START) / (SESSION_END - SESSION_START)));  // 0 at the open, 1 at the close
 
   function levelsOf(m) {  // m: {high, low, up}; the levels, sorted by price

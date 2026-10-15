@@ -32,7 +32,9 @@ def day_over(day: int, now: float) -> bool:
 
 
 def end_of(b: dict, seconds: int) -> float:
-    """When a candle closes: its size on, but never past 3:30 pm of its day."""
+    """When a candle closes: its size on, but never past 3:30 pm of its day; a week candle on its Friday at 3:30 pm (15 October)."""
+    if seconds >= 7 * 86400:
+        return b["time"] + 4 * 86400 + (SESSION_END - SESSION_START)
     return min(b["time"] + seconds, day_of(b["time"]) * 86400 - IST_OFFSET + SESSION_END)
 
 

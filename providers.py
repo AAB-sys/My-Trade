@@ -18,6 +18,13 @@ RANGES = {
     "today": {"range": "1d", "days": 1},
     "5d": {"range": "5d", "days": 5},
     "3mo": {"range": "3mo", "days": 66},  # for day candles: about three months of sessions
+    # the longer views (the owner, 15 October night: "1 week, 3 months, 6 months, 1 yr, 2yr, 3yr, 5yr"): days = sessions
+    # to show, cal_days = how far back Dhan is asked. Where the data does not reach back, the chart shows what there is
+    "6mo": {"range": "6mo", "days": 132, "cal_days": 200},
+    "1y": {"range": "1y", "days": 250, "cal_days": 380},
+    "2y": {"range": "2y", "days": 500, "cal_days": 750},
+    "3y": {"range": "5y", "days": 750, "cal_days": 1120},  # Yahoo has no 3y range: its 5y, cut to 3 years
+    "5y": {"range": "5y", "days": 1250, "cal_days": 1860},
 }
 INTERVALS = {
     "1m": {"interval": "1m", "bar_seconds": 60},
@@ -25,7 +32,9 @@ INTERVALS = {
     "15m": {"interval": "15m", "bar_seconds": 900},
     "30m": {"interval": "30m", "bar_seconds": 1800},
     "1d": {"interval": "1d", "bar_seconds": 86400},
+    "1w": {"interval": "1wk", "bar_seconds": 7 * 86400},  # a week candle, Monday to Friday, built from the day candles (15 October)
 }
+LONG_INTERVALS = ("1d", "1w")  # a candle a day or a week: the days shown are one session, no day end
 SESSION_MINUTES = 375  # 9:15 am to 3:30 pm
 SESSION_START = 9 * 3600 + 15 * 60  # 9:15 am IST, in seconds since midnight
 IST_SECONDS = 5 * 3600 + 30 * 60
@@ -38,6 +47,9 @@ def bars_per_day(interval_key: str) -> int:
 def bucket_start(t: float, bar_seconds: int) -> int:
     """The start of the candle holding time t. Minute candles run from 9:15 (NSE's open), so 30-minute
     ones start at 9:15, 9:45, ...; a day candle is stamped at its day's 9:15."""
+    if bar_seconds >= 7 * 86400:  # a week candle is stamped at its Monday's 9:15
+        day = int((t + IST_SECONDS) // 86400)
+        return (day - (day + 3) % 7) * 86400 - IST_SECONDS + SESSION_START  # day 0 (1 January 1970) was a Thursday
     if bar_seconds >= 86400:
         return int((t + IST_SECONDS) // 86400) * 86400 - IST_SECONDS + SESSION_START
     anchor = (SESSION_START - IST_SECONDS) % bar_seconds
@@ -185,9 +197,10 @@ def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interva
         "open": current is not None and now.weekday() < 5 and (9, 15) <= (now.hour, now.minute) < (15, 30),
     }
     candles = parse_bars(intraday)
-    if interval_key == "1d":
+    if interval_key in LONG_INTERVALS:
         for bar in candles:
-            bar["time"] = bucket_start(bar["time"], 86400)  # a day candle is stamped at its 9:15, whatever Yahoo stamps it with
+            bar["time"] = bucket_start(bar["time"], INTERVALS[interval_key]["bar_seconds"])  # a day candle is stamped at its 9:15, a week candle at its Monday's, whatever Yahoo stamps it with
+        candles = candles[-RANGES[range_key]["days"] // (5 if interval_key == "1w" else 1):]  # Yahoo's 5y cut to 3 years for "3y"
     if range_key == "today":
         candles = [bar for bar in candles if bar_date(bar) == today]  # never pass off the last session as today
     return {
