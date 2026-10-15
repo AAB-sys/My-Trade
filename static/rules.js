@@ -64,11 +64,12 @@
   }
   // The lines candle i of one session is judged on (the owner, 15 October: "add new logic to redraw it only if candle crosses
   // +100% line and make high above +100% then redraw the febonachi 7 lines again considering today's low as 0% line and today's
-  // high as +100% line. Same logic applies for -100% line crossed"). They begin as the previous close's 13 lines and stay as
-  // they are, until a closed candle closes above the +100% line ("Crossed above", the owner's own word for a close beyond a
-  // line): from the next candle the 7 lines run from today's low (0%) to today's high (+100%), the high that candle made
-  // included. A close above that +100% line again (a new high) draws them again the same way. A close below the -100% line:
-  // from today's high (0%) to today's low (-100%). Each candle is judged on the lines as they stood when it began
+  // high as +100% line. Same logic applies for -100% line crossed"; then, for a fall below today's low after that: "redraw
+  // downward with today's high as 0%"). They begin as the previous close's 13 lines and stay as they are until a closed candle
+  // closes beyond the outermost line ("Crossed above" / "Crossed below", the owner's words for a close beyond a line). Above the
+  // top line (+100%; after a redraw down, the 0% at today's high): from the next candle the 7 lines run from today's low (0%) to
+  // today's high (+100%), the high that candle made included. Below the bottom line (-100%; after a redraw up, the 0% at today's
+  // low): from today's high (0%) to today's low (-100%). Each candle is judged on the lines as they stood when it began
   function closeLevelsAt(bars, close) {
     const first = closeLevels(close);
     if (!first) return null;
@@ -77,7 +78,7 @@
     bars.forEach((b, k) => {
       const lv = at[k], top = lv[lv.length - 1], bottom = lv[0];
       low = Math.min(low, b.low); high = Math.max(high, b.high);
-      at.push(top.ratio === 1 && b.close > top.price ? rangeLevels(low, high, true) : bottom.ratio === -1 && b.close < bottom.price ? rangeLevels(low, high, false) : lv);
+      at.push(b.close > top.price ? rangeLevels(low, high, true) : b.close < bottom.price ? rangeLevels(low, high, false) : lv);
     });
     return (i) => at[Math.max(0, Math.min(i, at.length - 1))];
   }

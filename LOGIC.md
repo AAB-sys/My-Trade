@@ -50,6 +50,14 @@ turn after a move. Whether that holds is for the owner's own record to show.
   from today's low (0%) to today's high (+100%), the high that candle made
   included; each later close above that +100% line (a new high) draws them again
   the same way. A close below -100%: from today's high (0%) to today's low
+  (-100%). And when the price turns (the owner: "redraw downward with today's
+  high as 0%"): a close below the lowest line of lines drawn upward (their 0%, at
+  today's low) draws them downward, 0% at today's high and -100% at today's low;
+  a close above the highest line of lines drawn downward draws them upward. So a
+  close beyond the outermost line always draws the 7 lines again on today's range.
+  5 October, NIFTY BANK (the one saved day where it turns): the 9:15 candle closed
+  above +100% (55,104.16), lines up from 54,719.35 to 55,187.80; the 10:50 candle
+  closed at 54,661.35 below that 0%, lines down from 55,192.65 (0%) to 54,659.45
   (-100%). 15 October: the 10:10 candle closed at 22,901.50, above +100%
   (22,894.17); from 10:15 the lines ran from 22,637.40 (0%) to 22,904.40
   (+100%), and twelve closes above the day's high redrew them up to 23,029.85 by

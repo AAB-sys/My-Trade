@@ -86,7 +86,7 @@ def range_levels(low: float, high: float, up: bool) -> list:
 
 def close_levels_at(bars: list, close):
     """The lines candle i is judged on (the owner, 15 October; see static/rules.js closeLevelsAt): the previous close's 13 lines,
-    redrawn after a candle closes above the +100% line (today's low 0% to today's high +100%) or below the -100% line (today's
+    redrawn after a candle closes above the top line (today's low 0% to today's high +100%) or below the bottom line (today's
     high 0% to today's low -100%)."""
     first = close_levels(close)
     if not first:
@@ -96,8 +96,7 @@ def close_levels_at(bars: list, close):
         lv = at[k]
         top, bottom = lv[-1], lv[0]
         low, high = min(low, b["low"]), max(high, b["high"])
-        at.append(range_levels(low, high, True) if top["ratio"] == 1 and b["close"] > top["price"]
-                  else range_levels(low, high, False) if bottom["ratio"] == -1 and b["close"] < bottom["price"] else lv)
+        at.append(range_levels(low, high, True) if b["close"] > top["price"] else range_levels(low, high, False) if b["close"] < bottom["price"] else lv)
     return lambda i: at[max(0, min(i, len(at) - 1))]
 
 

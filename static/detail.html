@@ -1019,7 +1019,7 @@
     const redrawn = m.close != null && levels.length === 7;  // the previous close's lines, drawn again on today's range after a close beyond +100% or -100%
     const up = redrawn && levels[levels.length - 1].ratio === 1;
     const head = redrawn
-      ? `Redrawn after a candle closed ${up ? "above +100%" : "below -100%"}: 0% at today's ${up ? "low" : "high"} ${fmt.format(up ? levels[0].price : levels[levels.length - 1].price)}, ${up ? "+" : "-"}100% at today's ${up ? "high" : "low"} ${fmt.format(up ? levels[levels.length - 1].price : levels[0].price)}. `
+      ? `Redrawn ${up ? "upward after a candle closed above the highest" : "downward after a candle closed below the lowest"} line: 0% at today's ${up ? "low" : "high"} ${fmt.format(up ? levels[0].price : levels[levels.length - 1].price)}, ${up ? "+" : "-"}100% at today's ${up ? "high" : "low"} ${fmt.format(up ? levels[levels.length - 1].price : levels[0].price)}. `
       : m.close != null
       ? `${m.what[0].toUpperCase() + m.what.slice(1)}: 0% at ${fmt.format(m.close)}, 100% is ${Rules.CLOSE_STEP * 100}% of it (${fmt.format(Math.round(m.close * Rules.CLOSE_STEP * 100) / 100)} points) above and below. `
       : `${m.what[0].toUpperCase() + m.what.slice(1)}: ${m.up ? "up" : "down"} move ${fmt.format(m.low)} → ${fmt.format(m.high)}. `;

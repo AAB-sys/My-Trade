@@ -512,6 +512,14 @@ console.log("rules unit checks passed");
   const dn = R.closeLevelsAt(down, 22622.7);
   assert(same(dn(2), lv) && same(dn(3), R.rangeLevels(22330, 22610, false)), "a close below -100%: 0% at today's high 22,610, -100% at today's low 22,330");
   assert(same(dn(3).map(l => R.levelName(l.ratio, l.signed)), ["-100.0%", "-78.6%", "-61.8%", "-50.0%", "-38.2%", "-23.6%", "0.0%"]) && dn(3)[5].price === 22543.92, "redrawn down: " + dn(3).map(l => l.price));
+  // after the redraw up, a close below its 0% (today's low): drawn again downward, 0% at today's high, -100% at today's low (the
+  // owner: "redraw downward with today's high as 0%"); and after that a close above today's high: upward again
+  const turn = [...up.slice(0, 6), bar(6, 22900, 22905, 22600, 22610), bar(7, 22610, 22615, 22580, 22590), bar(8, 22590, 22990, 22585, 22980), bar(9, 22980, 22985, 22970, 22975)];
+  const tn = R.closeLevelsAt(turn, 22622.7);
+  assert(same(tn(6), R.rangeLevels(22640, 22930, true)) && same(tn(7), R.rangeLevels(22600, 22930, false)),
+    "a close below the redrawn 0% (today's low): 0% at today's high 22,930, -100% at today's low 22,600: " + tn(7).map(l => l.price));
+  assert(same(tn(8), R.rangeLevels(22580, 22930, false)), "a close below that -100% (a new low): drawn again down to 22,580");
+  assert(same(tn(9), R.rangeLevels(22580, 22990, true)), "then a close above the 0% at today's high: upward again, 22,580 to 22,990");
   const prev = { open: 22700, high: 22760, low: 22560, close: 22622.7 };
   const r = R.replayDay({ bars: up, move: "close", previous: prev, seconds: 300, signal: "both" }).trades;
   assert(r.length && r.every(t => t.signed === true), "calls on these lines carry signed: " + JSON.stringify(r.map(t => [(t.signalTime - t0) / 300, t.level, t.ratio, t.kind, t.side])));
