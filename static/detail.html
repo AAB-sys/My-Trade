@@ -450,7 +450,11 @@
     }
     return info;
   };
-  const refit = () => { if (series) series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o) }); };  // a fresh function makes the chart refit
+  // A fresh provider function makes the chart fit its price view again. Dragging the price scale (or the chart up and down)
+  // switches the chart's own fitting off for good, and then the buttons and the wheel, which work through that fitting, did
+  // nothing until the page was reloaded (the owner, 16 October: "if i try to scroll up and down its not working, even the
+  // marked buttons are not working"): so the fitting is switched back on first, and the dragged view gives way to the fitted one
+  const refit = () => { if (!series) return; chart.priceScale("right").applyOptions({ autoScale: true }); series.applyOptions({ autoscaleInfoProvider: (o) => autoscale(o) }); };
   function zoomBy(factor) {  // < 1 zooms in, > 1 zooms out, around the middle of the view
     const ts = chart.timeScale(), r = ts.getVisibleLogicalRange();
     if (!r) return;
