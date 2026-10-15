@@ -129,8 +129,8 @@ poll, who is watching, the last price and when) with no login. `check_dhan.bat` 
 price, the candles and the option chain, and says in plain words what to fix.
 Only data is read; nothing here can place an order. `DHAN_POLL_SECONDS` (default
 15) is how often the index page refreshes its candles and calls on Dhan;
-`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL` (defaults `5m`, `today,prev`, `both`:
-both levels modes, each by itself, since 9 October) are the settings the server watches the calls in by itself, every `WATCH_SECONDS`
+`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL` (defaults `5m`, `today,prev,close`, `both`:
+the levels modes each by itself, previous day since 9 October, previous close since 15 October) are the settings the server watches the calls in by itself, every `WATCH_SECONDS`
 (5) in market hours, so a call entering with no page open is still recorded
 (`rule.py` is the page's rule in Python; `python3 check_rule.py` proves the two
 give the same calls); with the watcher on, the live feed runs all session whether
@@ -298,7 +298,10 @@ The app is ready to run on a platform that deploys from GitHub:
 - `LOGIC.md` is the owner's own trading logic in plain words: what is built, what
   is still the owner's to decide. The index page draws its first layer, Fibonacci
   levels of a chosen move, the seven Fibonacci lines on the chart with a one-line
-  readout (with "today so far", the range up to the candle forming now); its
+  readout (with "today so far", the range up to the candle forming now; with
+  "previous close", 13 lines from the previous day's close, 0%, then +23.6% to
+  +100% above it and -23.6% to -100% below it, 100% being 1.5% of the close,
+  drawn again on today's range only after a candle closes beyond +100% or -100%); its
   second, whether a closed candle held or crossed a level, is the signal of its
   third, the paper trades that rule would have given on those candles (a Held/Crossed/Both switch, the call the
   moment the signal candle closes, buy a CE or a PE, entry at the next price, the next level as

@@ -635,12 +635,13 @@ TOKEN_CHECK_SECONDS = float(os.environ.get("DHAN_TOKEN_CHECK_SECONDS", "1800"))
 # a call that enters is recorded at once (its option, its premium paid), a call that ends is marked, and the day's
 # calls are recorded for the CSV. The page does all this too; whichever is first wins, the other finds the record.
 WATCH_INTERVAL = os.environ.get("WATCH_INTERVAL", "5m")                  # the time frame the owner trades on
-# the levels modes watched, each by itself: "today" (today so far) and "prev" (previous day). Until 9 October only "today": a
-# call on previous-day lines got its option and premium only while a page was open on them (the owner that day: "yes, build it")
-WATCH_LEVELS = tuple(m.strip() for m in os.environ.get("WATCH_LEVELS", "today,prev").split(",") if m.strip())
+# the levels modes watched, each by itself: "today" (today so far), "prev" (previous day) and, since 15 October, "close" (the
+# previous close's lines, the owner's own: "should the server also write down the calls from your new lines ... Yes"). Until 9
+# October only "today": a call on previous-day lines got its option and premium only while a page was open on them
+WATCH_LEVELS = tuple(m.strip() for m in os.environ.get("WATCH_LEVELS", "today,prev,close").split(",") if m.strip())
 WATCH_SIGNAL = os.environ.get("WATCH_SIGNAL", "both")                     # "held", "crossed" or "both"
 WATCH_SECONDS = float(os.environ.get("WATCH_SECONDS", "5"))
-WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL != "1d" and bool(WATCH_LEVELS) and all(m in ("today", "prev") for m in WATCH_LEVELS) and WATCH_SIGNAL in ("held", "crossed", "both")
+WATCH_ON = WATCH_INTERVAL in INTERVALS and WATCH_INTERVAL != "1d" and bool(WATCH_LEVELS) and all(m in ("today", "prev", "close") for m in WATCH_LEVELS) and WATCH_SIGNAL in ("held", "crossed", "both")
 WATCH_SETTING = f"{WATCH_INTERVAL} {'+'.join(WATCH_LEVELS)} {WATCH_SIGNAL}"  # as /health shows it
 # The live feed (the stream, and the poll behind it) used to run only while an index page was open. The watcher needs the
 # candle forming now and the open calls' premiums whether or not a page is open, so in market hours the feed runs for the
@@ -681,19 +682,26 @@ def watch_index(name: str) -> dict:
 
 
 def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, today) -> dict:
-    """The rule on one levels mode: the levels (previous day's; or today so far, each candle against the day's range up to
-    it, as the page judges it since 8 October), the rule, then the records and the day's calls brought up to date."""
+    """The rule on one levels mode: the levels (previous day's; the previous close's, drawn again only after a close beyond
+    the outermost line, 15 October; or today so far, each candle against the day's range up to it, as the page judges it since
+    8 October), the rule, then the records and the day's calls brought up to date."""
     key, seconds = WATCH_INTERVAL, INTERVALS[WATCH_INTERVAL]["bar_seconds"]
-    if levels_mode == "prev":
+    today_so_far = levels_mode not in ("prev", "close")  # each candle against the seven lines as they stood when it began, as the page and the Study page judge it (8 October)
+    if levels_mode in ("prev", "close"):
         previous = dhan.previous_day(name, all_candles)
         if not previous:
             return {"calls": 0, "open": 0}
-        levels = rule.levels_of(rule.move_of_day(previous))
+        if levels_mode == "prev":
+            levels = rule.levels_of(rule.move_of_day(previous))
+            levels_at = lambda i: levels
+        else:
+            levels_at = rule.close_levels_at(bars, previous["close"])  # the page's lines on "Previous close", candle by candle (Rules.closeLevelsAt)
+            if levels_at is None:
+                return {"calls": 0, "open": 0}
     else:
-        levels = None  # today so far: each candle against the seven lines as they stood when it began, as the page and the Study page judge it (8 October)
+        levels_at = rule.today_levels_at(bars)
     now = time.time()
-    levels_at = (lambda i: levels) if levels is not None else rule.today_levels_at(bars)
-    targets_at = None if levels is not None else rule.today_lines_at(bars)  # a call's target on the chart's lines (8 October evening)
+    targets_at = rule.today_lines_at(bars) if today_so_far else None  # a call's target on the chart's lines (8 October evening)
     given = {}  # the calls given live in this setting (their options recorded): each stays, whatever Dhan's final candle says (9 October)
     for r in sorted(dhan.records_for(name), key=lambda r: r["paid_at"]):
         parts = r["key"].split("|")
@@ -701,7 +709,7 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
             given.setdefault(int(parts[2]), parts[3])
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,
                                key == "5m" and rule.FRESH_RUN.get(name, False),  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October); idea 13 on NIFTY 50 (12 October)
-                               key == "5m" and levels is None and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
+                               key == "5m" and today_so_far and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                key == "5m" and rule.CLEAR_CROSS.get(name, False), key == "5m" and rule.ONE_WAY.get(name, False))["trades"]  # ideas 8 and 5: NIFTY 50, both kinds of lines (13 October)
     rows = []
     for t in trades:
@@ -1215,7 +1223,7 @@ def study_day(day: str):
     return data
 
 
-LEVEL_MODES, SIGNAL_MODES = ("off", "prev", "today", "shown"), ("off", "held", "crossed", "both")
+LEVEL_MODES, SIGNAL_MODES = ("off", "prev", "close", "today", "shown"), ("off", "held", "crossed", "both")  # close: the previous close's lines (15 October)
 
 
 @app.post("/calls/{name}")

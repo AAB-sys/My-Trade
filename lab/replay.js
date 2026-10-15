@@ -271,7 +271,7 @@ if (LIVE.length) {
     const done = list.filter(c => ["target", "day end", "back", "retouch", "trail"].includes(c.ended_by));
     const net = r2(done.reduce((s, c) => s + (parseFloat(c.points) || 0), 0)), won = done.filter(c => parseFloat(c.points) > 0).length;
     let matched = 0, replayable = 0;
-    if (SEC[interval] && (levels === "prev" || levels === "today") && signal !== "off") {
+    if (SEC[interval] && (levels === "prev" || levels === "close" || levels === "today") && signal !== "off") {
       list.forEach(c => { const day = DAYS.find(d => d.date === c.date); const ix = day && day.indices[index]; if (!ix) return;
         replayable++;
         const t = R.replayDay({ bars: ix.candles[interval], move: levels, previous: ix.previous, seconds: SEC[interval], signal,

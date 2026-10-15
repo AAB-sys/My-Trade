@@ -29,6 +29,49 @@ turn after a move. Whether that holds is for the owner's own record to show.
   session being looked at. Only the day's open, high, low and close are known, so
   the day is taken as an up move when it closed above its open, else a down move
   **(owner to decide)**.
+- *Previous close* (owner's decision, 15 October: "put the febonachi 7 lines
+  starting from previous days closing point so that should be the 0% line always
+  and you should calculate above it till 100 % level and from the same point below
+  till the 100% level with the help of febonachib 7 levels calculation. And 0% from
+  above should have + mark and 0 from below should have - mark"; the distance: "U
+  have to calculate those levels. Dont tk any reference. Referenc is only for 0%
+  level"; then "1.2% is fine. And it should be always fix"; then "make 100% is
+  1.5% of that close"). 0% is the previous trading day's close. The only
+  reference is that close, so the distance is a share of it: **100% is 1.5% of
+  the close**, and each line is the Fibonacci share of that, above the close
+  (named +23.6%, +38.2%, +50%, +61.8%, +78.6%, +100%) and below it (-23.6% to
+  -100%): 13 lines. 15 October: 14 October closed at 22,622.70, so 100% is 339.34
+  points; +23.6% is 22,702.78, +100% 22,962.04, -23.6% 22,542.62, -100%
+  22,283.36. **They stay as they are, with one exception**
+  (the owner, the same day: "redraw it only if candle crosses +100% line and make
+  high above +100% then redraw the febonachi 7 lines again considering today's low
+  as 0% line and today's high as +100% line. Same logic applies for -100% line
+  crossed"): once a candle closes above the +100% line ("Crossed above", the
+  owner's word for a close beyond a line), from the next candle the 7 lines run
+  from today's low (0%) to today's high (+100%), the high that candle made
+  included; each later close above that +100% line (a new high) draws them again
+  the same way. A close below -100%: from today's high (0%) to today's low
+  (-100%). And when the price turns (the owner: "redraw downward with today's
+  high as 0%"): a close below the lowest line of lines drawn upward (their 0%, at
+  today's low) draws them downward, 0% at today's high and -100% at today's low;
+  a close above the highest line of lines drawn downward draws them upward. So a
+  close beyond the outermost line always draws the 7 lines again on today's range.
+  (With 1.5% no saved day turns; lab/check.js has a made-up day that does.)
+  15 October: the 11:40 candle closed at 22,964.40, above +100% (22,962.04); from
+  11:45 the lines ran from 22,637.40 (0%) to 22,972.45 (+100%), and each later
+  close above the day's high drew them again. 8 October: the 13:15 candle closed
+  at 22,243.65, below -100% (22,264.00); from 13:20 the lines ran from 22,599.05
+  (0%) down to 22,243.30 (-100%). A call on these lines is the same rule as on the others (On the line,
+  Crossed above, Crossed below, the target the next line, the same exits). On the
+  chart all the lines are in view, + lines green, - lines red, 0% dark and
+  thicker, each line's percentage in a column left of the chart, level with the
+  line, as the prices are on the right. Once the lines have been
+  drawn again, a short message under the chart, above the paper calls, says so
+  (the owner: "put a small message below chart and above paper calls that
+  febonachi levels redrawn and the reason for it"): when, upward or downward, the
+  candle and its close, the line it closed beyond, how many times so far, and
+  where 0% and 100% are now. A new choice on the
+  index page; the other choices are unchanged.
 - *Today so far* (default, owner's choice of 6 October): the session's own low to
   high so far, an up move when its last price is above its open **(owner to
   decide)**. Blank until it has traded. **Each candle is judged against the
@@ -504,7 +547,9 @@ setting the owner trades on (`WATCH_INTERVAL`, `WATCH_LEVELS`, `WATCH_SIGNAL`:
 5-minute candles, both signals, and since 9 October both levels modes, today so
 far and previous day, each by itself on the same candles; until then only today
 so far, so a previous-day-line call got its option and premium only while a page
-was open on those lines: the owner that day, "yes, build it"). A call that enters is recorded
+was open on those lines: the owner that day, "yes, build it"; since 15 October
+the previous close's lines too, as the page draws them: the owner, asked whether
+the server should also write down the calls from the new lines, "Yes"). A call that enters is recorded
 the moment it enters, with its option and its premium paid, page or no page,
 restart or no restart; a call that ends is marked; and the day's calls go into
 the record for the CSV. The page does the same when it is open, and whichever

@@ -110,7 +110,8 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                 row = {"date": session, "index": index, "time_frame": interval, "levels": levels, "signal_mode": signal, "first_seen_ist": now[:16].replace("T", " ")}
                 new += 1
             before = None if key not in day else tuple(row.get(k) for k in HURRY)
-            row.update({"signal_time_ist": _stamp(c.get("signal_time")), "level_pct": f"{float(c.get('ratio') or 0) * 100:.1f}%", "level_price": _num(c.get("level")),
+            ratio = float(c.get("ratio") or 0)  # the previous close's lines (15 October) are named +23.6% above the close, -23.6% below it
+            row.update({"signal_time_ist": _stamp(c.get("signal_time")), "level_pct": ("+" if levels == "close" and ratio > 0 else "") + f"{ratio * 100:.1f}%", "level_price": _num(c.get("level")),
                         "kind": str(c.get("kind") or "")[:10], "option_side": str(c.get("side") or "")[:2], "entry_time_ist": _stamp(c.get("entry_time")) if c.get("entry_time") else "",
                         "index_at_entry": _num(c.get("entry")), "target": _num(c.get("target")), "exit_time_ist": _stamp(c.get("exit_time")) if c.get("exit_time") else "",
                         "index_at_exit": _num(c.get("exit")), "points": _num(c.get("points")), "ended_by": str(c.get("how") or "")[:12],
