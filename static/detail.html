@@ -150,7 +150,6 @@
   #paper.no-options .opt { display: none; }
   #feed-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
   #paper[hidden] { display: none; }
-  #paper-box .controls { margin: 0 0 8px; }
   .scroll { overflow-x: auto; }
   .seg { display: inline-flex; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
@@ -297,13 +296,8 @@
 
   <section id="paper-box" aria-label="Paper calls" hidden>
     <h2>Paper calls</h2>
-    <div class="controls levels">
-      <!-- 16 October, the owner's ask ("remove all the red marked boxed things"): the Off, On the line and Crossed
-           choices and the Download CSV button are gone; Both is the one signal setting -->
-      <div class="seg" id="signal" aria-label="Signal">
-        <button data-signal="both" class="on" type="button">Both</button>
-      </div>
-    </div>
+    <!-- 16 October, the owner's asks ("remove all the red marked boxed things", then "remove this"): the Off, On the
+         line, Crossed and Both choices and the Download CSV button are gone; Both is the signal setting, without a button -->
     <div id="paper-note"></div>
     <div id="feed-note" hidden></div>
     <div class="scroll">
