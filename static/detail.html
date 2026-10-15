@@ -112,6 +112,10 @@
   #paper-box { margin-top: 16px; }
   #paper-box h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 6px; }
   #paper-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
+  /* the previous close's lines drawn again (15 October): when, which way, and why */
+  #redraw-note { font-size: 13px; line-height: 1.45; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0; }
+  #redraw-note.up { border-left: 4px solid var(--candle-up); }
+  #redraw-note.down { border-left: 4px solid var(--candle-down); }
   #paper { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
   #paper th, #paper td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
   #paper th:first-child, #paper td:first-child { text-align: left; }
@@ -285,6 +289,7 @@
       <div id="popup"></div>
     </div>
   </div>
+  <p id="redraw-note" hidden></p>
 
   <section id="paper-box" aria-label="Paper calls" hidden>
     <h2>Paper calls</h2>
@@ -375,6 +380,24 @@
     [...box.children].forEach((el, k) => { const y = series.priceToCoordinate(lv[k].price); el.hidden = y == null || y < 0; if (!el.hidden) el.style.top = y + "px"; });
   }
   window.addEventListener("resize", queueTags);
+  // The message under the chart, above the paper calls, once the previous close's lines have been drawn again (the owner, 15
+  // October: "If febonachi lines are redrawn put a small message below chart and above paper calls that febonachi levels redrawn
+  // and the reason for it"): the last time, which way, the candle and the line it closed beyond, and where 0% and 100% are now
+  function drawRedraw(at) {
+    const el = document.getElementById("redraw-note"), bars = sessionBars(), now = serverNow();
+    const n = at ? bars.filter(b => endOf(b) <= now).length : 0;
+    let count = 0, last = 0;
+    for (let i = 1; i <= n; i++) if (at(i) !== at(i - 1)) { count++; last = i; }  // the same lines are the same array: a new one is a redraw
+    if (!last) { el.hidden = true; el.textContent = ""; return; }
+    const before = at(last - 1), after = at(last), bar = bars[last - 1], up = bar.close > before[before.length - 1].price;
+    const line = up ? before[before.length - 1] : before[0], day = isToday(currentSession()) ? "today's" : "the day's";
+    const zero = up ? after[0].price : after[after.length - 1].price, end = up ? after[after.length - 1].price : after[0].price;
+    el.className = up ? "up" : "down";
+    el.innerHTML = `<b>Fibonacci levels redrawn ${up ? "upward" : "downward"} at ${callTime(bar.time + SECONDS[state.interval])}</b>${count > 1 ? ` (${count} times so far)` : ""}. `
+      + `Reason: the ${callTime(bar.time)} candle closed at ${fmt.format(bar.close)}, ${up ? "above the highest" : "below the lowest"} line, ${Rules.levelName(line.ratio, true)} (${fmt.format(line.price)}). `
+      + `Now 0% is ${day} ${up ? "low" : "high"} (${fmt.format(zero)}) and ${up ? "+" : "-"}100% is ${day} ${up ? "high" : "low"} (${fmt.format(end)}).`;
+    el.hidden = false;
+  }
   let priceHeight = 0;  // the height of the auto-fitted price view, learnt from the chart
   const autoscale = (original) => {  // the chart's own fit, shifted by the buttons
     const info = original();
@@ -982,6 +1005,7 @@
     let levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
     const fromClose = m && m.close != null ? closeLinesAt(sessionBars()) : null;
     if (fromClose) { const now = serverNow(); levels = fromClose(sessionBars().filter(b => endOf(b) <= now).length); }  // as redrawn by the candles closed so far
+    drawRedraw(fromClose);
     lastLevels = { m, levels };  // before the chart refits, so the previous close's lines are all in view
     drawPaper(levels);
     const key = JSON.stringify([state.move, currentSession(), levels]);
