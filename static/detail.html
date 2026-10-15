@@ -370,7 +370,9 @@
     layout: { background: { color: "transparent" }, textColor: cssVar("--muted"), fontFamily: "system-ui, sans-serif" },
     grid: { vertLines: { color: cssVar("--grid") }, horzLines: { color: cssVar("--grid") } },
     rightPriceScale: { borderColor: cssVar("--grid") },
-    timeScale: { borderColor: cssVar("--grid"), timeVisible: true, secondsVisible: false },
+    // the chart never scrolls past its first or last candle (the owner, 16 October, a chart dragged away from its candles,
+    // lines across empty space: "what is this"); up and down, keepCandles below does the same
+    timeScale: { borderColor: cssVar("--grid"), timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     localization: { locale: "en-IN", priceFormatter: (p) => fmt.format(p) },
     // the wheel is handled below (price up/down, shift for time, ctrl or pinch for zoom);
@@ -428,13 +430,16 @@
     el.hidden = false;
   }
   let priceHeight = 0;  // the height of the auto-fitted price view, learnt from the chart
+  let candleRange = null, fittedRange = null;  // the candles' own lowest and highest price, and the fitted view before the buttons' shift
   const autoscale = (original) => {  // the chart's own fit, shifted by the buttons
     const info = original();
     const lv = state.move === "close" ? lastLevels.levels : null;  // the previous close's lines (15 October): all of them in view, so each one can be read
+    if (info && info.priceRange) candleRange = { ...info.priceRange };
     if (info && info.priceRange && lv && lv.length)
       info.priceRange = { minValue: Math.min(info.priceRange.minValue, lv[0].price), maxValue: Math.max(info.priceRange.maxValue, lv[lv.length - 1].price) };
     if (lv) queueTags();  // the chart is fitting its price view again: the lines' names follow
     if (info && info.priceRange) {
+      fittedRange = { ...info.priceRange };
       priceHeight = info.priceRange.maxValue - info.priceRange.minValue;
       if (priceShift) info.priceRange = { minValue: info.priceRange.minValue + priceShift, maxValue: info.priceRange.maxValue + priceShift };
     }
@@ -457,10 +462,26 @@
     const w = r.to - r.from;
     ts.setVisibleLogicalRange({ from: r.from + w * share, to: r.to + w * share });
   }
-  function movePrice(share) {  // + up, - down, as a share of the view's height
+  function movePrice(share) {  // + up, - down, as a share of the view's height; never so far that the candles leave the screen
     priceShift += priceHeight * share;
+    if (candleRange && fittedRange) {
+      const keep = priceHeight * 0.15;  // this much of the view always holds candles
+      priceShift = Math.min(priceShift, candleRange.maxValue - fittedRange.minValue - keep);
+      priceShift = Math.max(priceShift, candleRange.minValue - fittedRange.maxValue + keep);
+    }
     refit();
   }
+  // After a drag (the chart, or its price scale) that left every candle above or below the screen: the chart fits itself
+  // again, so the candles come back (the owner, 16 October: a chart of lines with no candles on it, "what is this")
+  function keepCandles() {
+    if (!series || !bars.length) return;
+    const h = chart.paneSize().height, top = series.coordinateToPrice(0), bottom = series.coordinateToPrice(h);
+    if (top == null || bottom == null) return;
+    let lo = Infinity, hi = -Infinity;
+    bars.forEach(b => { lo = Math.min(lo, b.low); hi = Math.max(hi, b.high); });
+    if (hi < bottom || lo > top) { priceShift = 0; refit(); }
+  }
+  ["pointerup", "pointercancel", "touchend"].forEach(ev => document.addEventListener(ev, () => setTimeout(keepCandles, 0), { passive: true }));  // on the page: a drag often ends off the chart
   function nav(action) {
     if (action === "fit") { priceShift = 0; chart.timeScale().fitContent(); refit(); }
     if (action === "in") zoomBy(0.7);
