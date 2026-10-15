@@ -371,7 +371,7 @@
   // are also not clearly visible"): + lines green, - lines red, 0% dark, the percentage only. Placed again whenever the chart fits its
   // view; the other levels keep the price scale's own labels
   let tagsQueued = false;
-  function queueTags() { if (tagsQueued) return; tagsQueued = true; requestAnimationFrame(() => { tagsQueued = false; placeTags(); }); }
+  function queueTags() { if (tagsQueued) return; tagsQueued = true; requestAnimationFrame(() => requestAnimationFrame(() => { tagsQueued = false; placeTags(); })); }  // after the chart's own repaint
   function placeTags() {
     const box = document.getElementById("line-tags");
     const lv = state.move === "close" && series ? lastLevels.levels.filter(l => l.signed) : [];
@@ -391,6 +391,9 @@
     }
   }
   window.addEventListener("resize", queueTags);
+  // a finger or the mouse dragging or scrolling the chart, the price scale included (a drag there turns the chart's own fitting off,
+  // so the autoscale hook above no longer runs): the names follow (the review of 15 October found them left beside other lines)
+  ["pointerdown", "pointermove", "pointerup", "wheel", "touchmove", "touchend"].forEach(ev => document.getElementById("chart").addEventListener(ev, queueTags, { passive: true }));
   // The message under the chart, above the paper calls, once the previous close's lines have been drawn again (the owner, 15
   // October: "If febonachi lines are redrawn put a small message below chart and above paper calls that febonachi levels redrawn
   // and the reason for it"): the last time, which way, the candle and the line it closed beyond, and where 0% and 100% are now
@@ -479,6 +482,8 @@
       timeScale: { borderColor: cssVar("--grid") },
     });
     if (series) makeSeries();
+    document.getElementById("line-tags").dataset.key = "";  // the names of the previous close's lines: drawn again in the theme's colours
+    queueTags();
   }
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 
@@ -554,7 +559,7 @@
       // Only the day's four figures are known, so a day that closed above its open is taken as an up move
       return { high: s.previous_high, low: s.previous_low, up: s.previous_close >= s.previous_open, what: "previous day" };
     }
-    if (state.move === "close") {  // the owner's lines of 15 October: 0% at the previous day's close, 100% 1% of it, above (+) and below (-); they stand still all day (Rules.closeLevels)
+    if (state.move === "close") {  // the owner's lines of 15 October: 0% at the previous day's close, 100% 1.5% of it, above (+) and below (-); drawn again only after a close beyond the outermost line (Rules.closeLevelsAt)
       const day = key ? dayBefore(key) : null;
       if (day && day.close != null) return { close: day.close, what: `previous close (${dayLabel(day.date)})` };
       if (key || s.previous_close == null) return null;
@@ -828,7 +833,7 @@
     const lines = linesOfCandle(bars, i), d = t.side === "CE" ? 1 : -1;
     const ahead = (lines || []).filter(l => d * (l.price - t.trail.line) > 0.005);
     const next = ahead.length ? ahead.reduce((a, b) => (d * (b.price - a.price) < 0 ? b : a)) : null;
-    return { passed: t.trail.ratio, next, price: next ? next.price : t.trail.line };
+    return { passed: t.trail.ratio, next, price: next ? next.price : t.trail.line, lines: lines || [] };
   }
   const pctText = (ratio) => lineName(ratio);
   // A call past the day's high or low (idea 24, 13 October) has no line beyond it to aim at until the lines move past its
@@ -844,7 +849,9 @@
       // the line passed was the day's high (low) and the price has gone on past it: no line beyond, the target shown is the day's
       // high (low) itself (13 October, idea 24: it read "target 0.0% passed, next target 0.0%"); "Today so far" lines only, the
       // previous day's top line is not today's high
-      const edge = judgedToday() && (!moved.next || moved.next.ratio === moved.passed);
+      // and on the previous close's lines once they are drawn again on the day's range (7 lines): their outer line is the day's high
+      // (low) too (the review of 15 October: "target +100.0% passed, next target +100.0%")
+      const edge = (judgedToday() || (state.move === "close" && moved.lines.length === 7)) && (!moved.next || moved.next.ratio === moved.passed);
       const said = edge ? `day's ${t.side === "PE" ? "low" : "high"} · ${noLine(t)}`
         : `target ${pctText(moved.passed)} passed, ${moved.next ? `next target ${pctText(moved.next.ratio)}` : "no line beyond it"}`;
       return `<td class="target">${fmt.format(shown)}<small>${said} · sell if a candle closes ${t.side === "PE" ? "above" : "below"} ${stopName(t)}</small></td>`;
@@ -1054,10 +1061,10 @@
     if (!levels.length) { note.textContent = "No levels: nothing to measure yet."; return; }
     const nearest = levels.reduce((a, b) => Math.abs(b.price - last) < Math.abs(a.price - last) ? b : a);
     const gap = Math.round((last - nearest.price) * 100) / 100;
-    const redrawn = m.close != null && levels.length === 7;  // the previous close's lines, drawn again on today's range after a close beyond +100% or -100%
-    const up = redrawn && levels[levels.length - 1].ratio === 1;
+    const redrawn = m.close != null && levels.length === 7;  // the previous close's lines, drawn again on the day's range after a close beyond +100% or -100%
+    const up = redrawn && levels[levels.length - 1].ratio === 1, day = isToday(currentSession()) ? "today's" : "the day's";  // a past session picked: that day's low and high
     const head = redrawn
-      ? `Redrawn ${up ? "upward after a candle closed above the highest" : "downward after a candle closed below the lowest"} line: 0% at today's ${up ? "low" : "high"} ${fmt.format(up ? levels[0].price : levels[levels.length - 1].price)}, ${up ? "+" : "-"}100% at today's ${up ? "high" : "low"} ${fmt.format(up ? levels[levels.length - 1].price : levels[0].price)}. `
+      ? `Redrawn ${up ? "upward after a candle closed above the highest" : "downward after a candle closed below the lowest"} line: 0% at ${day} ${up ? "low" : "high"} ${fmt.format(up ? levels[0].price : levels[levels.length - 1].price)}, ${up ? "+" : "-"}100% at ${day} ${up ? "high" : "low"} ${fmt.format(up ? levels[levels.length - 1].price : levels[0].price)}. `
       : m.close != null
       ? `${m.what[0].toUpperCase() + m.what.slice(1)}: 0% at ${fmt.format(m.close)}, 100% is ${Rules.CLOSE_STEP * 100}% of it (${fmt.format(Math.round(m.close * Rules.CLOSE_STEP * 100) / 100)} points) above and below. `
       : `${m.what[0].toUpperCase() + m.what.slice(1)}: ${m.up ? "up" : "down"} move ${fmt.format(m.low)} → ${fmt.format(m.high)}. `;

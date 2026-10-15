@@ -203,7 +203,7 @@ def main() -> int:
         cut = rnd.randrange(2, len(bars))
         shown = bars[:cut + 1]
         jobs.append({"mode": "live", "bars": shown, "levels": rule.levels_of(rule.move_of(shown)), "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live"})
-        close = round(shown[0]["open"] * (1 + extra.uniform(-0.015, 0.015)), 2)  # the previous close's lines near the day's prices, redrawn when it runs past +-1.2% (15 October); its own random stream, so the other random days stay as they were
+        close = round(shown[0]["open"] * (1 + extra.uniform(-0.015, 0.015)), 2)  # the previous close's lines near the day's prices, redrawn when it runs past +-1.5% (15 October); its own random stream, so the other random days stay as they were
         jobs.append({"mode": "live-close", "bars": shown, "close": close, "now": shown[-1]["time"] + extra.randrange(1, 300), "seconds": 300, "signal": ("held", "crossed", "both")[k % 3], "what": f"random {k} live close"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live today"})
         given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(5, len(shown) - 2))} if len(shown) > 2 else {}
