@@ -135,9 +135,10 @@ together (the "previous day" is the day before the last candle), and a call has 
 day end: there a day is one candle, so a call runs on until its target.
 
 **What the page does with them**: draws each level as a line across the chart with
-its percentage on the price axis (the two ends solid, the rest dashed), and shows
-one line of text: the move, its direction, and how far the last price is from the
-nearest level. Nothing else yet.
+its percentage on the price axis (the two ends solid, the rest dashed). Until 16
+October it also showed one line of text beside the Levels drop-down: the move, its
+direction, and how far the last price was from the nearest level; the owner took it
+off ("remove it, red marked"). Nothing else yet.
 
 ## Layer 2: The evidence - built, its table taken off the page
 

@@ -79,7 +79,7 @@ at all hours, from the same computation (in market hours marked "Dhan · live"
 and moving every second, after the close "Dhan · closed"; `/health`'s
 `feed.tiles_problem` says if an index's figures could not be read);
 the other tiles are Yahoo's, about 15 minutes delayed,
-and the footer says which is which. `/health`'s `feed.ids` is null, or what
+and each tile's own line says which it is (the footer line left the page on 16 October). `/health`'s `feed.ids` is null, or what
 Dhan's instrument list says differs from the index ids the code uses; its
 `feed.option_list` says what the list gave once read: the option ids per index,
 SENSEX's expiries, and how the BSE's option rows are written (9 October: no
