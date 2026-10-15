@@ -360,7 +360,7 @@
   let priceShift = 0;   // how far the price view has been moved up (+) or down (-), in price units
   let lastLevels = { m: null, levels: [] };  // the move and the levels drawn now (declared here: the chart's autoscale reads it)
   // The names of the previous close's lines, each written on its own line at the left of the chart (the owner, 15 October: "levels
-  // are also not clearly visible"): + lines green, - lines red, 0% dark, with the price. Placed again whenever the chart fits its
+  // are also not clearly visible"): + lines green, - lines red, 0% dark, the percentage only. Placed again whenever the chart fits its
   // view; the other levels keep the price scale's own labels
   let tagsQueued = false;
   function queueTags() { if (tagsQueued) return; tagsQueued = true; requestAnimationFrame(() => { tagsQueued = false; placeTags(); }); }
@@ -369,7 +369,7 @@
     const lv = state.move === "close" && series ? lastLevels.levels.filter(l => l.signed) : [];
     const key = JSON.stringify(lv);
     if (box.dataset.key !== key) {
-      box.innerHTML = lv.map(l => `<span style="color:${cssVar(l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2")}">${Rules.levelName(l.ratio, true)} · ${fmt.format(l.price)}</span>`).join("");
+      box.innerHTML = lv.map(l => `<span style="color:${cssVar(l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2")}">${Rules.levelName(l.ratio, true)}</span>`).join("");  // the name only, no price (the owner, 15 October: "Remove the index numbers from the febonachi lines. Just keep the percentage")
       box.dataset.key = key;
     }
     [...box.children].forEach((el, k) => { const y = series.priceToCoordinate(lv[k].price); el.hidden = y == null || y < 0; if (!el.hidden) el.style.top = y + "px"; });

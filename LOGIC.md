@@ -64,7 +64,7 @@ turn after a move. Whether that holds is for the owner's own record to show.
   1:30 PM. A call on these lines is the same rule as on the others (On the line,
   Crossed above, Crossed below, the target the next line, the same exits). On the
   chart all the lines are in view, + lines green, - lines red, 0% dark and
-  thicker, each with its name and price written on the line. A new choice on the
+  thicker, each with its percentage written on the line. A new choice on the
   index page; the other choices are unchanged.
 - *Today so far* (default, owner's choice of 6 October): the session's own low to
   high so far, an up move when its last price is above its open **(owner to
