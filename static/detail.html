@@ -471,28 +471,28 @@
   }
   document.getElementById("nav").addEventListener("click", e => { const a = e.target.dataset.nav; if (a) nav(a); });
 
-  // The wheel and the touchpad drive the chart while the pointer is over it:
-  //   wheel / two-finger swipe up-down      -> price view up or down
-  //   shift + wheel / two-finger swipe left-right -> earlier or later
-  //   ctrl + wheel / touchpad pinch         -> zoom (browsers send a pinch as ctrl + wheel)
-  // Move the pointer off the chart to scroll the page.
+  // The wheel over the chart (16 October, the owner: with the pointer on the chart the page would not scroll, "movement of
+  // cursor on the chart, why u did not fix"; until then a plain wheel moved the chart's price view instead):
+  //   wheel / two-finger swipe up-down            -> the page scrolls, as it does everywhere else on it
+  //   shift + wheel / two-finger swipe left-right -> the chart moves earlier or later
+  //   ctrl + wheel / touchpad pinch               -> the chart zooms (browsers send a pinch as ctrl + wheel)
+  // The price view moves with the ▲ ▼ buttons, or by dragging the chart.
   // A mouse wheel can report its turn in lines (Firefox) or in screens (Windows set to scroll one screen at a time)
-  // instead of pixels; taken as pixels, a notch of 3 lines moved the view by 3 pixels, as good as nothing (the owner,
-  // 16 October: "external mouse scroll up down is not happening"). A notch of three lines now moves as 100 pixels do
-  // (a notch of a Chrome mouse wheel), a screen as the chart's height
+  // instead of pixels: a notch of three lines counts as 100 pixels (a notch of a Chrome mouse wheel), a screen as the
+  // chart's height
   document.getElementById("chart").addEventListener("wheel", e => {
-    e.preventDefault();
     const box = e.currentTarget.getBoundingClientRect();
     const unit = e.deltaMode === 1 ? 100 / 3 : e.deltaMode === 2 ? box.height : 1;
     const dx = e.deltaX * unit, dy = e.deltaY * unit;
     if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
       zoomBy(Math.exp(Math.max(-100, Math.min(100, dy)) / 250));          // a wheel notch of 100 -> x1.5; a pinch step is gentler
     } else if (e.shiftKey || Math.abs(dx) > Math.abs(dy)) {
+      e.preventDefault();
       const px = e.shiftKey && !dx ? dy : dx;
       moveTime(px / box.width);                                            // one pixel of wheel = one pixel of chart
-    } else {
-      movePrice(-dy / box.height);                                         // wheel down shows lower prices
     }
+    // a plain wheel up or down: not ours, the browser scrolls the page
   }, { passive: false });
   let series = null;
   let nowLine = null;  // the price now, a light blue line (markNow)

@@ -310,9 +310,9 @@ The app is ready to run on a platform that deploys from GitHub:
   the 52-week range, and a chart with a Line/Candles switch and three drop-downs:
   the time frame (1, 5, 15 or 30-minute candles, or one candle a day), the levels,
   and the session (today by default, any of the last five days, or all five together;
-  on day candles, the last three months), zoom and move buttons (the wheel and the touchpad do the
-  same over the chart: wheel for price up/down, shift+wheel or a sideways swipe for
-  time, ctrl+wheel or a pinch for zoom), hover
+  on day candles, the last three months), zoom and move buttons (over the chart a plain wheel scrolls
+  the page, as everywhere else, since 16 October; shift+wheel or a sideways swipe moves the chart in
+  time, ctrl+wheel or a pinch zooms it), hover
   crosshair with the bar's values, light and dark. Click any bar (or point on the
   line) for a small pop-up with that bar's time, open, high, low and close; click elsewhere,
   press Esc or its x to close it. It refreshes on the source's rhythm. The chart is drawn by Lightweight Charts (Apache-2.0), bundled in
