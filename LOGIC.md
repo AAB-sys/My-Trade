@@ -23,7 +23,7 @@ cubed, 0.786 = the square root of 0.618; 50% is not a Fibonacci ratio but is kep
 as the halfway mark). Traders watch these fractions as places a price may pause or
 turn after a move. Whether that holds is for the owner's own record to show.
 
-**Which move** - a switch on the index page, remembered per browser:
+**Which move** - the Levels drop-down on the index page. Every visit starts on *Today so far* (the owner, 16 October: "it should be by default today"); until then the last choice was remembered per browser:
 
 - *Previous day*: the low to the high of the trading day before the
   session being looked at. Only the day's open, high, low and close are known, so
