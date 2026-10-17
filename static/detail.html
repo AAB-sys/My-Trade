@@ -169,7 +169,21 @@
   #chain-head .stat { display: flex; flex-direction: column; gap: 2px; }
   #chain-head .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
   #chain-head .stat b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #chain-bar { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; }  /* the Settings button at the left (the owner, 17 October: "add settings button in the red marked box"), the Updated line at the right */
+  #chain-settings { display: inline-flex; align-items: center; gap: 6px; }
+  #chain-settings svg { width: 15px; height: 15px; }
   #chain-updated { margin-left: auto; color: var(--ink-2); font-size: 14px; }  /* the same line as the page's "Live · updated" at the top right (the owner, 17 October) */
+  /* Settings > Change layout: a tick per column of the OI chart; an unticked column leaves the table (the owner, 17 October) */
+  .layout { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+  .layout[hidden] { display: none; }
+  .layout-box { background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; width: min(560px, 100%); max-height: 85vh; overflow: auto; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25); }
+  .layout-box h3 { margin: 0 0 6px; font-size: 16px; }
+  .layout-box .hint { font-size: 13px; color: var(--ink-2); margin: 0 0 12px; }
+  #layout-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 14px; margin-bottom: 14px; }
+  #layout-list label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  #layout-list label.fixed { color: var(--muted); cursor: default; }
+  #layout-list input { width: 16px; height: 16px; margin: 0; accent-color: var(--ink); }
+  .layout-foot { display: flex; justify-content: flex-end; }
   #chain-note { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
   .chain-scroll { max-height: 72vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
   #chain { border-collapse: separate; border-spacing: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 100%; }
@@ -362,10 +376,21 @@
       <div class="stat"><span>PCR</span><b id="chain-pcr">—</b></div>
       <div class="stat"><span>Market Lot</span><b id="chain-lot">—</b></div>
       <div class="stat"><span>Days for Expiry</span><b id="chain-days">—</b></div>
+    </div>
+    <div id="chain-bar">
+      <button type="button" class="pill" id="chain-settings" aria-haspopup="dialog" title="Choose the columns of the OI chart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
       <span id="chain-updated" title="When Dhan's chain was read; it moves every 15 seconds while the chart is open"></span>
     </div>
     <div id="chain-note" hidden></div>
     <div class="chain-scroll"><table id="chain"><thead><tr></tr></thead><tbody></tbody></table></div>
+    <div id="chain-layout" class="layout" hidden role="dialog" aria-modal="true" aria-labelledby="layout-title">
+      <div class="layout-box">
+        <h3 id="layout-title">Change layout</h3>
+        <p class="hint">Tick the columns to show. An unticked column leaves the table and comes back when ticked again. Remembered on this browser.</p>
+        <div id="layout-list"></div>
+        <div class="layout-foot"><button type="button" class="pill" id="layout-close">Close</button></div>
+      </div>
+    </div>
   </section>
   </div>
 
@@ -1528,6 +1553,9 @@
   let chainOrder = CHAIN_COLS.map(c => c[0]);  // the columns left to right; dragged into any order, remembered per browser
   try { const saved = JSON.parse(localStorage.getItem("chainCols") || "null");  // an order saved before a column was added keeps its places: the new column goes where it is by default
     if (Array.isArray(saved) && saved.length && saved.every(k => CHAIN_LABEL[k])) { const order = saved.filter((k, i) => saved.indexOf(k) === i); CHAIN_COLS.forEach(([k], i) => { if (!order.includes(k)) order.splice(i, 0, k); }); chainOrder = order; } } catch (e) {}
+  let chainHidden = new Set();  // the columns unticked under Settings > Change layout (17 October, the owner), remembered per browser; the strike column stays
+  try { const saved = JSON.parse(localStorage.getItem("chainHidden") || "null"); if (Array.isArray(saved)) chainHidden = new Set(saved.filter(k => CHAIN_LABEL[k] && k !== "strike")); } catch (e) {}
+  const shownCols = () => chainOrder.filter(k => !chainHidden.has(k));  // the columns on the table, left to right
   const chain = { data: null, expiry: null, loading: false };
   try { chain.expiry = sessionStorage.getItem("chainExpiry") || null; } catch (e) {}  // the expiry chosen before this tab's last reload (the page reloads itself after a deploy)
   const short = (n) => n == null ? "—" : Math.abs(n) >= 1e7 ? (n / 1e7).toFixed(2) + " Cr" : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + " L" : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(2) + " K" : String(Math.round(n));  // Dhan's lakh and crore
@@ -1556,19 +1584,19 @@
     return td("—");
   }
   function drawChain() {
-    const d = chain.data, head = document.querySelector("#chain thead tr"), body = document.querySelector("#chain tbody");
-    head.innerHTML = chainOrder.map(k => `<th draggable="true" data-col="${k}"${k === "strike" ? ' class="strike"' : ""} title="Drag to move this column">${k === "strike" ? `<span class="badge">CE</span>${CHAIN_LABEL[k]}<span class="badge">PE</span>` : CHAIN_LABEL[k]}</th>`).join("");
+    const d = chain.data, head = document.querySelector("#chain thead tr"), body = document.querySelector("#chain tbody"), cols = shownCols();
+    head.innerHTML = cols.map(k => `<th draggable="true" data-col="${k}"${k === "strike" ? ' class="strike"' : ""} title="Drag to move this column">${k === "strike" ? `<span class="badge">CE</span>${CHAIN_LABEL[k]}<span class="badge">PE</span>` : CHAIN_LABEL[k]}</th>`).join("");
     document.getElementById("chain-name").textContent = name;
     if (!d) { body.innerHTML = ""; return; }
     const F = d.fields, at = (row, f) => row[F.indexOf(f)];
     const legOf = (row, side) => Object.fromEntries(["oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma", "theta", "vega"].map(f => [f, at(row, side + "_" + f)]));
-    const strikeAt = chainOrder.indexOf("strike");
+    const strikeAt = cols.indexOf("strike");
     let html = "", marked = false;
     for (const row of d.rows) {
       const r = { strike: row[0], ce: legOf(row, "ce"), pe: legOf(row, "pe") };
       if (!marked && d.underlying && r.strike > d.underlying) {  // the index level, between the two strikes around it, as on Dhan
-        html += `<tr class="now">${chainOrder.map((k, i) => i === strikeAt ? `<td class="strike"><span class="price-badge">${fmt.format(d.underlying)}</span></td>` : "<td></td>").join("")}</tr>`; marked = true; }
-      html += `<tr>${chainOrder.map(k => chainCell(k, r)).join("")}</tr>`;
+        html += `<tr class="now">${cols.map((k, i) => i === strikeAt ? `<td class="strike"><span class="price-badge">${fmt.format(d.underlying)}</span></td>` : "<td></td>").join("")}</tr>`; marked = true; }
+      html += `<tr>${cols.map(k => chainCell(k, r)).join("")}</tr>`;
     }
     body.innerHTML = html;
     const s = state.summary, ch = s && s.change != null ? s.change : null, chp = s && s.change_percent != null ? s.change_percent : null;
@@ -1610,6 +1638,23 @@
   document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; try { sessionStorage.setItem("chainExpiry", chain.expiry); } catch (err) {} chain.data = null; drawChain(); loadChain(); });
   try { if (sessionStorage.getItem("panel") === "chain") showPanel("chain"); } catch (e) {}  // the OI chart open before the reload: open again
   setInterval(loadChain, 15000);
+  (() => {  // Settings > Change layout (17 October, the owner: "click on setting button, it will open change layout pop up and it would have
+    // check boxes of all the column headers. If i untick the check box that column will be removed from that OI chart table")
+    const box = document.getElementById("chain-layout"), list = document.getElementById("layout-list"), button = document.getElementById("chain-settings");
+    const SIDE = { ce: "CE", pe: "PE" };
+    const fill = () => { list.innerHTML = chainOrder.map(k => { const fixed = k === "strike", name = fixed ? CHAIN_LABEL[k] : `${SIDE[k.split(".")[0]]} ${CHAIN_LABEL[k]}`;
+      return `<label${fixed ? ' class="fixed"' : ""}><input type="checkbox" data-col="${k}"${chainHidden.has(k) ? "" : " checked"}${fixed ? " disabled" : ""}>${name}${fixed ? " (always shown)" : ""}</label>`; }).join(""); };
+    const open = () => { fill(); box.hidden = false; const first = list.querySelector("input:not([disabled])"); if (first) first.focus(); };
+    const close = () => { box.hidden = true; button.focus(); };
+    button.addEventListener("click", open);
+    document.getElementById("layout-close").addEventListener("click", close);
+    box.addEventListener("click", e => { if (e.target === box) close(); });  // a click on the shade closes it
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
+    list.addEventListener("change", e => { const k = e.target.dataset.col; if (!k || k === "strike") return;
+      if (e.target.checked) chainHidden.delete(k); else chainHidden.add(k);
+      try { localStorage.setItem("chainHidden", JSON.stringify([...chainHidden])); } catch (err) {}
+      drawChain(); });
+  })();
   (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
     const head = document.querySelector("#chain thead"); let from = null;
     const clear = () => head.querySelectorAll("th.over").forEach(x => x.classList.remove("over"));
