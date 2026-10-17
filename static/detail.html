@@ -23,10 +23,12 @@
     --candle-down: #d03b3b;
     --line: #2a78d6;
     --now-line: #8cc4f5; --now-box: #d6ebfc; --now-text: #1558b0;  /* the price now: a light blue line, a light blue box, blue figures (15 October) */
+    --itm: rgba(11, 11, 11, 0.045);  /* the OI chart's in-the-money cells (17 October) */
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
+      --itm: rgba(255, 255, 255, 0.06);
       --page: #0d0d0d;
       --surface: #1a1a19;
       --border: rgba(255, 255, 255, 0.10);
@@ -152,6 +154,35 @@
   #feed-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }
   #paper[hidden] { display: none; }
   .scroll { overflow-x: auto; }
+  /* The two pills under the chart (the owner, 17 October: "add button ... with the same format as Main Menu button. Title should
+     be Open OI chart. Make the paper calls button same as the format as Main menu button"): the one that is open is filled */
+  .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+  .pill:hover { border-color: var(--ink-2); }
+  .pill.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  #panel-tabs { display: flex; gap: 8px; margin: 18px 0 10px; }
+  #panels[data-panel="chain"] #paper-box { display: none; }
+  /* The OI chart: Dhan's option chain, its rows and columns (17 October). The header stays while the table scrolls both ways;
+     the columns can be dragged into any order */
+  #chain-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin: 0 0 10px; font-size: 13px; }
+  #chain-head .big { font-size: 18px; font-weight: 700; }
+  #chain-head .delta { font-size: 14px; font-weight: 500; margin-left: 10px; }
+  #chain-head .stat { display: flex; flex-direction: column; gap: 2px; }
+  #chain-head .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  #chain-head .stat b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #chain-note { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
+  .chain-scroll { max-height: 72vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+  #chain { border-collapse: separate; border-spacing: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 100%; }
+  #chain th, #chain td { text-align: right; padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #chain thead th { position: sticky; top: 0; background: var(--page); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); font-weight: 500; color: var(--muted); font-size: 12px; cursor: grab; user-select: none; }
+  #chain thead th.over { box-shadow: inset 3px 0 0 var(--ink), inset 0 -1px 0 var(--border); }
+  #chain th.strike, #chain td.strike { text-align: center; font-weight: 600; color: var(--ink); background: var(--page); }
+  #chain td.itm { background: var(--itm); }
+  #chain .up { color: var(--up); } #chain .down { color: var(--down); }
+  #chain td small { font-size: 11px; }
+  #chain tr.now td { border-top: 2px dotted var(--now-text); border-bottom: 0; padding: 0; height: 0; line-height: 0; }
+  #chain .price-badge { display: inline-block; background: var(--now-text); color: #fff; font-weight: 600; border-radius: 6px; padding: 3px 8px; font-size: 12px; line-height: 1; position: relative; top: -10px; }
+  #chain .badge { display: inline-block; border: 1px solid var(--ink-2); border-radius: 4px; padding: 0 5px; font-size: 11px; font-weight: 700; color: var(--ink); margin: 0 6px; }
+  @media (max-width: 600px) { #chain-head { gap: 6px 14px; } .chain-scroll { max-height: 60vh; } }
   .seg { display: inline-flex; max-width: 100%; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
   .seg button {
     font: inherit; font-size: 13px; padding: 6px 12px; border: 0; cursor: pointer; white-space: nowrap;
@@ -301,8 +332,13 @@
   </div>
   <p id="redraw-note" hidden></p>
 
+  <!-- 17 October, the owner: two pills in the Main Menu's format, "Paper calls" opens the paper calls table, "Open OI chart" the OI chart -->
+  <div id="panel-tabs">
+    <button class="pill on" id="tab-calls" type="button">Paper calls</button>
+    <button class="pill" id="tab-chain" type="button">Open OI chart</button>
+  </div>
+  <div id="panels" data-panel="calls">
   <section id="paper-box" aria-label="Paper calls" hidden>
-    <h2>Paper calls</h2>
     <!-- 16 October, the owner's asks ("remove all the red marked boxed things", then "remove this"): the Off, On the
          line, Crossed and Both choices and the Download CSV button are gone; Both is the signal setting, without a button -->
     <div id="paper-note"></div>
@@ -314,6 +350,22 @@
       </table>
     </div>
   </section>
+
+  <!-- The OI chart (17 October): Dhan's option chain of this index, the rows and columns as Dhan lays them out -->
+  <section id="chain-box" aria-label="OI chart" hidden>
+    <div id="chain-head">
+      <div><span class="big" id="chain-name"></span><span class="delta" id="chain-price"></span></div>
+      <label class="stat"><span>Expiry</span><select class="pick" id="chain-expiry" aria-label="Expiry"></select></label>
+      <div class="stat"><span>ATM IV</span><b id="chain-atm-iv">—</b></div>
+      <div class="stat"><span>IV Change %</span><b id="chain-iv-chg">—</b></div>
+      <div class="stat"><span>PCR</span><b id="chain-pcr">—</b></div>
+      <div class="stat"><span>Market Lot</span><b id="chain-lot">—</b></div>
+      <div class="stat"><span>Days for Expiry</span><b id="chain-days">—</b></div>
+    </div>
+    <div id="chain-note" hidden></div>
+    <div class="chain-scroll"><table id="chain"><thead><tr></tr></thead><tbody></tbody></table></div>
+  </section>
+  </div>
 
   <footer id="footer"></footer>
 </main>
@@ -1447,6 +1499,104 @@
     chart.applyOptions({ timeScale: { timeVisible: !longCandles() } });  // day and week candles: dates only
     load();
   });
+
+  // ---- The OI chart (17 October, the owner: "Click Open OI chart button it will open OI chart table. OI chart table should be
+  // same as OI chart which open on dhan with the same row and column format ... scroll up/down scroll left/right ... Header
+  // should be freezed always and columns can be dragged and moved left to right"). The server's /options/{name}/chain gives
+  // Dhan's chain of the nearest expiry (or the one chosen), every strike, read again every 15 s while the chart is open and
+  // the page in view. Data on the page only: nothing here touches the lines, the calls or the rule
+  const CHAIN_COLS = [["ce.gamma", "Gamma"], ["ce.delta", "Delta"], ["ce.oi", "OI"], ["ce.oichg", "OI Change %"], ["ce.vol", "Volume"], ["ce.volchg", "Vol Change%"],
+                      ["ce.iv", "IV"], ["ce.ltpchg", "LTP Change"], ["ce.ltp", "LTP"], ["strike", "Strike Price"], ["pe.ltp", "LTP"], ["pe.ltpchg", "LTP Change"],
+                      ["pe.iv", "IV"], ["pe.volchg", "Vol Change%"], ["pe.vol", "Volume"], ["pe.oichg", "OI Change %"], ["pe.oi", "OI"], ["pe.delta", "Delta"], ["pe.gamma", "Gamma"]];
+  const CHAIN_LABEL = Object.fromEntries(CHAIN_COLS);
+  let chainOrder = CHAIN_COLS.map(c => c[0]);  // the columns left to right; dragged into any order, remembered per browser
+  try { const saved = JSON.parse(localStorage.getItem("chainCols") || "null"); if (Array.isArray(saved) && saved.length === chainOrder.length && saved.every(k => CHAIN_LABEL[k])) chainOrder = saved; } catch (e) {}
+  const chain = { data: null, expiry: null, loading: false };
+  const short = (n) => n == null ? "—" : Math.abs(n) >= 1e7 ? (n / 1e7).toFixed(2) + " Cr" : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + " L" : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(2) + " K" : String(Math.round(n));  // Dhan's lakh and crore
+  const pctOf2 = (now, before) => now == null || !before ? null : (now - before) / before * 100;
+  const sgn = (v, d = 2) => (v > 0 ? "+" : "") + v.toFixed(d);
+  const tone = (v) => v > 0 ? "up" : v < 0 ? "down" : "";
+  const strikeText = (k) => Math.round(k).toLocaleString("en-IN");
+  function chainCell(key, r) {
+    if (key === "strike") return `<td class="strike">${strikeText(r.strike)}</td>`;
+    const [side, f] = key.split("."), leg = r[side];
+    const itm = (side === "ce" && r.strike < chain.data.underlying) || (side === "pe" && r.strike > chain.data.underlying);  // shaded, as on Dhan
+    const td = (html, c = "") => `<td class="${c}${itm ? " itm" : ""}">${html}</td>`;
+    if (f === "gamma") return td(leg.gamma == null ? "—" : leg.gamma.toFixed(5));
+    if (f === "delta") return td(leg.delta == null ? "—" : leg.delta.toFixed(2));
+    if (f === "oi") return td(short(leg.oi));
+    if (f === "vol") return td(short(leg.volume));
+    if (f === "iv") return td(leg.iv == null ? "—" : leg.iv.toFixed(2));
+    if (f === "ltp") return td(leg.ltp == null ? "—" : leg.ltp.toFixed(2));
+    if (f === "oichg") { const d = leg.oi != null && leg.prev_oi != null ? leg.oi - leg.prev_oi : null, p = pctOf2(leg.oi, leg.prev_oi);
+      return td(d == null ? "—" : `${(d < 0 ? "-" : "") + short(Math.abs(d))} <small class="${tone(d)}">(${p == null ? "—" : sgn(p) + "%"})</small>`); }
+    if (f === "volchg") { const p = pctOf2(leg.volume, leg.prev_volume); return td(p == null ? "—" : sgn(p) + "%", tone(p)); }
+    if (f === "ltpchg") { const d = leg.ltp != null && leg.prev_close != null ? leg.ltp - leg.prev_close : null, p = pctOf2(leg.ltp, leg.prev_close);
+      return td(d == null ? "—" : `${sgn(d)} <small>(${p == null ? "—" : sgn(p) + "%"})</small>`, tone(d)); }
+    return td("—");
+  }
+  function drawChain() {
+    const d = chain.data, head = document.querySelector("#chain thead tr"), body = document.querySelector("#chain tbody");
+    head.innerHTML = chainOrder.map(k => `<th draggable="true" data-col="${k}"${k === "strike" ? ' class="strike"' : ""} title="Drag to move this column">${k === "strike" ? `<span class="badge">CE</span>${CHAIN_LABEL[k]}<span class="badge">PE</span>` : CHAIN_LABEL[k]}</th>`).join("");
+    document.getElementById("chain-name").textContent = name;
+    if (!d) { body.innerHTML = ""; return; }
+    const F = d.fields, at = (row, f) => row[F.indexOf(f)];
+    const legOf = (row, side) => Object.fromEntries(["oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma"].map(f => [f, at(row, side + "_" + f)]));
+    const strikeAt = chainOrder.indexOf("strike");
+    let html = "", marked = false;
+    for (const row of d.rows) {
+      const r = { strike: row[0], ce: legOf(row, "ce"), pe: legOf(row, "pe") };
+      if (!marked && d.underlying && r.strike > d.underlying) {  // the index level, between the two strikes around it, as on Dhan
+        html += `<tr class="now">${chainOrder.map((k, i) => i === strikeAt ? `<td class="strike"><span class="price-badge">${fmt.format(d.underlying)}</span></td>` : "<td></td>").join("")}</tr>`; marked = true; }
+      html += `<tr>${chainOrder.map(k => chainCell(k, r)).join("")}</tr>`;
+    }
+    body.innerHTML = html;
+    const s = state.summary, ch = s && s.change != null ? s.change : null, chp = s && s.change_percent != null ? s.change_percent : null;
+    document.getElementById("chain-price").innerHTML = `${fmt.format(d.underlying)}${ch != null ? ` <span class="${tone(ch)}">${sgn(ch)} (${chp != null ? sgn(chp) + "%" : ""})</span>` : ""}`;
+    document.getElementById("chain-atm-iv").textContent = d.atm_iv == null ? "—" : d.atm_iv.toFixed(2);
+    const ivc = document.getElementById("chain-iv-chg"); ivc.textContent = d.iv_change_pct == null ? "—" : sgn(d.iv_change_pct) + " %"; ivc.className = d.iv_change_pct == null ? "" : tone(d.iv_change_pct);
+    ivc.title = d.iv_change_pct == null ? "Against the previous day's close: known from the day after the server first saw a close" : "Against the previous day's close";
+    document.getElementById("chain-pcr").textContent = d.pcr == null ? "—" : d.pcr.toFixed(2);
+    document.getElementById("chain-lot").textContent = d.lot == null ? "—" : String(d.lot);
+    document.getElementById("chain-days").textContent = d.days_to_expiry == null ? "—" : String(d.days_to_expiry);
+    const sel = document.getElementById("chain-expiry"), want = (d.expiries || []).join(",");
+    if (sel.dataset.list !== want) { sel.innerHTML = (d.expiries || []).map(x => `<option value="${x}">${new Date(x + "T00:00:00+05:30").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).toUpperCase()}</option>`).join(""); sel.dataset.list = want; }
+    sel.value = d.expiry;
+  }
+  async function loadChain() {
+    if (chain.loading || document.getElementById("panels").dataset.panel !== "chain" || document.hidden) return;
+    chain.loading = true;
+    try {
+      const r = await fetch(`/options/${encodeURIComponent(name)}/chain${chain.expiry ? "?expiry=" + encodeURIComponent(chain.expiry) : ""}`, withTab());
+      if (r.status === 401) { location.href = "/login"; return; }
+      const note = document.getElementById("chain-note");
+      if (!r.ok) { let why = ""; try { why = (await r.json()).detail || ""; } catch (e) {} note.textContent = `The OI chart could not be read just now${why ? ": " + why : ""}.${chain.data ? " The last values read are shown." : ""}`; note.hidden = false; return; }
+      chain.data = await r.json(); chain.expiry = chain.data.expiry; note.hidden = true; drawChain();
+    } catch (err) {
+      // the next refresh tries again
+    } finally { chain.loading = false; }
+  }
+  function showPanel(which) {
+    document.getElementById("panels").dataset.panel = which;
+    document.getElementById("tab-calls").classList.toggle("on", which === "calls");
+    document.getElementById("tab-chain").classList.toggle("on", which === "chain");
+    document.getElementById("chain-box").hidden = which !== "chain";
+    if (which === "chain") { drawChain(); loadChain(); }
+  }
+  document.getElementById("tab-calls").addEventListener("click", () => showPanel("calls"));
+  document.getElementById("tab-chain").addEventListener("click", () => showPanel("chain"));
+  document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; chain.data = null; drawChain(); loadChain(); });
+  setInterval(loadChain, 15000);
+  (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
+    const head = document.querySelector("#chain thead"); let from = null;
+    const clear = () => head.querySelectorAll("th.over").forEach(x => x.classList.remove("over"));
+    head.addEventListener("dragstart", e => { const th = e.target.closest("th"); if (!th) return; from = th.dataset.col; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", from); });
+    head.addEventListener("dragover", e => { const th = e.target.closest("th"); if (!th || !from) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; clear(); th.classList.add("over"); });
+    head.addEventListener("drop", e => { const th = e.target.closest("th"); if (!th || !from) return; e.preventDefault(); const to = th.dataset.col;
+      if (to !== from) { const order = chainOrder.filter(k => k !== from); order.splice(order.indexOf(to), 0, from); chainOrder = order; try { localStorage.setItem("chainCols", JSON.stringify(order)); } catch (err) {} drawChain(); }
+      from = null; clear(); });
+    head.addEventListener("dragend", () => { from = null; clear(); });
+  })();
 
   document.getElementById("move").value = state.period;
   document.getElementById("interval").value = state.view;

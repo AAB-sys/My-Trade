@@ -505,7 +505,7 @@ def _read_option_ids() -> dict:
     """{(underlying, expiry iso, strike, side): security id} for the indices' options still to expire, read from
     Dhan's instrument list (a large CSV; only the option rows of NIFTY and BANKNIFTY on the NSE, and of SENSEX on
     the BSE, are kept)."""
-    found, columns = {}, None
+    found, columns, lots = {}, None, {}  # lots: {underlying: (soonest expiry, market lot)} (17 October, the OI chart)
     report = {"bse_option_rows": 0, "bse_names": {}, "sensex_rows": [], "no_expiry": 0}
     wanted = set(UNDERLYING.values())
     index_rows = set(LIST_NAMES.values())
@@ -522,11 +522,11 @@ def _read_option_ids() -> dict:
                                 return i
                         return None
                     columns = (col("SECURITY_ID"), col("INSTRUMENT_NAME"), col("EXPIRY_DATE"), col("STRIKE"), col("OPTION_TYPE"),
-                               col("SYMBOL_NAME"), col("TRADING_SYMBOL"), col("EXCH_ID"), col("CUSTOM_SYMBOL"))
+                               col("SYMBOL_NAME"), col("TRADING_SYMBOL"), col("EXCH_ID"), col("CUSTOM_SYMBOL"), col("LOT"))
                     if None in columns[:5]:
                         raise DhanError("other", f"Dhan's instrument list has an unexpected header: {', '.join(row)[:160]}")
                     continue
-                sid, instrument, expiry, strike, side, symbol, trading, exchange, custom = (row[i] if i is not None and i < len(row) else "" for i in columns)
+                sid, instrument, expiry, strike, side, symbol, trading, exchange, custom, lot_text = (row[i] if i is not None and i < len(row) else "" for i in columns)
                 if instrument.strip().upper() == "INDEX":
                     label = (symbol.strip() or trading.strip()).upper()
                     if label in index_rows and label not in seen_index:
@@ -558,6 +558,9 @@ def _read_option_ids() -> dict:
                     continue
                 try:
                     found[(underlying, when, round(float(strike), 2), side.strip().upper())] = int(float(sid))
+                    lot = int(float(lot_text)) if lot_text.strip() else 0
+                    if lot > 0 and (underlying not in lots or when < lots[underlying][0]):
+                        lots[underlying] = (when, lot)  # the market lot, from the soonest expiry's rows
                 except ValueError:
                     continue
     except httpx.HTTPError as exc:
@@ -567,19 +570,28 @@ def _read_option_ids() -> dict:
     counts = {}
     for (underlying, when, _, _) in found:
         counts[underlying] = counts.get(underlying, 0) + 1
-    report.update(read_at=datetime.now(IST).isoformat(timespec="seconds"), option_ids=counts,
+    report.update(read_at=datetime.now(IST).isoformat(timespec="seconds"), option_ids=counts, lots={u: l for u, (w, l) in lots.items()},
                   sensex_expiries=sorted({when for (u, when, _, _) in found if u == "SENSEX"})[:4],
                   bse_names=dict(sorted(report["bse_names"].items(), key=lambda kv: -kv[1])[:6]))
     with _option_ids_lock:
         _index_ids_seen.update(seen_index)
         _list_report.clear()
         _list_report.update(report)
+        _lots.clear()
+        _lots.update({u: l for u, (w, l) in lots.items()})
     if problem := id_problem():
         log.warning("Dhan ids: %s", problem)
     return found
 
 
 _index_ids_seen: dict = {}  # the instrument list's ids of the index rows, by the list's name (NIFTY, BANKNIFTY, SENSEX), once read
+_lots: dict = {}  # the market lot of each underlying's options, from the instrument list once read (17 October, the OI chart)
+
+
+def lot_size(name: str) -> int | None:
+    """The market lot of an index's options, from Dhan's instrument list once it has been read; None until then."""
+    with _option_ids_lock:
+        return _lots.get(UNDERLYING[name])
 
 
 def id_problem() -> str | None:
@@ -644,10 +656,22 @@ def nearest_expiry(name: str) -> str:
     return cached(("expiry", name), 1800, make)
 
 
+LEG_FIELDS = ("oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma")  # what the OI chart shows of each leg, in this order
+
+
+def _num(value):
+    try:
+        return None if value is None else float(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def chain(name: str, expiry: str) -> dict:
-    """{"underlying": index level, "strikes": {strike: {"CE": premium, "PE": premium}}}, refreshed at most every 5 s
-    (Dhan allows one option-chain request per 3 s). A failed read is kept for those 5 s too, so a chain that
-    cannot be read is not asked again at once by every refresh, which would keep Dhan's rate limit tripping."""
+    """{"underlying": index level, "strikes": {strike: {"CE": premium, "PE": premium}}, "legs": {strike: {"CE": {...}, "PE": {...}}}},
+    refreshed at most every 5 s (Dhan allows one option-chain request per 3 s). "strikes" carries the premiums the records
+    read; "legs" every field the OI chart shows (LEG_FIELDS, 17 October: the owner's "bring the OI data as it is the same
+    like dhan does"), from the same answer, so the chart costs no extra request. A failed read is kept for those 5 s too,
+    so a chain that cannot be read is not asked again at once by every refresh, which would keep Dhan's rate limit tripping."""
     def make():
         try:
             return read()
@@ -656,25 +680,84 @@ def chain(name: str, expiry: str) -> dict:
     def read():
         body = call("POST", "/optionchain", {"UnderlyingScrip": OPTION_INDICES[name], "UnderlyingSeg": SEGMENT, "Expiry": expiry})
         data = body.get("data") or {}
-        strikes = {}
+        strikes, legs = {}, {}
         for strike, sides in (data.get("oc") or {}).items():
             try:
-                row = {}
+                row, full = {}, {}
                 for side in ("CE", "PE"):
                     leg = sides.get(side.lower()) or {}
                     if leg.get("last_price") is not None:
                         row[side] = round(float(leg["last_price"]), 2)
+                    greeks = leg.get("greeks") or {}
+                    full[side] = {"oi": _num(leg.get("oi")), "prev_oi": _num(leg.get("previous_oi")), "volume": _num(leg.get("volume")),
+                                  "prev_volume": _num(leg.get("previous_volume")), "iv": _num(leg.get("implied_volatility")), "ltp": _num(leg.get("last_price")),
+                                  "prev_close": _num(leg.get("previous_close_price")), "delta": _num(greeks.get("delta")), "gamma": _num(greeks.get("gamma"))}
                 if row:
                     strikes[round(float(strike), 2)] = row
+                    legs[round(float(strike), 2)] = full
             except (TypeError, ValueError):
                 continue
         if not strikes:
             raise DhanError("other", f"unexpected option chain answer from Dhan: {str(body)[:160]}")
-        return {"underlying": float(data.get("last_price") or 0), "strikes": strikes, "expiry": expiry, "time": datetime.now(IST).isoformat(timespec="seconds")}
+        return {"underlying": float(data.get("last_price") or 0), "strikes": strikes, "legs": legs, "expiry": expiry, "time": datetime.now(IST).isoformat(timespec="seconds")}
     result = cached(("chain", name, expiry), 5, make)
     if isinstance(result, DhanError):
         raise result
     return result
+
+
+def expiry_list(name: str) -> list[str]:
+    """The coming expiries of an index's options, soonest first, refreshed every 30 minutes."""
+    today = today_ist().isoformat()
+    return cached(("expiries", name), 1800, lambda: [d for d in expiries(name) if d >= today])
+
+
+_iv_close: dict = {}  # (index, expiry) -> {"date", "iv"}: the ATM IV at the day's close, kept in memory only (a restart forgets it)
+
+
+def _iv_change(name: str, expiry: str, atm_iv) -> float | None:
+    """The change of the ATM IV against the previous day's close, in %, once the server has seen a close (Dhan's chain gives
+    today's IV only, not yesterday's); None until then."""
+    now = datetime.now(IST)
+    today = now.date().isoformat()
+    key = (name, expiry)
+    if atm_iv is not None and now.hour * 60 + now.minute >= 15 * 60 + 25:
+        _iv_close[key] = {"date": today, "iv": atm_iv}
+    rec = _iv_close.get(key)
+    if rec and rec["date"] < today and rec["iv"] and atm_iv is not None:
+        return round((atm_iv - rec["iv"]) / rec["iv"] * 100, 2)
+    return None
+
+
+def chain_table(name: str, expiry: str | None = None) -> dict:
+    """The OI chart of an index (17 October, the owner: "bring the OI data as it is the same like dhan does"): every strike
+    of one expiry with both legs' OI, yesterday's OI, volume, yesterday's volume, IV, LTP, yesterday's close, delta and
+    gamma (LEG_FIELDS, as a compact row each: strike, the CE's nine, the PE's nine), with what Dhan's chain shows above
+    its table: the index level, the expiries to choose from, the market lot, the days to expiry, the ATM IV, its change
+    against the previous close, and the PCR (all PE OI over all CE OI). The nearest expiry unless another listed one is asked for."""
+    dates = expiry_list(name)
+    if not dates:
+        raise DhanError("other", f"Dhan listed no coming expiry for {name}")
+    if expiry not in dates:
+        expiry = dates[0]
+    try:
+        option_ids()  # starts the instrument list's read if it has not been read yet: the market lot comes from it
+    except DhanError:
+        pass
+    ch = chain(name, expiry)
+    under, legs = ch["underlying"], ch["legs"]
+    strikes = sorted(legs)
+    rows = [[k] + [legs[k]["CE"][f] for f in LEG_FIELDS] + [legs[k]["PE"][f] for f in LEG_FIELDS] for k in strikes]
+    atm = min(strikes, key=lambda k: abs(k - under)) if strikes and under else None
+    ivs = [legs[atm][side]["iv"] for side in ("CE", "PE") if atm is not None and legs[atm][side]["iv"]]
+    atm_iv = round(sum(ivs) / len(ivs), 2) if ivs else None
+    ce_oi = sum(legs[k]["CE"]["oi"] or 0 for k in strikes)
+    pe_oi = sum(legs[k]["PE"]["oi"] or 0 for k in strikes)
+    return {"name": name, "underlying": under, "expiry": expiry, "expiries": dates[:6], "lot": lot_size(name),
+            "days_to_expiry": (datetime.strptime(expiry, "%Y-%m-%d").date() - today_ist()).days,
+            "atm_strike": atm, "atm_iv": atm_iv, "iv_change_pct": _iv_change(name, expiry, atm_iv),
+            "pcr": round(pe_oi / ce_oi, 2) if ce_oi else None,
+            "fields": ["strike"] + ["ce_" + f for f in LEG_FIELDS] + ["pe_" + f for f in LEG_FIELDS], "rows": rows, "time": ch["time"]}
 
 
 def itm_strike(strikes: dict, side: str, level: float) -> float | None:

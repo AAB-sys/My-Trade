@@ -304,7 +304,16 @@ The app is ready to run on a platform that deploys from GitHub:
   a header row that stays in view (the score line and the CSV download left the page on 16 October, the owner's ask). The
   candle verdict also goes with every call into the day's calls CSV for the
   research engine, and so does the carry read (did the candle that reached the target close a quarter
-  into the next gap, and was the level beyond reached).
+  into the next gap, and was the level beyond reached). Under the chart two pills in the Main Menu's
+  format (17 October): **Paper calls** opens that table, **Open OI chart** opens Dhan's option chain of the
+  index, laid out as Dhan lays it out: every strike of the nearest expiry (a drop-down for the next ones),
+  both sides with OI, OI change, volume, volume change, IV, LTP, LTP change, delta and gamma, the
+  in-the-money cells shaded, the index level marked between the strikes around it; above it ATM IV, its
+  change against the previous close (known from the day after the server first saw a close), PCR, the
+  market lot and the days to expiry. Read again every 15 seconds while open (`/options/{name}/chain`, from
+  the same chain answer the premiums use, so no extra request to Dhan). The header stays while the table
+  scrolls both ways; the columns can be dragged into any order, remembered per browser. Data on the page
+  only: nothing of it touches the lines, the calls or the rule.
   Nothing else is drawn on the chart, and nothing is sent anywhere.
 - `static/detail.html` is the detail page: the previous session's and today's figures,
   the 52-week range, and a chart with a Line/Candles switch and three drop-downs:
