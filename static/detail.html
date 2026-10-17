@@ -1512,6 +1512,7 @@
   let chainOrder = CHAIN_COLS.map(c => c[0]);  // the columns left to right; dragged into any order, remembered per browser
   try { const saved = JSON.parse(localStorage.getItem("chainCols") || "null"); if (Array.isArray(saved) && saved.length === chainOrder.length && saved.every(k => CHAIN_LABEL[k])) chainOrder = saved; } catch (e) {}
   const chain = { data: null, expiry: null, loading: false };
+  try { chain.expiry = sessionStorage.getItem("chainExpiry") || null; } catch (e) {}  // the expiry chosen before this tab's last reload (the page reloads itself after a deploy)
   const short = (n) => n == null ? "—" : Math.abs(n) >= 1e7 ? (n / 1e7).toFixed(2) + " Cr" : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + " L" : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(2) + " K" : String(Math.round(n));  // Dhan's lakh and crore
   const pctOf2 = (now, before) => now == null || !before ? null : (now - before) / before * 100;
   const sgn = (v, d = 2) => (v > 0 ? "+" : "") + v.toFixed(d);
@@ -1577,6 +1578,7 @@
     } finally { chain.loading = false; }
   }
   function showPanel(which) {
+    try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
     document.getElementById("panels").dataset.panel = which;
     document.getElementById("tab-calls").classList.toggle("on", which === "calls");
     document.getElementById("tab-chain").classList.toggle("on", which === "chain");
@@ -1585,7 +1587,8 @@
   }
   document.getElementById("tab-calls").addEventListener("click", () => showPanel("calls"));
   document.getElementById("tab-chain").addEventListener("click", () => showPanel("chain"));
-  document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; chain.data = null; drawChain(); loadChain(); });
+  document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; try { sessionStorage.setItem("chainExpiry", chain.expiry); } catch (err) {} chain.data = null; drawChain(); loadChain(); });
+  try { if (sessionStorage.getItem("panel") === "chain") showPanel("chain"); } catch (e) {}  // the OI chart open before the reload: open again
   setInterval(loadChain, 15000);
   (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
     const head = document.querySelector("#chain thead"); let from = null;
