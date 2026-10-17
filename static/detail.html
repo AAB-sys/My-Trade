@@ -1559,8 +1559,8 @@
     document.getElementById("chain-pcr").textContent = d.pcr == null ? "—" : d.pcr.toFixed(2);
     document.getElementById("chain-lot").textContent = d.lot == null ? "—" : String(d.lot);
     document.getElementById("chain-days").textContent = d.days_to_expiry == null ? "—" : String(d.days_to_expiry);
-    const sel = document.getElementById("chain-expiry"), want = (d.expiries || []).join(",");
-    if (sel.dataset.list !== want) { sel.innerHTML = (d.expiries || []).map(x => `<option value="${x}">${new Date(x + "T00:00:00+05:30").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).toUpperCase()}</option>`).join(""); sel.dataset.list = want; }
+    const sel = document.getElementById("chain-expiry"), dates = (d.expiries || []).slice().sort().reverse(), want = dates.join(",");  // the latest date first, the nearest last (the owner, 17 October: "in descending manner always")
+    if (sel.dataset.list !== want) { sel.innerHTML = dates.map(x => `<option value="${x}">${new Date(x + "T00:00:00+05:30").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).toUpperCase()}</option>`).join(""); sel.dataset.list = want; }
     sel.value = d.expiry;
   }
   async function loadChain() {
