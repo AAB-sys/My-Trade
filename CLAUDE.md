@@ -111,7 +111,7 @@ their own logic. Read this before touching the code.
   `check_dhan.py`/`check_dhan.bat`. `main.py` serves NIFTY 50/NIFTY BANK details
   from Dhan when configured (fallback to the usual source, reason in
   `store["dhan"]`), the `/options/{name}` routes the page uses (`/options/{name}/chain`, 17 October: the OI chart's
-  data, `dhan.chain_table`, Dhan's chain of one expiry with every leg field, `dhan.LEG_FIELDS`, plus ATM IV, its change
+  data, `dhan.chain_table`, Dhan's chain of one expiry with every leg field, `dhan.LEG_FIELDS`, the four greeks among them, plus ATM IV, its change
   against the previous close kept in memory, PCR, `dhan.lot_size` from the instrument list and the days to expiry), and
   `stream_forever()`: while an index page on Dhan is open (`/ws?live=<index>`)
   in market hours, one connection to Dhan's tick-by-tick feed (`DHAN_FEED_URL`,
