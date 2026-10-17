@@ -169,6 +169,7 @@
   #chain-head .stat { display: flex; flex-direction: column; gap: 2px; }
   #chain-head .stat span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
   #chain-head .stat b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  #chain-updated { margin-left: auto; color: var(--ink-2); font-size: 14px; }  /* the same line as the page's "Live · updated" at the top right (the owner, 17 October) */
   #chain-note { font-size: 13px; color: var(--ink-2); margin-bottom: 8px; }
   .chain-scroll { max-height: 72vh; overflow: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
   #chain { border-collapse: separate; border-spacing: 0; font-size: 12.5px; font-variant-numeric: tabular-nums; min-width: 100%; }
@@ -361,7 +362,7 @@
       <div class="stat"><span>PCR</span><b id="chain-pcr">—</b></div>
       <div class="stat"><span>Market Lot</span><b id="chain-lot">—</b></div>
       <div class="stat"><span>Days for Expiry</span><b id="chain-days">—</b></div>
-      <div class="stat" title="When Dhan's chain was read; it moves every 15 seconds while the chart is open"><span>Updated</span><b id="chain-updated">—</b></div>
+      <span id="chain-updated" title="When Dhan's chain was read; it moves every 15 seconds while the chart is open"></span>
     </div>
     <div id="chain-note" hidden></div>
     <div class="chain-scroll"><table id="chain"><thead><tr></tr></thead><tbody></tbody></table></div>
@@ -1560,7 +1561,7 @@
     document.getElementById("chain-pcr").textContent = d.pcr == null ? "—" : d.pcr.toFixed(2);
     document.getElementById("chain-lot").textContent = d.lot == null ? "—" : String(d.lot);
     document.getElementById("chain-days").textContent = d.days_to_expiry == null ? "—" : String(d.days_to_expiry);
-    document.getElementById("chain-updated").textContent = d.time ? new Date(d.time).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }) + " IST" : "—";  // the time Dhan's chain was read (17 October, the owner: "how can we confirm that OI chart is live")
+    document.getElementById("chain-updated").textContent = d.time ? "Live · updated " + new Date(d.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) : "";  // the time Dhan's chain was read, in the page's own "Live · updated" format (17 October, the owner)
     const sel = document.getElementById("chain-expiry"), dates = (d.expiries || []).slice().sort().reverse(), want = dates.join(",");  // the latest date first, the nearest last (the owner, 17 October: "in descending manner always")
     if (sel.dataset.list !== want) { sel.innerHTML = dates.map(x => `<option value="${x}">${new Date(x + "T00:00:00+05:30").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).toUpperCase()}</option>`).join(""); sel.dataset.list = want; }
     sel.value = d.expiry;
