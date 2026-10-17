@@ -306,7 +306,8 @@ The app is ready to run on a platform that deploys from GitHub:
   research engine, and so does the carry read (did the candle that reached the target close a quarter
   into the next gap, and was the level beyond reached). Under the chart two pills in the Main Menu's
   format (17 October): **Paper calls** opens that table, **Open OI chart** opens Dhan's option chain of the
-  index, laid out as Dhan lays it out: every strike of the nearest expiry (a drop-down for the next ones),
+  index, laid out as Dhan lays it out: every strike of the nearest expiry (a drop-down for the next ones, the
+  latest date first, the owner's order),
   both sides with OI, OI change, volume, volume change, IV, LTP, LTP change, delta and gamma, the
   in-the-money cells shaded, the index level marked between the strikes around it; above it ATM IV, its
   change against the previous close (known from the day after the server first saw a close), PCR, the
