@@ -72,7 +72,9 @@ their own logic. Read this before touching the code.
   it again on a `pageshow` from the browser's back-forward cache, 17 October).
   A page without an id is let in only within a handover (opened
   when a page is served while another is open, or at login; used up when the
-  new page gets its id). A page silent for `DASHBOARD_DROP_SECONDS` (4 h) is
+  new page gets its id), or within `GRACE_SECONDS` of a page's connection
+  dropping (`page_just_left`: the Back button shows a page the server never
+  served, 17 October). A page silent for `DASHBOARD_DROP_SECONDS` (4 h) is
   gone; a login with no page and no handover is over. 30-day ceiling; kept in memory,
   so a restart ends it. No password set = open, with a warning. Pages show a
   **Log out** button whenever the login is on.
