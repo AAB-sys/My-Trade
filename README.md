@@ -236,7 +236,10 @@ true:
 - A page without an id is let in only inside a *handover*: the server opens one
   when it serves a page while another page of the login is open (a reload, a tile
   click), or at login for the first page, and closes it as soon as the new page
-  gets its id. A page that has not reported in for 4 hours
+  gets its id. It is also let in within 30 seconds of a page's connection
+  dropping: the Back button shows a page from the browser's own copy, which the
+  server never served, at the moment the page being left drops (17 October;
+  before, such a page landed on the password page). A page that has not reported in for 4 hours
   (`DASHBOARD_DROP_SECONDS`) is gone; a login with no page left and no handover
   open is over.
 

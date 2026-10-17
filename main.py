@@ -151,7 +151,9 @@ live_subs: dict = {}     # websocket -> the index name whose ticks it wants (an 
 #   drops. A page the browser brings back after a restart has no page id.
 # - A page without an id is let in only during a handover: opened when a page is served
 #   while another page of the login is open (a reload, a tile click), or by the login
-#   itself for its first page; used up when the new page gets its id.
+#   itself for its first page; used up when the new page gets its id. Or within
+#   GRACE_SECONDS of a page's connection dropping: the Back button shows a page from the
+#   browser's own copy, served by nobody, as the page it leaves drops (17 October).
 # Kept in memory, so a server restart ends every login.
 logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "dropped_at", "last_beat"}}, "handover_until"}
 revoked: set[str] = set()  # tokens logged out on this server: never revived from the cookie
@@ -184,6 +186,13 @@ def page_open(page: dict, now: float) -> bool:
     if page["socket"] is not None:
         return True
     return now - page["last_beat"] < OPEN_SECONDS and page["last_beat"] > page["dropped_at"]
+
+
+def page_just_left(page: dict, now: float) -> bool:
+    """Its connection dropped within GRACE_SECONDS: it may be the page the browser is leaving for the page now asking
+    without an id. The Back button shows the earlier page from the browser's own copy, so the server never serves it and
+    opens no handover (17 October: a page loaded afresh that way landed on the password page). The tab note still guards."""
+    return page["socket"] is None and 0 < now - page["dropped_at"] < GRACE_SECONDS
 
 
 def find_login(token):
@@ -248,7 +257,7 @@ def logged_in(connection) -> bool:
     if page_id:
         entry["pages"][page_id]["last_beat"] = now
         return True
-    return any(page_open(p, now) for p in entry["pages"].values()) or now < entry["handover_until"]
+    return any(page_open(p, now) or page_just_left(p, now) for p in entry["pages"].values()) or now < entry["handover_until"]
 
 
 def page_allowed(request: Request) -> bool:
