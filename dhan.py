@@ -656,7 +656,7 @@ def nearest_expiry(name: str) -> str:
     return cached(("expiry", name), 1800, make)
 
 
-LEG_FIELDS = ("oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma")  # what the OI chart shows of each leg, in this order
+LEG_FIELDS = ("oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma", "theta", "vega")  # what the OI chart shows of each leg, in this order (theta and vega since 17 October, the owner's ask)
 
 
 def _num(value):
@@ -691,7 +691,8 @@ def chain(name: str, expiry: str) -> dict:
                     greeks = leg.get("greeks") or {}
                     full[side] = {"oi": _num(leg.get("oi")), "prev_oi": _num(leg.get("previous_oi")), "volume": _num(leg.get("volume")),
                                   "prev_volume": _num(leg.get("previous_volume")), "iv": _num(leg.get("implied_volatility")), "ltp": _num(leg.get("last_price")),
-                                  "prev_close": _num(leg.get("previous_close_price")), "delta": _num(greeks.get("delta")), "gamma": _num(greeks.get("gamma"))}
+                                  "prev_close": _num(leg.get("previous_close_price")), "delta": _num(greeks.get("delta")), "gamma": _num(greeks.get("gamma")),
+                                  "theta": _num(greeks.get("theta")), "vega": _num(greeks.get("vega"))}
                 if row:
                     strikes[round(float(strike), 2)] = row
                     legs[round(float(strike), 2)] = full
@@ -731,8 +732,8 @@ def _iv_change(name: str, expiry: str, atm_iv) -> float | None:
 
 def chain_table(name: str, expiry: str | None = None) -> dict:
     """The OI chart of an index (17 October, the owner: "bring the OI data as it is the same like dhan does"): every strike
-    of one expiry with both legs' OI, yesterday's OI, volume, yesterday's volume, IV, LTP, yesterday's close, delta and
-    gamma (LEG_FIELDS, as a compact row each: strike, the CE's nine, the PE's nine), with what Dhan's chain shows above
+    of one expiry with both legs' OI, yesterday's OI, volume, yesterday's volume, IV, LTP, yesterday's close, delta, gamma,
+    theta and vega (LEG_FIELDS, as a compact row each: strike, the CE's eleven, the PE's eleven), with what Dhan's chain shows above
     its table: the index level, the expiries to choose from, the market lot, the days to expiry, the ATM IV, its change
     against the previous close, and the PCR (all PE OI over all CE OI). The nearest expiry unless another listed one is asked for."""
     dates = expiry_list(name)

@@ -308,7 +308,8 @@ The app is ready to run on a platform that deploys from GitHub:
   format (17 October): **Paper calls** opens that table, **Open OI chart** opens Dhan's option chain of the
   index, laid out as Dhan lays it out: every strike of the nearest expiry (a drop-down for the next ones, the
   latest date first, the owner's order),
-  both sides with OI, OI change, volume, volume change, IV, LTP, LTP change, delta and gamma, the
+  both sides with OI, OI change, volume, volume change, IV, LTP, LTP change, delta, gamma, theta and vega
+  (theta and vega outermost, added the same day at the owner's ask: Dhan sends them but shows them only when switched on), the
   in-the-money cells shaded, the index level marked between the strikes around it; above it ATM IV, its
   change against the previous close (known from the day after the server first saw a close), PCR, the
   market lot and the days to expiry. Read again every 15 seconds while open (`/options/{name}/chain`, from

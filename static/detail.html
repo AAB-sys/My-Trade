@@ -1507,12 +1507,14 @@
   // should be freezed always and columns can be dragged and moved left to right"). The server's /options/{name}/chain gives
   // Dhan's chain of the nearest expiry (or the one chosen), every strike, read again every 15 s while the chart is open and
   // the page in view. Data on the page only: nothing here touches the lines, the calls or the rule
-  const CHAIN_COLS = [["ce.gamma", "Gamma"], ["ce.delta", "Delta"], ["ce.oi", "OI"], ["ce.oichg", "OI Change %"], ["ce.vol", "Volume"], ["ce.volchg", "Vol Change%"],
+  // Theta and Vega on both sides since 17 October (the owner: "where is theta in the OI chart table?"), outermost, as Dhan places its greeks
+  const CHAIN_COLS = [["ce.vega", "Vega"], ["ce.theta", "Theta"], ["ce.gamma", "Gamma"], ["ce.delta", "Delta"], ["ce.oi", "OI"], ["ce.oichg", "OI Change %"], ["ce.vol", "Volume"], ["ce.volchg", "Vol Change%"],
                       ["ce.iv", "IV"], ["ce.ltpchg", "LTP Change"], ["ce.ltp", "LTP"], ["strike", "Strike Price"], ["pe.ltp", "LTP"], ["pe.ltpchg", "LTP Change"],
-                      ["pe.iv", "IV"], ["pe.volchg", "Vol Change%"], ["pe.vol", "Volume"], ["pe.oichg", "OI Change %"], ["pe.oi", "OI"], ["pe.delta", "Delta"], ["pe.gamma", "Gamma"]];
+                      ["pe.iv", "IV"], ["pe.volchg", "Vol Change%"], ["pe.vol", "Volume"], ["pe.oichg", "OI Change %"], ["pe.oi", "OI"], ["pe.delta", "Delta"], ["pe.gamma", "Gamma"], ["pe.theta", "Theta"], ["pe.vega", "Vega"]];
   const CHAIN_LABEL = Object.fromEntries(CHAIN_COLS);
   let chainOrder = CHAIN_COLS.map(c => c[0]);  // the columns left to right; dragged into any order, remembered per browser
-  try { const saved = JSON.parse(localStorage.getItem("chainCols") || "null"); if (Array.isArray(saved) && saved.length === chainOrder.length && saved.every(k => CHAIN_LABEL[k])) chainOrder = saved; } catch (e) {}
+  try { const saved = JSON.parse(localStorage.getItem("chainCols") || "null");  // an order saved before a column was added keeps its places: the new column goes where it is by default
+    if (Array.isArray(saved) && saved.length && saved.every(k => CHAIN_LABEL[k])) { const order = saved.filter((k, i) => saved.indexOf(k) === i); CHAIN_COLS.forEach(([k], i) => { if (!order.includes(k)) order.splice(i, 0, k); }); chainOrder = order; } } catch (e) {}
   const chain = { data: null, expiry: null, loading: false };
   try { chain.expiry = sessionStorage.getItem("chainExpiry") || null; } catch (e) {}  // the expiry chosen before this tab's last reload (the page reloads itself after a deploy)
   const short = (n) => n == null ? "—" : Math.abs(n) >= 1e7 ? (n / 1e7).toFixed(2) + " Cr" : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + " L" : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(2) + " K" : String(Math.round(n));  // Dhan's lakh and crore
@@ -1527,6 +1529,8 @@
     const td = (html, c = "") => `<td class="${c}${itm ? " itm" : ""}">${html}</td>`;
     if (f === "gamma") return td(leg.gamma == null ? "—" : leg.gamma.toFixed(5));
     if (f === "delta") return td(leg.delta == null ? "—" : leg.delta.toFixed(2));
+    if (f === "theta") return td(leg.theta == null ? "—" : leg.theta.toFixed(2));
+    if (f === "vega") return td(leg.vega == null ? "—" : leg.vega.toFixed(2));
     if (f === "oi") return td(short(leg.oi));
     if (f === "vol") return td(short(leg.volume));
     if (f === "iv") return td(leg.iv == null ? "—" : leg.iv.toFixed(2));
@@ -1544,7 +1548,7 @@
     document.getElementById("chain-name").textContent = name;
     if (!d) { body.innerHTML = ""; return; }
     const F = d.fields, at = (row, f) => row[F.indexOf(f)];
-    const legOf = (row, side) => Object.fromEntries(["oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma"].map(f => [f, at(row, side + "_" + f)]));
+    const legOf = (row, side) => Object.fromEntries(["oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma", "theta", "vega"].map(f => [f, at(row, side + "_" + f)]));
     const strikeAt = chainOrder.indexOf("strike");
     let html = "", marked = false;
     for (const row of d.rows) {
