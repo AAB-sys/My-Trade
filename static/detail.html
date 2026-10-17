@@ -370,15 +370,19 @@
     layout: { background: { color: "transparent" }, textColor: cssVar("--muted"), fontFamily: "system-ui, sans-serif" },
     grid: { vertLines: { color: cssVar("--grid") }, horzLines: { color: cssVar("--grid") } },
     rightPriceScale: { borderColor: cssVar("--grid") },
-    // the chart never scrolls past its first or last candle (the owner, 16 October, a chart dragged away from its candles,
-    // lines across empty space: "what is this"); up and down, keepCandles below does the same
-    timeScale: { borderColor: cssVar("--grid"), timeVisible: true, secondsVisible: false, fixLeftEdge: true, fixRightEdge: true },
+    // The chart moves as Dhan's does (the owner, 17 October: "i want chart movement same dhan chart movement ... charts up down
+    // right left movement with the help of mouse"). Dhan's chart is TradingView's engine, and this one is TradingView's own
+    // lightweight library, so its own handling is switched on: drag the chart to move it left, right, up and down; the wheel
+    // zooms around the pointer; a sideways swipe scrolls; drag the price scale or the time scale to stretch it, double-click
+    // either to reset it; pinch to zoom on the phone. A gap of five candles stays to the right of the last candle, as on Dhan.
+    // The chart never scrolls before its first candle, and not far past its last one (the owner, 16 October: "what is this",
+    // a chart dragged away from its candles); up and down, keepCandles below brings the candles back
+    timeScale: { borderColor: cssVar("--grid"), timeVisible: true, secondsVisible: false, rightOffset: 5, fixLeftEdge: true, fixRightEdge: false, lockVisibleTimeRangeOnResize: true },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
     localization: { locale: "en-IN", priceFormatter: (p) => fmt.format(p) },
-    // the wheel is handled below (price up/down, shift for time, ctrl or pinch for zoom);
-    // dragging moves in time; on a phone a one-finger vertical swipe still scrolls the page
-    handleScroll: { mouseWheel: false, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
-    handleScale: { mouseWheel: false, pinch: true, axisPressedMouseMove: true },
+    // on a phone a one-finger vertical swipe still scrolls the page (the table is under the chart); a sideways swipe moves the chart
+    handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+    handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: { time: true, price: true } },
   });
 
   // ---- zoom and move
@@ -402,7 +406,7 @@
     let below = -Infinity;
     for (let k = lv.length - 1; k >= 0; k--) {  // the levels are sorted by price: from the top line down
       const el = box.children[k], y = series.priceToCoordinate(lv[k].price);
-      el.hidden = y == null || y < 0 || y > box.clientHeight;
+      el.hidden = y == null || y < 0 || y > chart.paneSize().height;  // off the pane (the time scale under it is not the pane)
       if (el.hidden) continue;
       const at = Math.max(y, below + 14); el.style.top = at + "px"; below = at;
     }
@@ -431,13 +435,12 @@
   }
   let priceHeight = 0;  // the height of the auto-fitted price view, learnt from the chart
   let candleRange = null, fittedRange = null;  // the candles' own lowest and highest price, and the fitted view before the buttons' shift
-  const autoscale = (original) => {  // the chart's own fit, shifted by the buttons
+  const autoscale = (original) => {  // the chart's own fit, shifted by the buttons or a drag
     const info = original();
-    const lv = state.move === "close" ? lastLevels.levels : null;  // the previous close's lines (15 October): all of them in view, so each one can be read
+    // the view fits the candles, as Dhan's chart does (17 October); until then it took in all 13 previous-close lines too, which
+    // left the candles small in the middle. The lines sit where they fall: drag the chart, or stretch its price scale, to see the far ones
     if (info && info.priceRange) candleRange = { ...info.priceRange };
-    if (info && info.priceRange && lv && lv.length)
-      info.priceRange = { minValue: Math.min(info.priceRange.minValue, lv[0].price), maxValue: Math.max(info.priceRange.maxValue, lv[lv.length - 1].price) };
-    if (lv) queueTags();  // the chart is fitting its price view again: the lines' names follow
+    queueTags();  // the chart is fitting its price view again: the lines' names follow
     if (info && info.priceRange) {
       fittedRange = { ...info.priceRange };
       priceHeight = info.priceRange.maxValue - info.priceRange.minValue;
@@ -482,6 +485,34 @@
     if (hi < bottom || lo > top) { priceShift = 0; refit(); }
   }
   ["pointerup", "pointercancel", "touchend"].forEach(ev => document.addEventListener(ev, () => setTimeout(keepCandles, 0), { passive: true }));  // on the page: a drag often ends off the chart
+  // Dragging the chart up and down with the mouse (17 October, as Dhan's chart). While the chart's own fitting is on, the
+  // library moves the chart only sideways on a drag; the up-and-down part is done here, through the same shift the ▲ ▼ buttons
+  // use, so the fitting stays on and the candles keep their size. Once the price scale has been dragged (its fitting off), the
+  // library moves the chart up and down by itself, and this stays out of its way. The time scale and the price scale are the
+  // library's own: a drag there stretches, a double-click resets
+  let drag = null;
+  const chartEl = document.getElementById("chart");
+  const onScales = (e) => { const box = chartEl.getBoundingClientRect(); return e.clientX > box.right - chart.priceScale("right").width() || e.clientY > box.top + chart.paneSize().height; };
+  chartEl.addEventListener("pointerdown", e => { if (e.button === 0 && e.pointerType === "mouse" && !onScales(e)) drag = { y: e.clientY, shift: priceShift }; });
+  chartEl.addEventListener("pointermove", e => {
+    if (!drag || !series || !priceHeight) return;
+    if (!chart.priceScale("right").options().autoScale) { drag = null; return; }  // the library is moving it
+    const dy = e.clientY - drag.y, h = chart.paneSize().height, top = series.coordinateToPrice(0), bottom = series.coordinateToPrice(h);
+    if (top == null || bottom == null) return;
+    priceShift = drag.shift + dy * (top - bottom) / h;  // the chart follows the pointer, one pixel for one pixel: dragging down shows higher prices
+    refit();
+  });
+  ["pointerup", "pointercancel"].forEach(ev => document.addEventListener(ev, () => { drag = null; }, { passive: true }));
+  chartEl.addEventListener("dblclick", () => { priceShift = 0; refit(); });  // as the double-click on a scale: back to the fitted view
+  // not far past the last candle: at most a third of the view may be empty space to its right. And the names at the left
+  // follow: the view fits the candles in sight, so a sideways move or a zoom moves the lines up and down too
+  chart.timeScale().subscribeVisibleLogicalRangeChange(r => {
+    queueTags();
+    if (!r || !bars.length) return;
+    const w = r.to - r.from, most = bars.length - 1 + Math.max(5, w / 3);
+    if (r.to > most) chart.timeScale().setVisibleLogicalRange({ from: most - w, to: most });
+  });
+  setInterval(queueTags, 250);  // the library lays the chart out a frame later than it is asked: a slow heartbeat catches what the events miss
   function nav(action) {
     if (action === "fit") { priceShift = 0; chart.timeScale().fitContent(); refit(); }
     if (action === "in") zoomBy(0.7);
@@ -493,29 +524,8 @@
   }
   document.getElementById("nav").addEventListener("click", e => { const a = e.target.dataset.nav; if (a) nav(a); });
 
-  // The wheel over the chart (16 October, the owner: with the pointer on the chart the page would not scroll, "movement of
-  // cursor on the chart, why u did not fix"; until then a plain wheel moved the chart's price view instead):
-  //   wheel / two-finger swipe up-down            -> the page scrolls, as it does everywhere else on it
-  //   shift + wheel / two-finger swipe left-right -> the chart moves earlier or later
-  //   ctrl + wheel / touchpad pinch               -> the chart zooms (browsers send a pinch as ctrl + wheel)
-  // The price view moves with the ▲ ▼ buttons, or by dragging the chart.
-  // A mouse wheel can report its turn in lines (Firefox) or in screens (Windows set to scroll one screen at a time)
-  // instead of pixels: a notch of three lines counts as 100 pixels (a notch of a Chrome mouse wheel), a screen as the
-  // chart's height
-  document.getElementById("chart").addEventListener("wheel", e => {
-    const box = e.currentTarget.getBoundingClientRect();
-    const unit = e.deltaMode === 1 ? 100 / 3 : e.deltaMode === 2 ? box.height : 1;
-    const dx = e.deltaX * unit, dy = e.deltaY * unit;
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      zoomBy(Math.exp(Math.max(-100, Math.min(100, dy)) / 250));          // a wheel notch of 100 -> x1.5; a pinch step is gentler
-    } else if (e.shiftKey || Math.abs(dx) > Math.abs(dy)) {
-      e.preventDefault();
-      const px = e.shiftKey && !dx ? dy : dx;
-      moveTime(px / box.width);                                            // one pixel of wheel = one pixel of chart
-    }
-    // a plain wheel up or down: not ours, the browser scrolls the page
-  }, { passive: false });
+  // The wheel over the chart is the library's: it zooms around the pointer, a sideways swipe scrolls. The page scrolls when
+  // the pointer is off the chart (17 October, the owner: the chart as Dhan's; until then a plain wheel scrolled the page)
   let series = null;
   let nowLine = null;  // the price now, a light blue line (markNow)
   let bars = [];
