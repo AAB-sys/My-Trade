@@ -68,7 +68,9 @@ their own logic. Read this before touching the code.
   in front (a background tab reports about once a minute, a phone not at all),
   so a page counts as open while its connection is up or for
   `DASHBOARD_OPEN_SECONDS` (10 min) after its last report, and may come back
-  after a drop. A page without an id is let in only within a handover (opened
+  after a drop (a page that is left closes `/ws` itself on `pagehide` and opens
+  it again on a `pageshow` from the browser's back-forward cache, 17 October).
+  A page without an id is let in only within a handover (opened
   when a page is served while another is open, or at login; used up when the
   new page gets its id). A page silent for `DASHBOARD_DROP_SECONDS` (4 h) is
   gone; a login with no page and no handover is over. 30-day ceiling; kept in memory,

@@ -276,7 +276,11 @@ The app is ready to run on a platform that deploys from GitHub:
 - `main.py` runs the loop, keeps the memory, serves the menu, and pushes
   snapshots to WebSocket clients.
 - `static/index.html` opens the WebSocket, redraws on every message, and
-  reconnects by itself if the connection drops. Every tile is a link to that
+  reconnects by itself if the connection drops. Both pages close the connection
+  themselves when they are left (the Back button, a link) and open it again the
+  moment the browser shows them again (17 October: Chrome parks a page that is
+  left and used to close the connection itself, with a red "Page entered
+  Back-Forward Cache" line in the console). Every tile is a link to that
   index's detail page, opened in a new tab.
 - `study.py` and `static/study.html` (the record of each session's candles and
   the Study page that replayed the rules over it) were removed on 15 October at

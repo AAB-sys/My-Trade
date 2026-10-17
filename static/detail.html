@@ -1409,10 +1409,13 @@
   // Holds a /ws connection while this page is open, and reports in every BEAT_MS: the login
   // lives while some page does either.
   let liveWs = null;
+  let parked = false;  // the page is being left (the Back button, a link): it closed its own connection, and reconnects when shown again
   function keepAlive() {
+    if (parked) return;
     const ws = liveWs = new WebSocket(wsUrl());
     ws.onmessage = event => { const data = JSON.parse(event.data); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); if (data.premium) applyPremium(data.premium); };
     ws.onclose = () => {
+      if (parked || ws !== liveWs) return;  // closed by the page on leaving, or already replaced: nothing to reconnect
       beat();  // says "still here" at once, and finds out if the login is over
       setTimeout(keepAlive, 3000);
     };
@@ -1420,6 +1423,16 @@
   }
   beat().then(keepAlive);  // report in first (a new page gets its id), then open the stream
   setInterval(beat, BEAT_MS);
+  // Leaving and coming back (17 October, the owner's console: "WebSocket connection ... failed: Page entered Back-Forward
+  // Cache"): Chrome parks a page left with the Back button or a link, closes its live connection itself and prints that
+  // red line. The page closes the connection first, so Chrome has nothing to close, and the moment it is shown again it
+  // opens it again and refreshes at once, instead of 3 s later
+  window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
+  window.addEventListener("pageshow", event => {
+    if (!event.persisted) return;  // the first show: the page is already connecting
+    parked = false; lastSeen = lastKick = Date.now();
+    keepAlive(); clearTimeout(state.timer); load();
+  });
   // Silence is a dead connection, not a quiet market: ticks come every second in market hours and a refresh
   // every poll. After twice the poll (at least 45 s) with neither, the socket is closed, which makes it
   // reconnect, and a refresh is forced. A connection that dies without saying so (a laptop asleep, a phone
