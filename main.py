@@ -1170,6 +1170,26 @@ async def options_state(name: str):
             "sell_share": dhan.SELL_SHARE, "records": dhan.records_for(key)}
 
 
+@app.get("/options/{name}/chain")
+async def options_chain(name: str, expiry: str | None = None):
+    """The OI chart's data (17 October): Dhan's option chain of the index, one expiry, every strike with both legs' figures
+    (dhan.chain_table). The page asks every 15 s while its OI chart is open; the chain itself is the one the premiums
+    already read, kept for 5 s, so this costs Dhan no extra request."""
+    key = known_index(name)
+    if not (DHAN_ON and key in dhan.OPTION_INDICES):
+        raise HTTPException(status_code=409, detail=store["dhan"]["status"])
+    if expiry is not None:
+        try:
+            datetime.strptime(expiry, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(status_code=400, detail="expiry must be YYYY-MM-DD")
+    try:
+        return await asyncio.to_thread(dhan.chain_table, key, expiry)
+    except Exception as exc:
+        dhan_status(False, dhan_reason(exc))
+        raise HTTPException(status_code=502, detail=store["dhan"]["status"])
+
+
 @app.post("/options/{name}/calls")
 async def options_register(name: str, request: Request):
     key = known_index(name)
