@@ -716,6 +716,7 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
             if levels_at is None:
                 return {"calls": 0, "open": 0}
     else:
+        previous = None
         levels_at = rule.today_levels_at(bars)
     now = time.time()
     targets_at = rule.today_lines_at(bars) if today_so_far else None  # a call's target on the chart's lines (8 October evening)
@@ -724,10 +725,9 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
         parts = r["key"].split("|")
         if len(parts) == 5 and parts[0] == name and parts[1] == key and parts[4] == levels_mode and parts[2].isdigit():
             given.setdefault(int(parts[2]), parts[3])
-    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,
-                               key == "5m" and rule.FRESH_RUN.get(name, False),  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October); idea 13 on NIFTY 50 (12 October)
+    trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
                                key == "5m" and today_so_far and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
-                               key == "5m" and rule.CLEAR_CROSS.get(name, False), key == "5m" and rule.ONE_WAY.get(name, False))["trades"]  # ideas 8 and 5: NIFTY 50, both kinds of lines (13 October)
+                               previous["close"] if previous else None)["trades"]  # the first candle judged from the previous close; ideas 13, 8 and 5 removed (18 October)
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, levels_mode)

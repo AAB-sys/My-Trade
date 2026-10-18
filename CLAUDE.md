@@ -238,17 +238,22 @@ branch from `main`.
   itself brought closer (12 October; its own new low for a CE, high for a PE, moved the lines) counts its high/low only
   against the target as it stood before the candle (`linesAt(i - 1)`), and the moved target on its close (live: the price
   now): `hits` / `hits` in paperTrades, mirrored in `lab/replay.js`.
-- Idea 13, no call against a fresh run (12 October): `freshRun` / `fresh_run` in paperTrades and replayDay / replay_day, passed by
-  the index page (5m, `Rules.FRESH_RUN[name]`), the watcher (5m, `rule.FRESH_RUN`, both levels modes), the Study page (5m) and
-  `lab/replay.js` (its own engine, `o.freshRun`, and the page's base lines, so they still agree). `Rules.freshOf` / `rule.fresh_of`:
-  the day's new lows and highs among its last `FRESH_CANDLES` (6) candles up to the signal; against a fresh run (a new low and no new
-  high for a CE, the other way for a PE) a signal not given live gets no call and goes into the result's `skipped` (with `why`), its
-  line left free. `FRESH_FROM` (env) tells `lab/replay.js` from which session the live calls ran it.
+- Ideas 13 (no call against a fresh run), 8 (a clear close past the line) and 5 (no Crossed call the other way while one is held)
+  left the engine on 18 October (the owner: "all three remove"): no `freshRun` / `clearCross` / `oneWay`, no `FRESH_RUN` /
+  `CLEAR_CROSS` / `ONE_WAY`, no `freshOf`, no `skipped` in the result. `lab/replay.js` (its own engine) keeps them as settings, off,
+  and guards its reads of the gone exports.
+- The call fires on a later candle (18 October): a signal is `armed` with `fireAt` (its candle's high for a CE, low for a PE) and
+  enters, `enterAt(sig, bar, price)` / `enter_at`, where a later candle's price goes past it (the candle's open when it opened past
+  it), closed candles and the forming one alike (`fire` in paperTrades / paper_trades); a close back across the signal's line cancels
+  it; no row until it fires (no more `how: "pending"` rows). Every signal gives a call: a second one the same way while another is
+  held gets `parallel: true` (the page: "Can be bought parallelly"). `prevClose` / `prev_close` (the previous day's close) judges
+  the day's first candle too, passed by the page (`prevCloseOf()`, not on today's range), the watcher (Previous close mode) and
+  `replayDay` / `replay_day` on the "prev" and "close" moves.
 - The owner's exit rule "Hold Through a Level Break" (8 October night): `holdBreaks` / `hold_breaks`, passed by the index
   page (not on day candles), the watcher and `replayDay`. A crossed call gets `hold: true` and `c1Open` (the signal
   candle's open); it ends `"back"` (a close back across its line) or `"retouch"` (a candle opening beyond the previous
-  close, then back to `c1Open`, tick by tick), else at the day end; never at its target. While one is open, no new call
-  that way. The lab's `run()` mirrors it (`holdBreaks !== false`).
+  close, then back to `c1Open`, tick by tick), else at the day end; never at its target. Until 18 October no new call came
+  that way while one was open; now the next one runs beside it, `parallel: true`. The lab's `run()` mirrors it (`holdBreaks !== false`).
 - Rule 2 of the owner's specification (9 October): `trail` / `trail` (with holdBreaks), `Rules.TRAIL` / `rule.TRAIL`, the
   owner's choice `{ lines: "all", buffer: "none", place: "back" }` (#115 had `place: "at"`), passed by the index page, the watcher and `replayDay`
   (`replayDay({ trail: null })` is Rule 1 alone). A held break whose candle closes beyond a further line (on `levelsAt`)

@@ -799,9 +799,19 @@
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : fromClose || (() => levels), targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: longCandles(), signal: state.signal, holdBreaks: !longCandles(), trail: Rules.TRAIL,
-                               given: longCandles() || state.view === "1w" || !["today", "prev"].includes(state.period) ? null : givenCalls(), freshRun: state.interval === "5m" && !!Rules.FRESH_RUN[name],  // idea 13, NIFTY 50 (12 October)
+                               given: longCandles() || state.view === "1w" || !["today", "prev"].includes(state.period) ? null : givenCalls(),
                                newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
-                               clearCross: state.interval === "5m" && !!Rules.CLEAR_CROSS[name], oneWay: state.interval === "5m" && !!Rules.ONE_WAY[name] });  // ideas 8 and 5, NIFTY 50 (13 October)
+                               prevClose: judgedToday() ? null : prevCloseOf() });  // the first candle judged from the previous close (18 October; not on today's range, which has no lines before it); ideas 13, 8 and 5 left the rule that day
+  }
+  // The close before the day's first candle (18 October: the first candle is judged from it, as every other candle is judged from
+  // the close before it): the previous session's close when the day's candles are shown, else the last close the tiles show
+  function prevCloseOf() {
+    if (longCandles()) return null;
+    const first = shownBars()[0], key = currentSession();
+    const day = (first ? dayBefore(dateKey(first.time)) : null) || (key ? dayBefore(key) : null);
+    if (day && day.close != null) return day.close;
+    const s = state.summary;
+    return s && s.previous_close != null ? s.previous_close : null;
   }
   // The calls given live (9 October, the owner: a call already given must stay on the table): today's records of options
   // bought on this page's time frame and levels, { signal candle's time: side }, the first recorded for a candle. A candle
@@ -994,18 +1004,19 @@
   // "Candle status": one word for every open call, HOLD or SELL (the owner's plain words, 8 October night; CARRY and EXIT
   // until then), with the reason in words under it; on a finished call, what the word was and when, so the owner can judge
   // it against the result
+  // Since 18 October (the owner, on the Hypothetical Monday picture) the cell changes in place as the call goes: "Buy CE
+  // (Crossed above 0%)" when it fires, "Hold (Crossed above +23.6%)" once a candle has closed beyond a further line, naming the
+  // furthest one (Rule 2's line), "Can be bought parallelly" on a second call the same way while another is held ("it will be my
+  // decision to buy it or not"), and "Take Exit" with the reason at the end ("Sold wording can be replaced with Take Exit with reason")
   function candleCell(t, r) {
-    if (t.exit != null)  // closed: the sale is the last word on the call, the same way for every reason
-      return `<td class="cand ${{ up: "carry", down: "exit" }[closedTone(t, r)] || ""}">SOLD<small>${soldReason(t, r)}</small></td>`;
-    const rd = candleRead(t);
-    if (!rd) return `<td class="cand">—</td>`;
-    if (t.exit == null && rd.say === "exit" && !t.hold) {  // a bounce call: the candles' warning is not a sale (the owner, 9 October)
-      const w = watchNow(t);
-      return w.watch ? `<td class="cand watch">WATCH<small>${rd.why}</small></td>` : `<td class="cand carry">HOLD<small>${w.why}</small></td>`;
-    }
-    if (t.exit == null) return `<td class="cand ${rd.say}">${rd.say === "exit" ? "SELL" : "HOLD"}<small>${rd.why}</small></td>`;
-    if (rd.exitAt == null) return `<td class="cand carry">HOLD the whole time<small>${rd.why}</small></td>`;
-    return `<td class="cand exit">said SELL at ${callTime(rd.exitAt)}<small>${rd.why}</small></td>`;
+    if (t.exit != null)  // closed: the exit is the last word on the call, the same way for every reason
+      return `<td class="cand ${{ up: "carry", down: "exit" }[closedTone(t, r)] || ""}">Take Exit<small>${soldReason(t, r)}</small></td>`;
+    if (t.entry == null) return `<td class="cand">—</td>`;
+    const far = t.trail && t.trail.ratio != null ? pctText(t.trail.ratio) : pctOf(t);  // the furthest line a candle has closed beyond, else the signal's line
+    const what = t.kind === "held" && !t.hold ? `On the line ${pctOf(t)}` : `${t.side === "PE" ? "Crossed below" : "Crossed above"} ${far}`;
+    const head = t.trail ? "Hold" : t.parallel ? "Can be bought parallelly" : `Buy ${t.side}`;
+    const rd = !t.hold ? candleRead(t) : null, w = rd && rd.say === "exit" ? watchNow(t) : null;  // a bounce call: the candles' warning stays a warning (the owner, 9 October)
+    return `<td class="cand ${w && w.watch ? "watch" : "carry"}">${head}<small>(${what})${t.parallel && t.trail ? " · parallel" : ""}${w && w.watch ? ` · watch: ${rd.why}` : ""}</small></td>`;
   }
   // WATCH, not SELL, on an open bounce call (the owner's choice of 9 October, "2"): a bounce call is sold only at its
   // target, at the day end or by the 35% premium rule, so the candles' "sell" is a warning. It shows WATCH while the last
