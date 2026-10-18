@@ -296,7 +296,8 @@ The app is ready to run on a platform that deploys from GitHub:
   +100% above it and -23.6% to -100% below it, 100% being 1.5% of the close,
   drawn again on today's range only after a candle closes beyond +100% or -100%); its
   second, whether a closed candle held or crossed a level, is the signal of its
-  third, the paper trades that rule would have given on those candles (On the line and Crossed signals both, the switch gone on 16 October; the call the
+  third, the paper trades that rule would have given on those candles (On the line and Crossed signals both, the switch gone on 16 October; since 18 October a
+  candle's own wick through a line counts as a cross, so On the line is an exact touch only; the call the
   moment the signal candle closes, buy a CE or a PE, entry at the next price, the next level as
   target and no stop, one call per level (by its price) and direction until the index closes
   back across it, closed at the day's end; a call from a break is held through its

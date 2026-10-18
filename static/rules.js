@@ -96,8 +96,14 @@
   // 22,509.35, the 78.6% line itself, and the 13:40 candle closed above it at 22,526.15; judged against the close just
   // before, the break went uncounted and no call came): a cross is judged from the last close off that line, from(L), the
   // close just before whenever that is off the line. Holds are judged from the close just before, as ever
+  // A candle's own wick counts as crossing (18 October, the owner, of a candle that dipped below a line and closed above it:
+  // "this should also be considered as closed above"; "yes" to: a candle closing above a line after its own low went below it
+  // is Crossed above, the same the other way for Crossed below, and On the line is left for an exact touch). So a cross is
+  // a close on one side of a line with the price on the other side before it: the last close off the line, or this candle's
+  // own low or high. Until then such a candle was a hold, and the hold was sold at its target; as a cross it is held through
+  // the target and sold by the exit rules, and ideas 8 and 5 apply to it
   function signalAt(bar, prev, levels, used, signal, from) {
-    const crossed = L => { const p = from ? from(L) : prev; return (p < L && bar.close > L) || (p > L && bar.close < L); };
+    const crossed = L => { const p = from ? from(L) : prev; return (p < L && bar.close > L) || (p > L && bar.close < L) || (bar.low < L && bar.close > L) || (bar.high > L && bar.close < L); };
     const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
     const hits = levels.filter(l => {
       const kind = crossed(l.price) ? "crossed" : held(l.price) ? "held" : null;
@@ -124,7 +130,7 @@
     if (!ok.length) return null;
     const touched = ok.filter(l => bar.low <= l.price && bar.high >= l.price);
     const at = (touched.length ? touched : ok).reduce((a, b) => Math.abs(b.price - bar.close) < Math.abs(a.price - bar.close) ? b : a);
-    const p = from(at.price), kind = (side === "CE" ? p < at.price : p > at.price) ? "crossed" : "held";
+    const p = from(at.price), kind = (side === "CE" ? p < at.price || bar.low < at.price : p > at.price || bar.high > at.price) ? "crossed" : "held";  // the wick counts (18 October)
     const next = side === "CE" ? levels.find(l => l.price > at.price) : levels.slice().reverse().find(l => l.price < at.price);
     return { signalTime: bar.time, level: at.price, ratio: at.ratio, ...(at.signed ? { signed: true } : {}), kind, side, target: next.price, close: bar.close,
              range: round2(bar.high - bar.low), entry: null, exit: null, points: null, how: "pending", kept: true,

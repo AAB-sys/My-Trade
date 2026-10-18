@@ -116,9 +116,9 @@ def move_of_day(d):
 
 def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, frm=None):
     """frm(L): the last close off line L; a close exactly on a line has not crossed it yet (9 October, see static/rules.js)."""
-    def crossed(L):
+    def crossed(L):  # the candle's own wick counts as crossing too (18 October, see static/rules.js)
         p = frm(L) if frm else prev
-        return (p < L < bar["close"]) or (p > L > bar["close"])
+        return (p < L < bar["close"]) or (p > L > bar["close"]) or (bar["low"] < L < bar["close"]) or (bar["high"] > L > bar["close"])
 
     def held(L):
         return not crossed(L) and ((prev > L and bar["low"] <= L and bar["close"] > L) or (prev < L and bar["high"] >= L and bar["close"] < L))
@@ -159,7 +159,7 @@ def kept_at(bar: dict, levels: list, frm, side: str):
         if abs(b["price"] - bar["close"]) < abs(at["price"] - bar["close"]):
             at = b
     p = frm(at["price"])
-    kind = "crossed" if (p < at["price"] if side == "CE" else p > at["price"]) else "held"
+    kind = "crossed" if ((p < at["price"] or bar["low"] < at["price"]) if side == "CE" else (p > at["price"] or bar["high"] > at["price"])) else "held"  # the wick counts (18 October)
     nxt = next((l for l in levels if l["price"] > at["price"]), None) if side == "CE" else next((l for l in reversed(levels) if l["price"] < at["price"]), None)
     out = {"signalTime": bar["time"], "level": at["price"], "ratio": at["ratio"], "kind": kind, "side": side, "target": nxt["price"],
            "close": bar["close"], "range": round2(bar["high"] - bar["low"]), "entry": None, "exit": None, "points": None, "how": "pending",
