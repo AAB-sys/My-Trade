@@ -151,11 +151,24 @@ chart.
 Judged for every closed candle (the one still forming is judged once it closes)
 against where the previous candle closed:
 
-- **Held**: the candle reached the level (its high or low touched it or went
-  through) and closed back on the side it came from. The level acted as a floor
-  or a ceiling.
-- **Crossed**: the candle closed on the other side of the level from the previous
-  close. A close exactly on the level has not crossed it yet: the cross is judged
+- **Held**: the candle's high or low touched the level exactly, without going
+  through it, and it closed back on the side it came from. The level acted as a
+  floor or a ceiling. (Until 18 October a wick through the level counted as a hold
+  too; it is a cross now, below.)
+- **Crossed**: the candle closed on one side of the level with the price on the
+  other side before that: the previous close, or the candle's own low or high (18
+  October, the owner, of a candle that dipped below a line and closed above it:
+  "this should also be considered as closed above"; "yes" to: a close above a line
+  after the candle's own low went below it is Crossed above, the mirror is Crossed
+  below, and On the line is left for an exact touch). Such a call is a held break
+  like every Crossed call: held through its target, sold by a close back across
+  its line, Rule 2's stop or the day end (the retouch exit never fires for it: the
+  candle opened on the call's side), and ideas 8 and 5 apply to it. On the 12
+  saved days 29 September to 15 October, NIFTY 50, 5-minute candles, Previous
+  close lines: 61 calls, +582.67 → 31 calls, +645.25 (ahead on 5 days, behind on
+  7; 15 October: six On the line calls, +158 → one Buy CE held by Rule 2, +230;
+  13 October −165 → +225; 29 September +45 → −151).
+  A close exactly on the level has not crossed it yet: the cross is judged
   from the last close off the level (9 October, NIFTY 50: the 13:35 candle closed
   at 22,509.35, the 78.6% line itself, and the 13:40 candle closed above it at
   22,526.15; judged from 13:35's close the break was missed and no Buy CE came; it
@@ -249,8 +262,8 @@ sent anywhere, and the list is worked out afresh from the candles every minute.
 The rule, in the order it is applied:
 
 1. **Signal** - a closed candle that **held** a level (the owner's words since 12
-   October: "On the line") or **crossed** one ("Crossed above" for a Buy CE,
-   "Crossed below" for a Buy PE). Both count: the Off / On the line / Crossed above-below / Both
+   October: "On the line"; since 18 October an exact touch only) or **crossed** one ("Crossed above" for a Buy CE,
+   "Crossed below" for a Buy PE; since 18 October the candle's own wick through the line counts, layer 2). Both count: the Off / On the line / Crossed above-below / Both
    switch left the page on 16 October (the owner's ask), and so did the lone Both button later that day; Both is the setting. When
    one candle signals at several levels, the one nearest its close counts: one
    candle, one call **(owner to decide)**. A level that has given a call in a
