@@ -51,7 +51,10 @@ const r2 = x => Math.round(x * 100) / 100, tod = e => (e + IST) % 86400, hm = (h
 //   newHighLow: idea 24 (13 October), on "today" levels only: a close past the top or bottom line, when no line gives a signal,
 //   gives a Crossed call past it with no target, alongside the other calls (as Rules.paperTrades)
 //   clearCross: idea 8 (13 October): a Crossed signal closing less than a quarter of the way to the next line gives no call, its
-//   line free   oneWay: idea 5: while a Crossed call is held, a Crossed signal the other way gives no call, its line used (as Rules)
+//   line free   oneWay: idea 5: while a Crossed call is held, a Crossed signal the other way gives no call, its line used. Ideas 13,
+//   8 and 5 left the page's engine on 18 October (the owner: "all three remove"), as did the entry at the next candle's open (a
+//   call now fires where a later candle passes the signal candle's high or low): this engine still enters at the next open and
+//   keeps the three ideas as settings, off unless asked, for research only
 function run(bars, previous, o, higher) {
   const holdBreaks = o.holdBreaks !== false;
   const trail = !holdBreaks ? null : o.trail === undefined ? R.TRAIL : o.trail;
@@ -183,8 +186,8 @@ function all(index, interval, opts) {
   const higherKey = interval === "5m" ? "15m" : "30m";
   if (typeof opts === "function") opts = opts(index);  // a setting that depends on the index (Rule 2's buffer in points)
   return DAYS.flatMap(f => { const ix = f.indices[index]; if (!ix) return [];
-    return run(ix.candles[interval], ix.previous, { levels: "prev", signal: "both", freshRun: interval === "5m" && !!R.FRESH_RUN[index], newHighLow: interval === "5m" && !!R.NEW_HIGH_LOW[index],
-                   clearCross: interval === "5m" && !!R.CLEAR_CROSS[index], oneWay: interval === "5m" && !!R.ONE_WAY[index], ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
+    return run(ix.candles[interval], ix.previous, { levels: "prev", signal: "both", freshRun: interval === "5m" && !!(R.FRESH_RUN || {})[index], newHighLow: interval === "5m" && !!R.NEW_HIGH_LOW[index],
+                   clearCross: interval === "5m" && !!(R.CLEAR_CROSS || {})[index], oneWay: interval === "5m" && !!(R.ONE_WAY || {})[index], ...opts, sec: SEC[interval], higherSec: SEC[higherKey] }, ix.candles[higherKey]).map(x => ({ ...x, date: f.date })); });
 }
 const byDay = (L) => { const m = {}; L.forEach(x => m[x.date] = r2((m[x.date] || 0) + x.points)); return m; };
 function tally(L, base) {
@@ -275,10 +278,10 @@ if (LIVE.length) {
       list.forEach(c => { const day = DAYS.find(d => d.date === c.date); const ix = day && day.indices[index]; if (!ix) return;
         replayable++;
         const t = R.replayDay({ bars: ix.candles[interval], move: levels, previous: ix.previous, seconds: SEC[interval], signal,
-                                freshRun: interval === "5m" && !!R.FRESH_RUN[index] && c.signal_time_ist >= FRESH_FROM,
+                                freshRun: interval === "5m" && !!(R.FRESH_RUN || {})[index] && c.signal_time_ist >= FRESH_FROM,
                                 newHighLow: interval === "5m" && !!R.NEW_HIGH_LOW[index] && c.signal_time_ist >= EDGE_FROM,
-                                clearCross: interval === "5m" && !!R.CLEAR_CROSS[index] && c.signal_time_ist >= CROSS_FROM,
-                                oneWay: interval === "5m" && !!R.ONE_WAY[index] && c.signal_time_ist >= CROSS_FROM }).trades;  // the live rule of that day
+                                clearCross: interval === "5m" && !!(R.CLEAR_CROSS || {})[index] && c.signal_time_ist >= CROSS_FROM,
+                                oneWay: interval === "5m" && !!(R.ONE_WAY || {})[index] && c.signal_time_ist >= CROSS_FROM }).trades;  // the live rule of that day
         const stamp = e => new Date(e * 1000).toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 16);
         if (t.some(x => stamp(x.signalTime) === c.signal_time_ist && x.side === c.option_side)) matched++; });
     }
@@ -289,13 +292,13 @@ if (LIVE.length) {
 for (const index of Object.keys(DAYS[0].indices)) for (const interval of ["5m", "15m"]) {
   // the self-check: the base line must equal the page's engine
   const mine = tally(all(index, interval, {}));
-  const fresh = interval === "5m" && !!R.FRESH_RUN[index], edge = interval === "5m" && !!R.NEW_HIGH_LOW[index];  // ideas 13 and 24, as the index page runs them
-  const clear = interval === "5m" && !!R.CLEAR_CROSS[index], oneWay = interval === "5m" && !!R.ONE_WAY[index];  // and ideas 8 and 5
+  const fresh = interval === "5m" && !!(R.FRESH_RUN || {})[index], edge = interval === "5m" && !!R.NEW_HIGH_LOW[index];  // ideas 13 and 24, as the index page runs them
+  const clear = interval === "5m" && !!(R.CLEAR_CROSS || {})[index], oneWay = interval === "5m" && !!(R.ONE_WAY || {})[index];  // and ideas 8 and 5
   const page = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "prev", previous: ix.previous, seconds: SEC[interval], signal: "both", freshRun: fresh, newHighLow: edge, clearCross: clear, oneWay }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
   const mineToday = tally(all(index, interval, { levels: "today" }));  // and the today-so-far line
   const pageToday = tally(DAYS.flatMap(f => { const ix = f.indices[index]; return R.replayDay({ bars: ix.candles[interval], move: "today", previous: ix.previous, seconds: SEC[interval], signal: "both", freshRun: fresh, newHighLow: edge, clearCross: clear, oneWay }).trades.filter(t => t.exit != null).map(t => ({ ...t, date: f.date })); }));
   const same = mine.n === page.n && mine.net === page.net && mineToday.n === pageToday.n && mineToday.net === pageToday.net;
-  console.log(`\n==== ${index}, ${interval} candles ${same ? "(base lines agree with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE: " + JSON.stringify({ page, pageToday, mine, mineToday })}`);
+  console.log(`\n==== ${index}, ${interval} candles ${same ? "(base lines agree with the page's engine)" : "!! BASE LINE DIFFERS FROM THE PAGE (expected since 18 October: the page enters at the break of the signal candle, this engine at the next open): " + JSON.stringify({ page, pageToday, mine, mineToday })}`);
   const base = all(index, interval, {});
   IDEAS.forEach(([name, opts], i) => console.log(row(name, tally(all(index, interval, opts), i ? base : null))));
   // the stops of the Study page (P6, P7; the owner's question of 8 October), by the page's own engine, a candle that touched both

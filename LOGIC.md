@@ -219,7 +219,10 @@ call says *hold · sell at the target or at the day end* (12 October); a held br
 item 5, says *hold* or *target passed, continue* and what sells it, then how it
 was sold), **Premium Paid ->
 Now** (at exit once the call has ended; *SELL NOW* while the premium sits below
-the sell mark, *sold at* once marked sold), **Candle status** (the candle
+the sell mark, *sold at* once marked sold), **Candle status** (since 18 October the call's state in the owner's words: *Buy CE (Crossed above
+0.0%)*, *Buy PE (Crossed below -23.6%)* or *Buy CE (On the line +23.6%)* when it fires, *Can be bought parallelly (...)* when a call
+the same way is already held ("it will be my decision to buy it or not"), *Hold (Crossed above +23.6%)* naming the furthest line a
+candle has closed beyond once Rule 2 runs, and *Take Exit* with the reason once it is sold; before that: the candle
 verdict of item 7: HOLD or SELL with its reason on an open call; the owner's
 plain words of 8 October night: buy, hold, continue, sell, where it said CARRY
 and EXIT. On an open **bounce** call the candles' sell is only a warning (a
@@ -275,19 +278,35 @@ The rule, in the order it is applied:
    up to 186 points lower, and the price could never close back across a line
    that had moved, so the table went silent after 10:15. Now a line at a new
    price may call once more; a line that stays put still calls once. With the
-   previous day's levels nothing changes, their lines never move.
-2. **The call comes at once** - the moment the signal candle closes, with no
-   confirming candle (owner's decision, 6 October: the call must be there when
-   the signal fires, not a candle later; from 4 to 6 October the next candle had
-   to agree first).
+   previous day's levels nothing changes, their lines never move. The day's
+   first candle is judged too, from the previous day's close (18 October, the
+   owner: "the 9.15 candle opened and closed above 0% line, wick went down of
+   0% line"), on lines not built from the day's own range.
+2. **The signal is set at once, the call fires on a later candle** - the signal
+   the moment the signal candle closes, with no confirming candle (owner's
+   decision, 6 October; from 4 to 6 October the next candle had to agree
+   first); since 18 October the call fires when a later candle's price goes
+   past the signal candle's high (a Buy CE) or low (a Buy PE), any later
+   candle, tick by tick (the owner: "follow up candle opens above 9.15 candle
+   close and crossed above the high of the 9.15 candle then it should fire buy
+   CE call"; "above the 9:15 high"). The signal stays live until a candle
+   closes back across its line, which cancels it (the owner's choice "B"); a
+   signal no candle fires gives no row. Every signal gives its own call; while
+   a call that way is held, the next one the same way is marked "Can be bought
+   parallelly" (the owner: "it will be my decision to buy it or not, but the
+   call which is on Hold already is in continuation"). Until 18 October the
+   call came the moment the signal candle closed, and no new call came that
+   way while one was held.
 3. **Option** - always bought, never sold. The signal candle closed above the
    level: buy a CE, the index should rise. Below it: buy a PE, it should fall.
    For a hold that is the bounce away from the level; for a cross, the break
    through it.
-4. **Entry** - the open of the next candle, i.e. the first price after the
-   signal candle closes. The option's premium is recorded at that moment. In the
-   second or two before that candle begins, the call is listed as "Enters at the
-   next open".
+4. **Entry** - since 18 October the price the call fired at: the signal
+   candle's high (CE) or low (PE), or the firing candle's open when it opened
+   already past it. The option's premium is recorded at that moment. Until 18
+   October it was the open of the next candle, the first price after the signal
+   candle closed, and the call was listed as "Enters at the next open" in the
+   second or two before that candle began.
 5. **Target** - the next level in the call's direction. The call ends when a
    later candle reaches it, at that level's price; the candle forming now counts
    too, tick by tick. **No stop** (owner's decision,
@@ -337,7 +356,9 @@ The rule, in the order it is applied:
    9:40 CE sold at 9:55 instead of 9:50, +1.13 either way); NIFTY BANK +1,278.60
    → +1,277.72. The previous day's lines never move: nothing changes there.
    **No call against a fresh run** (idea 13; owner's yes, 12 October: "yes, do
-   it"; NIFTY 50 only, 5-minute candles, both levels modes): while NIFTY 50 is
+   it"; NIFTY 50 only, 5-minute candles, both levels modes) - **removed on 18
+   October** (the owner: "all three remove", with ideas 8 and 5 below; the
+   research engine keeps it as a setting, off). As it ran: while NIFTY 50 is
    still making new lows of the day, no Buy CE; while it is still making new
    highs, no Buy PE. "Still": one of the last 6 candles up to the signal
    candle (30 minutes, the signal candle too) went below the day's low before
@@ -369,8 +390,9 @@ The rule, in the order it is applied:
    entry (the target follows the lines, as every call's). It is held and sold
    as every Crossed call is (A, B, Rule 2, the day end). It runs alongside the
    other calls: while it is held, the lines' own calls that way still come;
-   while a Crossed call of the lines is held, it does not come, nor a second
-   one of its own. Example, 13 October: the 9:25 candle closed at 22,471.40,
+   since 18 October it comes beside a held call too (every signal gives its own
+   call); until then, while a Crossed call of the lines was held, it did not
+   come, nor a second one of its own. Example, 13 October: the 9:25 candle closed at 22,471.40,
    above the top line at 22,460.80; bought at the 9:30 open, 22,470.90, held
    to the day end, 22,721.95: +251.05. The ten saved days 29 September to 13
    October, NIFTY 50, 5-minute *Today so far*: +804 → +1,447 (better on 4 days,
@@ -383,7 +405,9 @@ The rule, in the order it is applied:
    test.
    **Fewer calls on the back-and-forth at one line** (ideas 5 and 8; owner's
    yes, 13 October evening: "yes, make the PR" for "build ideas 5 and 8 as a
-   second PR"; NIFTY 50 only, 5-minute candles, both kinds of lines). On 13
+   second PR"; NIFTY 50 only, 5-minute candles, both kinds of lines) -
+   **removed on 18 October** (the owner: "all three remove"; the research engine
+   keeps both as settings, off). As they ran: on 13
    October the price went back and forth across the 23.6% line (22,512.07)
    from 10:35 to 12:05; each close across it gave a Crossed call: 7 calls,
    all lost, −130.10 together. **Idea 8** (from the owner's three
@@ -413,7 +437,8 @@ The rule, in the order it is applied:
    **Hold Through a Level Break** (owner's exit rule, 8 October night, 5-minute
    candles): a call given by a *crossed* signal (the candle C1 broke a line L)
    is not sold at its target. It is held, and the same trade continues while
-   the price keeps going: no new call that way while it is held. It is sold:
+   the price keeps going (until 18 October no new call came that way while it
+   was held; since then every signal gives its own call, see item 2). It is sold:
    - **A, reclaim:** at the close of a candle that closes back across L (above
      it for a PE, below it for a CE), at that close;
    - **B, retouch:** when a later candle opens beyond the previous close (lower
