@@ -823,7 +823,11 @@
       if (!response.ok) return;
       const data = await response.json();
       if (!Array.isArray(data.candles) || want !== minutesWant()) return;  // the page moved on meanwhile
-      state.minutes = data.candles.filter(m => m.time + 60 <= serverNow());
+      // Dhan's list runs a minute or two behind the ticks, so the minutes the ticks built stay where the list lacks them (a
+      // missing minute restarts the rule's three; the owner, 19 October: the exit showed late). Dhan's own minute wins where both have one
+      const have = new Map((state.minutesKey === want ? state.minutes : []).map(m => [m.time, m]));
+      data.candles.filter(m => m.time + 60 <= serverNow()).forEach(m => have.set(m.time, m));
+      state.minutes = [...have.values()].sort((a, b) => a.time - b.time);
       state.minutesKey = want;
       if (series) drawLevels();  // the calls judged again, with the minutes
     } catch (e) { /* the next minute tries again */ }
