@@ -1179,7 +1179,7 @@ async def options_state(name: str):
     # shown as if live (the owner saw "Now" stand still on 6 October and could not tell why)
     status = (f"Dhan: the option premiums could not be refreshed just now: {problem}. The last values read are shown."
               if problem else "Dhan: option premiums live from your account")
-    return {"active": not problem, "status": status, "expiry": expiry,
+    return {"active": not problem, "status": status, "expiry": expiry, "lot": dhan.lot_size(key),  # the market lot: the page's profit or loss in rupees (19 October)
             "sell_share": dhan.SELL_SHARE, "records": dhan.records_for(key)}
 
 

@@ -143,6 +143,8 @@
   #paper td.cand { text-align: left; font-weight: 600; }
   #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
   #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
+  #paper td.why { text-align: left; color: var(--ink-2); }  /* "Reason" (19 October): what stood in brackets under the status */
+  #paper td.pl small { display: block; color: var(--muted); font-weight: 400; }  /* "Total Profit/Loss" (19 October): one lot, or per unit */
   #paper td.cand.watch { color: var(--watch); }
   #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
   #paper td.call { text-align: left; }
@@ -361,7 +363,7 @@
     <div id="feed-note" hidden></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th>Candle status</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -910,7 +912,7 @@
     return `<td>${callTime(t.signalTime)}</td>`
       + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + candleCell(t, r);
+      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r);
   }
   // The owner's words (12 October): "On the line" for a held signal; a crossed one says which way, "Crossed above" (Buy CE) or
   // "Crossed below" (Buy PE) the Fibonacci level
@@ -1042,15 +1044,32 @@
   // When the call ended (the owner, 19 October: "whenever exit is taken ... give the time as well or give the candle on which it
   // is exited"): the exact time where there is one (the early exit's minute, a sale by the premium rule), else the candle it fell in
   const exitWhen = (t) => t.exitAt || t.how === "sold" ? callTime(t.exitAt || t.exitTime) : `${callTime(t.exitTime)} candle`;
-  function candleCell(t, r) {
-    if (t.exit != null)  // closed: the exit is the last word on the call, the same way for every reason
-      return `<td class="cand ${{ up: "carry", down: "exit" }[closedTone(t, r)] || ""}">Take Exit · ${exitWhen(t)}<small>${soldReason(t, r)}</small></td>`;
-    if (t.entry == null) return `<td class="cand">—</td>`;
+  // "Candle status" holds the indicator alone and "Reason" what stood in brackets under it (the owner, 19 October: "candle status
+  // column should only have indicators like hold, take exit, buy ce/pe etc ... in the reason column all that status which are written
+  // in brackets should show"); an exit's reason starts with its time or candle (exitWhen) unless it names the candle itself
+  function statusParts(t, r) {
+    if (t.exit != null) {  // closed: the exit is the last word on the call, the same way for every reason
+      const why = soldReason(t, r);
+      return { tone: { up: "carry", down: "exit" }[closedTone(t, r)] || "", head: "Take Exit", why: /candle closed at/.test(why) ? why : `${exitWhen(t)} · ${why}` };
+    }
+    if (t.entry == null) return { tone: "", head: "—", why: "" };
     const far = t.trail && t.trail.ratio != null ? pctText(t.trail.ratio) : pctOf(t);  // the furthest line a candle has closed beyond, else the signal's line
     const what = t.kind === "held" && !t.hold ? `On the line ${pctOf(t)}` : `${t.side === "PE" ? "Crossed below" : "Crossed above"} ${far}`;
     const head = t.trail ? "Hold" : t.parallel ? "Can be bought parallelly" : `Buy ${t.side}`;
     const rd = !t.hold ? candleRead(t) : null, w = rd && rd.say === "exit" ? watchNow(t) : null;  // a bounce call: the candles' warning stays a warning (the owner, 9 October)
-    return `<td class="cand ${w && w.watch ? "watch" : "carry"}">${head}<small>(${what})${t.parallel && t.trail ? " · parallel" : ""}${w && w.watch ? ` · watch: ${rd.why}` : ""}</small></td>`;
+    return { tone: w && w.watch ? "watch" : "carry", head, why: `${what}${t.parallel && t.trail ? " · parallel" : ""}${w && w.watch ? ` · watch: ${rd.why}` : ""}` };
+  }
+  const statusCell = (t, r) => { const p = statusParts(t, r); return `<td class="cand ${p.tone}">${p.head}</td>`; };
+  const reasonCell = (t, r) => `<td class="why">${statusParts(t, r).why}</td>`;
+  // "Total Profit/Loss" (the owner, 19 October: "profit/loss should in rupees based on the premium values"): the premium's move
+  // from paid to now (to the sale once the call has ended) for one market lot, the lot from the server's records answer (the OI
+  // chart's lot when that came first); per unit while the lot is not known yet. It moves with every premium tick (applyPremium)
+  const lotOf = () => state.lot || (typeof chain !== "undefined" && chain.data && chain.data.lot) || null;
+  function plCell(t, r) {
+    if (!r || r.premium_paid == null || r.premium_now == null) return `<td class="opt pl">—</td>`;
+    const lot = lotOf(), diff = r.premium_now - r.premium_paid, rupees = Math.round((lot ? diff * lot : diff) * 100) / 100;
+    const tone = rupees > 0 ? "up" : rupees < 0 ? "down" : "";
+    return `<td class="opt pl ${tone}">₹ ${rupees > 0 ? "+" : rupees < 0 ? "−" : ""}${fmt.format(Math.abs(rupees))}<small>${lot ? `1 lot of ${lot}` : "per unit"}${t.exit != null ? ", at sale" : ""}</small></td>`;
   }
   // WATCH, not SELL, on an open bounce call (the owner's choice of 9 October, "2"): a bounce call is sold only at its
   // target, at the day end or by the 35% premium rule, so the candles' "sell" is a warning. It shows WATCH while the last
@@ -1109,8 +1128,9 @@
     const t = lastPaper.trades.find(x => callKey(x) === p.key);
     if (!tr || !t) return;
     const fresh = document.createElement("tr");
-    fresh.innerHTML = premiumCell(t, r);
+    fresh.innerHTML = premiumCell(t, r) + plCell(t, r);
     tr.querySelector("td.prem").replaceWith(fresh.children[0]);
+    tr.querySelector("td.pl").replaceWith(fresh.children[0]);  // the profit or loss in rupees moves with the premium
   }
 
   const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK", "SENSEX"];  // the indices whose options the server follows (dhan.OPTION_INDICES; SENSEX's on the BSE since 8 October)
@@ -1159,6 +1179,7 @@
       const data = await r.json();
       const json = JSON.stringify(data);
       state.optionStatus = data.status || "";
+      if (data.lot) state.lot = data.lot;  // the market lot, for the profit or loss in rupees (19 October)
       optionRecords = Object.fromEntries((data.records || []).map(rec => [rec.key, rec]));
       if (json !== lastRecordsJson) { lastRecordsJson = json; drawLevels(); }  // the rows show the premiums
     } catch (err) {
