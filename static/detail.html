@@ -1142,8 +1142,8 @@
     if (!d || state.simulated || !DHAN_INDICES.includes(name)) return;
     const problems = [];
     if (!d.configured) {  // say so on every server, so a copy without the values is not mistaken for a broken one
-      problems.push("Dhan: not set up on this server, so prices are from Yahoo, about 15 minutes delayed. "
-        + "Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to Render's Environment page (or to .env on the laptop) and it switches to Dhan by itself.");
+      problems.push("Dhan: not set up on this server, so there are no prices. "
+        + "Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to Render's Environment page (or to .env on the laptop) and it starts by itself.");
     } else {
       if (state.feed !== "dhan" && d.status) problems.push(d.status);
       if (state.feed === "dhan" && state.optionStatus && !/live from your account/.test(state.optionStatus)) problems.push(state.optionStatus);
@@ -1492,7 +1492,7 @@
         ? `Simulated prices, ${INTERVAL_NAMES[data.interval]} bars built from the simulator's ticks. Not real market data.`
         : data.source === "dhan"
         ? `Data from Dhan, your own account, in real time, ${INTERVAL_NAMES[data.interval]} bars: the price and the candle forming now tick every second, the rest refreshes every ${data.poll_seconds} s.`
-        : `Data from Yahoo Finance, about 15 minutes delayed, ${INTERVAL_NAMES[data.interval]} bars. Refreshes every ${data.poll_seconds} s.`;
+        : `No data: Dhan is not set up on this server.`;  // Dhan is the one source (19 October)
     } catch (err) {
       if (controller !== loadAbort) return;  // a newer refresh took over; it carries on from here
       status.className = "error";
@@ -1558,9 +1558,9 @@
     const el = document.getElementById("live-note");
     if (!dhanExpected()) { el.hidden = true; return; }
     const d = state.dhan || {};
-    if (state.feed !== "dhan") {  // the refresh came from Yahoo: delayed prices, and the live ticks are not applied
+    if (state.feed !== "dhan") {  // the refresh did not come from Dhan: no live ticks are applied
       el.hidden = false;
-      el.textContent = `Not on Dhan now, so this is Yahoo's price, about 15 minutes behind. ${d.status || ""}`;
+      el.textContent = `Not on Dhan now. ${d.status || ""}`;
       return;
     }
     const quiet = (Date.now() - Math.max(lastTickAt, pageOpened)) / 1000;

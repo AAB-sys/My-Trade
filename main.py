@@ -21,7 +21,7 @@ import websockets
 
 import dhan
 import memwatch
-from providers import INDICES, INTERVALS, LONG_INTERVALS, RANGES, DemoTicker, bucket_start, fetch_all_yahoo, fetch_detail_yahoo, now_ist
+from providers import INDICES, INTERVALS, LONG_INTERVALS, RANGES, DemoTicker, bucket_start, now_ist
 import rule
 
 BASE = Path(__file__).parent
@@ -42,7 +42,9 @@ def load_dotenv(path: Path = BASE / ".env") -> None:
 
 
 load_dotenv()
-PROVIDER = os.environ.get("DATA_PROVIDER", "yahoo").lower()
+PROVIDER = os.environ.get("DATA_PROVIDER", "dhan").lower()
+if PROVIDER == "yahoo":  # the setting of the Yahoo days (a host's environment may still carry it): Dhan now (19 October)
+    PROVIDER = "dhan"
 POLL_SECONDS = float(os.environ.get("POLL_SECONDS", "1" if PROVIDER == "demo" else "60"))
 PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 AUTH_ENABLED = bool(PASSWORD)
@@ -59,21 +61,22 @@ DROP_SECONDS = float(os.environ.get("DASHBOARD_DROP_SECONDS", str(4 * 3600)))  #
 COOKIE = "my_trade_session"
 OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
 
-if PROVIDER == "yahoo":
-    fetch_all = fetch_all_yahoo
-    fetch_detail = fetch_detail_yahoo
+# Dhan, the owner's broker API, is the one source of prices (19 October, the owner: "remove yahoo data or yahoo API from
+# everywhere. Because we are completely dependent on dhan"): real-time candles and quotes for the three indices (dhan.QUOTE_IDS)
+# and option premiums for them (dhan.OPTION_INDICES: NIFTY 50, NIFTY BANK, and SENSEX on the BSE since 8 October), when its two
+# settings are present. Without them the dashboard and the pages say so and show no prices; nothing fills in. Until 19 October
+# Yahoo Finance, about 15 minutes delayed, was the base source, with Dhan on top of it and every Dhan failure falling back to it.
+# "demo" is the simulated ticker, for watching the plumbing with no network at all.
+if PROVIDER == "dhan":
+    fetch_all = lambda: dhan_fetch_all()  # defined below, after the tiles
+    fetch_detail = None
 elif PROVIDER == "demo":
     demo = DemoTicker()
     fetch_all = demo.fetch_all
     fetch_detail = lambda name, ticker, range_key, interval_key: demo.fetch_detail(name, range_key, interval_key)
 else:
-    raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use yahoo or demo.")
-
-# Dhan, the owner's broker API: real-time candles and quotes for the indices it covers (dhan.QUOTE_IDS) and
-# option premiums for those with options (dhan.OPTION_INDICES: NIFTY 50, NIFTY BANK, and SENSEX on the BSE since 8 October),
-# when its two settings are present and the source is the real one.
-# Everything else, and every Dhan failure, falls back to the source above.
-DHAN_ON = PROVIDER == "yahoo" and dhan.configured()
+    raise SystemExit(f"Unknown DATA_PROVIDER '{PROVIDER}'. Use dhan or demo.")
+DHAN_ON = PROVIDER == "dhan" and dhan.configured()
 DHAN_POLL_SECONDS = float(os.environ.get("DHAN_POLL_SECONDS", "15"))
 TICK_SECONDS = float(os.environ.get("DHAN_TICK_SECONDS", "1"))   # the fallback: the last price once a second
 TICK_ALWAYS = os.environ.get("DHAN_TICK_ALWAYS") == "1"           # for tests: tick outside market hours too
@@ -103,7 +106,7 @@ store = {
         "active": False,
         "status": ("Dhan: not tried yet" if DHAN_ON else
                    "Dhan: off in demo mode" if PROVIDER == "demo" else
-                   "Dhan: not set up. Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to .env or the host's environment."),
+                   "Dhan: not set up, so there are no prices. Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to .env or the host's environment."),
         "at": None,
         "stream": "",  # the tick-by-tick stream's state, in plain words
         "poll": "",  # the once-a-second price request's state (the fallback behind the stream), in plain words
@@ -289,15 +292,14 @@ async def broadcast(payload: dict) -> None:
             clients.discard(ws)
 
 
-tile_cache: dict = {}  # index -> the figures last read for its tile: kept when a read fails, so a tile never falls back to Yahoo once Dhan has answered
+tile_cache: dict = {}  # index -> the figures last read for its tile: kept when a read fails, so a tile keeps its last figures
 
 
 def dhan_tiles(names: list) -> tuple:
     """For the dashboard's tiles: each index's figures exactly as its own page's header shows them, from the same
     computation (dhan.fetch_detail's summary: Dhan's last price, the live one while the feed runs, else the last trade;
-    the change against Dhan's previous close; the time the price is from). Until 7 October the tile was put together on
-    its own, from a separate price request and Yahoo's quote, and read differently from the page, with the wrong sign
-    after the close. Returns ({index: figures}, the problem, if an index could not be read: its last figures stay)."""
+    the change against Dhan's previous close; the time the price is from). Returns ({index: figures}, the problem, if an index could not be read: its last figures stay).
+    Until 7 October the tile was put together on its own, from a separate price request and the old source's quote."""
     tiles, problem = {}, None
     today = dhan.today_ist()
     for name in names:
@@ -320,14 +322,20 @@ def dhan_tiles(names: list) -> tuple:
     return tiles, problem
 
 
-def with_dhan_prices(quotes: list, tiles: dict) -> list:
-    """The dashboard's tiles: the quotes of the indices Dhan covers carry the figures their pages show (dhan_tiles) in
-    place of Yahoo's, and say so (source: dhan; live: whether the price moves every second now, or stands at the close)."""
-    out = []
-    for q in quotes:
-        t = tiles.get(q["name"])
-        out.append({**q, **t, "source": "dhan", "live": in_tick_hours()} if t else q)
-    return out
+def dhan_fetch_all() -> dict:
+    """The dashboard's quotes, from Dhan alone (19 October): each index's tile shows exactly what its page's header shows,
+    at all hours (dhan_tiles), marked dhan and live (whether the price moves every second now, or stands at the close).
+    While Dhan is not set up there are no quotes: the dashboard says so and waits."""
+    if not DHAN_ON:
+        return {"quotes": [], "failed": sorted(INDICES), "reason": "Dhan is not set up on this server"}
+    names = [n for n in INDICES if n in dhan.QUOTE_IDS]
+    try:
+        tiles, problem = dhan_tiles(names)
+    except Exception as exc:
+        tiles, problem = {}, f"{type(exc).__name__}: {str(exc)[:120]}"
+    store["dhan"]["tiles"], store["dhan"]["tiles_problem"] = bool(tiles), problem
+    quotes = [{"name": n, "ticker": INDICES[n], **tiles[n], "source": "dhan", "live": in_tick_hours()} for n in names if n in tiles]
+    return {"quotes": quotes, "failed": [n for n in names if n not in tiles], "reason": problem or ""}
 
 
 async def refresh_forever() -> None:
@@ -335,15 +343,6 @@ async def refresh_forever() -> None:
         try:
             result = await asyncio.to_thread(fetch_all)
             reason = result.get("reason") or ""
-            if result["quotes"] and DHAN_ON:  # the tiles of the Dhan indices show what their pages show, at all hours
-                try:
-                    names = [q["name"] for q in result["quotes"] if q["name"] in dhan.QUOTE_IDS]
-                    tiles, problem = await asyncio.to_thread(dhan_tiles, names)
-                    result["quotes"] = with_dhan_prices(result["quotes"], tiles)
-                    store["dhan"]["tiles"], store["dhan"]["tiles_problem"] = bool(tiles), problem
-                except Exception as exc:
-                    store["dhan"]["tiles_problem"] = f"{type(exc).__name__}: {str(exc)[:120]}"
-                    log.warning("Dhan tiles: %s", exc)
             if result["quotes"]:
                 if result["failed"]:
                     log.warning("refresh missed %s: %s", result["failed"], reason)
@@ -1134,18 +1133,20 @@ async def index_detail(
                 payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
                 detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload, now_ist()[11:19])
             except Exception as exc:
-                # One refused request (Dhan's rate limit, a slow answer) must not throw the page onto Yahoo's delayed
-                # prices: the last Dhan answer is served again, the live ticks keep moving the price and the candle
-                # forming now, and the reason is said. Only a token or subscription problem means Dhan is really gone.
+                # One refused request (Dhan's rate limit, a slow answer) must not leave the page empty: the last Dhan
+                # answer is served again, the live ticks keep moving the price and the candle forming now, and the reason
+                # is said. Only a token or subscription problem means Dhan is really gone.
                 stale = detail_cache.get(("dhan", key, range_key, interval_key))
                 keep = stale is not None and getattr(exc, "kind", "other") not in ("token", "subscription", "config")
                 payload = stale[1] if keep else None
                 dhan_status(False, dhan_reason(exc) + (f" The last Dhan answer (from {stale[2]} IST) is shown meanwhile, the live price still moves."
-                                                      if keep else f" Prices from {PROVIDER}, about 15 minutes delayed, meanwhile."))
-                log.warning("Dhan detail failed for %s (%s): %s", key, "last answer kept" if keep else f"falling back to {PROVIDER}", exc)
+                                                      if keep else " Nothing to show meanwhile."))
+                log.warning("Dhan detail failed for %s (%s): %s", key, "last answer kept" if keep else "nothing kept", exc)
         if payload is not None:  # the candles from the ticks and the server's clock are added fresh to every answer, cached or not
             return {**payload, "candles": with_live_candles(payload["candles"], key, interval_key), "now": now_ist()}
 
+    if PROVIDER != "demo":  # Dhan alone (19 October): not set up, or refused with no earlier answer kept: the page says why and tries again
+        raise HTTPException(status_code=503, detail=store["dhan"]["status"])
     cached = detail_cache.get((key, range_key, interval_key))
     if cached and time.monotonic() - cached[0] < POLL_SECONDS:
         return cached[1]

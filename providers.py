@@ -1,19 +1,10 @@
-import os
 import random
 import time
-from collections import Counter
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
-import httpx
-
 IST = timezone(timedelta(hours=5, minutes=30))
-YAHOO_URL = os.environ.get("YAHOO_API_BASE", "https://query1.finance.yahoo.com") + "/v8/finance/chart/{ticker}"  # the base is overridden only by tests
-HEADERS = {"User-Agent": "Mozilla/5.0"}
-MAX_WORKERS = 4
-RETRIES = 3
 
-# chart ranges and candle sizes the detail page can ask for, in any combination
+# chart ranges and candle sizes the detail page can ask for, in any combination (range and interval: the names an earlier source used; days, cal_days and bar_seconds are what Dhan's fetch reads)
 RANGES = {
     "today": {"range": "1d", "days": 1},
     "5d": {"range": "5d", "days": 5},
@@ -24,7 +15,7 @@ RANGES = {
     "6mo": {"range": "6mo", "days": 132, "cal_days": 200},
     "1y": {"range": "1y", "days": 250, "cal_days": 380},
     "2y": {"range": "2y", "days": 500, "cal_days": 750},
-    "3y": {"range": "5y", "days": 750, "cal_days": 1120},  # Yahoo has no 3y range: its 5y, cut to 3 years
+    "3y": {"range": "5y", "days": 750, "cal_days": 1120},  # 3 years of sessions
     "5y": {"range": "5y", "days": 1250, "cal_days": 1860},
 }
 INTERVALS = {
@@ -56,27 +47,13 @@ def bucket_start(t: float, bar_seconds: int) -> int:
     anchor = (SESSION_START - IST_SECONDS) % bar_seconds
     return int((t - anchor) // bar_seconds) * bar_seconds + anchor
 
-# index name -> Yahoo Finance ticker
+# The indices: the three on the dashboard, every one from Dhan (the owner, 19 October: "remove yahoo data or yahoo API from
+# everywhere. Because we are completely dependent on dhan"; until then Yahoo Finance, about 15 minutes delayed, carried these and
+# sixteen more, which left the dashboard on 15 October). The value names the source; dhan.QUOTE_IDS has Dhan's ids
 INDICES = {
-    "NIFTY 50": "^NSEI",
-    "NIFTY BANK": "^NSEBANK",
-    "NIFTY IT": "^CNXIT",
-    "NIFTY NEXT 50": "^NSMIDCP",
-    "NIFTY 100": "^CNX100",
-    "NIFTY 200": "^CNX200",
-    "NIFTY 500": "^CRSLDX",
-    "NIFTY FIN SERVICE": "NIFTY_FIN_SERVICE.NS",
-    "NIFTY AUTO": "^CNXAUTO",
-    "NIFTY PHARMA": "^CNXPHARMA",
-    "NIFTY FMCG": "^CNXFMCG",
-    "NIFTY METAL": "^CNXMETAL",
-    "NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS",
-    "NIFTY SMALLCAP 100": "^CNXSC",
-    "SENSEX": "^BSESN",
-    "BANKEX": "BSE-BANK.BO",
-    "BSE 100": "BSE-100.BO",
-    "BSE 200": "BSE-200.BO",
-    "BSE 500": "BSE-500.BO",
+    "NIFTY 50": "dhan:13",
+    "NIFTY BANK": "dhan:25",
+    "SENSEX": "dhan:51",
 }
 
 
@@ -93,126 +70,6 @@ def quote_fields(name: str, ticker: str, level: float, previous_close: float, qu
         "change": change,
         "change_percent": round(change / previous_close * 100, 2),
         "time": quoted_at.isoformat(timespec="seconds"),
-    }
-
-
-# ---------------------------------------------------------------- Yahoo Finance
-
-def yahoo_chart(ticker: str, range_: str, interval: str) -> dict:
-    response = httpx.get(
-        YAHOO_URL.format(ticker=ticker),
-        params={"range": range_, "interval": interval},
-        headers=HEADERS,
-        timeout=15,
-    )
-    response.raise_for_status()
-    return response.json()["chart"]["result"][0]
-
-
-def parse_bars(result: dict) -> list:
-    times = result.get("timestamp") or []
-    quote = result["indicators"]["quote"][0]
-    bars = []
-    for i, t in enumerate(times):
-        values = (quote["open"][i], quote["high"][i], quote["low"][i], quote["close"][i])
-        if any(v is None for v in values):
-            continue
-        o, h, l, c = (round(v, 2) for v in values)
-        bars.append({"time": t, "open": o, "high": h, "low": l, "close": c})
-    return bars
-
-
-def fetch_quote(name: str, ticker: str) -> dict:
-    meta = yahoo_chart(ticker, "1d", "5m")["meta"]
-    previous_close = meta.get("chartPreviousClose") or meta.get("previousClose")
-    quoted_at = datetime.fromtimestamp(meta["regularMarketTime"], IST)
-    return quote_fields(name, ticker, meta["regularMarketPrice"], previous_close, quoted_at)
-
-
-def fetch_quote_with_retries(name: str, ticker: str) -> tuple:
-    """(quote, None) on success, (None, why) after the last retry fails."""
-    why = None
-    for attempt in range(RETRIES):
-        try:
-            return fetch_quote(name, ticker), None
-        except httpx.HTTPStatusError as exc:
-            why = f"HTTP {exc.response.status_code} {exc.response.reason_phrase}".strip()
-        except Exception as exc:
-            why = f"{type(exc).__name__}: {exc}"[:120]
-        if attempt < RETRIES - 1:
-            time.sleep(1 + attempt)  # Yahoo rate-limits bursts; give it a moment before asking again
-    return None, why
-
-
-def fetch_all_yahoo() -> dict:
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        results = list(pool.map(lambda item: fetch_quote_with_retries(*item), INDICES.items()))
-    reasons = Counter(why for _, why in results if why)
-    return {
-        "quotes": [quote for quote, _ in results if quote is not None],
-        "failed": [name for name, (quote, _) in zip(INDICES, results) if quote is None],
-        "reason": "; ".join(f"{why} for {n}" for why, n in reasons.most_common(2)),  # what Yahoo said, most common first
-    }
-
-
-def fetch_detail_yahoo(name: str, ticker: str, range_key: str = "today", interval_key: str = "5m") -> dict:
-    daily = yahoo_chart(ticker, "1mo", "1d")  # a month of days, so every session shown has a previous day
-    intraday = yahoo_chart(ticker, RANGES[range_key]["range"], INTERVALS[interval_key]["interval"])
-    meta = intraday["meta"]
-
-    now = datetime.now(IST)
-    today = now.date()
-    day_bars = parse_bars(daily)
-    bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
-    previous_days = [bar for bar in day_bars if bar_date(bar) < today]
-    today_bars = [bar for bar in day_bars if bar_date(bar) == today]
-    previous = previous_days[-1] if previous_days else None
-    current = today_bars[-1] if today_bars else None
-
-    level = meta["regularMarketPrice"]
-    # The change is against the close before the last session, as Yahoo reports it (and as
-    # the dashboard tiles show it). The "previous day" boxes are the last session before
-    # today, as one day: on a holiday that is the last session itself, whose close is the
-    # last price, not the close Yahoo compares against.
-    reference_close = meta.get("chartPreviousClose") or meta.get("previousClose") or (previous["close"] if previous else None)
-    change = round(level - reference_close, 2)
-
-    summary = {
-        "previous_open": previous["open"] if previous else None,
-        "previous_high": previous["high"] if previous else None,
-        "previous_low": previous["low"] if previous else None,
-        "previous_close": previous["close"] if previous else reference_close,
-        # today's figures only when the market has traded today; on a holiday or before the
-        # open there are none (Yahoo's "day" figures would be the last session's)
-        "today_open": current["open"] if current else None,
-        "today_high": (meta.get("regularMarketDayHigh") or current["high"]) if current else None,
-        "today_low": (meta.get("regularMarketDayLow") or current["low"]) if current else None,
-        "last": level,
-        "change": change,
-        "change_percent": round(change / reference_close * 100, 2),
-        "week52_high": meta.get("fiftyTwoWeekHigh"),
-        "week52_low": meta.get("fiftyTwoWeekLow"),
-        "time": datetime.fromtimestamp(meta["regularMarketTime"], IST).isoformat(timespec="seconds"),
-        # the market trades now (NSE hours, and it has traded today): the page shows the price as of its
-        # time, else "closed" and when the price is from
-        "open": current is not None and now.weekday() < 5 and (9, 15) <= (now.hour, now.minute) < (15, 30),
-    }
-    candles = parse_bars(intraday)
-    if interval_key in LONG_INTERVALS:
-        for bar in candles:
-            bar["time"] = bucket_start(bar["time"], INTERVALS[interval_key]["bar_seconds"])  # a day candle is stamped at its 9:15, a week candle at its Monday's, whatever Yahoo stamps it with
-        candles = candles[-RANGES[range_key]["days"] // (5 if interval_key == "1w" else 1):]  # Yahoo's 5y cut to 3 years for "3y"
-    if range_key == "today":
-        candles = [bar for bar in candles if bar_date(bar) == today]  # never pass off the last session as today
-    return {
-        "name": name,
-        "ticker": ticker,
-        "range": range_key,
-        "interval": interval_key,
-        "summary": summary,
-        "candles": candles,
-        # one row per trading day, oldest first: the page builds each session's levels from the day before it
-        "days": [{"date": bar_date(bar).isoformat(), "open": bar["open"], "high": bar["high"], "low": bar["low"], "close": bar["close"]} for bar in day_bars],
     }
 
 

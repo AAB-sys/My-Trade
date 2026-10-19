@@ -65,7 +65,7 @@ def configured() -> bool:
 # Dhan allows one market-feed request a second (ltp, ohlc, quote) and asks for a gap between option-chain
 # requests. The server has several callers of those: the once-a-second price poll, the index page's quote,
 # the dashboard's tiles. Two of them in the same second and Dhan refuses the second one ("too many
-# requests"); on 7 October that is what kept throwing the index page back to Yahoo's delayed prices
+# requests"); on 7 October that is what kept throwing the index page off Dhan
 # while the live ticks were ignored. So every request takes its turn here, spaced out, whoever asks.
 _pace_lock = threading.Lock()
 _pace_next = {"feed": 0.0, "chain": 0.0, "other": 0.0}
@@ -381,7 +381,7 @@ def previous_day(name: str, all_candles: list) -> dict | None:
 
 
 def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, ranges: dict, last_price: float | None = None) -> dict:
-    """The index page's detail, in the same shape as the Yahoo one, from Dhan in real time. With last_price given
+    """The index page's detail, in the shape the page reads, from Dhan in real time. With last_price given
     (the live price the server already holds from the stream or the poll) no quote request is made: that request
     shares Dhan's one-a-second allowance with the price poll."""
     seconds = intervals[interval_key]["bar_seconds"]
