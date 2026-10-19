@@ -19,7 +19,7 @@ fewer allocator pools from the start (limit_pools) and the free memory given bac
 
 What it found next (14 October, 20:00): 409 MB, peak 427 MB, with 320 MB "in use" and only about 500,000 Python blocks;
 on 13 October the server reached 469 MB in 13 minutes while Dhan refused the token, and after a restart at night it
-reaches about 280 MB in 13 minutes with no page open. Every request to Dhan and to Yahoo makes its own HTTPS client, and
+reaches about 280 MB in 13 minutes with no page open. Every request to Dhan (and, then, to Yahoo) made its own HTTPS client, and
 each holds about 0.75 MB of C memory (the certificate list) that Python's garbage collector does not count. Requests,
 most of all refused ones, leave their clients in reference cycles, which only the collector frees, and in a process
 this size its full runs can be far apart. A test the same evening: 250 refused requests to Dhan held up to 55 MB, and one full

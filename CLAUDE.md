@@ -51,9 +51,10 @@ their own logic. Read this before touching the code.
 
 ## Shape of the project
 
-- `providers.py` - data sources. Each is a callable returning
-  `{"quotes": [...], "failed": [...]}`. Currently `yahoo` (~15 min delayed) and
-  `demo` (simulated). A broker feed goes here as a third source.
+- `providers.py` - the index list (the three on Dhan), the chart ranges and candle sizes, the clock
+  helpers and the `demo` simulated ticker. Yahoo Finance left on 19 October (the owner: "remove
+  yahoo data or yahoo API from everywhere"): Dhan (`dhan.py`) is the one source, `main.py`'s
+  `dhan_fetch_all` the dashboard's quotes; without Dhan's settings there are no prices and the pages say so.
 - `main.py` - the server: in-memory store, background refresh loop, REST menu,
   `/ws` WebSocket push, 5-line `.env` reader (`DATA_PROVIDER`, `POLL_SECONDS`,
   `DASHBOARD_PASSWORD`, `SESSION_SECRET`), single-password login with a signed
@@ -102,7 +103,7 @@ their own logic. Read this before touching the code.
   caches for Dhan's rate limits and every request paced to them in `call()`
   (`_pace`: market-feed requests 1.2 s apart, option chain 3.1 s; on 7 October
   the once-a-second poll and the page's quote in the same second got the quote
-  refused and the page thrown to Yahoo; a request waits for its turn outside
+  refused and the page left without an answer; a request waits for its turn outside
   the lock, so the chain's gap never holds up the poll, and `cached` remakes a
   value by one caller at a time); `fetch_detail` takes the live price
   the server holds, so it needs no quote request while ticks flow; the record of each paper call's option (strike
@@ -144,7 +145,7 @@ their own logic. Read this before touching the code.
   the tile; a tile keeps its last figures when a read fails, `/health` says
   `feed.tiles_problem`) and in market hours move every second: `live_forever` sends `{"live": {...}}` to
   the dashboard sockets (`dash_subs`) once a second, `applyLive` redraws the
-  tile in place; each tile's own line says whether it is Dhan's or Yahoo's (the footer line under the tiles left the page on 16 October).
+  tile in place; each tile's own line says it is Dhan's, live or closed (the footer line under the tiles left the page on 16 October).
 - `static/rules.js` - layers 1 to 3 of `LOGIC.md` as plain functions with no page
   (`readOf()`: the candle verdict of 7 October, CARRY or EXIT with the reason, for
   whichever level gave the call, sent with every recorded call into the calls CSV;

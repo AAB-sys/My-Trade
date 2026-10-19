@@ -680,7 +680,7 @@ SENSEX are on Dhan (SENSEX since 7 October for its tile and its page, and since
 contracts come from the BSE rows of Dhan's instrument list, its premiums from
 Dhan's option chain for SENSEX and from the BSE_FNO segment of the feed and the
 poll; the same strike rule on its 100-point step, the same records, Sell mark and
-watcher as NIFTY's); the other indices stay on Yahoo and have no options.
+watcher as NIFTY's); since 19 October these three are the only indices, all on Dhan (the other sixteen, Yahoo's, left with it).
 
 The session's candles run from 09:15 to 15:30 and nothing else is a candle
 (7 October): the pre-open prices from 09:00 move the price at the top of the
@@ -690,8 +690,9 @@ When the live price stops, a red line under the price says for how long and why,
 in the server's own words (a restart, a token refused, Dhan's limit, a dropped
 connection); the page never stands still without saying so. A refused request is
 not a reason to leave Dhan: the last Dhan answer is kept and the live price
-keeps moving. The page goes to Yahoo's delayed prices only when the token is
-refused or the subscription is gone, and says so under the price.
+keeps moving. When the token is refused or the subscription is gone the page
+has nothing to show and says so under the price (until 19 October it went to
+Yahoo's delayed prices then).
 
 **Not decided yet (owner to decide)**: whether to trade real money on any of
 this, at what size, and with what daily limit. The score line over many days is

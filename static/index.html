@@ -220,13 +220,13 @@
     document.getElementById("logout").hidden = !data.auth_enabled;
     if (!data.quotes.length) {
       status.className = data.last_error ? "error" : "";
-      // the source named is the one the prices will come from: Dhan when it is set up (the server's base provider, Yahoo, only
-      // fills in when Dhan is not); the owner, 19 October, after a restart: "if we are fetching from dhan then why does it show
-      // the message as taking from yahoo?"
-      const from = data.dhan && data.dhan.configured ? "Dhan" : data.source === "yahoo" ? "Yahoo" : data.source;
-      status.textContent = "Waiting for the first prices from " + from + "… "
-        + (data.last_error ? "Last try failed: " + data.last_error + ". Trying again every " + data.poll_seconds + " s."
-                           : "The server asks every " + data.poll_seconds + " s.");
+      // Dhan is the one source (19 October, the owner: "remove yahoo data or yahoo API from everywhere"); the simulator only in
+      // demo mode. Not set up: say so, and what to do
+      status.textContent = data.dhan && !data.dhan.configured && !data.simulated
+        ? "No prices: Dhan is not set up on this server. Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to its environment (Render's Environment page, or .env on the laptop)."
+        : "Waiting for the first prices from " + (data.simulated ? "the simulator" : "Dhan") + "… "
+          + (data.last_error ? "Last try failed: " + data.last_error + ". Trying again every " + data.poll_seconds + " s."
+                             : "The server asks every " + data.poll_seconds + " s.");
       return;
     }
     render(data.quotes);

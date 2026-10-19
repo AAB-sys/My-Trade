@@ -49,8 +49,8 @@ Copy `.env.example` to `.env` and edit it. The server reads it on startup.
 
 | Setting         | Values           | Meaning                                                       |
 |-----------------|------------------|---------------------------------------------------------------|
-| `DATA_PROVIDER` | `yahoo` (default), `demo` | Real prices from Yahoo Finance, or a simulated random walk for testing |
-| `POLL_SECONDS`  | a number         | How often the server refreshes. Defaults: 60 for yahoo, 1 for demo |
+| `DATA_PROVIDER` | `dhan` (default), `demo` | Real-time prices from the owner's Dhan account (the one source since 19 October; Yahoo Finance is gone), or a simulated random walk for testing |
+| `POLL_SECONDS`  | a number         | How often the dashboard refreshes. Defaults: 60 for dhan, 1 for demo |
 | `DASHBOARD_PASSWORD` | any text    | Turns the login on. Unset = open (the dashboard shows a warning). Required before hosting |
 | `SESSION_SECRET` | a long random string | Signs the login cookie. With it set, a login survives a server restart (every merge is one): the page carries on by itself. Without it, every restart logs you out |
 | `HOST`          | `127.0.0.1` (default), `0.0.0.0` | Read by `start.bat`. `0.0.0.0` lets other devices on the same network open the dashboard |
@@ -72,14 +72,14 @@ it is on.
 
 Real-time candles and quotes for NIFTY 50, NIFTY BANK and SENSEX, and option
 premiums for all three (SENSEX's on the BSE, since 8 October), come from the owner's Dhan account through
-DhanHQ's API, under its Data API subscription; every other index, and every Dhan
-failure, falls back to Yahoo. On the dashboard, the top row is NIFTY 50, NIFTY
-BANK and SENSEX, and those tiles show exactly what their pages' headers show,
+DhanHQ's API, under its Data API subscription. Dhan is the one source (19 October, the owner:
+"remove yahoo data or yahoo API from everywhere"): without its two settings there are no prices,
+and the pages say so; until then Yahoo Finance, about 15 minutes delayed, carried every index and
+every Dhan failure. The dashboard's three tiles, NIFTY 50, NIFTY
+BANK and SENSEX, show exactly what their pages' headers show,
 at all hours, from the same computation (in market hours marked "Dhan · live"
 and moving every second, after the close "Dhan · closed"; `/health`'s
-`feed.tiles_problem` says if an index's figures could not be read);
-the other tiles are Yahoo's, about 15 minutes delayed,
-and each tile's own line says which it is (the footer line left the page on 16 October). `/health`'s `feed.ids` is null, or what
+`feed.tiles_problem` says if an index's figures could not be read). `/health`'s `feed.ids` is null, or what
 Dhan's instrument list says differs from the index ids the code uses; its
 `feed.option_list` says what the list gave once read: the option ids per index,
 SENSEX's expiries, and how the BSE's option rows are written (9 October: no
@@ -259,16 +259,15 @@ The app is ready to run on a platform that deploys from GitHub:
 
 - `Procfile` gives the start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`.
 - Set these in the host's environment (never in the repo): `DASHBOARD_PASSWORD`,
-  `SESSION_SECRET`, `DATA_PROVIDER=yahoo`. The host provides `PORT` and HTTPS.
+  `SESSION_SECRET`, `DHAN_CLIENT_ID`, `DHAN_ACCESS_TOKEN`. The host provides `PORT` and HTTPS.
 - Run exactly **one** instance: prices live in the server's memory.
 - Use the host's health check on `/health`.
-- Keep it private (your login only): the free Yahoo feed, and any licensed feed
-  later, are for personal use.
+- Keep it private (your login only): the broker's feed is for personal use.
 
 ## How it works
 
 ```
-  source (yahoo | demo)  ──▶  background loop  ──▶  memory: latest 19 quotes  ──▶  /ws  ──▶  every open dashboard
+  source (dhan | demo)   ──▶  background loop  ──▶  memory: the latest quotes  ──▶  /ws  ──▶  every open dashboard
                               every POLL_SECONDS                                   pushed the instant it changes
                                                                                     /indices/all, /indices/{name} read the same memory
 ```
@@ -348,15 +347,14 @@ The app is ready to run on a platform that deploys from GitHub:
 
 ## Phases
 
-1. **The API** - done. Menu, real data from Yahoo, proper errors, on GitHub.
+1. **The API** - done. Menu, real data (Yahoo at first, Dhan alone since 19 October), proper errors, on GitHub.
 2. **The dashboard** - done. Three tiles, NIFTY 50, NIFTY BANK and SENSEX (the other indices, gainers to losers, were taken off on 15 October),
    light and dark, phone-friendly, failures named rather than hidden.
 3. **Real time**
    - 3a - done. Streaming plumbing: in-memory store, background refresh,
      WebSocket push, pluggable source, simulated mode.
-   - 3b - next. A licensed broker feed as a source (needs a broker account with
-     API access). Until then the data is Yahoo's, ~15 minutes delayed; only the
-     delivery is instant.
+   - 3b - done. The owner's broker feed, Dhan, as the source; since 19 October the
+     only one.
 4. **Orders** - paper trading first, with hard limits, before anything real.
 
 **Each tick is small** (15 October): a tick to an open index page carries the price, its time and the candle of
