@@ -413,6 +413,7 @@
   state.period = "today";  // every visit starts on "Today so far" (the owner, 16 October: "it should be by default today"); until then the last choice was remembered per browser
   state.move = PERIODS[state.period].move;
   state.signal = "both";  // layer 3's signal: On the line and Crossed both count (the switch left the page on 16 October)
+  state.minutes = []; state.minutesKey = ""; state.minuteNow = null;  // the shown session's one-minute candles, for the owner's early exit (19 October; loadMinutes)
   const INTERVAL_NAMES = { "1m": "1-minute", "5m": "5-minute", "15m": "15-minute", "30m": "30-minute", "1d": "1-day", "1w": "1-week" };
   // The Time frame drop-down (15 October, the owner's list): the first five choices are a candle size over the last five
   // days (three months for 1 day); the rest say how far back the chart shows, each with its candle size. Where the
@@ -805,7 +806,27 @@
                                dayCandles: longCandles(), signal: state.signal, holdBreaks: !longCandles(), trail: Rules.TRAIL,
                                given: longCandles() || state.view === "1w" || !["today", "prev"].includes(state.period) ? null : givenCalls(),
                                newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
-                               prevClose: judgedToday() ? null : prevCloseOf() });  // the first candle judged from the previous close (18 October; not on today's range, which has no lines before it); ideas 13, 8 and 5 left the rule that day
+                               prevClose: judgedToday() ? null : prevCloseOf(),  // the first candle judged from the previous close (18 October; not on today's range, which has no lines before it); ideas 13, 8 and 5 left the rule that day
+                               minutes: longCandles() ? null : sessionMinutes() });  // the session's one-minute candles: the owner's early exit of a held break (19 October)
+  }
+  // The shown session's one-minute candles (the owner's early exit, 19 October: a held break ends inside a candle once three minutes
+  // stayed beyond the close before it and the price crossed one line back; Rules.paperTrades minutes): today's are fetched once a
+  // minute, and the minute closing now comes from the ticks (applyTick), so the exit is judged the moment the minute closes; a past
+  // session's are fetched once. The closed minutes only: the one forming now is not judged
+  const sessionMinutes = () => { const key = currentSession(); return key ? state.minutes.filter(m => sessionOf(m) === key) : []; };
+  const minutesWant = () => { const key = currentSession(); return key ? (key === dateKey(serverNow()) ? "today" : rangeFor()) + "|" + key : ""; };
+  async function loadMinutes() {
+    const want = minutesWant();
+    if (!want || longCandles()) return;
+    try {
+      const response = await fetch(`/indices/${encodeURIComponent(name)}/detail?range=${want.split("|")[0]}&interval=1m`, withTab());
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!Array.isArray(data.candles) || want !== minutesWant()) return;  // the page moved on meanwhile
+      state.minutes = data.candles.filter(m => m.time + 60 <= serverNow());
+      state.minutesKey = want;
+      if (series) drawLevels();  // the calls judged again, with the minutes
+    } catch (e) { /* the next minute tries again */ }
   }
   // The close before the day's first candle (18 October: the first candle is judged from it, as every other candle is judged from
   // the close before it): the previous session's close when the day's candles are shown, else the last close the tiles show
@@ -927,6 +948,7 @@
   // gives the real fall (the owner, 12 October: "here in the box, also mention the percentage"; "35% is just an example").
   // A sale at a candle's close names that candle and its close (the owner, 13 October: NIFTY 50's 10:30 Buy PE read "a candle
   // closed above 61.8%", taken for the 10:30 candle, which closed below it; the candle was the 10:45 one, closed at 22,524.25)
+  const lineLabel = (price) => { const l = (lastLevels.levels || []).find(x => x.price === price); return (l ? Rules.levelName(l.ratio, l.signed) + " · " : "") + fmt.format(price); };  // a line by its price: "-38.2% · 23,013.52"
   function soldReason(t, r) {
     const way = t.side === "PE" ? "above" : "below", line = `${pctOf(t)} · ${fmt.format(t.level)}`, target = targetPct(t);
     const closed = `the ${callTime(t.exitTime)} candle closed at ${fmt.format(t.exit)},`;
@@ -934,6 +956,7 @@
       : t.how === "sold" ? (r ? `premium dropped ${-premiumChange(r)}%` : "premium fell 35% of what was paid")
       : t.how === "back" ? `${closed} ${way} ${line}` : t.how === "retouch" ? `price came back to ${fmt.format(t.c1Open)}, ${way} ${pctOf(t)}`
       : t.how === "trail" ? `${closed} ${way} ${stopName(t)}`
+      : t.how === "early" ? `3 minutes ${way} ${fmt.format(t.earlyFrom)}, the close before, and crossed ${way} ${lineLabel(t.earlyLine)}`  // the owner's early exit (19 October)
       : t.how === "candle" ? `${closed} back across ${line}` : t.how;
   }
   // The target's line: a target follows the lines ("today so far" levels move with each new high or low), so it is looked up
@@ -969,7 +992,7 @@
   function targetCell(t, r) {
     const moved = movedTarget(t), shown = moved ? moved.price : t.target;
     if (t.exit != null)
-      return `<td class="target">${targetPrice(shown, t)}<small class="${closedTone(t, r)}">sold at ${callTime(t.exitTime)}</small></td>`;
+      return `<td class="target">${targetPrice(shown, t)}<small class="${closedTone(t, r)}">sold at ${callTime(t.exitAt || t.exitTime)}</small></td>`;
     if (t.hold && t.trail) {  // Rule 2: the stop has moved to a further line; the note always names the stop's line (section 7)
       // the line passed was the day's high (low) and the price has gone on past it: no line beyond, the target shown is the day's
       // high (low) itself (13 October, idea 24: it read "target 0.0% passed, next target 0.0%"); "Today so far" lines only, the
@@ -984,7 +1007,7 @@
     if (t.hold) {
       const way = t.side === "PE" ? "above" : "below", line = fmt.format(t.level);
       const past = t.entry != null && t.target != null && sessionBars().some(b => b.time >= t.entryTime && (t.exitTime == null || b.time <= t.exitTime) && (t.side === "CE" ? b.high >= t.target : b.low <= t.target));
-      const note = t.how === "back" ? `sold: a candle closed ${way} ${line}` : t.how === "retouch" ? `sold: price came back to ${fmt.format(t.c1Open)}`
+      const note = t.how === "early" ? `sold: 3 minutes ${way} the close before, and one level back crossed` : t.how === "back" ? `sold: a candle closed ${way} ${line}` : t.how === "retouch" ? `sold: price came back to ${fmt.format(t.c1Open)}`
         : t.how === "day end" ? "sold at day end" : t.entry == null ? (t.target == null ? newEdge(t) : "")
         : `${t.target == null ? `${newEdge(t)} · hold` : past ? "target passed, continue" : "hold"} · sell if a candle closes ${way} ${line}`;
       return `<td class="target">${targetPrice(t.target, t)}${note ? `<small${t.exit != null && t.points > 0 ? ' class="up"' : ""}>${note}</small>` : ""}</td>`;
@@ -1311,6 +1334,12 @@
       else if ((state.dhan.stream || "").startsWith("Stream: tick-by-tick")) state.dhan.stream = "Stream: quiet, prices once a second meanwhile.";
       drawFeedNote();
     }
+    const m1 = t.bars && t.bars["1m"];  // the minute forming now, from the ticks: when the next one begins, the closed minute joins the list and the calls are judged on it at once
+    if (m1 && state.minutesKey.startsWith("today|")) {
+      const lastMin = state.minutes[state.minutes.length - 1];
+      if (state.minuteNow && m1.time > state.minuteNow.time && (!lastMin || state.minuteNow.time > lastMin.time)) { state.minutes.push({ ...state.minuteNow }); if (series) drawLevels(); }
+      state.minuteNow = { time: m1.time, open: m1.open, high: m1.high, low: m1.low, close: m1.close };
+    }
     const bar = t.bars && t.bars[state.interval];
     if (!bar || !series || !bars.length) return;
     const last = bars[bars.length - 1];
@@ -1425,6 +1454,7 @@
       state.candles = data.candles;
       setBars(shownBars());
       drawLevels();
+      if (state.minutesKey !== minutesWant()) loadMinutes();  // the session's one-minute candles, when the page's session changed (the early exit, 19 October)
       state.pollMs = Math.max(1000, data.poll_seconds * 1000);
       status.className = "";
       status.textContent = "Live · updated " + clock();
@@ -1519,6 +1549,7 @@
   }
   const pageOpened = Date.now();
   setInterval(drawLiveNote, 1000);
+  setInterval(() => { if (state.minutesKey.startsWith("today|")) loadMinutes(); }, 60000);  // today's one-minute candles, once a minute (the ticks bring the newest meanwhile)
 
   // ---- controls
   document.getElementById("logout").addEventListener("click", () => {

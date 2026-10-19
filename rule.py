@@ -261,7 +261,8 @@ TRAIL = {"lines": "all", "buffer": "none", "place": "back"}  # Rule 2 as the ind
 
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
-                 hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, new_high_low: bool = False, prev_close=None) -> dict:
+                 hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, new_high_low: bool = False, prev_close=None,
+                 minutes: list | None = None) -> dict:
     """The paper calls (see static/rules.js paperTrades). Since 18 October a call fires when a later candle's price goes past the
     signal candle's high (CE) or low (PE) and enters there, or at the candle's open when it opened past it; any later candle may
     fire it, until a candle closes back across the signal's line; a second call the same way while another is held runs beside
@@ -274,7 +275,10 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     given: the calls given live, {signal candle's time: "CE" or "PE"} (the records of their options): each stays, whatever the
     candle's final prices say (kept_at; 9 October).
     new_high_low: idea 24 (13 October): a close past the top or bottom line, when no line gives a signal, gives a Crossed call
-    past it (edge), alongside the other calls; "Today so far" lines only."""
+    past it (edge), alongside the other calls; "Today so far" lines only.
+    minutes: the session's one-minute candles, for the owner's early exit of a held break (19 October; static/rules.js paperTrades):
+    inside a candle, at the close of the first minute by whose end the last three minutes all stayed on the exit side of the close
+    before the candle and that minute closed across the first line beyond that close ("early", exitAt the minute's end)."""
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -282,7 +286,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     exit_back = (ideas or {}).get("exitBack")  # idea P4 (7 October, the owner's rule): a candle closing back across the level by this share of the gap ends the call
     carry_on = (ideas or {}).get("carryOn")  # idea P5 (7 October evening): at the target, a close this share into the next gap carries the call on to the level beyond
     stop_share = (ideas or {}).get("stopShare")  # ideas P6, P7 (8 October evening): a stop fixed at the entry, this share of the target's distance away
-    minutes = (ideas or {}).get("minutes")  # the day's one-minute candles, to settle a candle that touched both the stop and the target
+    stop_minutes = (ideas or {}).get("minutes")  # the day's one-minute candles, to settle a candle that touched both the stop and the target
 
     def clock_end(b):
         return (b["time"] + IST_OFFSET) % 86400 + seconds
@@ -319,9 +323,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
     def stop_first(t, bar):
         """The candle touched the stop: did the stop come before the target? The first minute to touch either; the stop when unsure."""
-        if not reaches(t, bar) or not minutes:
+        if not reaches(t, bar) or not stop_minutes:
             return True
-        for m in minutes:
+        for m in stop_minutes:
             if m["time"] < bar["time"] or m["time"] >= bar["time"] + seconds:
                 continue
             if touches_stop(t, m):
@@ -366,6 +370,45 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if t["side"] == "PE":
             return t["c1Open"] >= t["level"] and bar["open"] < prev_close and bar["high"] >= t["c1Open"]
         return t["c1Open"] <= t["level"] and bar["open"] > prev_close and bar["low"] <= t["c1Open"]
+
+    mins = minutes if minutes else None  # the owner's early exit (19 October) runs on the session's one-minute candles
+
+    def line_back(t, levels, P):
+        """One level back from the close before the candle, on the exit side."""
+        prices = [l["price"] for l in levels]
+        return next((p for p in prices if p > P), None) if t["side"] == "PE" else next((p for p in reversed(prices) if p < P), None)
+
+    def early(t, bar, P, levels):
+        """The minute the double confirmation came in this candle: (minute, high, low) of the candle up to it, or None."""
+        if not mins or not t.get("hold") or P is None:
+            return None
+        L = line_back(t, levels, P)
+        if L is None:
+            return None
+        run, prev, high, low = 0, None, -INF, INF
+        for m in mins:
+            if m["time"] < bar["time"] or m["time"] + 60 > bar["time"] + seconds or m["time"] + 60 > now:
+                continue  # this candle's closed minutes only
+            high, low = max(high, m["high"]), min(low, m["low"])
+            ok = m["low"] > P if t["side"] == "PE" else m["high"] < P  # every tick of the minute on the exit side
+            run = run + 1 if ok and (prev is None or m["time"] == prev + 60) else 1 if ok else 0  # a missing minute breaks the run
+            prev = m["time"]
+            if run >= 3 and (m["close"] > L if t["side"] == "PE" else m["close"] < L):
+                return m, high, low
+        return None
+
+    def early_exit(t, bar, P, levels):
+        """True when the call ended inside this candle: at the double confirmation, or at a retouch before it."""
+        e = early(t, bar, P, levels)
+        if not e:
+            return False
+        m, high, low = e
+        if not t.get("trail") and retouch(t, {**bar, "high": high, "low": low}, P):
+            end(t, t["c1Open"], bar, "retouch")
+            return True
+        end(t, m["close"], bar, "early")
+        t["exitAt"], t["earlyFrom"], t["earlyLine"] = m["time"] + 60, P, line_back(t, levels, P)  # the minute's end, the close it stayed beyond, the line it crossed back
+        return True
 
     def settle(t, bar, prev_close, levels, buf):
         """The target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target."""
@@ -445,6 +488,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 else:
                     still.append(t)
             open_ = still
+        open_ = [t for t in open_ if not early_exit(t, bar, before, levels)]  # the owner's early exit, inside the candle (19 October), before the candle's close is judged
         open_ = [t for t in open_ if settle(t, bar, before, levels, buffer_at(i))]
         if exit_back:  # idea P4: the candle says exit, at its close
             still = []
@@ -500,6 +544,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 else:
                     still.append(t)
             open_ = still
+        open_ = [t for t in open_ if not early_exit(t, forming, last["close"], levels_at(len(closed)))]  # the early exit on the minutes closed so far of the candle forming now
         still = []
         for t in open_:
             if t.get("hold"):  # exit B tick by tick; exit A and Rule 2 wait for the close
@@ -525,7 +570,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
 
 def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL,
-               new_high_low: bool = False) -> dict:
+               new_high_low: bool = False, minutes: list | None = None) -> dict:
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
     setting is given (None: Rule 1 alone); idea 24 when asked for, on "today so far" lines only. The first candle is judged from
     the previous day's close (18 October)."""
@@ -536,7 +581,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else from_close if move == "close" else today_levels_at(bars)
     return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if own else today_lines_at(bars), True, trail, None,
-                        not own and bool(new_high_low), previous.get("close") if own and previous else None)
+                        not own and bool(new_high_low), previous.get("close") if own and previous else None, minutes or None)
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},
@@ -576,8 +621,9 @@ def read_of(t: dict, bars: list, seconds: int, now: float) -> dict | None:
         ratio = t["trail"]["stopRatio"] if t.get("trail") else t.get("ratio")
         name = "the level" if ratio is None else f"the {level_name(ratio, t.get('signed'))} level"
         pe, how = t["side"] == "PE", t.get("how")
-        word = "exit" if how in ("back", "retouch", "trail") else "carry"
+        word = "exit" if how in ("back", "retouch", "trail", "early") else "carry"
         why = (f"price closed back {'above' if pe else 'below'} {name}" if how in ("back", "trail") else f"price came back to where the {'fall' if pe else 'rise'} started" if how == "retouch"
+               else f"price stayed {'above' if pe else 'below'} the previous close for 3 minutes and crossed one level back" if how == "early"
                else f"price stays {'below' if pe else 'above'} {name}")
         return {"depth": None, "body": None, "back": None, "retest": False, "strength": None, "word": word, "why": why,
                 "exitAt": t.get("exitTime") if word == "exit" else None, "exitPrice": t.get("exit") if word == "exit" else None}

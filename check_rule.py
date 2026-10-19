@@ -16,17 +16,18 @@ import rule  # noqa: E402
 JS = r"""
 require(process.argv[1]);
 const R = globalThis.Rules;
-const jobs = JSON.parse(require("fs").readFileSync(0, "utf8"));
+const { minutes: table, jobs } = JSON.parse(require("fs").readFileSync(0, "utf8"));  // the days' one-minute candles once, by key: in every job they made the input too long for node
 const out = jobs.map(j => {
   const levels = j.levels;  // the live page: the levels as they stand now, for every candle
+  j.minutes = j.minutes ? table[j.minutes] : null;
   const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined,
-                                                 trail: "trail" in j ? j.trail : undefined, newHighLow: !!j.newHighLow })  // Rule 2: as the page runs it, or another setting, or null (Rule 1 alone)
+                                                 trail: "trail" in j ? j.trail : undefined, newHighLow: !!j.newHighLow, minutes: j.minutes || null })  // Rule 2: as the page runs it, or another setting, or null (Rule 1 alone)
     : j.mode === "live-close" ? R.paperTrades({ bars: j.bars, levelsAt: R.closeLevelsAt(j.bars, j.close), now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, holdBreaks: true,
-                                                trail: R.TRAIL, given: j.given || undefined, prevClose: j.close })  // the previous close's lines, redrawn (15 October)
+                                                trail: R.TRAIL, given: j.given || undefined, prevClose: j.close, minutes: j.minutes || null })  // the previous close's lines, redrawn (15 October)
     : j.mode === "live-today" ? R.paperTrades({ bars: j.bars, levelsAt: R.todayLevelsAt(j.bars), targetsAt: R.todayLinesAt(j.bars), now: j.now, seconds: j.seconds,
                                                 dayCandles: false, signal: j.signal, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined,
-                                                newHighLow: !!j.newHighLow })  // the index page and the watcher today
-    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined, newHighLow: !!j.newHighLow });
+                                                newHighLow: !!j.newHighLow, minutes: j.minutes || null })  // the index page and the watcher today
+    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined, newHighLow: !!j.newHighLow, minutes: j.minutes || null });
   res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now });  // the candle verdict too
     t.carry = R.carryOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // and the carry read
   return res;
@@ -36,7 +37,9 @@ process.stdout.write(JSON.stringify(out));
 
 
 def js_run(jobs: list) -> list:
-    proc = subprocess.run(["node", "-e", JS, str(HERE / "static" / "rules.js")], input=json.dumps(jobs).encode(), capture_output=True, check=True)
+    proc = subprocess.run(["node", "--max-old-space-size=4096", "-e", JS, str(HERE / "static" / "rules.js")], input=json.dumps({"minutes": MINUTES, "jobs": jobs}).encode(), capture_output=True)
+    if proc.returncode != 0:
+        sys.exit("node failed: " + proc.stderr.decode()[-2000:])
     return json.loads(proc.stdout)
 
 
@@ -45,18 +48,22 @@ def given_of(j: dict):
     return {int(k): v for k, v in j["given"].items()} if j.get("given") else None
 
 
+MINUTES: dict = {}  # the saved days' one-minute candles by key (the owner's early exit, 19 October); a job names its key
+
+
 def py_run(jobs: list) -> list:
     out = []
     for j in jobs:
+        j = {**j, "minutes": MINUTES.get(j["minutes"]) if j.get("minutes") else None}
         if j["mode"] == "replay":
-            res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL, bool(j.get("newHighLow")))
+            res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL, bool(j.get("newHighLow")), j.get("minutes"))
         elif j["mode"] == "live-close":
-            res = rule.paper_trades(j["bars"], rule.close_levels_at(j["bars"], j["close"]), j["now"], j["seconds"], False, j["signal"], None, None, True, rule.TRAIL, given_of(j), False, j["close"])
+            res = rule.paper_trades(j["bars"], rule.close_levels_at(j["bars"], j["close"]), j["now"], j["seconds"], False, j["signal"], None, None, True, rule.TRAIL, given_of(j), False, j["close"], j.get("minutes"))
         elif j["mode"] == "live-today":
-            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")))
+            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")), None, j.get("minutes"))
         else:
             levels = j["levels"]
-            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")))
+            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")), None, j.get("minutes"))
         for t in res["trades"]:
             t["read"] = rule.read_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # the candle verdict too
             t["carry"] = rule.carry_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # and the carry read
@@ -130,11 +137,15 @@ def main() -> int:
                 for move in ("prev", "close", "today"):  # close: the previous close's lines (15 October)
                     if move in ("prev", "close") and not prev:
                         continue
+                    mins = f"{d['date']} {name}" if candles.get("1m") else None  # the day's one-minute candles, by key: the owner's early exit (19 October) runs on them
+                    if mins:
+                        MINUTES[mins] = candles["1m"]
                     for signal in ("held", "crossed", "both"):
                         for ideas in IDEAS:
-                            jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "ideas": ideas, "what": f"{d['date']} {name} {key} {move} {signal}"})
+                            jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "ideas": ideas, "minutes": mins, "what": f"{d['date']} {name} {key} {move} {signal}"})
+                        jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "what": f"{d['date']} {name} {key} {move} {signal} no minutes"})
                         for k, trail in enumerate(TRAILS):
-                            jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "trail": trail,
+                            jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "trail": trail, "minutes": mins,
                                          "what": f"{d['date']} {name} {key} {move} {signal} trail {k}"})
                         jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "newHighLow": True,
                                      "what": f"{d['date']} {name} {key} {move} {signal} idea 24"})
@@ -153,9 +164,14 @@ def main() -> int:
                     shown = bars5[:cut + 1]  # the candles the page has: the closed ones and the one forming
                     now = shown[-1]["time"] + 90  # mid-way through the forming candle
                     levels = rule.levels_of(rule.move_of(shown))
+                    mins = f"{d['date']} {name}" if candles.get("1m") else None
+                    if mins:
+                        MINUTES[mins] = candles["1m"]
                     for signal in ("held", "crossed", "both"):
-                        jobs.append({"mode": "live", "bars": shown, "levels": levels, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live at {cut} {signal}"})
-                        jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "what": f"{d['date']} {name} live today at {cut} {signal}"})
+                        jobs.append({"mode": "live", "bars": shown, "levels": levels, "now": now, "seconds": 300, "signal": signal, "minutes": mins, "what": f"{d['date']} {name} live at {cut} {signal}"})
+                        jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "minutes": mins, "what": f"{d['date']} {name} live today at {cut} {signal}"})
+                        if prev:
+                            jobs.append({"mode": "live-close", "bars": shown, "close": prev["close"], "now": now, "seconds": 300, "signal": signal, "minutes": mins, "what": f"{d['date']} {name} live close at {cut} {signal}"})
                         jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "newHighLow": True, "what": f"{d['date']} {name} live today at {cut} {signal} idea 24"})
                         jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "newHighLow": True, "what": f"{d['date']} {name} live today at {cut} {signal} idea 24"})
                     # calls given live (9 October): some candles' calls kept on a side the final prices may not give

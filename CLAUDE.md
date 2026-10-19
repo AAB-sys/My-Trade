@@ -253,7 +253,15 @@ branch from `main`.
   page (not on day candles), the watcher and `replayDay`. A crossed call gets `hold: true` and `c1Open` (the signal
   candle's open); it ends `"back"` (a close back across its line) or `"retouch"` (a candle opening beyond the previous
   close, then back to `c1Open`, tick by tick), else at the day end; never at its target. Until 18 October no new call came
-  that way while one was open; now the next one runs beside it, `parallel: true`. The lab's `run()` mirrors it (`holdBreaks !== false`).
+  that way while one was open; now the next one runs beside it, `parallel: true`.
+- The owner's early exit (19 October): `minutes` / `minutes` (the session's one-minute candles) in paperTrades / paper_trades and
+  replayDay / replay_day. A held break ends `"early"` inside a candle at the close of the first minute by whose end three minutes in
+  a row stayed beyond the close before the candle (PE: lows above it; CE: highs below it) and that minute closed across the first
+  line beyond that close (`early`, `earlyExit` / `early_exit`); the trade gets `exitAt` (the minute's end), `earlyFrom` (that close)
+  and `earlyLine`. The page fetches today's minutes once a minute (`loadMinutes`, range "today", interval "1m") and takes the minute
+  closing now from the ticks (`applyTick`, `t.bars["1m"]`); the watcher reads `dhan.intraday(name, 1)` with the ticks
+  (`with_live_candles(..., "1m")`); `sale_minute` returns `exitAt - 60` for it; check_rule.py and lab/check.js pass the saved days'
+  minutes (`lab/replay.js`, its own engine, does not know it). The lab's `run()` mirrors it (`holdBreaks !== false`).
 - Rule 2 of the owner's specification (9 October): `trail` / `trail` (with holdBreaks), `Rules.TRAIL` / `rule.TRAIL`, the
   owner's choice `{ lines: "all", buffer: "none", place: "back" }` (#115 had `place: "at"`), passed by the index page, the watcher and `replayDay`
   (`replayDay({ trail: null })` is Rule 1 alone). A held break whose candle closes beyond a further line (on `levelsAt`)

@@ -305,7 +305,9 @@ The app is ready to run on a platform that deploys from GitHub:
   target and sold when a candle closes back across the broken line, when the price
   comes back to where the break began, or at the day's end; once a candle closes past
   a further line, its stop moves to the Fibonacci line one behind it, line by line,
-  and a close back past the stop sells it), listed one row each in the owner's
+  and a close back past the stop sells it; and, inside a candle, once three one-minute
+  candles in a row stayed back beyond the close before it and the price crossed one
+  line back, the early exit of 19 October), listed one row each in the owner's
   format: time, call with its contract, signal, call entry (the strike), call
   target (the next line on the chart in the call's direction, following the lines
   as they move; with "hit" or "not reached" once ended), premium paid -> now and

@@ -725,9 +725,11 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
         parts = r["key"].split("|")
         if len(parts) == 5 and parts[0] == name and parts[1] == key and parts[4] == levels_mode and parts[2].isdigit():
             given.setdefault(int(parts[2]), parts[3])
+    minutes = with_live_candles([b for b in dhan.intraday(name, 1) if datetime.fromtimestamp(b["time"], dhan.IST).date() == today], name, "1m")  # today's one-minute candles, the one forming now from the ticks: the owner's early exit (19 October)
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
                                key == "5m" and today_so_far and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
-                               previous["close"] if previous else None)["trades"]  # the first candle judged from the previous close; ideas 13, 8 and 5 removed (18 October)
+                               previous["close"] if previous else None,  # the first candle judged from the previous close; ideas 13, 8 and 5 removed (18 October)
+                               minutes)["trades"]
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, levels_mode)
@@ -779,6 +781,8 @@ def sale_minute(name: str, t: dict, seconds: int) -> int:
     so the first one-minute candle of the selling candle that reached that price (13 October: the 9:20 Buy CE's target,
     22,477.78, in the 9:25 candle, was reached at 9:29); any other sale is at the candle's close, so its last minute."""
     start, end = t["exitTime"], t["exitTime"] + seconds
+    if t["how"] == "early" and t.get("exitAt"):  # the owner's early exit (19 October): at the end of a minute, so the minute before exitAt
+        return t["exitAt"] - 60
     if t["how"] in ("target", "retouch"):
         up = (t["how"] == "target") == (t["side"] == "CE")  # a Buy CE's target is above, its retouch below; a Buy PE's the other way
         for b in dhan.intraday(name, 1):
