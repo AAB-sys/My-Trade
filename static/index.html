@@ -220,7 +220,11 @@
     document.getElementById("logout").hidden = !data.auth_enabled;
     if (!data.quotes.length) {
       status.className = data.last_error ? "error" : "";
-      status.textContent = "Waiting for the first prices from " + data.source + "… "
+      // the source named is the one the prices will come from: Dhan when it is set up (the server's base provider, Yahoo, only
+      // fills in when Dhan is not); the owner, 19 October, after a restart: "if we are fetching from dhan then why does it show
+      // the message as taking from yahoo?"
+      const from = data.dhan && data.dhan.configured ? "Dhan" : data.source === "yahoo" ? "Yahoo" : data.source;
+      status.textContent = "Waiting for the first prices from " + from + "… "
         + (data.last_error ? "Last try failed: " + data.last_error + ". Trying again every " + data.poll_seconds + " s."
                            : "The server asks every " + data.poll_seconds + " s.");
       return;
