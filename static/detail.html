@@ -1035,9 +1035,12 @@
   // (Crossed above 0%)" when it fires, "Hold (Crossed above +23.6%)" once a candle has closed beyond a further line, naming the
   // furthest one (Rule 2's line), "Can be bought parallelly" on a second call the same way while another is held ("it will be my
   // decision to buy it or not"), and "Take Exit" with the reason at the end ("Sold wording can be replaced with Take Exit with reason")
+  // When the call ended (the owner, 19 October: "whenever exit is taken ... give the time as well or give the candle on which it
+  // is exited"): the exact time where there is one (the early exit's minute, a sale by the premium rule), else the candle it fell in
+  const exitWhen = (t) => t.exitAt || t.how === "sold" ? callTime(t.exitAt || t.exitTime) : `${callTime(t.exitTime)} candle`;
   function candleCell(t, r) {
     if (t.exit != null)  // closed: the exit is the last word on the call, the same way for every reason
-      return `<td class="cand ${{ up: "carry", down: "exit" }[closedTone(t, r)] || ""}">Take Exit<small>${soldReason(t, r)}</small></td>`;
+      return `<td class="cand ${{ up: "carry", down: "exit" }[closedTone(t, r)] || ""}">Take Exit · ${exitWhen(t)}<small>${soldReason(t, r)}</small></td>`;
     if (t.entry == null) return `<td class="cand">—</td>`;
     const far = t.trail && t.trail.ratio != null ? pctText(t.trail.ratio) : pctOf(t);  // the furthest line a candle has closed beyond, else the signal's line
     const what = t.kind === "held" && !t.hold ? `On the line ${pctOf(t)}` : `${t.side === "PE" ? "Crossed below" : "Crossed above"} ${far}`;
