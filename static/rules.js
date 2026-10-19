@@ -339,13 +339,34 @@
     };
     const mins = minutes && minutes.length ? minutes : null;  // the owner's early exit (19 October) runs on the session's one-minute candles
     const lineBack = (t, levels, P) => { const prices = levels.map(l => l.price); return t.side === "PE" ? prices.find(p => p > P) : prices.slice().reverse().find(p => p < P); };  // one level back from the close before the candle, on the exit side
+    // A call that fired inside this candle (18 October: at the break of the signal candle's high or low) is judged on the part of the
+    // candle after it fired (the owner, 19 October: the 2:05 Buy PE was sold on the 2:10 candle, which closed below its line and below
+    // the 2:05 close; the candle's earlier part, before the call fired, had been counted). With the minutes known, that part runs from
+    // the minute the price broke through in; a call that fired in the minute forming now has no closed minute after it yet, so only
+    // the price now counts. Without the minutes the whole candle counts, as before
+    const fireMinute = (t, bar) => {  // the minute the call fired in, when it fired in this candle and the minutes are known; else null
+      if (!mins || t.entryTime !== bar.time) return null;
+      const m = mins.find(m => m.time >= bar.time && m.time < bar.time + seconds && m.time + 60 <= now && (t.side === "PE" ? m.low <= t.entry : m.high >= t.entry));
+      return m ? m.time : null;
+    };
+    const sinceFire = (t, bar, priceNow) => {  // the candle from the fire on: its high and low over the closed minutes from the fire minute, and the price now
+      if (!mins || t.entryTime !== bar.time) return bar;
+      const from = fireMinute(t, bar);
+      if (from == null) return priceNow != null ? { ...bar, high: priceNow, low: priceNow } : bar;
+      let high = -Infinity, low = Infinity;
+      for (const m of mins) if (m.time >= from && m.time < bar.time + seconds && m.time + 60 <= now) { high = Math.max(high, m.high); low = Math.min(low, m.low); }
+      if (priceNow != null) { high = Math.max(high, priceNow); low = Math.min(low, priceNow); }
+      return { ...bar, high, low };
+    };
     const early = (t, bar, P, levels) => {  // the minute the double confirmation came in this candle: { m, high, low } (the candle up to that minute), or null
       if (!mins || !t.hold || P == null) return null;
       const L = lineBack(t, levels, P);
       if (L == null) return null;
+      const from = fireMinute(t, bar);  // a call fired in this candle: its minutes from the fire on
+      if (t.entryTime === bar.time && from == null) return null;  // fired in the minute forming now: nothing closed after it yet
       let run = 0, prev = null, high = -Infinity, low = Infinity;
       for (const m of mins) {
-        if (m.time < bar.time || m.time + 60 > bar.time + seconds || m.time + 60 > now) continue;  // this candle's closed minutes only
+        if (m.time < bar.time || m.time + 60 > bar.time + seconds || m.time + 60 > now || (from != null && m.time < from)) continue;  // this candle's closed minutes only, from the fire on
         high = Math.max(high, m.high); low = Math.min(low, m.low);
         const ok = t.side === "PE" ? m.low > P : m.high < P;  // every tick of the minute on the exit side
         run = ok && (prev == null || m.time === prev + 60) ? run + 1 : ok ? 1 : 0;  // a missing minute breaks the run
@@ -364,7 +385,7 @@
     const settle = (t, bar, prevClose, levels, buf) => {  // the target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target
       if (t.hold) {  // a held break: exit B, then exit A at the close (Rule 1); the target does not end it
         if (!t.trail) {
-          if (retouch(t, bar, prevClose)) { end(t, t.c1Open, bar, "retouch"); return false; }
+          if (retouch(t, sinceFire(t, bar), prevClose)) { end(t, t.c1Open, bar, "retouch"); return false; }  // on the part of the candle after the call fired
           if (t.side === "PE" ? bar.close > t.level : bar.close < t.level) { end(t, bar.close, bar, "back"); return false; }
         }
         if (trail) {  // Rule 2: the stop on the lines crossed since, from the line the call broke
@@ -425,7 +446,7 @@
       open.forEach(t => { came.set(t, targetOn(t, linesBefore)); follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
       if (stopShare) open = open.filter(t => { if (!t.hold && touchesStop(t, forming)) { end(t, t.stop, forming, "stop"); return false; } return true; });  // ideas P6, P7, tick by tick
       open = open.filter(t => !earlyExit(t, forming, last.close, levelsAt(closed.length)));  // the early exit on the minutes closed so far of the candle forming now
-      open = open.filter(t => { if (t.hold) { if (!t.trail && retouch(t, forming, last.close)) { end(t, t.c1Open, forming, "retouch"); return false; } return true; }  // exit B tick by tick; exit A and Rule 2 wait for the close
+      open = open.filter(t => { if (t.hold) { if (!t.trail && retouch(t, sinceFire(t, forming, forming.close), last.close)) { end(t, t.c1Open, forming, "retouch"); return false; } return true; }  // exit B tick by tick, on the part after the call fired; exit A and Rule 2 wait for the close
                                 if (!hits(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
                                 end(t, t.target, forming, "target"); return false; });
       open.forEach(t => { t.points = gain(t, forming.close); t.last = forming.close; });  // last: the price the open call's points are at

@@ -378,6 +378,31 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         prices = [l["price"] for l in levels]
         return next((p for p in prices if p > P), None) if t["side"] == "PE" else next((p for p in reversed(prices) if p < P), None)
 
+    def fire_minute(t, bar):
+        """The minute the call fired in, when it fired in this candle and the minutes are known; else None (static/rules.js fireMinute:
+        a call fired inside a candle is judged on the part of the candle after it fired; the owner, 19 October)."""
+        if not mins or t.get("entryTime") != bar["time"]:
+            return None
+        for m in mins:
+            if bar["time"] <= m["time"] < bar["time"] + seconds and m["time"] + 60 <= now and (m["low"] <= t["entry"] if t["side"] == "PE" else m["high"] >= t["entry"]):
+                return m["time"]
+        return None
+
+    def since_fire(t, bar, price_now=None):
+        """The candle from the fire on: its high and low over the closed minutes from the fire minute, and the price now."""
+        if not mins or t.get("entryTime") != bar["time"]:
+            return bar
+        frm = fire_minute(t, bar)
+        if frm is None:
+            return {**bar, "high": price_now, "low": price_now} if price_now is not None else bar
+        high, low = -INF, INF
+        for m in mins:
+            if frm <= m["time"] < bar["time"] + seconds and m["time"] + 60 <= now:
+                high, low = max(high, m["high"]), min(low, m["low"])
+        if price_now is not None:
+            high, low = max(high, price_now), min(low, price_now)
+        return {**bar, "high": high, "low": low}
+
     def early(t, bar, P, levels):
         """The minute the double confirmation came in this candle: (minute, high, low) of the candle up to it, or None."""
         if not mins or not t.get("hold") or P is None:
@@ -385,10 +410,13 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         L = line_back(t, levels, P)
         if L is None:
             return None
+        frm = fire_minute(t, bar)  # a call fired in this candle: its minutes from the fire on
+        if t.get("entryTime") == bar["time"] and frm is None:
+            return None  # fired in the minute forming now: nothing closed after it yet
         run, prev, high, low = 0, None, -INF, INF
         for m in mins:
-            if m["time"] < bar["time"] or m["time"] + 60 > bar["time"] + seconds or m["time"] + 60 > now:
-                continue  # this candle's closed minutes only
+            if m["time"] < bar["time"] or m["time"] + 60 > bar["time"] + seconds or m["time"] + 60 > now or (frm is not None and m["time"] < frm):
+                continue  # this candle's closed minutes only, from the fire on
             high, low = max(high, m["high"]), min(low, m["low"])
             ok = m["low"] > P if t["side"] == "PE" else m["high"] < P  # every tick of the minute on the exit side
             run = run + 1 if ok and (prev is None or m["time"] == prev + 60) else 1 if ok else 0  # a missing minute breaks the run
@@ -414,7 +442,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         """The target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target."""
         if t.get("hold"):  # a held break: exit B, then exit A at the close (Rule 1); the target does not end it
             if not t.get("trail"):
-                if retouch(t, bar, prev_close):
+                if retouch(t, since_fire(t, bar), prev_close):  # on the part of the candle after the call fired
                     end(t, t["c1Open"], bar, "retouch")
                     return False
                 if bar["close"] > t["level"] if t["side"] == "PE" else bar["close"] < t["level"]:
@@ -548,7 +576,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         still = []
         for t in open_:
             if t.get("hold"):  # exit B tick by tick; exit A and Rule 2 wait for the close
-                if not t.get("trail") and retouch(t, forming, last["close"]):
+                if not t.get("trail") and retouch(t, since_fire(t, forming, forming["close"]), last["close"]):  # on the part after the call fired
                     end(t, t["c1Open"], forming, "retouch")
                 else:
                     still.append(t)

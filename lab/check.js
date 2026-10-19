@@ -528,6 +528,28 @@ console.log("rules unit checks passed");
   const up = R.paperTrades({ bars: bars.map(flip), levelsAt: R.closeLevelsAt(bars.map(flip), 46300 - previous.close), now: Infinity, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, prevClose: 46300 - previous.close, minutes: minutes.map(flip) }).trades;
   const ce = up.find(t => t.side === "CE" && t.signalTime === bars[1].time);
   assert(ce && ce.how === "early" && ce.exit === 46300 - 23020 && ce.points === 63, "the CE mirror: " + JSON.stringify(ce));
+  // A call fired inside a candle is judged on the part after it fired (the owner, 19 October: the 2:05 Buy PE sold on the 2:10 candle,
+  // which closed below its line and below the 2:05 close). C1 (9:20) opens 23,154 above 0% and closes 23,130 below it: Buy PE, fired
+  // below 23,120, C1's low. Case A: 9:25 opens 23,125, below the 9:20 close, first goes up to 23,155 (C1's open, a retouch by the look
+  // of it), then breaks 23,120 in its third minute and closes 23,085. Without the minutes the retouch sells it at 23,154 (-34); with
+  // them the touch came before the fire, so the call is held, to the day end at 23,075 (+45). Case B: 9:25's first three minutes stay
+  // above 23,130 and close above 0% (the early exit by the look of it), then the fourth breaks 23,120 and the candle closes 23,092:
+  // with the minutes no exit, since nothing closed after the fire; live at 9:28:30, the fire in the minute forming now, the same
+  const c1 = [bar(0, 23150, 23176, 23140, 23160), bar(1, 23154, 23160, 23120, 23130)];
+  const minA = [[10, 23125, 23155, 23124, 23150], [11, 23150, 23152, 23130, 23132], [12, 23132, 23134, 23110, 23112], [13, 23112, 23115, 23095, 23098], [14, 23098, 23100, 23080, 23085]].map(a => m(...a));  // the 9:25 candle's minutes
+  const barsA = [...c1, bar(2, 23125, 23155, 23080, 23085), bar(3, 23085, 23090, 23070, 23075)];
+  const runA = (mins, now = Infinity) => R.paperTrades({ bars: now === Infinity ? barsA : barsA.filter(b => b.time < now), levelsAt: R.closeLevelsAt(barsA, previous.close), now, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, prevClose: previous.close, minutes: mins }).trades.find(t => t.side === "PE");
+  const a0 = runA(null), a1 = runA(minA);
+  assert(a0.entry === 23120 && a0.how === "retouch" && a0.exit === 23154 && a0.points === -34, "without the minutes the touch before the fire sells: " + JSON.stringify(a0));
+  assert(a1.entry === 23120 && a1.how === "day end" && a1.exit === 23075 && a1.points === 45, "with the minutes the touch before the fire does not count: " + JSON.stringify(a1));
+  const minB = [[10, 23132, 23150, 23131, 23148], [11, 23148, 23160, 23140, 23158], [12, 23158, 23162, 23150, 23155], [13, 23155, 23156, 23110, 23112], [14, 23112, 23114, 23090, 23092]].map(a => m(...a));
+  const barsB = [...c1, bar(2, 23132, 23162, 23090, 23092), bar(3, 23092, 23095, 23070, 23075)];
+  const runB = (mins, now = Infinity, forming = null) => R.paperTrades({ bars: now === Infinity ? barsB : [...barsB.filter(b => b.time + 300 <= now), ...(forming ? [forming] : [])], levelsAt: R.closeLevelsAt(barsB, previous.close), now, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, prevClose: previous.close, minutes: mins }).trades.find(t => t.side === "PE");
+  const b1 = runB(minB);
+  assert(b1 && b1.entry === 23120 && b1.how === "day end" && b1.exit === 23075 && b1.points === 45, "three minutes above the close before the fire do not count: " + JSON.stringify(b1));
+  const bLive = runB(minB, t0 + 13 * 60 + 30, bar(2, 23132, 23162, 23110, 23112));  // 9:28:30
+  assert(bLive && bLive.entry === 23120 && bLive.how === "open", "fired in the minute forming now: held: " + JSON.stringify(bLive));
+  console.log("judged from the fire on: checked");
   console.log("early exit checks passed");
 }
 
