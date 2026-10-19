@@ -481,6 +481,56 @@ console.log("rules unit checks passed");
   console.log("idea 24 checks passed");
 }
 
+// ---- the owner's early exit of a held break (19 October: "if the candle stays above the previous candle's close more than a 2.5
+// minute and also crossed one previous level which is a double confirmation then it should fire Take exit call for previous Hold
+// call"), on the day it came from, 19 October, as the screenshot showed it (prices rounded; the minutes of the 9:30 candle made up
+// to match the words: it touched -50%, made no new low, then went up through -38.2%). The previous close 23,146.15 gives the lines
+// 0% 23,146.15, -23.6% 23,064.21, -38.2% 23,013.52, -50% 22,972.55. 9:20 closes 23,085, below 0%: Buy PE, fired at 9:25 below
+// 9:20's low 23,083. 9:25 closes 22,975, past -23.6% and -38.2%: Rule 2's stop one line back, on -23.6%. 9:30 opens 22,975: its
+// minutes 9:31, 9:32 and 9:33 stay above 22,975 (the 9:25 close), and 9:33 closes 23,020, above -38.2% (23,013.52), the first line
+// above that close: Take Exit at 9:34 at 23,020, 23,083 - 23,020 = +63. Without the minutes the call runs to the 9:30 close,
+// 23,100, above the stop -23.6%: Rule 2 sells it at -17 (what the page did that day)
+{
+  const t0 = 1792381500;  // 19 October 2026 09:15 IST
+  const bar = (i, o, h, l, c) => ({ time: t0 + i * 300, open: o, high: h, low: l, close: c });
+  const bars = [bar(0, 23150, 23176, 23088, 23152), bar(1, 23154, 23160, 23083, 23085), bar(2, 23085, 23090, 22970, 22975), bar(3, 22975, 23105, 22972, 23100), bar(4, 23100, 23150, 23095, 23140)];
+  const m = (k, o, h, l, c) => ({ time: t0 + k * 60, open: o, high: h, low: l, close: c });
+  const minutes = [[0, 23150, 23176, 23140, 23160], [1, 23160, 23165, 23088, 23150], [2, 23150, 23155, 23145, 23148], [3, 23148, 23152, 23146, 23150], [4, 23150, 23153, 23148, 23152],
+    [5, 23154, 23160, 23150, 23155], [6, 23155, 23157, 23140, 23142], [7, 23142, 23144, 23120, 23122], [8, 23122, 23124, 23100, 23102], [9, 23102, 23104, 23083, 23085],
+    [10, 23085, 23090, 23060, 23062], [11, 23062, 23064, 23030, 23032], [12, 23032, 23034, 23000, 23002], [13, 23002, 23004, 22975, 22978], [14, 22978, 22980, 22970, 22975],
+    [15, 22975, 22980, 22972, 22978], [16, 22978, 22992, 22976, 22990], [17, 22990, 23005, 22988, 23002], [18, 23002, 23025, 23000, 23020], [19, 23020, 23105, 23018, 23100],
+    [20, 23100, 23110, 23095, 23105], [21, 23105, 23120, 23100, 23118], [22, 23118, 23130, 23115, 23128], [23, 23128, 23150, 23125, 23145], [24, 23145, 23148, 23135, 23140]].map(a => m(...a));
+  const previous = { open: 23100, high: 23200, low: 23050, close: 23146.15 };
+  const run = (mins, now = Infinity) => R.paperTrades({ bars: now === Infinity ? bars : bars.filter(b => b.time < now), levelsAt: R.closeLevelsAt(bars, previous.close), now, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, prevClose: previous.close, minutes: mins }).trades;
+  const pe = (ts) => ts.find(t => t.side === "PE" && t.signalTime === bars[1].time);
+  const a = pe(run(null)), b = pe(run(minutes));
+  assert(a && a.entry === 23083 && a.entryTime === bars[2].time && a.how === "trail" && a.exit === 23100 && a.points === -17 && a.trail.stop === 23064.21, "without the minutes Rule 2 sells at the 9:30 close: " + JSON.stringify(a));
+  assert(b && b.entry === 23083 && b.how === "early" && b.exit === 23020 && b.exitTime === bars[3].time && b.exitAt === t0 + 19 * 60 && b.earlyFrom === 22975 && b.earlyLine === 23013.52 && b.points === 63,
+         "the early exit at 9:34, at 23,020: " + JSON.stringify(b));
+  assert(JSON.stringify(R.replayDay({ bars, move: "close", previous, seconds: 300, signal: "both", minutes }).trades.find(t => t.side === "PE")) === JSON.stringify(b), "replayDay passes the minutes on");
+  // live: at 9:33:30 only the 9:30 to 9:32 minutes have closed (two above 22,975): still held; at 9:34:10 the 9:33 minute has closed: sold
+  const live1 = pe(run(minutes, t0 + 18 * 60 + 30)), live2 = pe(run(minutes, t0 + 19 * 60 + 10));
+  assert(live1 && live1.how === "open" && live2 && live2.how === "early" && live2.exit === 23020 && live2.exitAt === t0 + 19 * 60, "on the candle forming now, minute by minute: " + JSON.stringify([live1.how, live2.how, live2.exit]));
+  // a minute that dips to the previous close breaks the run: 9:32's low 22,975 (not above it): the run restarts at 9:33, so no exit in this candle
+  const dip = minutes.map(x => x.time === t0 + 17 * 60 ? { ...x, low: 22975 } : x);
+  assert(pe(run(dip)).how === "trail", "a dip to the previous close restarts the three minutes: " + pe(run(dip)).how);
+  // the line one back must be crossed too: 9:33 closing 23,010, under -38.2%, gives no exit yet; 9:34 (still above 22,975) closing 23,100 above it does
+  const low = minutes.map(x => x.time === t0 + 18 * 60 ? { ...x, high: 23012, close: 23010 } : x);
+  const c = pe(run(low));
+  assert(c.how === "early" && c.exit === 23100 && c.exitAt === t0 + 20 * 60, "the double confirmation waits for the line: " + JSON.stringify([c.how, c.exit, c.exitAt - t0]));
+  // a retouch earlier in the same candle still sells first: C1 (9:20) opened above 0%, so the 9:30 candle opening below 22,975 and reaching 23,154 before 9:33 sells at 23,154
+  const touch = minutes.map(x => x.time === t0 + 16 * 60 ? { ...x, high: 23155 } : x);
+  const d = pe(run(touch.map(x => x), Infinity));
+  assert(d.how === "trail" || d.how === "early" || d.how === "retouch", "some exit: " + d.how);  // Rule 2 took over at 9:25 (a further line crossed), so no retouch here: the early exit
+  assert(d.how === "early", "with Rule 2 on, the retouch no longer sells, the early exit does: " + d.how);
+  // the CE mirror (every price p as 46300 - p): a Buy CE held, three minutes below the previous close and a close below the line one back
+  const flip = (x) => ({ time: x.time, open: 46300 - x.open, high: 46300 - x.low, low: 46300 - x.high, close: 46300 - x.close });
+  const up = R.paperTrades({ bars: bars.map(flip), levelsAt: R.closeLevelsAt(bars.map(flip), 46300 - previous.close), now: Infinity, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true, trail: R.TRAIL, prevClose: 46300 - previous.close, minutes: minutes.map(flip) }).trades;
+  const ce = up.find(t => t.side === "CE" && t.signalTime === bars[1].time);
+  assert(ce && ce.how === "early" && ce.exit === 46300 - 23020 && ce.points === 63, "the CE mirror: " + JSON.stringify(ce));
+  console.log("early exit checks passed");
+}
+
 // "Previous close" lines (the owner, 15 October): 0% at the previous day's close, 100% 1.5% of it, the Fibonacci shares above (+)
 // and below (-): 13 lines; drawn again only after a candle closes above +100% (today's low 0% to today's high +100%) or below
 // -100% (today's high 0% to today's low -100%); the other levels modes untouched

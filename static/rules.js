@@ -278,11 +278,19 @@
   //              whatever the candle's final prices say (keptAt above). The replays have none
   //   newHighLow idea 24 (NEW_HIGH_LOW and pastEdgeAt above; "Today so far" lines only, which no Levels choice uses since 15
   //              October): a candle closing past the top or bottom line, when no line gives a signal, gives a Crossed call past it (edge)
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose }) {
+  //   minutes    the session's one-minute candles, for the owner's early exit of a held break (19 October: "if the candle stays above
+  //              the previous candle's close more than a 2.5 minute and also crossed one previous level which is a double
+  //              confirmation then it should fire Take exit call for previous Hold call"): inside a candle, at the close of the
+  //              first minute by whose end (1) the last three minutes, more than 2.5, all stayed on the exit side of the close
+  //              before this candle, every tick of them (a Buy PE: their lows above it; a Buy CE: their highs below it), and (2)
+  //              that minute closed across the first line beyond that close on the exit side, one level back ("early"; exitAt:
+  //              the minute's end). Judged on the minutes the same way live and in a replay; without them (null) nothing changes.
+  //              A retouch earlier in the same candle still comes first. Bounce (held) calls keep their target
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
-    const stopShare = ideas && ideas.stopShare, minutes = (ideas && ideas.minutes) || null;
+    const stopShare = ideas && ideas.stopShare, stopMinutes = (ideas && ideas.minutes) || null;  // the stop ideas settle by the minutes they are given
     const clockEnd = (b) => (b.time + IST_OFFSET) % 86400 + seconds;  // when the candle closes, in seconds since midnight IST
     const closed = bars.filter(b => endOf(b, seconds) <= now);
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
@@ -316,8 +324,8 @@
     };
     const touchesStop = (t, bar) => t.stop != null && (t.side === "CE" ? bar.low <= t.stop : bar.high >= t.stop);
     const stopFirst = (t, bar) => {  // the candle touched the stop: did the stop come before the target? (ideas P6, P7)
-      if (!reaches(t, bar) || !minutes) return true;
-      for (const m of minutes) {
+      if (!reaches(t, bar) || !stopMinutes) return true;
+      for (const m of stopMinutes) {
         if (m.time < bar.time || m.time >= bar.time + seconds) continue;
         if (touchesStop(t, m)) return true;
         if (reaches(t, m)) return false;
@@ -328,6 +336,30 @@
     const retouch = (t, bar, prevClose) => {  // exit B: the candle opened beyond the previous close and came back to C1's open
       const armed = t.side === "PE" ? t.c1Open >= t.level : t.c1Open <= t.level;  // C1 began on the far side of the line it broke
       return armed && (t.side === "PE" ? bar.open < prevClose && bar.high >= t.c1Open : bar.open > prevClose && bar.low <= t.c1Open);
+    };
+    const mins = minutes && minutes.length ? minutes : null;  // the owner's early exit (19 October) runs on the session's one-minute candles
+    const lineBack = (t, levels, P) => { const prices = levels.map(l => l.price); return t.side === "PE" ? prices.find(p => p > P) : prices.slice().reverse().find(p => p < P); };  // one level back from the close before the candle, on the exit side
+    const early = (t, bar, P, levels) => {  // the minute the double confirmation came in this candle: { m, high, low } (the candle up to that minute), or null
+      if (!mins || !t.hold || P == null) return null;
+      const L = lineBack(t, levels, P);
+      if (L == null) return null;
+      let run = 0, prev = null, high = -Infinity, low = Infinity;
+      for (const m of mins) {
+        if (m.time < bar.time || m.time + 60 > bar.time + seconds || m.time + 60 > now) continue;  // this candle's closed minutes only
+        high = Math.max(high, m.high); low = Math.min(low, m.low);
+        const ok = t.side === "PE" ? m.low > P : m.high < P;  // every tick of the minute on the exit side
+        run = ok && (prev == null || m.time === prev + 60) ? run + 1 : ok ? 1 : 0;  // a missing minute breaks the run
+        prev = m.time;
+        if (run >= 3 && (t.side === "PE" ? m.close > L : m.close < L)) return { m, high, low };
+      }
+      return null;
+    };
+    const earlyExit = (t, bar, P, levels) => {  // true when the call ended inside this candle: at the double confirmation, or at a retouch before it
+      const e = early(t, bar, P, levels);
+      if (!e) return false;
+      if (!t.trail && retouch(t, { ...bar, high: e.high, low: e.low }, P)) { end(t, t.c1Open, bar, "retouch"); return true; }
+      end(t, e.m.close, bar, "early"); t.exitAt = e.m.time + 60; t.earlyFrom = P; t.earlyLine = lineBack(t, levels, P);  // the minute's end, the close it stayed beyond, the line it crossed back
+      return true;
     };
     const settle = (t, bar, prevClose, levels, buf) => {  // the target reached within this closed candle: idea P5 may carry the call on to the level beyond, else it ends at the target
       if (t.hold) {  // a held break: exit B, then exit A at the close (Rule 1); the target does not end it
@@ -368,6 +400,7 @@
       const levels = levelsAt(i), lines = linesAt(i), linesBefore = linesAt(Math.max(0, i - 1));
       open.forEach(t => { came.set(t, targetOn(t, linesBefore)); follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
       if (stopShare) open = open.filter(t => { if (!t.hold && touchesStop(t, bar) && stopFirst(t, bar)) { end(t, t.stop, bar, "stop"); return false; } return true; });  // ideas P6, P7
+      open = open.filter(t => !earlyExit(t, bar, before, levels));  // the owner's early exit, inside the candle (19 October), before the candle's close is judged
       open = open.filter(t => settle(t, bar, before, levels, bufferAt(i)));
       if (exitBack) open = open.filter(t => { if (!t.hold && backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit, at its close
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
@@ -391,6 +424,7 @@
       const lines = linesAt(closed.length), linesBefore = linesAt(closed.length - 1);  // the lines as the chart draws them now, with the forming candle in the day's range
       open.forEach(t => { came.set(t, targetOn(t, linesBefore)); follow(t, lines); if (stopShare && !t.hold && t.stop == null) t.stop = round2(t.side === "CE" ? t.entry - stopShare * (t.target - t.entry) : t.entry + stopShare * (t.entry - t.target)); });
       if (stopShare) open = open.filter(t => { if (!t.hold && touchesStop(t, forming)) { end(t, t.stop, forming, "stop"); return false; } return true; });  // ideas P6, P7, tick by tick
+      open = open.filter(t => !earlyExit(t, forming, last.close, levelsAt(closed.length)));  // the early exit on the minutes closed so far of the candle forming now
       open = open.filter(t => { if (t.hold) { if (!t.trail && retouch(t, forming, last.close)) { end(t, t.c1Open, forming, "retouch"); return false; } return true; }  // exit B tick by tick; exit A and Rule 2 wait for the close
                                 if (!hits(t, forming)) return true; if (carryOn != null && t.ladder.length) return true;  // idea P5: the decision waits for the close
                                 end(t, t.target, forming, "target"); return false; });
@@ -406,13 +440,14 @@
   // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page, with Rule 2 as
   // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone. Idea 24 when
   // asked for, on "today so far" lines only. The first candle is judged from the previous day's close (18 October)
-  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow }) {
+  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow, minutes }) {
     const own = move === "prev" || move === "close";  // the previous day's lines, or the previous close's (15 October): not today's range so far
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null, fromClose = move === "close" && previous ? closeLevelsAt(bars, previous.close) : null;
     if ((move === "prev" && !fixed) || (move === "close" && !fromClose)) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : move === "close" ? fromClose : todayLevelsAt(bars), targetsAt = own ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
-                         trail: trail === undefined ? TRAIL : trail, newHighLow: !own && !!newHighLow, prevClose: own && previous && previous.close != null ? previous.close : null });  // not on today's range: the first candle has no lines before it
+                         trail: trail === undefined ? TRAIL : trail, newHighLow: !own && !!newHighLow, prevClose: own && previous && previous.close != null ? previous.close : null,  // not on today's range: the first candle has no lines before it
+                         minutes: minutes || null });  // the day's one-minute candles: the owner's early exit (19 October)
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -513,8 +548,9 @@
     if (t.hold) {  // a held break (holdBreaks): the verdict is the owner's exit rule itself, worded for the line its stop is on (Rule 2: the line it moved to)
       const ratio = t.trail ? t.trail.stopRatio : t.ratio;
       const name = ratio == null ? "the level" : `the ${levelName(ratio, t.signed)} level`, pe = t.side === "PE";
-      const word = t.how === "back" || t.how === "retouch" || t.how === "trail" ? "exit" : "carry";
+      const word = t.how === "back" || t.how === "retouch" || t.how === "trail" || t.how === "early" ? "exit" : "carry";
       const why = t.how === "back" || t.how === "trail" ? `price closed back ${pe ? "above" : "below"} ${name}` : t.how === "retouch" ? `price came back to where the ${pe ? "fall" : "rise"} started`
+        : t.how === "early" ? `price stayed ${pe ? "above" : "below"} the previous close for 3 minutes and crossed one level back`
         : `price stays ${pe ? "below" : "above"} ${name}`;
       return { depth: null, body: null, back: null, retest: false, strength: null, word, why, exitAt: word === "exit" ? t.exitTime : null, exitPrice: word === "exit" ? t.exit : null };
     }

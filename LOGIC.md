@@ -445,6 +445,30 @@ The rule, in the order it is applied:
      for a PE, higher for a CE) and then comes back to C1's open, at C1's open,
      tick by tick (only when C1 opened on the far side of L);
    - **C, end of day:** at the day end (item 6).
+   - **The early exit** (the owner, 19 October, from the morning's 9:20 Buy PE,
+     which Rule 2 sold at the 9:30 close, 23,100, after the index had been at
+     22,975: "if the candle stays above the previous candle's close more than a
+     2.5 minute and also crossed one previous level which is a double
+     confirmation then it should fire Take exit call for previous Hold call"):
+     inside a candle, judged on the day's one-minute candles, the same live and
+     in a replay. The call ends at the close of the first minute by whose end
+     (1) the last three minutes, more than 2.5, all stayed on the exit side of
+     the close before the candle, every tick of them (a Buy PE: their lows above
+     it; a Buy CE: their highs below it), and (2) that minute closed across the
+     first line beyond that close on the exit side, one level back. A minute
+     that touches the close before, or a missing minute, restarts the three. It
+     comes before A and Rule 2, which wait for the candle's close; a retouch
+     earlier in the same candle still comes first. The table says "sold at
+     9:34 AM" (the minute's end) and "3 minutes above 22,975.00, the close
+     before, and crossed above -38.2% · 23,013.52". On that morning the 9:20 Buy
+     PE (in at 23,083) would have ended at 9:34 at 23,020, +63, instead of
+     23,100 at the 9:30 close, -17. The page fetches today's one-minute candles
+     once a minute and takes the minute closing now from the ticks, the watcher
+     reads them from Dhan with the ticks, the replays and the checks use the
+     saved days' minutes. The 12 saved days, Previous close lines, 5-minute
+     candles: the same 163 calls, net +971 → +970, 41 → 54 won, worst day −313
+     → −89 (7 October −313 → +55, 29 September −250 → +34), but the long runs
+     are cut too (8 October +434 → −0.50, 12 October +272 → +51).
    The target column still shows the next line, for information. A bounce
    (*held*) call keeps its target. The candle status of such a call is this
    rule's own verdict. The ideas P3 to P7 of the Study page leave it alone.
