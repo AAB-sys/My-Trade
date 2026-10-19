@@ -237,7 +237,8 @@
   #line-tags { position: absolute; top: 0; bottom: 0; left: 0; width: 122px; pointer-events: none; overflow: hidden; z-index: 2; }
   #line-tags span { position: absolute; right: 4px; transform: translateY(-50%); font: 700 11px/1.2 system-ui, sans-serif; white-space: nowrap; font-variant-numeric: tabular-nums; }
   #line-tags span small { font-size: 11px; font-weight: 500; margin-left: 5px; }
-  @media (max-width: 600px) { .chart-area.left-tags #chart { margin-left: 116px; } #line-tags { width: 114px; } #line-tags span, #line-tags span small { font-size: 10px; } #line-tags span small { margin-left: 4px; } }
+  /* on a phone the column is narrow, the price under the name (the owner, 19 October: "chart is not fitting correctly"; the column took 116 of 412 px and left the candles 162 px) */
+  @media (max-width: 600px) { .chart-area.left-tags #chart { margin-left: 68px; } #line-tags { width: 66px; } #line-tags span { font-size: 10px; line-height: 1.1; text-align: right; } #line-tags span small { display: block; margin-left: 0; font-size: 9px; } }
   #popup {
     display: none; position: absolute; z-index: 5; min-width: 170px;
     background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
@@ -432,6 +433,8 @@
   const rangeFor = () => VIEWS[state.view].range;  // what the server is asked for: the last five days, or the view's months or years of day or week candles
 
   const fmt = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt0 = new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 });  // whole rupees, for the chart's price scale on a phone
+  const phone = () => matchMedia("(max-width: 600px)").matches;  // the phone layout (19 October): the chart's scales take less room
   const signed = new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "always" });
   const clock = () => new Date(serverNow() * 1000).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" });  // the server's clock, IST
   const istTime = (epoch, withDate) => new Date(epoch * 1000).toLocaleString("en-IN", {
@@ -446,7 +449,7 @@
   // ---- chart
   const chart = LightweightCharts.createChart(document.getElementById("chart"), {
     autoSize: true,
-    layout: { background: { color: "transparent" }, textColor: cssVar("--muted"), fontFamily: "system-ui, sans-serif" },
+    layout: { background: { color: "transparent" }, textColor: cssVar("--muted"), fontFamily: "system-ui, sans-serif", fontSize: phone() ? 10 : 11 },  // smaller on a phone: more times fit on the time scale
     grid: { vertLines: { color: cssVar("--grid") }, horzLines: { color: cssVar("--grid") } },
     rightPriceScale: { borderColor: cssVar("--grid") },
     // The chart moves as Dhan's does (the owner, 17 October: "i want chart movement same dhan chart movement ... charts up down
@@ -458,7 +461,7 @@
     // a chart dragged away from its candles); up and down, keepCandles below brings the candles back
     timeScale: { borderColor: cssVar("--grid"), timeVisible: true, secondsVisible: false, rightOffset: 5, fixLeftEdge: true, fixRightEdge: false, lockVisibleTimeRangeOnResize: true },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    localization: { locale: "en-IN", priceFormatter: (p) => fmt.format(p) },
+    localization: { locale: "en-IN", priceFormatter: (p) => phone() ? fmt0.format(p) : fmt.format(p) },  // the price scale on a phone shows whole rupees: 23,200 not 23,200.00, so the candles get the room (19 October)
     // on a phone a one-finger vertical swipe still scrolls the page (the table is under the chart); a sideways swipe moves the chart
     handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
     handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: { time: true, price: true } },
@@ -487,10 +490,11 @@
       const el = box.children[k], y = series.priceToCoordinate(lv[k].price);
       el.hidden = y == null || y < 0 || y > chart.paneSize().height;  // off the pane (the time scale under it is not the pane)
       if (el.hidden) continue;
-      const at = Math.max(y, below + 14); el.style.top = at + "px"; below = at;
+      const at = Math.max(y, below + Math.max(14, el.offsetHeight)); el.style.top = at + "px"; below = at;  // a tag's own height: two lines on a phone
     }
   }
   window.addEventListener("resize", queueTags);
+  matchMedia("(max-width: 600px)").addEventListener("change", () => { chart.applyOptions({ layout: { fontSize: phone() ? 10 : 11 } }); queueTags(); });  // a phone turned, a window shrunk: the phone layout on or off
   // a finger or the mouse dragging or scrolling the chart, the price scale included (a drag there turns the chart's own fitting off,
   // so the autoscale hook above no longer runs): the names follow (the review of 15 October found them left beside other lines)
   ["pointerdown", "pointermove", "pointerup", "wheel", "touchmove", "touchend"].forEach(ev => document.getElementById("chart").addEventListener(ev, queueTags, { passive: true }));
