@@ -405,7 +405,7 @@
       <div class="layout-box">
         <h3 id="indicators-title">Indicators</h3>
         <p class="hint">Tick an indicator to make it active. Remembered on this browser.</p>
-        <div id="indicators-list" class="indicators"><label><input type="checkbox" data-ind="fib">Fib Levels</label><label><input type="checkbox" data-ind="dt">Double Top</label><label><input type="checkbox" data-ind="db">Double Bottom</label><label><input type="checkbox" data-ind="tt">Triple Top</label></div>
+        <div id="indicators-list" class="indicators"><label><input type="checkbox" data-ind="fib">Fib Levels</label><label><input type="checkbox" data-ind="dt">Double Top</label><label><input type="checkbox" data-ind="db">Double Bottom</label><label><input type="checkbox" data-ind="tt">Triple Top</label><label><input type="checkbox" data-ind="tb">Triple Bottom</label></div>
         <div class="layout-foot"><button type="button" class="pill" id="indicators-close">Close</button></div>
       </div>
     </div>
@@ -1821,7 +1821,7 @@
     const box = document.getElementById("signals-layout"), list = document.getElementById("indicators-list"), button = document.getElementById("signals-settings");
     let active = new Set(); try { active = new Set(JSON.parse(localStorage.getItem("signalsIndicators") || "[]")); } catch (e) {}
     state.signalsFib = active.has("fib");  // "Fib Levels": for the logic still to come; ticking it draws nothing yet
-    state.signalsDT = active.has("dt"); state.signalsDB = active.has("db"); state.signalsTT = active.has("tt");  // each rule's marks and lines on the chart (the table always carries every rule's calls, drawSignals)
+    state.signalsDT = active.has("dt"); state.signalsDB = active.has("db"); state.signalsTT = active.has("tt"); state.signalsTB = active.has("tb");  // each rule's marks and lines on the chart (the table always carries every rule's calls, drawSignals)
     const fill = () => list.querySelectorAll("input").forEach(i => { i.checked = active.has(i.dataset.ind); });
     const open = () => { fill(); box.hidden = false; const first = list.querySelector("input"); if (first) first.focus(); };
     const close = () => { box.hidden = true; button.focus(); };
@@ -1830,7 +1830,7 @@
     box.addEventListener("click", e => { if (e.target === box) close(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
     list.addEventListener("change", e => { const k = e.target.dataset.ind; if (!k) return; if (e.target.checked) active.add(k); else active.delete(k);
-      state.signalsFib = active.has("fib"); state.signalsDT = active.has("dt"); state.signalsDB = active.has("db"); state.signalsTT = active.has("tt"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {}
+      state.signalsFib = active.has("fib"); state.signalsDT = active.has("dt"); state.signalsDB = active.has("db"); state.signalsTT = active.has("tt"); state.signalsTB = active.has("tb"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {}
       if (series) drawLevels(); });  // the tick draws the rule's marks and lines at once, or takes them off; the table stays
   })();
   // ---- New Rule Chart: the double top (Buy PE) and double bottom (Buy CE) rule of the owner's "Trading Rules Specification" (21 October),
@@ -1867,16 +1867,16 @@
     const run = signalsNow();
     if (!run) { clearSignals(); return []; }
     const lines = [], marks = [];
-    const ticked = { "double top": state.signalsDT, "double bottom": state.signalsDB, "triple top": state.signalsTT };
+    const ticked = { "double top": state.signalsDT, "double bottom": state.signalsDB, "triple top": state.signalsTT, "triple bottom": state.signalsTB };
     run.trades.filter(t => ticked[t.rule]).forEach(t => {  // a rule's marks and lines only while its tick is on; the table carries every rule's calls
-      const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom";
-      const lineName = t.rule === "double bottom" ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
+      const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom" || t.rule === "triple bottom";
+      const lineName = bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
       lines.push({ nr: true, price: t.L, name: lineName, up, solid: true });
       if (t.exit == null && t.stop != null && t.stop !== t.L) lines.push({ nr: true, price: t.stop, name: "stop " + (t.stopPct || ""), up, solid: false });
       const pos = bottoms ? "belowBar" : "aboveBar", tag = bottoms ? "B" : "T";
       marks.push({ time: t.t1Time + IST_OFFSET, position: pos, color: colour, shape: "circle", text: tag + "1" });
       marks.push({ time: t.t2Time + IST_OFFSET, position: pos, color: colour, shape: "circle", text: tag + "2" });
-      if (t.t3Time) marks.push({ time: t.t3Time + IST_OFFSET, position: pos, color: colour, shape: "circle", text: "T3" });
+      if (t.t3Time) marks.push({ time: t.t3Time + IST_OFFSET, position: pos, color: colour, shape: "circle", text: tag + "3" });
       marks.push({ time: t.signalTime + IST_OFFSET, position: up ? "belowBar" : "aboveBar", color: colour, shape: up ? "arrowUp" : "arrowDown", text: "Buy " + t.side });
     });
     setSignalMarkers(marks.sort((a, b) => a.time - b.time));
@@ -1885,8 +1885,8 @@
       const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";
       const sideWord = t.side === "PE" ? "above" : "below", now = (run.bars && run.bars.length ? run.bars[run.bars.length - 1].close : t.entry), pts = t.exit != null ? t.points : Rules.round2(t.side === "CE" ? now - t.entry : t.entry - now);  // an open call: against the price now (the forming candle's close)
       const status = t.exit != null ? "Take Exit" : t.stage === 2 ? "Hold" : `Buy ${t.side}`;
-      const points = (t.rule === "double bottom" ? "B" : "T") + "1 " + callTime(t.t1Time) + " · " + (t.rule === "double bottom" ? "B" : "T") + "2 " + callTime(t.t2Time) + (t.t3Time ? " · T3 " + callTime(t.t3Time) : "");
-      const entryMsg = t.kind === "double bottom failed" ? `BUY PE: double bottom failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`  // the documents' entry messages
+      const tag = t.rule === "double bottom" || t.rule === "triple bottom" ? "B" : "T", points = `${tag}1 ${callTime(t.t1Time)} · ${tag}2 ${callTime(t.t2Time)}` + (t.t3Time ? ` · ${tag}3 ${callTime(t.t3Time)}` : "");
+      const entryMsg = t.kind === "double bottom failed" || t.kind === "triple bottom failed" ? `BUY PE: ${t.rule} failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`  // the documents' entry messages
         : t.kind === "triple top failed" ? `BUY CE: triple top failed · ${points} · resistance ${fmt.format(t.resistance)} broken · pattern target ${fmt.format(t.target)}`
         : `BUY ${t.side}: ${t.kind} · ${points} · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
       const reason = t.exit == null ? (t.stage === 2 ? `Target passed, continue · sell if a candle closes ${sideWord} ${t.stopPct || ""} (${fmt.format(t.stop)})` : entryMsg)
@@ -1895,7 +1895,7 @@
         : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
       tr.innerHTML = `<td class="when">${callTime(t.signalTime)}<small>in at ${callTime(t.entryTime)}</small></td>`
         + `<td class="call">Buy ${t.side}</td>`
-        + `<td>Rule:- ${{ "double top": "Double Top", "double bottom": "Double Bottom", "triple top": "Triple Top" }[t.rule] || t.rule}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
+        + `<td>Rule:- ${{ "double top": "Double Top", "double bottom": "Double Bottom", "triple top": "Triple Top", "triple bottom": "Triple Bottom" }[t.rule] || t.rule}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
         + `<td>${fmt.format(t.entry)}</td>`
         + `<td class="target">${fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
         + `<td class="opt">—</td><td class="opt ${pts > 0 ? "up" : pts < 0 ? "down" : ""}">${pts > 0 ? "+" : ""}${fmt.format(pts)} pts</td>`
