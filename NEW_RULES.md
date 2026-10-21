@@ -62,16 +62,42 @@ candle (the break level); the pattern target L plus (CE) or minus (PE) the wides
 The scanners keep state (the locked wedge, the wedges used up) and step on every closed candle, a trade open or not: a signal while
 a trade is open is skipped, "one trade at a time". The documents' daily chart, VWAP and strength filters are not built.
 
+## Symmetrical Triangle (the "Symmetrical Triangle Chart Pattern" document, built 21 October night)
+
+Price between a falling upper line (through the two latest confirmed swing highs) and a rising lower line (through the two latest
+confirmed swing lows), the touches alternating, neither line more than 3 times steeper than the other. First to last touch 10 to
+60 candles; the width at the first touch at least 2 ATR, at the last touch at most 70% of it; every close in between inside the
+lines by the buffer; before the apex; within 20 candles of the last touch. The trend into it, from the 20 candles before the first
+touch (the day's own candles): the rise is the middle of the triangle at the first touch above their lowest low, the fall their
+highest high above that middle; bullish when the rise is at least 2 ATR and not less than the fall, bearish when the fall is at
+least 2 ATR and more than the rise, else no clear trend and no triangle. The lines and the type are locked the first time every
+check passes; a triangle that has already closed outside its lines since its last touch was confirmed is never locked; dropped 20
+candles after the last touch or at the apex; never taken twice. The side follows the break, the first close outside the locked
+lines by the buffer: above the upper line Buy CE, below the lower line Buy PE; the type names it (bullish broke out or failed,
+bearish broke down or failed). More than 2 ATR past the line, skipped. The sides setting BOTH (CONTINUATION_ONLY would switch the
+failures off). L is the broken line's value on the signal candle; the target L plus or minus the widest width.
+
+## Bullish Rectangle (the "Bullish Rectangle Chart Pattern" document, built 21 October night)
+
+After a rise, two swing highs within half an ATR of each other and two swing lows within half an ATR, alternating; the resistance
+the higher high, the support the lower low, the height at least 2 ATR; the support at least 2 ATR above the lowest low of the 20
+candles before the first touch. First to last touch 10 to 60 candles; every close in between inside the lines by the buffer; within
+20 candles of the last touch. Locked the first time every check passes (never when already broken since the last touch was
+confirmed), dropped 20 candles after the last touch, never taken twice. One trade per rectangle: a close above the resistance by
+the buffer, Buy CE (the breakout); before any breakout, a close below the support by the buffer, Buy PE (the failure). More than 2
+ATR past the line, skipped. L is the resistance (CE) or the support (PE); the target that line plus or minus the height.
+
 ## The entry and the filters (every rule)
 
 The entry at the next candle's open, 09:30 to 14:45; one trade at a time across the rules; two losses in a row end the day's
 entries; max trades and max loss a day off until the owner sets them; the expiry-day skip waits for the option (not built). Rules
 firing on one candle the same way: the first in the order double top, double bottom, triple top, triple bottom, falling wedge, rising
-wedge; different ways: nothing.
+wedge, symmetrical triangle, bullish rectangle; different ways: nothing. The wedge, triangle and rectangle scanners keep state and
+step on every closed candle, a trade open or not: their signal while a trade is open is skipped, "one trade at a time".
 
 ## After the entry: Rule 1 and Rule 2
 
-L is the line the signal broke (the neckline, the support, the resistance or a wedge's break level). Rule 1 until the first of the chart's lines is
+L is the line the signal broke (the neckline, the support, the resistance, or a wedge's or triangle's break level). Rule 1 until the first of the chart's lines is
 crossed: sold on a close back across L (the reclaim); on the candle after the signal candle opening past the signal candle's close
 and touching its open (the retouch); or at the day end. Once a candle closes beyond the first line in the profit direction by the
 buffer, Rule 2: the stop on each line crossed (AT_LEVEL; ONE_LEVEL_BACK is an option), never back; sold on a close back past it.
@@ -82,8 +108,8 @@ The lines are the chart's own lines of the day, the Previous close lines (hidden
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,
 the index at entry, the pattern target with the stop or the exit, the points, the status, the documents' messages). The Settings
 popup has a tick per rule (and Fib Levels, waiting for its logic): ticked, the chart marks the pattern's points (T1, T2, T3 or
-B1, B2, B3; a wedge's H1, H2, L1, L2) and the signal, and draws the broken line (a wedge's two sloped lines too, from the first
-touch to the signal candle) and an open call's stop.
+B1, B2, B3; a wedge's, triangle's or rectangle's H1, H2, L1, L2) and the signal, and draws the broken line (the pattern's two
+lines too, from the first touch to the signal candle) and an open call's stop.
 
 ## Figures
 

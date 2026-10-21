@@ -320,3 +320,97 @@ console.log("New Rule Chart: the double top rule, Rule 1 and Rule 2 match the do
   assert(m1.fires === "29" && m1.out[0].side === "CE" && near(m1.out[0].L, 200 - 101.5) && m2.fires === "31" && m2.out[0].side === "PE" && near(m2.out[0].L, 200 - 104), "the falling wedge is the rising wedge upside down");
   console.log("New Rule Chart: the rising wedge matches its document's cases (PE-1 to PE-13, CE-1 to CE-9)");
 }
+
+// ---- The symmetrical triangle (the owner's "Symmetrical Triangle Chart Pattern" document): Appendix A (bullish, works, Buy CE), B
+// (bullish, fails, Buy PE), C (bearish, works, Buy PE), D (bearish, fails, Buy CE); ATR fixed at 1.5, the buffer 0.375; BU/BE, X, S, F cases
+{
+  const A = [[92.0,93.4,91.6,93.1],[93.1,94.9,92.8,94.6],[94.6,96.3,94.3,96.0],[96.0,97.8,95.7,97.5],[97.5,99.3,97.2,99.0],[99.0,101.0,98.7,100.7],[100.7,102.0,100.3,100.9],[100.9,101.2,99.4,99.6],[99.6,99.9,98.3,98.5],[98.5,98.8,97.5,97.7],[97.7,98.3,97.0,98.1],[98.1,98.9,97.8,98.7],[98.7,99.5,98.4,99.3],[99.3,100.0,99.0,99.8],[99.8,100.5,99.5,100.2],[100.2,100.8,99.9,100.5],[100.5,101.0,100.1,100.3],[100.3,100.6,99.4,99.6],[99.6,99.9,98.8,99.0],[99.0,99.3,98.3,98.5],[98.5,99.0,98.0,98.8],[98.8,99.5,98.5,99.3],[99.3,99.9,99.0,99.7],[99.7,100.2,99.4,100.0],[100.0,101.0,99.8,100.8],[100.8,101.7,100.6,101.5],[101.5,102.4,101.3,102.2],[102.2,103.1,102.0,102.9],[102.9,103.7,102.6,103.5],[103.5,104.3,103.2,104.1],[104.1,104.8,103.8,104.6],[104.6,105.3,104.3,105.1]];
+  const B = A.slice(0, 24).concat([[100.0,100.2,99.2,99.4],[99.4,99.6,98.5,98.7],[98.7,98.9,97.9,98.0],[98.0,98.2,97.0,97.2],[97.2,97.4,96.2,96.4],[96.4,96.6,95.4,95.6],[95.6,95.8,94.6,94.8],[94.8,95.0,93.8,94.0]]);
+  const flipRows = rows => rows.map(r => [200 - r[0], 200 - r[2], 200 - r[1], 200 - r[3]].map(v => Math.round(v * 10) / 10));  // C and D: A and B upside down (each price p becomes 200 - p)
+  const C = flipRows(A), D = flipRows(B);
+  assert(C[0].join() === "108,108.4,106.6,106.9" && C[24].join() === "100,100.2,99,99.2" && D[26].join() === "101.3,102.1,101.1,102" && D[31].join() === "105.2,106.2,105,106", "the document's Appendix C and D are A and B upside down");
+  const mk = rows => rows.map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const dA = mk(A), dB = mk(B), dC = mk(C), dD = mk(D);
+  const vary = (bars, i, r) => bars.map((b, k) => k === i ? { time: b.time, open: r[0], high: r[1], low: r[2], close: r[3] } : b);
+  const tcfg = (o) => ({ ...cfg, triangle: o });
+  const scan = (bars, c = cfg) => { const st = { active: null, used: new Set() }, out = [], skipped = []; for (let k = 0; k < bars.length; k++) { const s = N.SCANNERS["symmetrical triangle"](st, bars, k, ATR, c, skipped); if (s) out.push(s); } return { out, skipped, fires: out.map(s => s.signalCandle).join() }; };
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  const b1 = scan(dA), s1 = b1.out[0];
+  assert(b1.fires === "24" && s1.side === "CE" && s1.type === "bullish" && s1.works && s1.kind === "bullish symmetrical triangle broke out" && s1.h1 === 6 && s1.h2 === 16 && s1.l1 === 10 && s1.l2 === 20 && near(s1.su, -0.1) && near(s1.sl, 0.1)
+    && s1.lockTime === dA[23].time && s1.rise === 7.7 && s1.fall === 1.7 && s1.L === 100.2 && s1.width === 5.4 && s1.target === 105.6, "ST BU-CE-1, BU-CE-2: " + b1.fires + " " + JSON.stringify(s1));
+  const tr = N.triangleAt(dA, 23, ATR, cfg); assert(tr && near(tr.apex, 33) && near(tr.upper(24), 100.2) && near(tr.lower(24), 98.4) && N.triangleAt(dA, 22, ATR, cfg) === null, "ST section 6: apex 33, upper(24) 100.2, lower(24) 98.4, Low 2 confirmed on 23");
+  const rA = N.runDay({ bars: dA, levels: [], atrFixed: ATR, rules: ["symmetrical triangle"] });
+  assert(rA.trades.length === 1 && rA.trades[0].side === "CE" && rA.trades[0].entry === 100.8 && rA.trades[0].entryTime === dA[25].time && rA.trades[0].L === 100.2, "ST BU-CE-1 entry at 100.8: " + JSON.stringify(rA.trades[0]));
+  const b2 = scan(dB), s2 = b2.out[0];
+  assert(b2.fires === "26" && s2.side === "PE" && s2.type === "bullish" && !s2.works && s2.kind === "bullish symmetrical triangle failed" && s2.L === 98.6 && s2.target === 93.2, "ST BU-PE-1, BU-PE-2: " + b2.fires + " " + JSON.stringify(s2));
+  const rB = N.runDay({ bars: dB, levels: [], atrFixed: ATR, rules: ["symmetrical triangle"] });
+  assert(rB.trades.length === 1 && rB.trades[0].side === "PE" && rB.trades[0].entry === 98.0 && rB.trades[0].entryTime === dB[27].time, "ST BU-PE-1 entry at 98.0");
+  const b3 = scan(dC), s3 = b3.out[0];
+  assert(b3.fires === "24" && s3.side === "PE" && s3.type === "bearish" && s3.works && s3.kind === "bearish symmetrical triangle broke down" && s3.h1 === 10 && s3.h2 === 20 && s3.l1 === 6 && s3.l2 === 16 && s3.rise === 1.7 && s3.fall === 7.7 && s3.L === 99.8 && s3.target === 94.4, "ST BE-PE-1, BE-PE-2: " + b3.fires + " " + JSON.stringify(s3));
+  const rC = N.runDay({ bars: dC, levels: [], atrFixed: ATR, rules: ["symmetrical triangle"] });
+  assert(rC.trades.length === 1 && rC.trades[0].side === "PE" && rC.trades[0].entry === 99.2 && rC.trades[0].entryTime === dC[25].time, "ST BE-PE-1 entry at 99.2");
+  const b4 = scan(dD), s4 = b4.out[0];
+  assert(b4.fires === "26" && s4.side === "CE" && s4.type === "bearish" && !s4.works && s4.kind === "bearish symmetrical triangle failed" && s4.L === 101.4 && s4.target === 106.8, "ST BE-CE-1, BE-CE-2: " + b4.fires + " " + JSON.stringify(s4));
+  const rD = N.runDay({ bars: dD, levels: [], atrFixed: ATR, rules: ["symmetrical triangle"] });
+  assert(rD.trades.length === 1 && rD.trades[0].side === "CE" && rD.trades[0].entry === 102.0 && rD.trades[0].entryTime === dD[27].time, "ST BE-CE-1 entry at 102.0");
+  assert(b1.out.every(s => s.side !== "PE") && b2.out.every(s => s.side !== "CE") && b3.out.every(s => s.side !== "CE") && b4.out.every(s => s.side !== "PE"), "ST X-1 to X-4: the other side never fires");
+  assert(scan(vary(dA, 16, [100.5, 102.0, 100.1, 100.3])).fires === "", "ST S-1: a flat upper line is no symmetrical triangle");
+  assert(scan(vary(dA, 16, [100.5, 101.8, 100.1, 100.3])).fires === "", "ST S-2: symmetry ratio 5.0");
+  assert(scan(dA, tcfg({ minNarrowing: 0.6 })).fires === "" && scan(dA, tcfg({ minWidthAtr: 4.0 })).fires === "" && scan(dA, tcfg({ minLen: 15 })).fires === "", "ST S-3, S-4, S-5");
+  assert(scan(dA, tcfg({ priorMoveAtr: 6.0 })).fires === "", "ST S-6: no clear trend");
+  const s7 = scan(vary(dA, 24, [100.0, 101.0, 99.8, 100.5])); assert(s7.fires === "25" && near(s7.out[0].L, 100.1) && s7.out[0].target === 105.5, "ST S-7: " + s7.fires);
+  const s8 = scan(vary(dA, 24, [100.0, 103.6, 99.8, 103.4])); assert(s8.fires === "" && s8.skipped.length === 1 && s8.skipped[0].why === "too far past the line", "ST S-8");
+  assert(scan(dA, tcfg({ maxWait: 3 })).fires === "", "ST S-9");
+  const s10 = scan(vary(vary(dA, 22, [99.3, 101.1, 99.0, 100.9]), 23, [100.9, 101.3, 100.7, 101.1])); assert(s10.fires === "23" && near(s10.out[0].L, 100.3), "ST S-10: the lock candle is the signal: " + s10.fires);
+  const s11 = scan(dA, tcfg({ sides: "CONTINUATION_ONLY" })); assert(s11.fires === "24" && s11.out[0].side === "CE", "ST S-11");
+  const s12 = scan(dB, tcfg({ sides: "CONTINUATION_ONLY" })); assert(s12.fires === "" && s12.skipped.some(x => x.why === "failure switched off"), "ST S-12");
+  const s13 = scan(dD, tcfg({ sides: "CONTINUATION_ONLY" })); assert(s13.fires === "" && s13.skipped.some(x => x.why === "failure switched off"), "ST S-13");
+  const f1 = N.runDay({ bars: dA.map((b, k) => ({ ...b, time: 1792381500 + 300 + (k - 24) * 300 })), levels: [], atrFixed: ATR, rules: ["symmetrical triangle"] });
+  assert(f1.trades.length === 0 && f1.skipped.some(s => s.why === "outside entry window"), "ST F-1");
+  // F-2: a trade already open: the A data (its CE trade open to the day end), then the D data 10 points higher: its Buy CE signal (candle 26 + 32) is skipped
+  const two = A.concat(D.map(r => r.map(v => Math.round((v + 10) * 10) / 10))).map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const f2 = N.runDay({ bars: two, levels: [], atrFixed: ATR, rules: ["symmetrical triangle"] });
+  assert(f2.trades.length === 1 && f2.trades[0].how === "day end" && f2.skipped.some(s => s.why === "one trade at a time" && s.side === "CE" && s.time === two[26 + 32].time), "ST F-2: " + JSON.stringify([f2.trades.map(t => [t.side, t.how]), f2.skipped]));
+  console.log("New Rule Chart: the symmetrical triangle matches its document's cases (BU-CE, BU-PE, BE-PE, BE-CE 1 and 2, X-1 to X-4, S-1 to S-13, F-1, F-2)");
+}
+// ---- The bullish rectangle (the owner's "Bullish Rectangle Chart Pattern" document): Appendix A (the breakout, Buy CE) and B (the failure, Buy PE)
+{
+  const A = [[89.0,90.2,88.6,90.0],[90.0,91.8,89.7,91.5],[91.5,93.4,91.2,93.1],[93.1,95.0,92.8,94.7],[94.7,96.6,94.4,96.3],[96.3,98.2,96.0,97.9],[97.9,99.5,97.6,99.2],[99.2,100.0,98.8,99.1],[99.1,99.4,98.0,98.2],[98.2,98.5,97.2,97.4],[97.4,97.7,96.5,96.7],[96.7,97.0,96.0,96.8],[96.8,97.8,96.6,97.6],[97.6,98.4,97.3,98.2],[98.2,99.0,97.9,98.8],[98.8,99.6,98.5,99.4],[99.4,99.9,99.0,99.6],[99.6,100.2,99.2,99.5],[99.5,99.7,98.6,98.8],[98.8,99.0,97.8,98.0],[98.0,98.2,97.1,97.3],[97.3,97.5,96.6,96.8],[96.8,97.2,96.2,97.0],[97.0,97.9,96.8,97.7],[97.7,98.6,97.5,98.4],[98.4,99.3,98.2,99.1],[99.1,99.9,98.9,99.7],[99.7,100.9,99.5,100.7],[100.7,101.6,100.5,101.4],[101.4,102.3,101.2,102.1],[102.1,103.0,101.9,102.8],[102.8,103.6,102.5,103.4],[103.4,104.2,103.1,104.0],[104.0,104.8,103.7,104.6],[104.6,105.3,104.3,105.1]];
+  const B = A.slice(0, 26).concat([[99.1,99.6,98.6,98.8],[98.8,99.0,97.6,97.8],[97.8,98.0,96.6,96.8],[96.8,97.0,95.3,95.5],[95.5,95.8,94.4,94.6],[94.6,94.9,93.5,93.7],[93.7,94.0,92.6,92.8],[92.8,93.1,91.7,91.9],[91.9,92.2,90.8,91.0]]);
+  const mk = rows => rows.map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const dA = mk(A), dB = mk(B);
+  const vary = (bars, i, r) => bars.map((b, k) => k === i ? { time: b.time, open: r[0], high: r[1], low: r[2], close: r[3] } : b);
+  const rcfg = (o) => ({ ...cfg, rect: o });
+  const scan = (bars, c = cfg) => { const st = { active: null, used: new Set() }, out = [], skipped = []; for (let k = 0; k < bars.length; k++) { const s = N.SCANNERS["bullish rectangle"](st, bars, k, ATR, c, skipped); if (s) out.push(s); } return { out, skipped, fires: out.map(s => s.signalCandle).join() }; };
+  const c1 = scan(dA), s1 = c1.out[0];
+  assert(c1.fires === "27" && s1.side === "CE" && s1.kind === "bullish rectangle broke out" && s1.h1 === 7 && s1.h2 === 17 && s1.l1 === 11 && s1.l2 === 22 && s1.resistance === 100.2 && s1.support === 96 && s1.height === 4.2
+    && s1.lockTime === dA[25].time && s1.L === 100.2 && s1.target === 104.4, "BR CE-1, CE-2: " + c1.fires + " " + JSON.stringify(s1));
+  assert(N.round2(N.rectangleAt(dA, 25, ATR, cfg).priorRise) === 7.4 && N.rectangleAt(dA, 24, ATR, cfg) === null, "BR: the prior rise 7.4, Low 2 confirmed on 25");
+  const rA = N.runDay({ bars: dA, levels: [], atrFixed: ATR, rules: ["bullish rectangle"] });
+  assert(rA.trades.length === 1 && rA.trades[0].side === "CE" && rA.trades[0].entry === 100.7 && rA.trades[0].entryTime === dA[28].time && rA.trades[0].L === 100.2, "BR CE-1 entry at 100.7: " + JSON.stringify(rA.trades[0]));
+  assert(scan(vary(dA, 17, [99.6, 101.2, 99.2, 99.5])).fires === "", "BR CE-3: the highs 1.2 apart");
+  assert(scan(dA, rcfg({ eqAtr: 0.1 })).fires === "" && scan(dA, rcfg({ minHeightAtr: 3.0 })).fires === "" && scan(dA, rcfg({ priorMoveAtr: 5.0 })).fires === "" && scan(dA, rcfg({ minLen: 16 })).fires === "", "BR CE-4 to CE-7");
+  const c8 = scan(vary(dA, 27, [99.7, 100.9, 99.5, 100.5])); assert(c8.fires === "28", "BR CE-8: " + c8.fires);
+  const c9 = scan(vary(dA, 27, [99.7, 103.4, 99.5, 103.3])); assert(c9.fires === "" && c9.skipped.length === 1 && c9.skipped[0].why === "too far past the line", "BR CE-9");
+  assert(scan(dA, rcfg({ maxWait: 4 })).fires === "", "BR CE-10");
+  const c11 = scan(vary(vary(dA, 24, [97.7, 100.9, 97.5, 100.7]), 25, [100.7, 101.2, 100.4, 100.9])); assert(c11.fires === "25" && c11.out[0].L === 100.2, "BR CE-11: the lock candle is the signal: " + c11.fires);
+  assert(scan(dB).out.every(s => s.side !== "CE"), "BR CE-12: the resistance is never broken");
+  const c13 = N.runDay({ bars: dA.map((b, k) => ({ ...b, time: 1792381500 + 300 + (k - 27) * 300 })), levels: [], atrFixed: ATR, rules: ["bullish rectangle"] });
+  assert(c13.trades.length === 0 && c13.skipped.some(s => s.why === "outside entry window"), "BR CE-13");
+  const p1 = scan(dB), q1 = p1.out[0];
+  assert(p1.fires === "29" && q1.side === "PE" && q1.kind === "bullish rectangle failed" && q1.L === 96 && q1.target === 91.8 && q1.support === 96, "BR PE-1, PE-2 (candle 26's new swing high gives no second signal): " + p1.fires + " " + JSON.stringify(q1));
+  assert(N.rectangleAt(dB, 30, ATR, cfg) !== null && N.rectangleAt(dB, 30, ATR, cfg).h2 === 26, "BR PE-2: candle 26 is a new swing high on candle 29, a new set of touches over the same range (not locked: already broken)");
+  const rB = N.runDay({ bars: dB, levels: [], atrFixed: ATR, rules: ["bullish rectangle"] });
+  assert(rB.trades.length === 1 && rB.trades[0].side === "PE" && rB.trades[0].entry === 95.5 && rB.trades[0].entryTime === dB[30].time, "BR PE-1 entry at 95.5: " + JSON.stringify(rB.trades[0]));
+  const p3 = scan(vary(dB, 29, [96.8, 97.0, 95.3, 95.7])); assert(p3.fires === "30", "BR PE-3: " + p3.fires);
+  const p4 = scan(vary(dB, 29, [96.8, 97.0, 92.7, 92.8])); assert(p4.fires === "" && p4.skipped.length === 1, "BR PE-4");
+  assert(scan(dA).out.every(s => s.side !== "PE"), "BR PE-5: the rectangle broke out upward");
+  const p6 = scan(vary(dA, 28, [100.7, 100.9, 95.4, 95.5])); assert(p6.fires === "27" && p6.out[0].side === "CE", "BR PE-6: no PE on 28, already broke out on 27: " + p6.fires);
+  assert(scan(dB, rcfg({ minHeightAtr: 3.0 })).fires === "" && scan(dB, rcfg({ maxWait: 6 })).fires === "", "BR PE-7, PE-8");
+  // PE-9: the A data (its CE trade open to the day end), then the B data 12 points higher (its closes stay above the first trade's L):
+  // its Buy PE signal (candle 29 + 35) is skipped, one trade at a time. The day starts at 09:15 so both entries fall in the window
+  const two = A.concat(B.map(r => r.map(v => Math.round((v + 12) * 10) / 10))).map((r, i) => ({ time: t0 - 900 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const p9 = N.runDay({ bars: two, levels: [], atrFixed: ATR, rules: ["bullish rectangle"] });
+  assert(p9.trades.length === 1 && p9.trades[0].side === "CE" && p9.trades[0].how === "day end" && p9.skipped.some(s => s.why === "one trade at a time" && s.side === "PE" && s.time === two[29 + 35].time), "BR PE-9: " + JSON.stringify([p9.trades.map(t => [t.side, t.how]), p9.skipped]));
+  console.log("New Rule Chart: the bullish rectangle matches its document's cases (CE-1 to CE-13, PE-1 to PE-9)");
+}
