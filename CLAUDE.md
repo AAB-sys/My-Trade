@@ -272,7 +272,8 @@ branch from `main`.
   (`with_live_candles(..., "1m")`); `sale_minute` returns `exitAt - 60` for it; check_rule.py and lab/check.js pass the saved days'
   minutes (`lab/replay.js`, its own engine, does not know it). The lab's `run()` mirrors it (`holdBreaks !== false`).
 - Rule 2 of the owner's specification (9 October): `trail` / `trail` (with holdBreaks), `Rules.TRAIL` / `rule.TRAIL`, the
-  owner's choice `{ lines: "all", buffer: "none", place: "back" }` (#115 had `place: "at"`), passed by the index page, the watcher and `replayDay`
+  owner's choice `{ lines: "all", buffer: "none", place: "at" }` (the stop on the line crossed itself: #115, and again since
+  21 October, Change 4, the owner's "point no 3"; from 9 to 21 October `place: "back"`, one line back), passed by the index page, the watcher and `replayDay`
   (`replayDay({ trail: null })` is Rule 1 alone). A held break whose candle closes beyond a further line (on `levelsAt`)
   gets `trail: { stop, stopRatio, line, ratio }` (`Rules.trailStep` / `rule.trail_step`, the stop never moves back);
   from then exits A and B are off and it ends `"trail"` at the close of a candle back past `trail.stop`, or at the day
