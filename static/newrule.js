@@ -133,7 +133,8 @@
   // atrSeed: the ATR to start the day with (from the previous day's candles), else the day warms up on its own 14 candles;
   // atrFixed: a test's fixed ATR. One trade at a time; both sides firing on one candle skip both; the filters of section 9.5
   // closedCount: how many of the bars have closed (the rest is the candle forming now: an entry may take its open, nothing else)
-  function runDay({ bars, levels, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null }) {
+  // sides: the double top ("PE") alone for now (the owner, 21 October: the double bottom's logic comes in another document)
+  function runDay({ bars, levels, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"] }) {
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
@@ -161,7 +162,7 @@
         if (open || how === "day end") continue;
       }
       if (k + 1 >= bars.length) break;  // a signal on the last candle has no next candle to enter on
-      const pe = detectEntry(bars, k, "PE", atr, cfg), ce = detectEntry(bars, k, "CE", atr, cfg);
+      const pe = sides.includes("PE") ? detectEntry(bars, k, "PE", atr, cfg) : null, ce = sides.includes("CE") ? detectEntry(bars, k, "CE", atr, cfg) : null;
       if (!pe && !ce) continue;
       if (pe && ce) { skipped.push({ time: bar.time, why: "both sides on one candle" }); continue; }
       const sig = pe || ce, entryBar = bars[k + 1], when = istHM(entryBar.time);

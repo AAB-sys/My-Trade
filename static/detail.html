@@ -1821,7 +1821,7 @@
     const box = document.getElementById("signals-layout"), list = document.getElementById("indicators-list"), button = document.getElementById("signals-settings");
     let active = new Set(); try { active = new Set(JSON.parse(localStorage.getItem("signalsIndicators") || "[]")); } catch (e) {}
     state.signalsFib = active.has("fib");  // "Fib Levels": for the logic still to come; ticking it draws nothing yet
-    state.signalsDT = active.has("dt");  // "Double Top / Bottom": the rule of the owner's document runs and its calls fill the table (drawSignals)
+    state.signalsDT = active.has("dt");  // "Double Top / Bottom": the rule's marks and lines on the chart (the table always carries its calls, drawSignals)
     const fill = () => list.querySelectorAll("input").forEach(i => { i.checked = active.has(i.dataset.ind); });
     const open = () => { fill(); box.hidden = false; const first = list.querySelector("input"); if (first) first.focus(); };
     const close = () => { box.hidden = true; button.focus(); };
@@ -1831,7 +1831,7 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
     list.addEventListener("change", e => { const k = e.target.dataset.ind; if (!k) return; if (e.target.checked) active.add(k); else active.delete(k);
       state.signalsFib = active.has("fib"); state.signalsDT = active.has("dt"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {}
-      if (series) drawLevels(); });  // the tick runs the rule at once, or takes its rows and lines off
+      if (series) drawLevels(); });  // the tick draws the rule's marks and lines at once, or takes them off; the table stays
   })();
   // ---- New Rule Chart: the double top (Buy PE) and double bottom (Buy CE) rule of the owner's "Trading Rules Specification" (21 October),
   // with Rule 1 (break-and-hold) and Rule 2 (trailing) after the entry: NewRule.runDay over the session's closed 5-minute candles,
@@ -1849,7 +1849,7 @@
   }
   function signalsNow() {
     const key = currentSession();
-    if (!key || key === "all" || longCandles() || !state.signalsDT) return null;
+    if (!key || key === "all" || longCandles()) return null;  // the rule always runs for the table (the owner, 21 October: "it should always be in the table"); the tick is for the chart
     const now = serverNow(), bars = sessionBars(), closed = bars.filter(b => endOf(b) <= now).length;
     if (!closed) return null;
     const day = dayBefore(key), levels = day && day.close != null ? Rules.closeLevels(day.close).map(l => ({ pct: Rules.levelName(l.ratio, true), price: l.price })) : [];
@@ -1875,20 +1875,21 @@
       marks.push({ time: t.t2Time + IST_OFFSET, position: up ? "belowBar" : "aboveBar", color: cssVar(up ? "--candle-up" : "--candle-down"), shape: "circle", text: "T2" });
       marks.push({ time: t.signalTime + IST_OFFSET, position: up ? "belowBar" : "aboveBar", color: cssVar(up ? "--candle-up" : "--candle-down"), shape: up ? "arrowUp" : "arrowDown", text: "Buy " + t.side });
     });
-    setSignalMarkers(marks.sort((a, b) => a.time - b.time));
+    if (!state.signalsDT) { setSignalMarkers([]); lines.length = 0; }  // unticked: the table only; ticked, the chart shows the marks, the neckline and the stop
+    else setSignalMarkers(marks.sort((a, b) => a.time - b.time));
     const body = document.querySelector("#signals tbody");
     const rows = run.trades.slice().sort((a, b) => b.signalTime - a.signalTime).map(t => {
       const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";
       const sideWord = t.side === "PE" ? "above" : "below", now = (run.bars && run.bars.length ? run.bars[run.bars.length - 1].close : t.entry), pts = t.exit != null ? t.points : Rules.round2(t.side === "CE" ? now - t.entry : t.entry - now);  // an open call: against the price now (the forming candle's close)
       const status = t.exit != null ? "Take Exit" : t.stage === 2 ? "Hold" : `Buy ${t.side}`;
-      const entryMsg = `BUY ${t.side}: ${t.kind} confirmed · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
+      const entryMsg = `BUY ${t.side}: ${t.kind} confirmed · T1 ${callTime(t.t1Time)} · T2 ${callTime(t.t2Time)} · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
       const reason = t.exit == null ? (t.stage === 2 ? `Target passed, continue · sell if a candle closes ${sideWord} ${t.stopPct || ""} (${fmt.format(t.stop)})` : entryMsg)
         : t.how === "trail" ? `${callTime(t.exitTime)} candle · Sell: index candle closed ${sideWord} ${t.stopPct || ""} (${fmt.format(t.stop)})`
         : t.how === "reclaim" ? `${callTime(t.exitTime)} candle · Reclaim: closed back ${sideWord} the neckline ${fmt.format(t.neckline)}`
         : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
       tr.innerHTML = `<td class="when">${callTime(t.signalTime)}<small>in at ${callTime(t.entryTime)}</small></td>`
-        + `<td class="call">Buy ${t.side} · ${t.kind}</td>`
-        + `<td>T1 ${callTime(t.t1Time)} · T2 ${callTime(t.t2Time)} · neckline ${fmt.format(t.neckline)}</td>`
+        + `<td class="call">Buy ${t.side}</td>`
+        + `<td>Rule:- ${t.kind === "double top" ? "Double Top" : "Double Bottom"}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
         + `<td>${fmt.format(t.entry)}</td>`
         + `<td class="target">${fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
         + `<td class="opt">—</td><td class="opt ${pts > 0 ? "up" : pts < 0 ? "down" : ""}">${pts > 0 ? "+" : ""}${fmt.format(pts)} pts</td>`

@@ -69,10 +69,11 @@ const e19 = vary(19, [98.2, 98.6, 90.5, 91.0]).map((b, k) => k === 20 ? { time: 
 const f19 = e19.map((_, k) => sig(e19, k, "PE") ? k : null).filter(k => k != null);
 assert(f19.join() === "20", "E19: the break before T2 is confirmed: the confirming candle 20 is the signal, none later: " + f19.join());
 // the entry: E1 buys the PE at candle 23's open, 90.8; E13 the CE at 99.2 (runDay, no levels beyond: Rule 1 alone, the day end closes it)
+assert(N.runDay({ bars: ceD, levels: [], atrFixed: ATR }).trades.length === 0, "the page's default: the double top alone, no double bottom yet");
 const r1 = N.runDay({ bars: peD, levels: [], atrFixed: ATR });
 assert(r1.trades.length === 1 && r1.trades[0].side === "PE" && r1.trades[0].entry === 90.8 && r1.trades[0].entryTime === peD[23].time, "E1 entry: " + JSON.stringify(r1.trades[0]));
 assert(r1.trades[0].how === "day end" && r1.trades[0].exit === 85.5 && r1.trades[0].points === 5.3, "E1 run to the day end: " + JSON.stringify(r1.trades[0]));
-const r13 = N.runDay({ bars: ceD, levels: [], atrFixed: ATR });
+const r13 = N.runDay({ bars: ceD, levels: [], atrFixed: ATR, sides: ["CE"] });  // the CE side, asked for: the page runs the double top alone for now
 assert(r13.trades.length === 1 && r13.trades[0].side === "CE" && r13.trades[0].entry === 99.2, "E13 entry: " + JSON.stringify(r13.trades[0]));
 // E16: the signal candle closing at 09:25: the entry at 09:25 is before 09:30: skipped, "outside entry window"
 const early = peD.map((b, k) => ({ ...b, time: 1792381500 + 300 + (k - 22) * 300 }));  // candle 22 at 09:20, closing at 09:25: the entry candle opens at 09:25
