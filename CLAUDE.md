@@ -182,6 +182,10 @@ their own logic. Read this before touching the code.
   (removed: "remove this study tab and everything under it"); the save alone came
   back on 21 October ("bring back the daily save, without study page"). No page
   over it: the lab and `check_rule.py` read the saved days. 16 to 20 October are not saved.
+- `static/newrule.js` - New Rule Chart (21 October, the owner's documents 04 and 02): the new set of rules' engine, apart from
+  `rules.js`, which it never touches. So far the levels alone: `moveAt(bars, cfg, atrFixed)` finds the latest clear move (swing,
+  ATR(14) Wilder, 36-candle leg) and its ten levels; the page draws them under Calls with Signals when the Fib Levels tick is on.
+  `lab/newrule-check.js` runs the documents' test cases (F1, F8, F9, F10, F11, T11). PRs for it are named "New Rule Chart_".
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all

@@ -6,6 +6,7 @@
 <title>My-Trade</title>
 <script src="/static/vendor/lightweight-charts.js"></script>
 <script src="/static/rules.js"></script>
+<script src="/static/newrule.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -1267,14 +1268,23 @@
     let levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
     const fromClose = m && m.close != null ? closeLinesAt(shownBars()) : null;
     if (fromClose) { const now = serverNow(); levels = fromClose(shownBars().filter(b => endOf(b) <= now).length); }  // as redrawn by the candles closed so far, over the days shown
-    const plain = plainChart(), shown = plain ? [] : levels;  // the lines the chart draws: none while Calls with Signals is open
+    const plain = plainChart();
+    let shown = plain ? [] : levels;  // the lines the chart draws: none while Calls with Signals is open...
+    if (plain && state.signalsFib && !longCandles()) {  // ...unless the Fib Levels tick is on: the new rule's levels of the latest clear move (newrule.js)
+      const now = serverNow(), closed = state.candles.filter(b => endOf(b) <= now), mv = NewRule.moveAt(closed);
+      state.signalsMove = mv;
+      shown = mv ? mv.levels.map(l => ({ ratio: l.ratio, price: l.price, nr: true, name: l.name, up: mv.up })) : [];
+    }
     drawRedraw(plain ? null : fromClose);
     lastLevels = { m, levels };  // before the chart refits, so the previous close's lines are all in view
     drawPaper(levels);
     const key = JSON.stringify([state.move, currentSession(), shown]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
-      priceLines = shown.map(l => series.createPriceLine({
+      priceLines = shown.map(l => l.nr ? series.createPriceLine({  // the new rule's lines: the move's colour, 0% (B) and 100% (A) solid, the rest dashed
+        price: l.price, title: l.name, color: cssVar(l.up ? "--candle-up" : "--candle-down"), lineWidth: l.ratio === 0 || l.ratio === 1 ? 2 : 1,
+        lineStyle: l.ratio === 0 || l.ratio === 1 ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dashed, axisLabelVisible: true,
+      }) : series.createPriceLine({
         price: l.price, title: Rules.levelName(l.ratio, l.signed),
         // the previous close's lines (15 October): + lines green, - lines red, 0% thicker; the other levels as before
         color: cssVar(l.signed ? (l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2") : l.ratio === 0 || Math.abs(l.ratio) === 1 ? "--ink-2" : "--muted"),
@@ -1818,7 +1828,8 @@
     box.addEventListener("click", e => { if (e.target === box) close(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
     list.addEventListener("change", e => { const k = e.target.dataset.ind; if (!k) return; if (e.target.checked) active.add(k); else active.delete(k);
-      state.signalsFib = active.has("fib"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {} });
+      state.signalsFib = active.has("fib"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {}
+      if (series) drawLevels(); });  // the tick draws the new rule's levels at once, or takes them off
   })();
   (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
     const head = document.querySelector("#chain thead"); let from = null;

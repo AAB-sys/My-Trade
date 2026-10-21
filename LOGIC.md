@@ -271,6 +271,14 @@ active or inactive, remembered on the browser; "only keep Fib Levels as of now, 
 automatically on the chart as per the fib logic which we will develop asap": the tick is kept for that logic and draws nothing yet.
 While the panel is open the chart is plain (the owner: "chart should be plain without any fib levels and without any rules on it"):
 no lines, no tags, no redraw note; they come back with Paper calls or the OI chart. The Paper calls rule runs on underneath.
+**The Fib Levels tick** (New Rule Chart, 21 October night, the owner's documents 04 and 02; "draw fib levels only without any
+filters and if I tick the fib levels then only fib levels will be drawn"): `static/newrule.js`, the new set of rules' own engine,
+finds the latest clear move on the closed 5-minute candles (B the latest swing high or low, at least as extreme as the 3 candles on
+each side and known once the third after it has closed; A the lowest low or highest high in the 36 candles before B; no candle
+between them beyond B; at least 3 candles and 3 times the ATR(14), Wilder, as of the candle before B; the later B of the two sides
+wins) and the page draws its levels: 100% at A, 78.6%, 61.8%, 50%, 38.2%, 23.6%, 0% at B, and -27.2%, -61.8%, -100% beyond B, green
+for an up-move, red for a down-move, redrawn on every new move. No entry, no filter, no call yet: those come in their own New Rule
+Chart PRs. `lab/newrule-check.js` holds the documents' cases F1, F8, F9, F10, F11 and T11.
 
 The rule, in the order it is applied:
 
