@@ -262,6 +262,11 @@ ask: the list must say what is happening and what action is needed) to 16 Octobe
 with the Download CSV button and the no-call notes ("remove all the red marked boxed things"). Paper only: nothing is
 sent anywhere, and the list is worked out afresh from the candles every minute.
 
+**Calls with Signals** (21 October, the owner: a third pill after Paper calls, "same index table which is present on Paper calls
+page. But it will not have any rules applied on it ... I want to build alternate option or set of rules on the chart and fire the
+calls based on these newly built rules. So this is just a start of it"): the same table, empty, for the set of rules still to
+come. The Fibonacci rule below never writes to it.
+
 The rule, in the order it is applied:
 
 1. **Signal** - a closed candle that **held** a level (the owner's words since 12
