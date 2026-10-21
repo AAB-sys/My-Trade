@@ -323,7 +323,7 @@ The app is ready to run on a platform that deploys from GitHub:
   (theta and vega outermost, added the same day at the owner's ask: Dhan sends them but shows them only when switched on), the
   in-the-money cells shaded, the index level marked between the strikes around it; above it ATM IV, its
   change against the previous close (known from the day after the server first saw a close), PCR, the
-  market lot and the days to expiry. Read again every 15 seconds while open (`/options/{name}/chain`, from
+  market lot and the days to expiry. Read again every 5 seconds while open (`/options/{name}/chain`, from
   the same chain answer the premiums use, so no extra request to Dhan). The header stays while the table
   scrolls both ways; the columns can be dragged into any order, remembered per browser, and chosen under
   **Settings > Change layout** (a tick per column; an unticked column leaves the table; the strike column stays;
