@@ -701,7 +701,7 @@ def chain(name: str, expiry: str) -> dict:
         if not strikes:
             raise DhanError("other", f"unexpected option chain answer from Dhan: {str(body)[:160]}")
         return {"underlying": float(data.get("last_price") or 0), "strikes": strikes, "legs": legs, "expiry": expiry, "time": datetime.now(IST).isoformat(timespec="seconds")}
-    result = cached(("chain", name, expiry), 5, make)
+    result = cached(("chain", name, expiry), 3, make)  # 3 s, Dhan's own pace for the chain (5 s until 21 October: the OI chart reads it every 5 s now)
     if isinstance(result, DhanError):
         raise result
     return result

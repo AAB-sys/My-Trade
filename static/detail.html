@@ -383,7 +383,7 @@
     </div>
     <div id="chain-bar">
       <button type="button" class="pill" id="chain-settings" aria-haspopup="dialog" title="Choose the columns of the OI chart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
-      <span id="chain-updated" title="When Dhan's chain was read; it moves every 15 seconds while the chart is open"></span>
+      <span id="chain-updated" title="When Dhan's chain was read; it moves every 5 seconds while the chart is open"></span>
     </div>
     <div id="chain-note" hidden></div>
     <div class="chain-scroll"><table id="chain"><thead><tr></tr></thead><tbody></tbody></table></div>
@@ -1648,7 +1648,7 @@
   // ---- The OI chart (17 October, the owner: "Click Open OI chart button it will open OI chart table. OI chart table should be
   // same as OI chart which open on dhan with the same row and column format ... scroll up/down scroll left/right ... Header
   // should be freezed always and columns can be dragged and moved left to right"). The server's /options/{name}/chain gives
-  // Dhan's chain of the nearest expiry (or the one chosen), every strike, read again every 15 s while the chart is open and
+  // Dhan's chain of the nearest expiry (or the one chosen), every strike, read again every 5 s while the chart is open (15 s until 21 October) and
   // the page in view. Data on the page only: nothing here touches the lines, the calls or the rule
   // Theta and Vega on both sides since 17 October (the owner: "where is theta in the OI chart table?"), outermost, as Dhan places its greeks
   const CHAIN_COLS = [["ce.vega", "Vega"], ["ce.theta", "Theta"], ["ce.gamma", "Gamma"], ["ce.delta", "Delta"], ["ce.oi", "OI"], ["ce.oichg", "OI Change %"], ["ce.vol", "Volume"], ["ce.volchg", "Vol Change%"],
@@ -1742,7 +1742,7 @@
   document.getElementById("tab-chain").addEventListener("click", () => showPanel("chain"));
   document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; try { sessionStorage.setItem("chainExpiry", chain.expiry); } catch (err) {} chain.data = null; drawChain(); loadChain(); });
   try { if (sessionStorage.getItem("panel") === "chain") showPanel("chain"); } catch (e) {}  // the OI chart open before the reload: open again
-  setInterval(loadChain, 15000);
+  setInterval(loadChain, 5000);  // every 5 s (the owner, 21 October: "why OI chart is not getting updated every 5 seconds?"); 15 s until then
   (() => {  // Settings > Change layout (17 October, the owner: "click on setting button, it will open change layout pop up and it would have
     // check boxes of all the column headers. If i untick the check box that column will be removed from that OI chart table")
     const box = document.getElementById("chain-layout"), list = document.getElementById("layout-list"), button = document.getElementById("chain-settings");
