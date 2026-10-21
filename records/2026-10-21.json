@@ -1,0 +1,442 @@
+[
+ {
+  "key": "NIFTY 50|5m|1792555800|PE|close",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23100.0,
+  "index_at_entry": 23093.75,
+  "premium_paid": 163.2,
+  "paid_at": "2026-10-21T09:59:02+05:30",
+  "premium_now": 196.9,
+  "now_at": "2026-10-21T09:59:39+05:30",
+  "sell_below": 106.08,
+  "sold": null,
+  "ended": null,
+  "security_id": 51357,
+  "late": {
+   "paid": "2026-10-21T09:45:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY 50|5m|1792556100|PE|close",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23100.0,
+  "index_at_entry": 23053.5,
+  "premium_paid": 183.65,
+  "paid_at": "2026-10-21T09:59:04+05:30",
+  "premium_now": 196.9,
+  "now_at": "2026-10-21T09:59:39+05:30",
+  "sell_below": 119.37,
+  "sold": null,
+  "ended": null,
+  "security_id": 51357,
+  "late": {
+   "paid": "2026-10-21T09:50:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY 50|5m|1792555500|PE|today",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23100.0,
+  "index_at_entry": 23093.65,
+  "premium_paid": 163.2,
+  "paid_at": "2026-10-21T09:59:14+05:30",
+  "premium_now": 196.9,
+  "now_at": "2026-10-21T09:59:39+05:30",
+  "sell_below": 106.08,
+  "sold": null,
+  "ended": null,
+  "security_id": 51357,
+  "late": {
+   "paid": "2026-10-21T09:45:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY 50|5m|1792555800|PE|today",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23100.0,
+  "index_at_entry": 23093.75,
+  "premium_paid": 163.2,
+  "paid_at": "2026-10-21T09:59:14+05:30",
+  "premium_now": 196.9,
+  "now_at": "2026-10-21T09:59:39+05:30",
+  "sell_below": 106.08,
+  "sold": null,
+  "ended": null,
+  "security_id": 51357,
+  "late": {
+   "paid": "2026-10-21T09:45:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY 50|5m|1792556100|PE|today",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23100.0,
+  "index_at_entry": 23053.5,
+  "premium_paid": 183.65,
+  "paid_at": "2026-10-21T09:59:14+05:30",
+  "premium_now": 196.9,
+  "now_at": "2026-10-21T09:59:39+05:30",
+  "sell_below": 119.37,
+  "sold": null,
+  "ended": null,
+  "security_id": 51357,
+  "late": {
+   "paid": "2026-10-21T09:50:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY 50|5m|1792556400|PE|today",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23050.0,
+  "index_at_entry": 23018.55,
+  "premium_paid": 169.0,
+  "paid_at": "2026-10-21T09:59:14+05:30",
+  "premium_now": 171.8,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 109.85,
+  "sold": null,
+  "ended": null,
+  "security_id": 51355,
+  "late": {
+   "paid": "2026-10-21T09:55:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY 50|5m|1792555800|PE|prev",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23100.0,
+  "index_at_entry": 23093.75,
+  "premium_paid": 163.2,
+  "paid_at": "2026-10-21T09:59:14+05:30",
+  "premium_now": 196.9,
+  "now_at": "2026-10-21T09:59:39+05:30",
+  "sell_below": 106.08,
+  "sold": null,
+  "ended": null,
+  "security_id": 51357,
+  "late": {
+   "paid": "2026-10-21T09:45:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY 50|5m|1792556400|PE|prev",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 23050.0,
+  "index_at_entry": 23018.55,
+  "premium_paid": 169.0,
+  "paid_at": "2026-10-21T09:59:14+05:30",
+  "premium_now": 171.8,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 109.85,
+  "sold": null,
+  "ended": null,
+  "security_id": 51355,
+  "late": {
+   "paid": "2026-10-21T09:55:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1792555800|PE|today",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 55800.0,
+  "index_at_entry": 55793.35,
+  "premium_paid": 384.6,
+  "paid_at": "2026-10-21T09:59:23+05:30",
+  "premium_now": 469.8,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 249.99,
+  "sold": null,
+  "ended": null,
+  "security_id": 49464,
+  "late": {
+   "paid": "2026-10-21T09:45:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1792556100|PE|today",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 55700.0,
+  "index_at_entry": 55661.85,
+  "premium_paid": 391.0,
+  "paid_at": "2026-10-21T09:59:24+05:30",
+  "premium_now": 419.5,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 254.15,
+  "sold": null,
+  "ended": null,
+  "security_id": 49462,
+  "late": {
+   "paid": "2026-10-21T09:50:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1792556400|PE|today",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 55600.0,
+  "index_at_entry": 55597.9,
+  "premium_paid": 365.5,
+  "paid_at": "2026-10-21T09:59:24+05:30",
+  "premium_now": 374.5,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 237.58,
+  "sold": null,
+  "ended": null,
+  "security_id": 49460,
+  "late": {
+   "paid": "2026-10-21T09:55:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1792556100|PE|prev",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 55700.0,
+  "index_at_entry": 55661.85,
+  "premium_paid": 391.0,
+  "paid_at": "2026-10-21T09:59:25+05:30",
+  "premium_now": 419.5,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 254.15,
+  "sold": null,
+  "ended": null,
+  "security_id": 49462,
+  "late": {
+   "paid": "2026-10-21T09:50:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1792556400|PE|prev",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 55600.0,
+  "index_at_entry": 55597.9,
+  "premium_paid": 365.5,
+  "paid_at": "2026-10-21T09:59:25+05:30",
+  "premium_now": 374.5,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 237.58,
+  "sold": null,
+  "ended": null,
+  "security_id": 49460,
+  "late": {
+   "paid": "2026-10-21T09:55:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1792555800|PE|close",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 55800.0,
+  "index_at_entry": 55793.35,
+  "premium_paid": 384.6,
+  "paid_at": "2026-10-21T09:59:25+05:30",
+  "premium_now": 469.8,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 249.99,
+  "sold": null,
+  "ended": null,
+  "security_id": 49464,
+  "late": {
+   "paid": "2026-10-21T09:45:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1792556100|PE|close",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 55700.0,
+  "index_at_entry": 55661.85,
+  "premium_paid": 391.0,
+  "paid_at": "2026-10-21T09:59:25+05:30",
+  "premium_now": 419.5,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 254.15,
+  "sold": null,
+  "ended": null,
+  "security_id": 49462,
+  "late": {
+   "paid": "2026-10-21T09:50:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1792555500|PE|today",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-10-22",
+  "strike": 74700.0,
+  "index_at_entry": 74607.63,
+  "premium_paid": 333.6,
+  "paid_at": "2026-10-21T09:59:26+05:30",
+  "premium_now": 502.15,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 216.84,
+  "sold": null,
+  "ended": null,
+  "security_id": 1125478,
+  "late": {
+   "paid": "2026-10-21T09:40:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1792556100|PE|today",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-10-22",
+  "strike": 74500.0,
+  "index_at_entry": 74467.15,
+  "premium_paid": 330.0,
+  "paid_at": "2026-10-21T09:59:27+05:30",
+  "premium_now": 383.05,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 214.5,
+  "sold": null,
+  "ended": null,
+  "security_id": 1125006,
+  "late": {
+   "paid": "2026-10-21T09:50:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1792556400|PE|today",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-10-22",
+  "strike": 74400.0,
+  "index_at_entry": 74361.19,
+  "premium_paid": 324.4,
+  "paid_at": "2026-10-21T09:59:27+05:30",
+  "premium_now": 329.95,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 210.86,
+  "sold": null,
+  "ended": null,
+  "security_id": 1125316,
+  "late": {
+   "paid": "2026-10-21T09:55:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1792555800|PE|prev",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-10-22",
+  "strike": 74600.0,
+  "index_at_entry": 74595.81,
+  "premium_paid": 316.4,
+  "paid_at": "2026-10-21T09:59:28+05:30",
+  "premium_now": 439.9,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 205.66,
+  "sold": null,
+  "ended": null,
+  "security_id": 1125704,
+  "late": {
+   "paid": "2026-10-21T09:45:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1792556400|PE|prev",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-10-22",
+  "strike": 74400.0,
+  "index_at_entry": 74361.19,
+  "premium_paid": 324.4,
+  "paid_at": "2026-10-21T09:59:29+05:30",
+  "premium_now": 329.95,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 210.86,
+  "sold": null,
+  "ended": null,
+  "security_id": 1125316,
+  "late": {
+   "paid": "2026-10-21T09:55:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1792556100|PE|close",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-10-22",
+  "strike": 74500.0,
+  "index_at_entry": 74467.15,
+  "premium_paid": 330.0,
+  "paid_at": "2026-10-21T09:59:29+05:30",
+  "premium_now": 383.05,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 214.5,
+  "sold": null,
+  "ended": null,
+  "security_id": 1125006,
+  "late": {
+   "paid": "2026-10-21T09:50:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1792556400|PE|close",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-10-22",
+  "strike": 74400.0,
+  "index_at_entry": 74361.19,
+  "premium_paid": 324.4,
+  "paid_at": "2026-10-21T09:59:29+05:30",
+  "premium_now": 329.95,
+  "now_at": "2026-10-21T09:59:40+05:30",
+  "sell_below": 210.86,
+  "sold": null,
+  "ended": null,
+  "security_id": 1125316,
+  "late": {
+   "paid": "2026-10-21T09:55:00+05:30",
+   "sold": null
+  }
+ }
+]
