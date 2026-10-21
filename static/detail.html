@@ -121,16 +121,17 @@
   #redraw-note { font-size: 13px; line-height: 1.45; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin: 10px 0 0; }
   #redraw-note.up { border-left: 4px solid var(--candle-up); }
   #redraw-note.down { border-left: 4px solid var(--candle-down); }
-  #paper { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
-  #paper th, #paper td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  #paper th:first-child, #paper td:first-child { text-align: left; }
-  #paper th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #paper, #signals { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #paper th, #paper td, #signals th, #signals td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #paper th:first-child, #paper td:first-child, #signals th:first-child, #signals td:first-child { text-align: left; }
+  #paper th, #signals th { font-weight: 500; color: var(--muted); font-size: 12px; }
+  #signals-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }  /* Calls with Signals (21 October): the table of the rules still to come */
   #paper td.up { color: var(--up); }
   #paper td.down { color: var(--down); }
   /* the header row stays in view while the page scrolls (owner's ask, 7 October): on a wide screen the table has no scroll
      box of its own, so the header sticks to the top of the window; on a narrow screen the table slides sideways and
      scrolls inside a box of its own, the header stuck to the box's top */
-  #paper thead th { position: sticky; top: 0; background: var(--page); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
+  #paper thead th, #signals thead th { position: sticky; top: 0; background: var(--page); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
   #paper-box .scroll { overflow: visible; }
   @media (max-width: 1099px) { #paper-box .scroll { overflow: auto; max-height: 80vh; } }
   #paper td.entry.wait { color: var(--ink-2); }
@@ -162,8 +163,8 @@
   .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
   .pill:hover { border-color: var(--ink-2); }
   .pill.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
-  #panel-tabs { display: flex; gap: 8px; margin: 18px 0 10px; }
-  #panels[data-panel="chain"] #paper-box { display: none; }
+  #panel-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 10px; }  /* three pills since 21 October: on a phone the third goes to a second line */
+  #panels[data-panel="chain"] #paper-box, #panels[data-panel="signals"] #paper-box { display: none; }
   /* The OI chart: Dhan's option chain, its rows and columns (17 October). The header stays while the table scrolls both ways;
      the columns can be dragged into any order */
   #chain-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin: 0 0 10px; font-size: 13px; }
@@ -352,8 +353,12 @@
   <p id="redraw-note" hidden></p>
 
   <!-- 17 October, the owner: two pills in the Main Menu's format, "Paper calls" opens the paper calls table, "Open OI chart" the OI chart -->
+  <!-- 21 October, the owner: a third pill, "Calls with Signals", after Paper calls: the same calls table, with no rule on it yet
+       ("I want to build alternate option or set of rules on the chart and fire the calls based on these newly built rules. So this
+       is just a start of it"). The Fibonacci rule never writes to it -->
   <div id="panel-tabs">
     <button class="pill on" id="tab-calls" type="button">Paper calls</button>
+    <button class="pill" id="tab-signals" type="button">Calls with Signals</button>
     <button class="pill" id="tab-chain" type="button">Open OI chart</button>
   </div>
   <div id="panels" data-panel="calls">
@@ -364,6 +369,17 @@
     <div id="feed-note" hidden></div>
     <div class="scroll">
       <table id="paper">
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Calls with Signals (21 October): the same table as Paper calls, empty until the new set of rules is built -->
+  <section id="signals-box" aria-label="Calls with Signals" hidden>
+    <div id="signals-note">No rules on this table yet. The calls of the new set of rules will show here, in the same columns as Paper calls, once they are built.</div>
+    <div class="scroll">
+      <table id="signals">
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
         <tbody></tbody>
       </table>
@@ -1734,14 +1750,17 @@
     try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
     document.getElementById("panels").dataset.panel = which;
     document.getElementById("tab-calls").classList.toggle("on", which === "calls");
+    document.getElementById("tab-signals").classList.toggle("on", which === "signals");
     document.getElementById("tab-chain").classList.toggle("on", which === "chain");
     document.getElementById("chain-box").hidden = which !== "chain";
+    document.getElementById("signals-box").hidden = which !== "signals";
     if (which === "chain") { drawChain(); loadChain(); }
   }
   document.getElementById("tab-calls").addEventListener("click", () => showPanel("calls"));
+  document.getElementById("tab-signals").addEventListener("click", () => showPanel("signals"));
   document.getElementById("tab-chain").addEventListener("click", () => showPanel("chain"));
   document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; try { sessionStorage.setItem("chainExpiry", chain.expiry); } catch (err) {} chain.data = null; drawChain(); loadChain(); });
-  try { if (sessionStorage.getItem("panel") === "chain") showPanel("chain"); } catch (e) {}  // the OI chart open before the reload: open again
+  try { const was = sessionStorage.getItem("panel"); if (was === "chain" || was === "signals") showPanel(was); } catch (e) {}  // the panel open before the reload: open again
   setInterval(loadChain, 5000);  // every 5 s (the owner, 21 October: "why OI chart is not getting updated every 5 seconds?"); 15 s until then
   (() => {  // Settings > Change layout (17 October, the owner: "click on setting button, it will open change layout pop up and it would have
     // check boxes of all the column headers. If i untick the check box that column will be removed from that OI chart table")
