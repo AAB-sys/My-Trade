@@ -45,15 +45,33 @@ lowest bottom, the neckline the higher of the two bounce highs, both bounces at 
 breakout, a close below the support by the buffer, Buy PE (the failure). Counted from the candle that confirms the third bottom,
 within 20 candles, not more than 2 ATR past the line.
 
+## Falling Wedge and Rising Wedge (the "Falling Wedge Chart Pattern" and "Rising Wedge Chart Pattern" documents, built 21 October night)
+
+Price between two trendlines that get closer: the upper line through the two latest confirmed swing highs (High 1, High 2), the
+lower through the two latest confirmed swing lows (Low 1, Low 2), the touches alternating (High 1 before Low 2, Low 1 before
+High 2). Falling wedge: both lines fall and the upper falls faster. Rising wedge: both rise and the lower rises faster. First to
+last touch 10 to 60 candles; the width at the first touch at least 2 ATR, at the last touch at most 70% of it; every close from the
+first to the last touch inside the lines by the buffer; the candle before the apex (where the lines meet) and within 20 candles of
+the last touch. The first time every check passes (normally the candle that confirms the last touch) the two lines are locked and
+never redrawn; the wedge is dropped 20 candles after the last touch or at the apex; a dropped or traded wedge (the same four
+touches) is never taken again, and while one is locked no other is looked for. One trade per wedge, the first close outside the
+locked lines by the buffer, the line's value changing candle by candle: falling wedge, above the upper line Buy CE (the breakout),
+below the lower line Buy PE (the failure); rising wedge, below the lower line Buy PE (the breakdown), above the upper line Buy CE
+(the failure). A close more than 2 ATR past the line is skipped and the wedge used up. L is the broken line's value on the signal
+candle (the break level); the pattern target L plus (CE) or minus (PE) the widest width. The whole wedge and the signal on one day.
+The scanners keep state (the locked wedge, the wedges used up) and step on every closed candle, a trade open or not: a signal while
+a trade is open is skipped, "one trade at a time". The documents' daily chart, VWAP and strength filters are not built.
+
 ## The entry and the filters (every rule)
 
 The entry at the next candle's open, 09:30 to 14:45; one trade at a time across the rules; two losses in a row end the day's
 entries; max trades and max loss a day off until the owner sets them; the expiry-day skip waits for the option (not built). Rules
-firing on one candle the same way: the first in the order double top, double bottom, triple top, triple bottom; different ways: nothing.
+firing on one candle the same way: the first in the order double top, double bottom, triple top, triple bottom, falling wedge, rising
+wedge; different ways: nothing.
 
 ## After the entry: Rule 1 and Rule 2
 
-L is the line the signal broke (the neckline, the support or the resistance). Rule 1 until the first of the chart's lines is
+L is the line the signal broke (the neckline, the support, the resistance or a wedge's break level). Rule 1 until the first of the chart's lines is
 crossed: sold on a close back across L (the reclaim); on the candle after the signal candle opening past the signal candle's close
 and touching its open (the retouch); or at the day end. Once a candle closes beyond the first line in the profit direction by the
 buffer, Rule 2: the stop on each line crossed (AT_LEVEL; ONE_LEVEL_BACK is an option), never back; sold on a close back past it.
@@ -64,7 +82,8 @@ The lines are the chart's own lines of the day, the Previous close lines (hidden
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,
 the index at entry, the pattern target with the stop or the exit, the points, the status, the documents' messages). The Settings
 popup has a tick per rule (and Fib Levels, waiting for its logic): ticked, the chart marks the pattern's points (T1, T2, T3 or
-B1, B2, B3) and the signal, and draws the broken line and an open call's stop.
+B1, B2, B3; a wedge's H1, H2, L1, L2) and the signal, and draws the broken line (a wedge's two sloped lines too, from the first
+touch to the signal candle) and an open call's stop.
 
 ## Figures
 
