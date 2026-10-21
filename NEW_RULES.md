@@ -37,11 +37,19 @@ the first top. One trade per pattern: a close below the neckline by the buffer, 
 close above the resistance by the buffer, Buy CE (the failure). Counted from the candle that confirms the third top, within 20
 candles, not more than 2 ATR past the line.
 
+## Triple Bottom (the "Triple Bottom Chart Pattern" document, built 21 October night)
+
+Three swing lows, each 5 to 40 candles after the one before, all within half an ATR, nothing below them between; the support the
+lowest bottom, the neckline the higher of the two bounce highs, both bounces at least 1.5 ATR above the highest bottom; a fall of
+2 ATR into the first bottom. One trade per pattern: a close above the neckline by the buffer, Buy CE (the breakout); before any
+breakout, a close below the support by the buffer, Buy PE (the failure). Counted from the candle that confirms the third bottom,
+within 20 candles, not more than 2 ATR past the line.
+
 ## The entry and the filters (every rule)
 
 The entry at the next candle's open, 09:30 to 14:45; one trade at a time across the rules; two losses in a row end the day's
 entries; max trades and max loss a day off until the owner sets them; the expiry-day skip waits for the option (not built). Rules
-firing on one candle the same way: the first in the order double top, double bottom, triple top; different ways: nothing.
+firing on one candle the same way: the first in the order double top, double bottom, triple top, triple bottom; different ways: nothing.
 
 ## After the entry: Rule 1 and Rule 2
 
@@ -56,7 +64,7 @@ The lines are the chart's own lines of the day, the Previous close lines (hidden
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,
 the index at entry, the pattern target with the stop or the exit, the points, the status, the documents' messages). The Settings
 popup has a tick per rule (and Fib Levels, waiting for its logic): ticked, the chart marks the pattern's points (T1, T2, T3 or
-B1, B2) and the signal, and draws the broken line and an open call's stop.
+B1, B2, B3) and the signal, and draws the broken line and an open call's stop.
 
 ## Figures
 

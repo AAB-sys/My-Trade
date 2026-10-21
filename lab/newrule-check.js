@@ -183,3 +183,44 @@ console.log("New Rule Chart: the double top rule, Rule 1 and Rule 2 match the do
   assert(rB.trades.length === 1 && rB.trades[0].side === "CE" && rB.trades[0].entry === 101.5, "TT CE-1 entry at 101.5: " + JSON.stringify(rB.trades[0]));
   console.log("New Rule Chart: the triple top matches its document's cases (PE-1 to PE-15, CE-1 to CE-8)");
 }
+
+// ---- The triple bottom (the owner's "Triple Bottom Chart Pattern" document): Appendix A (the breakout, Buy CE) and B (the failure, Buy PE)
+{
+  const A = [[105.0,105.4,103.4,103.8],[103.8,104.2,102.0,102.3],[102.3,102.7,100.6,100.9],[100.9,101.2,99.1,99.4],[99.4,99.8,97.7,98.0],[98.0,98.4,96.2,96.5],[96.5,96.9,94.8,95.1],[95.1,96.0,94.2,95.7],[95.7,97.4,95.4,97.1],[97.1,98.8,96.8,98.5],[98.5,100.1,98.2,99.8],[99.8,101.0,99.5,100.6],[100.6,100.8,99.2,99.5],[99.5,99.8,98.0,98.2],[98.2,98.5,96.7,96.9],[96.9,97.2,95.6,95.8],[95.8,96.1,94.7,95.0],[95.0,95.8,94.4,95.5],[95.5,97.0,95.2,96.7],[96.7,98.3,96.4,98.0],[98.0,99.6,97.7,99.3],[99.3,100.7,99.0,100.4],[100.4,100.6,99.0,99.2],[99.2,99.5,97.7,97.9],[97.9,98.2,96.4,96.6],[96.6,96.9,95.3,95.5],[95.5,95.8,94.6,94.9],[94.9,95.7,94.3,95.4],[95.4,96.9,95.1,96.6],[96.6,98.2,96.3,97.9],[97.9,99.5,97.6,99.2],[99.2,100.5,98.9,100.2],[100.2,102.0,99.9,101.7],[101.7,102.4,101.1,101.4],[101.4,103.2,101.2,102.9],[102.9,104.4,102.6,104.1],[104.1,105.5,103.8,105.2],[105.2,106.6,104.9,106.3]];
+  const B = A.slice(0, 29).concat([[96.6,97.8,96.3,97.5],[97.5,97.7,96.1,96.3],[96.3,96.5,94.8,95.0],[95.0,95.2,93.2,93.5],[93.5,93.8,92.4,92.7],[92.7,93.0,91.5,91.8],[91.8,92.1,90.7,91.0],[91.0,91.3,89.9,90.2],[90.2,90.5,89.1,89.4]]);
+  const mk = rows => rows.map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const dA = mk(A), dB = mk(B);
+  const tb = (bars, k, side, c = cfg) => N.detectTripleBottom(bars, k, side, ATR, c);
+  const first = (bars, side, c = cfg) => { for (let k = 0; k < bars.length; k++) { const s = tb(bars, k, side, c); if (s) return s; } return null; };
+  const fires = (bars, side, c = cfg) => bars.map((_, k) => tb(bars, k, side, c) ? k : null).filter(k => k != null).join();
+  const vary = (bars, i, r) => bars.map((b, k) => k === i ? { time: b.time, open: r[0], high: r[1], low: r[2], close: r[3] } : b);
+  const c1 = tb(dA, 32, "CE");
+  assert(c1 && c1.t1 === 7 && c1.t2 === 17 && c1.t3 === 27 && c1.neckline === 101 && c1.support === 94.2 && c1.height === 6.8 && c1.target === 107.8 && c1.L === 101, "TB CE-1: " + JSON.stringify(c1));
+  assert(fires(dA, "CE") === "32", "TB CE-2: " + fires(dA, "CE"));
+  assert(first(vary(dA, 17, [95.0, 95.8, 93.0, 95.5]), "CE") === null, "TB CE-3");
+  assert(first(dA, "CE", { ...cfg, minGap: 11 }) === null && first(dA, "CE", { ...cfg, maxGap: 9 }) === null, "TB CE-4, CE-5");
+  assert(first(dA, "CE", { ...cfg, minDepthAtr: 5.0 }) === null && first(dA, "CE", { ...cfg, priorMoveAtr: 8.0 }) === null, "TB CE-6, CE-7");
+  assert(first(vary(dA, 23, [99.2, 99.5, 93.5, 93.8]), "CE") === null, "TB CE-8");
+  const c9 = vary(dA, 32, [100.2, 102.0, 99.9, 101.2]); assert(tb(c9, 32, "CE") === null && tb(c9, 33, "CE") !== null, "TB CE-9");
+  const c10 = vary(dA, 32, [100.2, 102.0, 99.9, 100.7]); assert(tb(c10, 32, "CE") === null && tb(c10, 33, "CE") !== null, "TB CE-10");
+  assert(fires(vary(dA, 32, [100.2, 104.5, 99.9, 104.2]), "CE") === "", "TB CE-11");
+  assert(first(dA, "CE", { ...cfg, maxWait: 4 }) === null, "TB CE-12");
+  const c13 = vary(vary(dA, 29, [96.6, 102.0, 96.3, 101.7]), 30, [101.7, 102.2, 101.4, 101.9]); assert(fires(c13, "CE") === "30", "TB CE-13: " + fires(c13, "CE"));
+  assert(first(dB, "CE") === null, "TB CE-14: the neckline is never broken");
+  const r15 = N.runDay({ bars: dA.map((b, k) => ({ ...b, time: 1792381500 + 300 + (k - 32) * 300 })), levels: [], atrFixed: ATR, rules: ["triple bottom"] });
+  assert(r15.trades.length === 0 && r15.skipped.some(s => s.why === "outside entry window"), "TB CE-15");
+  const rA = N.runDay({ bars: dA, levels: [], atrFixed: ATR, rules: ["triple bottom"] });
+  assert(rA.trades.length === 1 && rA.trades[0].side === "CE" && rA.trades[0].entry === 101.7 && rA.trades[0].L === 101, "TB CE-1 entry at 101.7: " + JSON.stringify(rA.trades[0]));
+  const p1 = tb(dB, 32, "PE");
+  assert(p1 && p1.support === 94.2 && p1.neckline === 101 && p1.height === 6.8 && p1.target === 87.4 && p1.L === 94.2, "TB PE-1: " + JSON.stringify(p1));
+  assert(fires(dB, "PE") === "32", "TB PE-2: " + fires(dB, "PE"));
+  const p3 = vary(dB, 32, [95.0, 95.2, 93.2, 94.0]); assert(tb(p3, 32, "PE") === null && tb(p3, 33, "PE") !== null, "TB PE-3");
+  assert(fires(vary(dB, 32, [95.0, 95.2, 90.8, 91.0]), "PE") === "", "TB PE-4");
+  assert(first(dA, "PE") === null, "TB PE-5: the pattern broke out upward");
+  const p6 = dA.map((b, k) => k >= 33 && k <= 37 ? { time: b.time, ...[[101.7,102.0,99.0,99.2],[99.2,99.5,96.5,96.7],[96.7,97.0,94.4,94.6],[94.6,94.8,93.1,93.4],[93.4,93.7,92.5,92.8]][k - 33].reduce((o, v, i) => ({ ...o, [["open","high","low","close"][i]]: v }), {}) } : b);
+  assert(first(p6, "PE") === null, "TB PE-6: already broke out on candle 32");
+  assert(first(dB, "PE", { ...cfg, minDepthAtr: 5.0 }) === null && first(dB, "PE", { ...cfg, maxWait: 4 }) === null, "TB PE-7, PE-8");
+  const rB = N.runDay({ bars: dB, levels: [], atrFixed: ATR, rules: ["triple bottom"] });
+  assert(rB.trades.length === 1 && rB.trades[0].side === "PE" && rB.trades[0].entry === 93.5, "TB PE-1 entry at 93.5: " + JSON.stringify(rB.trades[0]));
+  console.log("New Rule Chart: the triple bottom matches its document's cases (CE-1 to CE-15, PE-1 to PE-8)");
+}
