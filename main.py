@@ -21,6 +21,7 @@ import websockets
 
 import dhan
 import memwatch
+import record
 from providers import INDICES, INTERVALS, LONG_INTERVALS, RANGES, DemoTicker, bucket_start, now_ist
 import rule
 
@@ -771,7 +772,10 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "beyond_reached": ("yes" if carry["reached"] else "no") if carry else "",
                      "contract": f"{round(rec['strike'])} {rec['side']} {rec['expiry']}" if rec else "", "premium_paid": rec["premium_paid"] if rec else None,
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
-                     "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None})
+                     "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None,
+                     "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": ""})  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
+    if rows:
+        record.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)  # the day's calls CSV (the daily save, back on 21 October)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
 
 
@@ -937,7 +941,8 @@ async def lifespan(app: FastAPI):
     if not AUTH_ENABLED:
         log.warning("DASHBOARD_PASSWORD is not set: anyone who can reach this server can see the dashboard.")
     tasks = [asyncio.create_task(give_memory_back_forever()),
-             asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever())]
+             asyncio.create_task(refresh_forever()), asyncio.create_task(tick_forever()), asyncio.create_task(stream_forever()),
+             asyncio.create_task(record.record_forever(DHAN_ON))]  # the daily save (back on 21 October: "bring back the daily save, without study page")
     if DHAN_ON:
         tasks.append(asyncio.create_task(warm_option_ids()))
         tasks.append(asyncio.create_task(token_forever()))
@@ -1009,8 +1014,9 @@ def memory_mb() -> dict:
 @app.get("/health")
 def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads the token's
-    state. No secret in here: dates, and a problem said in plain words. (Until 15 October it also carried the day's save.)"""
-    return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "memory_mb": memory_mb(),
+    state and, after the close, whether the day was saved (under "save"; the daily save was off from 15 to 21 October).
+    No secret in here: dates, and a problem said in plain words."""
+    return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "save": record.summary(), "memory_mb": memory_mb(),
             "memory": memwatch.summary(),  # where the memory goes (9 October): threads, the allocator, the most numerous objects, the biggest jumps
             "feed": feed_state(), "keep_awake": {k: v for k, v in keep_awake_state.items() if k != "url"} | {"on": bool(SELF_URL)}}
 
@@ -1237,8 +1243,29 @@ async def options_ended(name: str, request: Request):
     return record
 
 
-# The Study page, the day's save (candles and the calls CSV) and the options records backup were taken off on 15 October
-# (the owner: "remove this study tab and everything under it ... never update it from tomorrows session").
+# ---------------------------------------------------------------- the record of each session (record.py)
+# The Study page went on 15 October (the owner: "remove this study tab and everything under it") and the day's save with it.
+# On 21 October the owner asked for the save back ("bring back the daily save, without study page"): the candles and the
+# calls CSV on the data branch at 15:40, the options records backup, and the page's report of its calls below. No page over them.
+
+LEVEL_MODES, SIGNAL_MODES = ("off", "prev", "close", "today", "shown"), ("off", "held", "crossed", "both")  # close: the previous close's lines (15 October)
+
+
+@app.post("/calls/{name}")
+async def calls_record(name: str, request: Request):
+    """The index page tells the server the calls it shows for today's session (every call, as drawn), so the day's
+    record carries each and every call that was suggested (record.record_calls, the owner's ask of 7 October)."""
+    key = known_index(name)
+    body = await request.json()
+    interval, levels, signal = str(body.get("interval", "")), str(body.get("levels", "")), str(body.get("signal", ""))
+    try:
+        session = datetime.strptime(str(body.get("session", "")), "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        raise HTTPException(status_code=400, detail="session must be YYYY-MM-DD")
+    calls = body.get("calls")
+    if interval not in INTERVALS or levels not in LEVEL_MODES or signal not in SIGNAL_MODES or not isinstance(calls, list) or len(calls) > 500:
+        raise HTTPException(status_code=400, detail="interval, levels, signal and a list of at most 500 calls are required")
+    return {"new": record.record_calls(key, interval, levels, signal, session, calls), "recorded": len(calls)}
 
 
 @app.get("/indices/{name}")

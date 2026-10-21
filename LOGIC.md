@@ -736,7 +736,9 @@ owner's own repository.
 
 **Removed on 15 October** (the owner: "remove this study tab and everything under it. i dont want it now ... never
 update it from tomorrows session"): the Study page, the daily save of the session and the calls CSV, and the options
-records backup. What follows describes it as it was; the days saved up to 15 October stay on the `data` branch.
+records backup. **The save came back on 21 October**, alone (the owner: "bring back the daily save, without study
+page"; `record.py`): the days from 21 October on are on the `data` branch again, 16 to 20 October are not. What
+follows describes the Study page as it was.
 
 **The study** (`/study/`, linked from the dashboard and the index page) was one
 page over every saved day, for the index, time frame, levels and signal picked:
