@@ -517,7 +517,7 @@
   function queueTags() { if (tagsQueued) return; tagsQueued = true; requestAnimationFrame(() => requestAnimationFrame(() => { tagsQueued = false; placeTags(); })); }  // after the chart's own repaint
   function placeTags() {
     const box = document.getElementById("line-tags");
-    const lv = state.move === "close" && series ? lastLevels.levels.filter(l => l.signed) : [];
+    const lv = state.move === "close" && series && !plainChart() ? lastLevels.levels.filter(l => l.signed) : [];  // no tags on the plain chart
     box.parentElement.classList.toggle("left-tags", lv.length > 0);  // the chart makes room on its left for the column (it sizes itself to its box)
     const key = JSON.stringify(lv);
     if (box.dataset.key !== key) {
@@ -1256,19 +1256,25 @@
     }
   }
 
+  // Calls with Signals open (21 October, the owner: the chart "should be plain without any fib levels and without any rules on it ...
+  // when I will click on Fib level tick, then only it should be drawn"): no lines, no tags, no redraw note on the chart while that
+  // panel is open. The Paper calls rule still runs on its lines underneath (its table is hidden, its records go on); the Fib Levels
+  // tick will draw the new rule's own lines once that rule is built
+  const plainChart = () => document.getElementById("panels").dataset.panel === "signals";
   function drawLevels() {
     drawSessions();
     const m = theMove();
     let levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
     const fromClose = m && m.close != null ? closeLinesAt(shownBars()) : null;
     if (fromClose) { const now = serverNow(); levels = fromClose(shownBars().filter(b => endOf(b) <= now).length); }  // as redrawn by the candles closed so far, over the days shown
-    drawRedraw(fromClose);
+    const plain = plainChart(), shown = plain ? [] : levels;  // the lines the chart draws: none while Calls with Signals is open
+    drawRedraw(plain ? null : fromClose);
     lastLevels = { m, levels };  // before the chart refits, so the previous close's lines are all in view
     drawPaper(levels);
-    const key = JSON.stringify([state.move, currentSession(), levels]);
+    const key = JSON.stringify([state.move, currentSession(), shown]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
-      priceLines = levels.map(l => series.createPriceLine({
+      priceLines = shown.map(l => series.createPriceLine({
         price: l.price, title: Rules.levelName(l.ratio, l.signed),
         // the previous close's lines (15 October): + lines green, - lines red, 0% thicker; the other levels as before
         color: cssVar(l.signed ? (l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2") : l.ratio === 0 || Math.abs(l.ratio) === 1 ? "--ink-2" : "--muted"),
@@ -1277,7 +1283,7 @@
         axisLabelVisible: !l.signed,  // the previous close's lines carry their names on the lines themselves (placeTags): the scale's own labels stack and slide off their lines
       }));
       lastLevelsKey = key;
-      if (state.move === "close") refit();  // the view takes in all the lines
+      if (state.move === "close" && !plain) refit();  // the view takes in all the lines
     }
     queueTags();
     lastLevels = { m, levels };
@@ -1774,6 +1780,7 @@
     document.getElementById("tab-chain").classList.toggle("on", which === "chain");
     document.getElementById("chain-box").hidden = which !== "chain";
     document.getElementById("signals-box").hidden = which !== "signals";
+    if (series) drawLevels();  // the chart: plain with Calls with Signals open, its lines back with Paper calls or the OI chart
     if (which === "chain") { drawChain(); loadChain(); }
   }
   document.getElementById("tab-calls").addEventListener("click", () => showPanel("calls"));

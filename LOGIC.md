@@ -269,6 +269,8 @@ come. The Fibonacci rule below never writes to it. The same evening: no note ove
 scrolls up, down, left and right (the OI chart's scroll box), and a Settings button whose popup lists the indicators, each
 active or inactive, remembered on the browser; "only keep Fib Levels as of now, if i tick it it will draw fib levels
 automatically on the chart as per the fib logic which we will develop asap": the tick is kept for that logic and draws nothing yet.
+While the panel is open the chart is plain (the owner: "chart should be plain without any fib levels and without any rules on it"):
+no lines, no tags, no redraw note; they come back with Paper calls or the OI chart. The Paper calls rule runs on underneath.
 
 The rule, in the order it is applied:
 
