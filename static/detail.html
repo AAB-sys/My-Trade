@@ -135,6 +135,7 @@
   @media (max-width: 1099px) { #paper-box .scroll { overflow: auto; max-height: 80vh; } }
   #paper td.entry.wait { color: var(--ink-2); }
   #paper td.target small { display: block; color: var(--muted); }
+  #paper td.when small { display: block; color: var(--muted); font-weight: 400; }  /* "fired 1:25 PM" under the signal candle's time (21 October) */
   #paper td.target small.up { color: var(--up); }
   #paper td.target small.down { color: var(--down); }
   #paper td.prem small.sell { color: var(--down); font-weight: 600; }
@@ -930,7 +931,7 @@
   // 7 October evening, back on 8 October: the owner's exit signal).
   function rowCells(t, r) {
     const strike = strikeOf(t, r);
-    return `<td>${callTime(t.signalTime)}</td>`
+    return `<td class="when">${callTime(t.signalTime)}${t.entryTime != null ? `<small>fired ${firedWhen(t)}</small>` : ""}</td>`
       + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
       + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r);
@@ -939,6 +940,15 @@
   // "Crossed below" (Buy PE) the Fibonacci level
   const signalWord = (t) => t.kind === "held" ? "On the line" : t.side === "CE" ? "Crossed above" : "Crossed below";
   const callTime = (epoch) => istTime(epoch, withDate()).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // "9:15 AM", as the owner's sheet writes it
+  // When the call fired (the owner, 21 October: "i think call is getting fired 5 mins delayed"; the Time column is the signal
+  // candle, the fire comes when a later candle goes past its high or low, Change 2): the first minute of the entry candle whose
+  // price reached the entry, as the engine's fireMinute finds it; without the minutes, the entry candle itself
+  function firedWhen(t) {
+    const seconds = SECONDS[state.interval], mins = longCandles() ? [] : sessionMinutes();
+    if (state.minuteNow && !mins.some(m => m.time === state.minuteNow.time)) mins.push(state.minuteNow);
+    const m = mins.find(m => m.time >= t.entryTime && m.time < t.entryTime + seconds && (t.side === "PE" ? m.low <= t.entry : m.high >= t.entry));
+    return m ? callTime(m.time) : `${callTime(t.entryTime)} candle`;
+  }
 
   // The strike bought (the owner's choice, one strike in the money: a CE the first strike below the index at entry, a PE the
   // first above, dhan.itm_strike): the server's record names it once the call has been seen entering; before that, and for

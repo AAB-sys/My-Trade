@@ -208,7 +208,7 @@ October).
 
 The rule above, run over the closed candles of the session picked, with that
 session's levels. Each call (buy a CE, or buy a PE) is one row of the list, read
-left to right, in the owner's format of 7 October evening: **Time** (9:15 AM),
+left to right, in the owner's format of 7 October evening: **Time** (9:15 AM, the signal candle; under it, since 21 October, *fired 9:25 AM*, the minute a later candle went past the signal candle's high or low, from the day's one-minute candles, else the entry candle: the owner, "i think call is getting fired 5 mins delayed"),
 **Call (CE/PE)** with its contract, **Signal** (*Held* or *Crossed*, the level's
 ratio and price), **Call Entry** (the strike number of the contract, the same
 number as in the call; the index price at entry until the contract is known:
