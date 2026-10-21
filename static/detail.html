@@ -6,6 +6,7 @@
 <title>My-Trade</title>
 <script src="/static/vendor/lightweight-charts.js"></script>
 <script src="/static/rules.js"></script>
+<script src="/static/newrule.js"></script>
 <style>
   :root {
     color-scheme: light;
@@ -138,6 +139,10 @@
   #paper thead th { position: sticky; top: 0; background: var(--page); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
   #signals thead th { position: sticky; top: 0; background: var(--surface); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }  /* fixed in its scroll box, as the OI chart's header */
   #signals th, #signals td { padding-left: 10px; }
+  #signals td.when small, #signals td.target small { display: block; color: var(--muted); font-weight: 400; }
+  #signals td.up { color: var(--up); } #signals td.down { color: var(--down); }
+  #signals td.cand.carry { color: var(--up); font-weight: 600; } #signals td.cand.exit { color: var(--down); font-weight: 600; }
+  #signals tr.ended td { color: var(--ink-2); }
   #paper-box .scroll { overflow: visible; }
   @media (max-width: 1099px) { #paper-box .scroll { overflow: auto; max-height: 80vh; } }
   #paper td.entry.wait { color: var(--ink-2); }
@@ -400,7 +405,7 @@
       <div class="layout-box">
         <h3 id="indicators-title">Indicators</h3>
         <p class="hint">Tick an indicator to make it active. Remembered on this browser.</p>
-        <div id="indicators-list" class="indicators"><label><input type="checkbox" data-ind="fib">Fib Levels</label></div>
+        <div id="indicators-list" class="indicators"><label><input type="checkbox" data-ind="fib">Fib Levels</label><label><input type="checkbox" data-ind="dt">Double Top / Bottom</label></div>
         <div class="layout-foot"><button type="button" class="pill" id="indicators-close">Close</button></div>
       </div>
     </div>
@@ -1267,14 +1272,20 @@
     let levels = m ? (m.close != null ? Rules.closeLevels(m.close) || [] : levelsOf(m)) : [];
     const fromClose = m && m.close != null ? closeLinesAt(shownBars()) : null;
     if (fromClose) { const now = serverNow(); levels = fromClose(shownBars().filter(b => endOf(b) <= now).length); }  // as redrawn by the candles closed so far, over the days shown
-    const plain = plainChart(), shown = plain ? [] : levels;  // the lines the chart draws: none while Calls with Signals is open
+    const plain = plainChart();
+    let shown = plain ? [] : levels;  // the lines the chart draws: none while Calls with Signals is open...
+    if (plain) shown = shown.concat(drawSignals());  // ...but the Double Top / Bottom rule's necklines and stop when its tick is on (newrule.js)
+    else clearSignals();
     drawRedraw(plain ? null : fromClose);
     lastLevels = { m, levels };  // before the chart refits, so the previous close's lines are all in view
     drawPaper(levels);
     const key = JSON.stringify([state.move, currentSession(), shown]);
     if (series && key !== lastLevelsKey) {
       priceLines.forEach(l => series.removePriceLine(l));
-      priceLines = shown.map(l => series.createPriceLine({
+      priceLines = shown.map(l => l.nr ? series.createPriceLine({  // the new rule's lines: a trade's neckline (solid) and stop (dashed), in the call's colour
+        price: l.price, title: l.name, color: cssVar(l.up ? "--candle-up" : "--candle-down"), lineWidth: l.solid ? 2 : 1,
+        lineStyle: l.solid ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dashed, axisLabelVisible: true,
+      }) : series.createPriceLine({
         price: l.price, title: Rules.levelName(l.ratio, l.signed),
         // the previous close's lines (15 October): + lines green, - lines red, 0% thicker; the other levels as before
         color: cssVar(l.signed ? (l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2") : l.ratio === 0 || Math.abs(l.ratio) === 1 ? "--ink-2" : "--muted"),
@@ -1810,6 +1821,7 @@
     const box = document.getElementById("signals-layout"), list = document.getElementById("indicators-list"), button = document.getElementById("signals-settings");
     let active = new Set(); try { active = new Set(JSON.parse(localStorage.getItem("signalsIndicators") || "[]")); } catch (e) {}
     state.signalsFib = active.has("fib");  // "Fib Levels": for the logic still to come; ticking it draws nothing yet
+    state.signalsDT = active.has("dt");  // "Double Top / Bottom": the rule's marks and lines on the chart (the table always carries its calls, drawSignals)
     const fill = () => list.querySelectorAll("input").forEach(i => { i.checked = active.has(i.dataset.ind); });
     const open = () => { fill(); box.hidden = false; const first = list.querySelector("input"); if (first) first.focus(); };
     const close = () => { box.hidden = true; button.focus(); };
@@ -1818,8 +1830,75 @@
     box.addEventListener("click", e => { if (e.target === box) close(); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
     list.addEventListener("change", e => { const k = e.target.dataset.ind; if (!k) return; if (e.target.checked) active.add(k); else active.delete(k);
-      state.signalsFib = active.has("fib"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {} });
+      state.signalsFib = active.has("fib"); state.signalsDT = active.has("dt"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {}
+      if (series) drawLevels(); });  // the tick draws the rule's marks and lines at once, or takes them off; the table stays
   })();
+  // ---- New Rule Chart: the double top (Buy PE) and double bottom (Buy CE) rule of the owner's "Trading Rules Specification" (21 October),
+  // with Rule 1 (break-and-hold) and Rule 2 (trailing) after the entry: NewRule.runDay over the session's closed 5-minute candles,
+  // the candle forming now lending only its open to an entry. The trailing levels are the chart's own lines of the day, the Previous
+  // close lines (hidden on the plain chart, used by the rule). The ATR carries over from the previous day's candles. Its rows fill the
+  // Calls with Signals table; the chart shows each call's neckline (solid) and the open call's stop (dashed), with T1 and T2 marked.
+  // Paper only, index points: no option yet (the next New Rule Chart PR). Nothing here touches the Paper calls rule (rules.js)
+  let signalMarkers = null;  // the chart library's marker set for the series drawn now (v5: createSeriesMarkers; older: series.setMarkers)
+  function setSignalMarkers(marks) {
+    if (!series) return;
+    if (typeof LightweightCharts.createSeriesMarkers === "function") {
+      if (!signalMarkers || signalMarkers.series !== series) signalMarkers = { series, set: LightweightCharts.createSeriesMarkers(series, []) };
+      signalMarkers.set.setMarkers(marks);
+    } else if (typeof series.setMarkers === "function") series.setMarkers(marks);
+  }
+  function signalsNow() {
+    const key = currentSession();
+    if (!key || key === "all" || longCandles()) return null;  // the rule always runs for the table (the owner, 21 October: "it should always be in the table"); the tick is for the chart
+    const now = serverNow(), bars = sessionBars(), closed = bars.filter(b => endOf(b) <= now).length;
+    if (!closed) return null;
+    const day = dayBefore(key), levels = day && day.close != null ? Rules.closeLevels(day.close).map(l => ({ pct: Rules.levelName(l.ratio, true), price: l.price })) : [];
+    const before = state.candles.filter(b => sessionOf(b) < key);  // the previous sessions loaded, for the ATR's warm-up
+    const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
+    const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
+    return { ...NewRule.runDay({ bars, levels, atrSeed: seed, closedCount: closed, dayEnd }), levels, bars };
+  }
+  function clearSignals() {
+    document.querySelector("#signals tbody").replaceChildren();
+    if (signalMarkers && signalMarkers.series === series) setSignalMarkers([]);
+  }
+  // the lines for the chart (returned to drawLevels) and the table's rows
+  function drawSignals() {
+    const run = signalsNow();
+    if (!run) { clearSignals(); return []; }
+    const lines = [], marks = [];
+    run.trades.forEach(t => {
+      const up = t.side === "CE";
+      lines.push({ nr: true, price: t.neckline, name: "neckline", up, solid: true });
+      if (t.exit == null && t.stop != null && t.stop !== t.neckline) lines.push({ nr: true, price: t.stop, name: "stop " + (t.stopPct || ""), up, solid: false });
+      marks.push({ time: t.t1Time + IST_OFFSET, position: up ? "belowBar" : "aboveBar", color: cssVar(up ? "--candle-up" : "--candle-down"), shape: "circle", text: "T1" });
+      marks.push({ time: t.t2Time + IST_OFFSET, position: up ? "belowBar" : "aboveBar", color: cssVar(up ? "--candle-up" : "--candle-down"), shape: "circle", text: "T2" });
+      marks.push({ time: t.signalTime + IST_OFFSET, position: up ? "belowBar" : "aboveBar", color: cssVar(up ? "--candle-up" : "--candle-down"), shape: up ? "arrowUp" : "arrowDown", text: "Buy " + t.side });
+    });
+    if (!state.signalsDT) { setSignalMarkers([]); lines.length = 0; }  // unticked: the table only; ticked, the chart shows the marks, the neckline and the stop
+    else setSignalMarkers(marks.sort((a, b) => a.time - b.time));
+    const body = document.querySelector("#signals tbody");
+    const rows = run.trades.slice().sort((a, b) => b.signalTime - a.signalTime).map(t => {
+      const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";
+      const sideWord = t.side === "PE" ? "above" : "below", now = (run.bars && run.bars.length ? run.bars[run.bars.length - 1].close : t.entry), pts = t.exit != null ? t.points : Rules.round2(t.side === "CE" ? now - t.entry : t.entry - now);  // an open call: against the price now (the forming candle's close)
+      const status = t.exit != null ? "Take Exit" : t.stage === 2 ? "Hold" : `Buy ${t.side}`;
+      const entryMsg = `BUY ${t.side}: ${t.kind} confirmed · T1 ${callTime(t.t1Time)} · T2 ${callTime(t.t2Time)} · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
+      const reason = t.exit == null ? (t.stage === 2 ? `Target passed, continue · sell if a candle closes ${sideWord} ${t.stopPct || ""} (${fmt.format(t.stop)})` : entryMsg)
+        : t.how === "trail" ? `${callTime(t.exitTime)} candle · Sell: index candle closed ${sideWord} ${t.stopPct || ""} (${fmt.format(t.stop)})`
+        : t.how === "reclaim" ? `${callTime(t.exitTime)} candle · Reclaim: closed back ${sideWord} the neckline ${fmt.format(t.neckline)}`
+        : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
+      tr.innerHTML = `<td class="when">${callTime(t.signalTime)}<small>in at ${callTime(t.entryTime)}</small></td>`
+        + `<td class="call">Buy ${t.side}</td>`
+        + `<td>Rule:- ${t.kind === "double top" ? "Double Top" : "Double Bottom"}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
+        + `<td>${fmt.format(t.entry)}</td>`
+        + `<td class="target">${fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
+        + `<td class="opt">—</td><td class="opt ${pts > 0 ? "up" : pts < 0 ? "down" : ""}">${pts > 0 ? "+" : ""}${fmt.format(pts)} pts</td>`
+        + `<td class="cand ${t.exit != null ? "exit" : "carry"}">${status}</td><td>${reason}</td>`;
+      return tr;
+    });
+    body.replaceChildren(...rows);
+    return lines;
+  }
   (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
     const head = document.querySelector("#chain thead"); let from = null;
     const clear = () => head.querySelectorAll("th.over").forEach(x => x.classList.remove("over"));
