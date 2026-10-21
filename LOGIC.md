@@ -271,22 +271,7 @@ active or inactive, remembered on the browser; "only keep Fib Levels as of now, 
 automatically on the chart as per the fib logic which we will develop asap": the tick is kept for that logic and draws nothing yet.
 While the panel is open the chart is plain (the owner: "chart should be plain without any fib levels and without any rules on it"):
 no lines, no tags, no redraw note; they come back with Paper calls or the OI chart. The Paper calls rule runs on underneath.
-**Double Top** (New Rule Chart, 21 October night, the owner's "Trading Rules Specification" document: "build the rule as
-explained in the document and give me the test screenshot on today's chart"; the double bottom waits for its own document). The
-rule always runs for the Calls with Signals table ("it should always be in the table"), its Signal column reading "Rule:- Double
-Top"; the Double Top / Bottom tick under Settings puts its marks and lines on the chart. `static/newrule.js`, the new
-set of rules' own engine (nothing in `rules.js` touched), runs the document's rule on the session's closed 5-minute candles: a double
-top (two swing highs, 3 candles each side, 5 to 40 candles apart, within half an ATR of each other, nothing above them between, the
-neckline the lowest low between them at least 1.5 ATR below the lower top, a move of 2 ATR into the first top, no close above the tops
-since, the signal the first close below the neckline by a quarter of the ATR within 20 candles of the second top and not more than
-2 ATR past it) gives a Buy PE at the next candle's open (the engine holds the double bottom mirror too, off until its document). Entries 09:30 to 14:45, one at a time,
-none after two losses in a row. After the entry, Rule 1 (sold on a close back across the neckline, or on the candle after the signal
-candle opening past its close and touching its open) until a candle closes beyond the first of the chart's lines (the Previous close
-lines of the day, hidden on the plain chart) by the buffer, then Rule 2 (the stop on each line crossed, never back; sold on a close
-back past it), and the day end. The ATR(14) carries over from the previous day's candles. The rows fill the Calls with Signals table
-in index points (no option yet); ticked, the chart marks T1, T2 and the signal, the neckline (solid) and the open call's stop (dashed).
-`lab/newrule-check.js` holds the document's cases E1 to E19 and T1 to T11. On the 15 saved days (29 September to 21 October): 6 calls,
-1 won, net -88 points.
+The new set of rules under Calls with Signals is described in `NEW_RULES.md`, apart from this document.
 
 The rule, in the order it is applied:
 

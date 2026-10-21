@@ -109,8 +109,104 @@
       if (dist <= buf) continue;                                           // no break by the buffer on this candle
       if (dist > cfg.maxChaseAtr * atr) return null;                       // too far past the neckline: skip
       const height = d * (top - neck);
-      return { side, t1: a, t2: b, t1Time: bars[a].time, t2Time: bars[b].time, top: round2(top), neckline: round2(neck), height: round2(height),
+      return { side, rule: d > 0 ? "double top" : "double bottom", kind: d > 0 ? "double top confirmed" : "double bottom confirmed", t1: a, t2: b, t1Time: bars[a].time, t2Time: bars[b].time, top: round2(top), neckline: round2(neck), L: round2(neck), height: round2(height),
                target: round2(neck - d * height), signalCandle: k, signalTime: bars[k].time, buffer: round2(buf), atr: round2(atr) };
+    }
+    return null;
+  }
+  // ---- The double bottom (the owner's "Double Bottom Chart Pattern" document, 21 October): two lows within 0.5 ATR, 5 to 40
+  // candles apart, nothing below them between, the neckline the highest high between them at least 1.5 ATR above the higher
+  // bottom, a fall of 2 ATR into the first bottom. The pattern ends one of two ways, one trade per pattern: a close above the
+  // neckline by the buffer, Buy CE (the breakout); before any breakout, a close below the support (the lower bottom) by the
+  // buffer, Buy PE (the failure). Section 13 of the document, to the letter. The 5-minute settings; the daily chart is not built
+  function detectDoubleBottom(bars, k, side, atr, cfg = DT) {
+    const buf = bufferOf(atr, cfg);
+    if (atr == null || buf == null) return null;
+    const lows = findSwings(bars.slice(0, k + 1), -1, cfg.swingN);
+    if (!lows.length) return null;
+    const b2 = lows[lows.length - 1];
+    if (k - b2 > cfg.maxWait) return null;
+    const b1s = lows.filter(s => b2 - s >= cfg.minGap && b2 - s <= cfg.maxGap);
+    for (let i = b1s.length - 1; i >= 0; i--) {
+      const b1 = b1s[i], low1 = bars[b1].low, low2 = bars[b2].low;
+      if (Math.abs(low1 - low2) > cfg.eqAtr * atr) continue;                                   // 3
+      const lower = Math.min(low1, low2), higher = Math.max(low1, low2);
+      let below = false, neck = null;
+      for (let j = b1 + 1; j < b2; j++) { if (bars[j].low < lower) below = true; if (neck == null || bars[j].high > neck) neck = bars[j].high; }
+      if (below || neck == null) continue;                                                       // 4
+      if (neck - higher < cfg.minDepthAtr * atr) continue;                                       // 5
+      const s0 = Math.max(0, b1 - cfg.priorLookback);
+      let priorHigh = -Infinity; for (let j = s0; j <= b1; j++) priorHigh = Math.max(priorHigh, bars[j].high);
+      if (priorHigh - low1 < cfg.priorMoveAtr * atr) continue;                                   // 6
+      const height = round2(neck - lower), start = b2 + cfg.swingN;
+      let brokeOut = false, brokeDown = false;
+      for (let j = start; j < k; j++) { if (bars[j].close - neck > buf) brokeOut = true; if (lower - bars[j].close > buf) brokeDown = true; }
+      if (side === "CE") {
+        let closedBelow = false; for (let j = b1; j <= k; j++) if (bars[j].close < lower) closedBelow = true;
+        if (closedBelow || brokeOut) continue;                                                   // 7, used up
+        const dist = bars[k].close - neck;
+        if (dist <= buf) continue;
+        if (dist > cfg.maxChaseAtr * atr) return null;
+        return { side: "CE", rule: "double bottom", kind: "double bottom confirmed", t1: b1, t2: b2, t1Time: bars[b1].time, t2Time: bars[b2].time, neckline: round2(neck), support: round2(lower),
+                 L: round2(neck), height, target: round2(neck + height), signalCandle: k, signalTime: bars[k].time, buffer: round2(buf), atr: round2(atr) };
+      }
+      if (brokeOut || brokeDown) continue;                                                       // 7, used up
+      const dist = lower - bars[k].close;
+      if (dist <= buf) continue;
+      if (dist > cfg.maxChaseAtr * atr) return null;
+      return { side: "PE", rule: "double bottom", kind: "double bottom failed", t1: b1, t2: b2, t1Time: bars[b1].time, t2Time: bars[b2].time, neckline: round2(neck), support: round2(lower),
+               L: round2(lower), height, target: round2(lower - height), signalCandle: k, signalTime: bars[k].time, buffer: round2(buf), atr: round2(atr) };
+    }
+    return null;
+  }
+  // ---- The triple top (the owner's "Triple Top Chart Pattern" document, 21 October): three highs within 0.5 ATR, each 5 to 40
+  // candles after the one before, nothing above them between; the resistance the highest top, the neckline the lower of the two
+  // dip lows, both dips at least 1.5 ATR below the lowest top; a rise of 2 ATR into the first top. A close below the neckline by
+  // the buffer, Buy PE (the breakdown); before any breakdown, a close above the resistance by the buffer, Buy CE (the failure)
+  function detectTripleTop(bars, k, side, atr, cfg = DT) {
+    const buf = bufferOf(atr, cfg);
+    if (atr == null || buf == null) return null;
+    const highs = findSwings(bars.slice(0, k + 1), 1, cfg.swingN);
+    if (!highs.length) return null;
+    const t3 = highs[highs.length - 1];
+    if (k - t3 > cfg.maxWait) return null;
+    const gapOk = (a, b) => b - a >= cfg.minGap && b - a <= cfg.maxGap;
+    const t2s = highs.filter(s => gapOk(s, t3));
+    for (let i2 = t2s.length - 1; i2 >= 0; i2--) {
+      const t2 = t2s[i2], t1s = highs.filter(s => gapOk(s, t2));
+      for (let i1 = t1s.length - 1; i1 >= 0; i1--) {
+        const t1 = t1s[i1], tops = [bars[t1].high, bars[t2].high, bars[t3].high];
+        const resistance = Math.max(...tops), lowestTop = Math.min(...tops);
+        if (resistance - lowestTop > cfg.eqAtr * atr) continue;                                  // 3
+        let above = false; for (let j = t1 + 1; j < t3; j++) if (bars[j].high > resistance) above = true;
+        if (above) continue;                                                                     // 4
+        let p1 = Infinity, p2 = Infinity;
+        for (let j = t1 + 1; j < t2; j++) p1 = Math.min(p1, bars[j].low);
+        for (let j = t2 + 1; j < t3; j++) p2 = Math.min(p2, bars[j].low);
+        const neck = Math.min(p1, p2);
+        if (lowestTop - Math.max(p1, p2) < cfg.minDepthAtr * atr) continue;                       // 5
+        const s0 = Math.max(0, t1 - cfg.priorLookback);
+        let priorLow = Infinity; for (let j = s0; j <= t1; j++) priorLow = Math.min(priorLow, bars[j].low);
+        if (bars[t1].high - priorLow < cfg.priorMoveAtr * atr) continue;                         // 6
+        const height = round2(resistance - neck), start = t3 + cfg.swingN;
+        let brokeDown = false, brokeOut = false;
+        for (let j = start; j < k; j++) { if (neck - bars[j].close > buf) brokeDown = true; if (bars[j].close - resistance > buf) brokeOut = true; }
+        const base = { rule: "triple top", t1, t2, t3, t1Time: bars[t1].time, t2Time: bars[t2].time, t3Time: bars[t3].time, neckline: round2(neck), resistance: round2(resistance), height,
+                       signalCandle: k, signalTime: bars[k].time, buffer: round2(buf), atr: round2(atr) };
+        if (side === "PE") {
+          let closedAbove = false; for (let j = t1; j <= k; j++) if (bars[j].close > resistance) closedAbove = true;
+          if (closedAbove || brokeDown) continue;                                                // 7, used up
+          const dist = neck - bars[k].close;
+          if (dist <= buf) continue;
+          if (dist > cfg.maxChaseAtr * atr) return null;
+          return { ...base, side: "PE", kind: "triple top confirmed", L: round2(neck), target: round2(neck - height) };
+        }
+        if (brokeDown || brokeOut) continue;                                                     // 7, used up
+        const dist = bars[k].close - resistance;
+        if (dist <= buf) continue;
+        if (dist > cfg.maxChaseAtr * atr) return null;
+        return { ...base, side: "CE", kind: "triple top failed", L: round2(resistance), target: round2(resistance + height) };
+      }
     }
     return null;
   }
@@ -134,7 +230,12 @@
   // atrFixed: a test's fixed ATR. One trade at a time; both sides firing on one candle skip both; the filters of section 9.5
   // closedCount: how many of the bars have closed (the rest is the candle forming now: an entry may take its open, nothing else)
   // sides: the double top ("PE") alone for now (the owner, 21 October: the double bottom's logic comes in another document)
-  function runDay({ bars, levels, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"] }) {
+  // rules: which patterns run, in order: the double top (Buy PE), the double bottom (Buy CE, or Buy PE when it fails), the triple top
+  // (Buy PE, or Buy CE when it fails). Rules firing on one candle the same way: the first in the list; different ways: nothing
+  const RULES = { "double top": (bars, k, atr, cfg) => [detectEntry(bars, k, "PE", atr, cfg)],
+                  "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg), detectDoubleBottom(bars, k, "PE", atr, cfg)],
+                  "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)] };
+  function runDay({ bars, levels, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top"] }) {
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
@@ -162,23 +263,27 @@
         if (open || how === "day end") continue;
       }
       if (k + 1 >= bars.length) break;  // a signal on the last candle has no next candle to enter on
-      const pe = sides.includes("PE") ? detectEntry(bars, k, "PE", atr, cfg) : null, ce = sides.includes("CE") ? detectEntry(bars, k, "CE", atr, cfg) : null;
-      if (!pe && !ce) continue;
-      if (pe && ce) { skipped.push({ time: bar.time, why: "both sides on one candle" }); continue; }
-      const sig = pe || ce, entryBar = bars[k + 1], when = istHM(entryBar.time);
+      const found = [];
+      for (const name of rules) {
+        if (name === "double top") { if (sides.includes("PE")) found.push(detectEntry(bars, k, "PE", atr, cfg)); if (sides.includes("CE")) found.push(detectEntry(bars, k, "CE", atr, cfg)); }
+        else if (RULES[name]) found.push(...RULES[name](bars, k, atr, cfg));
+      }
+      const sigs = found.filter(Boolean);
+      if (!sigs.length) continue;
+      if (sigs.some(x => x.side !== sigs[0].side)) { skipped.push({ time: bar.time, why: "rules disagree on one candle: " + sigs.map(x => `${x.rule} ${x.side}`).join(", ") }); continue; }
+      const sig = sigs[0], entryBar = bars[k + 1], when = istHM(entryBar.time);
       if (when < cfg.entryFrom || when > cfg.entryTo) { skipped.push({ time: bar.time, side: sig.side, why: "outside entry window" }); continue; }
       if (cfg.maxTradesPerDay != null && trades.length >= cfg.maxTradesPerDay) { skipped.push({ time: bar.time, side: sig.side, why: "daily limit" }); continue; }
       if (cfg.maxLossPerDay != null && dayLoss >= cfg.maxLossPerDay) { skipped.push({ time: bar.time, side: sig.side, why: "daily loss limit" }); continue; }
       if (lossesInRow >= cfg.maxLossesInRow) { skipped.push({ time: bar.time, side: sig.side, why: `${cfg.maxLossesInRow} losses in a row` }); continue; }
       if (cfg.skipExpiryDay && expiryDay) { skipped.push({ time: bar.time, side: sig.side, why: "expiry day" }); continue; }
       const d = sig.side === "CE" ? 1 : -1;
-      const lv = levels.slice().sort((x, y) => d * (x.price - y.price)).filter(l => d * (l.price - sig.neckline) > 0);  // the levels beyond L in the profit direction
-      const Lpct = (levels.find(l => Math.abs(l.price - sig.neckline) < 1e-9) || {}).pct;
-      open = { ...sig, kind: sig.side === "PE" ? "double top" : "double bottom", entryTime: entryBar.time, entry: entryBar.open, c1: bar, L: sig.neckline, Lpct, lv, stage: 1,
-               stop: sig.neckline, stopPct: Lpct, exit: null, exitTime: null, points: null, how: "open" };
+      const lv = levels.slice().sort((x, y) => d * (x.price - y.price)).filter(l => d * (l.price - sig.L) > 0);  // the levels beyond L in the profit direction
+      const Lpct = (levels.find(l => Math.abs(l.price - sig.L) < 1e-9) || {}).pct;
+      open = { ...sig, entryTime: entryBar.time, entry: entryBar.open, c1: bar, Lpct, lv, stage: 1, stop: sig.L, stopPct: Lpct, exit: null, exitTime: null, points: null, how: "open" };
       trades.push(open);
     }
     return { trades, skipped };
   }
-  root.NewRule = { RATIOS, CFG, DT, atrSeries, atrStep, findSwings, moveOnSide, moveAt, levelName, round2, bufferOf, detectEntry, trailStep, runDay, istHM };
+  root.NewRule = { RATIOS, CFG, DT, RULES, atrSeries, atrStep, findSwings, moveOnSide, moveAt, levelName, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, trailStep, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
