@@ -11,7 +11,7 @@ dashboard that shows them and updates the moment they change.
 | POST   | `/login`          | `{"password": "..."}` | sets the login cookie, or 401                          |
 | POST   | `/logout`         | nothing       | clears the login cookie                                       |
 | POST   | `/alive`          | the tab note and page id (headers) | "still here" from an open page: the latest snapshot plus the page's id |
-| GET    | `/health`         | nothing       | `{"status": "ok", ...}` - open, for the host's health checks and the wake-up workflow: the commit, under `token` whether Dhan accepts the token and until when, under `study` the latest saved day and any saving problem |
+| GET    | `/health`         | nothing       | `{"status": "ok", ...}` - open, for the host's health checks and the wake-up workflow: the commit, under `token` whether Dhan accepts the token and until when, under `save` the latest saved day and any saving problem |
 | GET    | `/`               | nothing       | the dashboard page                                            |
 | GET    | `/index/{name}`   | an index name | the detail page for that index (summary + chart)              |
 | GET    | `/indices`        | nothing       | the list of index names this API serves                       |
@@ -138,18 +138,17 @@ could not be read just now, or null);
 page is open in market hours and the stream is quiet; `SELL_SHARE` (default 0.65) is the sell point as a
 share of the premium paid.
 
-## The record of each session, and the study
+## The record of each session (the daily save)
 
 After every session the server saves the day's candles (NIFTY 50 and NIFTY
 BANK, in 1, 5, 15 and 30 minutes, with the day's and the previous day's open,
 high, low and close) to `data/sessions/<date>.json`, and beside it every call
 the index page suggested that day to `data/sessions/<date>-calls.csv`, with a partial copy of
 both every few minutes during the session, and the options behind the day's
-calls to `records/<date>.json` as they change (all of this until 15 October). **The Study page is gone** (15 October, the owner: "remove this study tab and everything under it ... never
-update it from tomorrows session"): with it the daily save of the session's candles and the calls CSV, the
-options records backup, and the ideas under test as switches. The days saved up to 15 October stay on the
-`data` branch as history; nothing new is written there. `lab/replay.js` and `lab/findings.md` remain as the
-offline record of what was tested.
+calls to `records/<date>.json` as they change (`record.py`). **There is no page over them**: the Study page went
+on 15 October (the owner: "remove this study tab and everything under it") and the save with it; on 21 October
+the owner asked for the save back ("bring back the daily save, without study page"), so the days from then
+on are saved again, with the gap of 16 to 20 October. The lab (`lab/`) and `check_rule.py` read the saved days.
 
 Render's files do not last (a restart wipes them), so each day is also pushed to
 the `data` branch of your own repository. That needs one more secret, made once:
@@ -189,11 +188,12 @@ good one, for up to a week back.
 
 The first save creates the `data` branch (data only; never merge it into
 `main`): on the repository page, open the branch drop-down and pick `data` to
-see the files. The study page's first line says how many days are saved, where
-they are kept and any problem with the push. `STUDY_SAVE_AT` (default `15:40`,
+see the files. `/health` says under `save` which day was saved last and any
+problem with the push. `SAVE_AT` (default `15:40`,
 IST) is when the final copy is saved; `GITHUB_DATA_REPO` and
 `GITHUB_DATA_BRANCH` (defaults: this repository, `data`) say where it goes;
-`STUDY_DIR` is the folder on this computer (default: `data` next to `main.py`).
+`SAVE_DIR` is the folder on this computer (default: `data` next to `main.py`).
+(The old names `STUDY_SAVE_AT` and `STUDY_DIR` still work.)
 Only sessions on Dhan are recorded, and nothing is sent anywhere but your own
 repository.
 
@@ -284,9 +284,10 @@ The app is ready to run on a platform that deploys from GitHub:
   left and used to close the connection itself, with a red "Page entered
   Back-Forward Cache" line in the console). Every tile is a link to that
   index's detail page, opened in a new tab.
-- `study.py` and `static/study.html` (the record of each session's candles and
-  the Study page that replayed the rules over it) were removed on 15 October at
-  the owner's ask; the saved days up to then stay on the `data` branch.
+- `record.py` is the daily save: each session's candles and calls CSV on the
+  `data` branch, and the options records backup. It was `study.py` with the
+  Study page until 15 October, when both were removed at the owner's ask; the
+  save alone came back on 21 October.
 - `LOGIC.md` is the owner's own trading logic in plain words: what is built, what
   is still the owner's to decide. The index page draws its first layer, Fibonacci
   levels of a chosen move, the seven Fibonacci lines on the chart with a one-line

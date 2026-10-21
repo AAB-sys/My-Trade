@@ -882,6 +882,7 @@
       return tr;
     }));
     syncOptions(trades);
+    recordCalls(trades);
   }
 
   // A call sold at its Sell mark (the owner, 9 October: "if it is sold at 67 then ... it should stop there"): the server
@@ -901,7 +902,27 @@
 
   // Every call this page suggests for today goes to the server as drawn (the owner's ask, 7 October), so the day's
   // record carries each and every one: sent when the list's shape changes (a call enters, ends or is marked sold),
-  // else at most once a minute, so the points and premiums on the record stay fresh without a flood.
+  // else at most once a minute, so the points and premiums on the record stay fresh without a flood. Off with the
+  // Study page from 15 October; back on 21 October with the daily save ("bring back the daily save, without study page")
+  let lastShape = "", lastSent = 0;
+  async function recordCalls(trades) {
+    const session = currentSession();
+    if (state.simulated || !trades.length || !session || session === "all" || !isToday(session)) return;
+    const rows = trades.map(t => { const r = optionRecords[callKey(t)], cr = candleRead(t), sp = statusParts(t, r); return {
+      signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
+      target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
+      exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
+      candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
+      contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
+      sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
+    const shape = rows.map(r => `${r.signal_time}${r.side}${r.how}${r.sold_at ?? ""}${r.contract}`).join(",");
+    if (shape === lastShape && Date.now() - lastSent < 60000) return;
+    lastShape = shape; lastSent = Date.now();
+    try {
+      await fetch(`/calls/${encodeURIComponent(name)}`, { method: "POST", headers: { "Content-Type": "application/json", ...withTab().headers },
+        body: JSON.stringify({ interval: state.interval, levels: state.move, signal: state.signal, session, calls: rows }) });
+    } catch (err) { lastShape = ""; }  // the next draw tries again
+  }
 
   // One row reads left to right, in the owner's format of 7 October: the time, the call with its contract, the signal,
   // the entry (the strike number bought; the index at entry only where there is no strike), the target level (with

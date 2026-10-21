@@ -47,7 +47,9 @@ their own logic. Read this before touching the code.
   **15 October: the Study page, the daily save and the research rounds are off**
   (the owner: "remove this study tab and everything under it"; "close every
   research engine, every data backup, every excel csv file backup"). Nothing is
-  studied, saved or proposed unless the owner asks in the chat.
+  studied or proposed unless the owner asks in the chat. **21 October: the daily
+  save is back, alone** (the owner: "bring back the daily save, without study
+  page"): `record.py` saves each session to the `data` branch again; no page over it.
 
 ## Shape of the project
 
@@ -108,9 +110,9 @@ their own logic. Read this before touching the code.
   value by one caller at a time); `fetch_detail` takes the live price
   the server holds, so it needs no quote request while ticks flow; the record of each paper call's option (strike
   one in the money, nearest expiry, premium paid, premium now, the Sell mark) in
-  `paper_calls.json` (until 15 October also on the data branch as `records/<date>.json`,
-  pushed by `study.py`; that backup went with the Study page, so a restart of the
-  host starts the day's records afresh), with the contract's security id from Dhan's instrument list
+  `paper_calls.json` (and on the data branch as `records/<date>.json`, pushed by
+  `record.py` whenever they change and fetched back at start; off from 15 to
+  21 October with the Study page), with the contract's security id from Dhan's instrument list
   (`option_ids()`, a CSV at `DHAN_SCRIP_MASTER_URL`) so the feed and the poll in
   `main.py` carry its premium tick by tick (`note_premium`, `open_options`); `status()`/`deep_checks()` in plain words for
   `check_dhan.py`/`check_dhan.bat`. `main.py` serves NIFTY 50/NIFTY BANK details
@@ -164,16 +166,22 @@ their own logic. Read this before touching the code.
   and the log of rounds (`findings.md`). Loaded by no page.
 - `.github/workflows/wake.yml` - website side: wakes the sleeping host after the
   close (15:42 IST) so the server saves the day, and at 16:10 reads `/health`
-  (`study.summary()`: the latest complete day, the day checked without a
+  (`save`, `record.summary()`: the latest complete day, the day checked without a
   session, any problem; `token`: `dhan.token_check()` every half hour, whether
   Dhan accepts the token and until when) and fails the run when the day is not
   saved and pushed, or when the token is refused or expires before the next
   trading day's close. The owner does not look after the saving (6 October);
   Claude does; the token is the one thing only the owner can renew.
-- `study.py` and `static/study.html` - removed on 15 October (the owner: "remove this
-  study tab and everything under it"): the record of each session's candles and
-  calls CSV on the `data` branch, the options records backup, the Study page and
-  its routes. The days saved up to 15 October stay on the `data` branch as history.
+- `record.py` - the daily save: each session's candles (1, 5, 15, 30 minutes, both
+  indices, the day's and the previous day's figures) and its calls CSV on the `data`
+  branch at 15:40 (a partial copy every ten minutes during the session; a missed day
+  saved at the next wake, up to a week back), the options records backup
+  (`records/<date>.json`), the pull of both at start, and `POST /calls/{name}`, the
+  page's report of the calls it shows (`recordCalls` in detail.html; the watcher
+  sends its rows too). It was `study.py` with the Study page until 15 October
+  (removed: "remove this study tab and everything under it"); the save alone came
+  back on 21 October ("bring back the daily save, without study page"). No page
+  over it: the lab and `check_rule.py` read the saved days. 16 to 20 October are not saved.
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
