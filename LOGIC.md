@@ -265,7 +265,10 @@ sent anywhere, and the list is worked out afresh from the candles every minute.
 **Calls with Signals** (21 October, the owner: a third pill after Paper calls, "same index table which is present on Paper calls
 page. But it will not have any rules applied on it ... I want to build alternate option or set of rules on the chart and fire the
 calls based on these newly built rules. So this is just a start of it"): the same table, empty, for the set of rules still to
-come. The Fibonacci rule below never writes to it.
+come. The Fibonacci rule below never writes to it. The same evening: no note over the table, its header row fixed while it
+scrolls up, down, left and right (the OI chart's scroll box), and a Settings button whose popup lists the indicators, each
+active or inactive, remembered on the browser; "only keep Fib Levels as of now, if i tick it it will draw fib levels
+automatically on the chart as per the fib logic which we will develop asap": the tick is kept for that logic and draws nothing yet.
 
 The rule, in the order it is applied:
 

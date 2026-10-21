@@ -125,13 +125,19 @@
   #paper th, #paper td, #signals th, #signals td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
   #paper th:first-child, #paper td:first-child, #signals th:first-child, #signals td:first-child { text-align: left; }
   #paper th, #signals th { font-weight: 500; color: var(--muted); font-size: 12px; }
-  #signals-note { font-size: 13px; color: var(--ink-2); margin-bottom: 6px; }  /* Calls with Signals (21 October): the table of the rules still to come */
+  #signals-bar { display: flex; align-items: center; margin: 0 0 10px; }  /* Calls with Signals (21 October): the Settings button over the table */
+  #signals-settings { display: inline-flex; align-items: center; gap: 6px; } #signals-settings svg { width: 15px; height: 15px; }
+  .signals-scroll { max-height: 72vh; }
+  .indicators { display: grid; gap: 8px 14px; margin-bottom: 14px; } .indicators label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+  .indicators input { width: 16px; height: 16px; margin: 0; accent-color: var(--ink); }
   #paper td.up { color: var(--up); }
   #paper td.down { color: var(--down); }
   /* the header row stays in view while the page scrolls (owner's ask, 7 October): on a wide screen the table has no scroll
      box of its own, so the header sticks to the top of the window; on a narrow screen the table slides sideways and
      scrolls inside a box of its own, the header stuck to the box's top */
-  #paper thead th, #signals thead th { position: sticky; top: 0; background: var(--page); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
+  #paper thead th { position: sticky; top: 0; background: var(--page); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
+  #signals thead th { position: sticky; top: 0; background: var(--surface); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }  /* fixed in its scroll box, as the OI chart's header */
+  #signals th, #signals td { padding-left: 10px; }
   #paper-box .scroll { overflow: visible; }
   @media (max-width: 1099px) { #paper-box .scroll { overflow: auto; max-height: 80vh; } }
   #paper td.entry.wait { color: var(--ink-2); }
@@ -377,12 +383,26 @@
 
   <!-- Calls with Signals (21 October): the same table as Paper calls, empty until the new set of rules is built -->
   <section id="signals-box" aria-label="Calls with Signals" hidden>
-    <div id="signals-note">No rules on this table yet. The calls of the new set of rules will show here, in the same columns as Paper calls, once they are built.</div>
-    <div class="scroll">
+    <!-- 21 October evening, the owner: the note taken off; the header row fixed while the table scrolls up, down, left and right (the OI
+         chart's scroll box); a Settings button whose popup lists the indicators, each active or inactive, remembered on this browser:
+         "only keep Fib Levels as of now, if i tick it it will draw fib levels automatically on the chart as per the fib logic which we
+         will develop asap". The tick is kept (state.signalsFib) for that logic; until it is built, ticking draws nothing -->
+    <div id="signals-bar">
+      <button type="button" class="pill" id="signals-settings" aria-haspopup="dialog" title="Indicators: active or inactive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
+    </div>
+    <div class="chain-scroll signals-scroll">
       <table id="signals">
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+    <div id="signals-layout" class="layout" hidden role="dialog" aria-modal="true" aria-labelledby="indicators-title">
+      <div class="layout-box">
+        <h3 id="indicators-title">Indicators</h3>
+        <p class="hint">Tick an indicator to make it active. Remembered on this browser.</p>
+        <div id="indicators-list" class="indicators"><label><input type="checkbox" data-ind="fib">Fib Levels</label></div>
+        <div class="layout-foot"><button type="button" class="pill" id="indicators-close">Close</button></div>
+      </div>
     </div>
   </section>
 
@@ -1778,6 +1798,20 @@
       if (e.target.checked) chainHidden.delete(k); else chainHidden.add(k);
       try { localStorage.setItem("chainHidden", JSON.stringify([...chainHidden])); } catch (err) {}
       drawChain(); });
+  })();
+  (() => {  // Calls with Signals > Settings (21 October): the indicators, each active or inactive, remembered on this browser
+    const box = document.getElementById("signals-layout"), list = document.getElementById("indicators-list"), button = document.getElementById("signals-settings");
+    let active = new Set(); try { active = new Set(JSON.parse(localStorage.getItem("signalsIndicators") || "[]")); } catch (e) {}
+    state.signalsFib = active.has("fib");  // "Fib Levels": for the logic still to come; ticking it draws nothing yet
+    const fill = () => list.querySelectorAll("input").forEach(i => { i.checked = active.has(i.dataset.ind); });
+    const open = () => { fill(); box.hidden = false; const first = list.querySelector("input"); if (first) first.focus(); };
+    const close = () => { box.hidden = true; button.focus(); };
+    button.addEventListener("click", open);
+    document.getElementById("indicators-close").addEventListener("click", close);
+    box.addEventListener("click", e => { if (e.target === box) close(); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
+    list.addEventListener("change", e => { const k = e.target.dataset.ind; if (!k) return; if (e.target.checked) active.add(k); else active.delete(k);
+      state.signalsFib = active.has("fib"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {} });
   })();
   (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
     const head = document.querySelector("#chain thead"); let from = null;
