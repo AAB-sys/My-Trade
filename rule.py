@@ -114,6 +114,12 @@ def move_of_day(d):
 
 # ---- Layer 2 inside layer 3's signal: held or crossed, one candle one call, no repeat until closed back across
 
+def with_colour(bar: dict, side: str) -> bool:
+    """The candle's colour (Change 5, 21 October, see static/rules.js withColour): a Buy CE needs a candle that did not close below
+    its open, a Buy PE one that did not close above it; a candle that closed where it opened gives either."""
+    return bar["close"] >= bar["open"] if side == "CE" else bar["close"] <= bar["open"]
+
+
 def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, frm=None):
     """frm(L): the last close off line L; a close exactly on a line has not crossed it yet (9 October, see static/rules.js)."""
     def crossed(L):  # the candle's own wick counts as crossing too (18 October, see static/rules.js)
@@ -126,7 +132,8 @@ def signal_at(bar: dict, prev: float, levels: list, used: dict, signal: str, frm
     hits = []
     for l in levels:
         kind = "crossed" if crossed(l["price"]) else "held" if held(l["price"]) else None
-        if kind and (signal == "both" or signal == kind) and not used.get((l["price"], "CE" if bar["close"] > l["price"] else "PE")):  # the line at its price (8 October)
+        side = "CE" if bar["close"] > l["price"] else "PE"
+        if kind and (signal == "both" or signal == kind) and with_colour(bar, side) and not used.get((l["price"], side)):  # the line at its price (8 October)
             hits.append(l)
     if not hits:
         return None
