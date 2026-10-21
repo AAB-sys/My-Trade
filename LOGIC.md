@@ -269,7 +269,14 @@ The rule, in the order it is applied:
    "Crossed below" for a Buy PE; since 18 October the candle's own wick through the line counts, layer 2). Both count: the Off / On the line / Crossed above-below / Both
    switch left the page on 16 October (the owner's ask), and so did the lone Both button later that day; Both is the setting. When
    one candle signals at several levels, the one nearest its close counts: one
-   candle, one call **(owner to decide)**. A level that has given a call in a
+   candle, one call **(owner to decide)**. **The candle's colour** (Change 5,
+   21 October, from the 11:50 Buy CE off a red candle; the owner: "Yes, build
+   rule A"): the signal candle must close in the call's direction, a Buy CE from
+   a candle that closed above its open, a Buy PE from one that closed below; a
+   red candle above a line or a green one below gives nothing, and the line
+   stays free; a candle that closed where it opened gives either. On the 15
+   saved days, 29 September to 21 October, 15 of 224 calls came from a candle
+   of the wrong colour, 11 of them lost. A level that has given a call in a
    direction gives no more that way until the index has closed back across it
    (owner's decision, 4 October: no repeat calls while the index hovers at one
    level). The level is remembered by its price, not its name (8 October): with

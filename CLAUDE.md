@@ -157,7 +157,7 @@ their own logic. Read this before touching the code.
   P4 is the same exit acted on, `exitBack` in `paperTrades`, Study page only; P6/P7 the stops of 8 October evening,
   `stopShare` fixed at the entry, settled by `ideas.minutes` (the day's 1-minute candles) when a candle touched both,
   stop first without them; the Study page passes the minutes and never runs P6 with P7)
-  state (`Rules.levelsOf`, `signalAt`, `paperTrades`, `replayDay`) plus layer 4's
+  state (`Rules.levelsOf`, `signalAt` with `withColour`, the signal candle's colour of 21 October, Change 5, `paperTrades`, `replayDay`) plus layer 4's
   candle facts (`dayFacts`, `levelBehaviour`, `candleBreaks`) and layer 5's ideas
   under test (`IDEAS`, `ideasOf`: options of `paperTrades` that are off unless
   the Study page passes them), loaded by the index page and the study page so

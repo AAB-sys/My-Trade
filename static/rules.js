@@ -102,12 +102,17 @@
   // a close on one side of a line with the price on the other side before it: the last close off the line, or this candle's
   // own low or high. Until then such a candle was a hold, and the hold was sold at its target; as a cross it is held through
   // the target and sold by the exit rules, and ideas 8 and 5 apply to it
+  // The candle's colour (Change 5, the owner, 21 October, from the 11:50 Buy CE off a red candle: "Yes, build rule A"): the signal
+  // candle must close in the call's direction. A red candle (closed below its open) above a line gives no Buy CE, a green one
+  // (closed above its open) below a line gives no Buy PE; a candle that closed where it opened is neither, and gives either.
+  // On the 15 saved days 29 September to 21 October: 15 of 224 calls came from a candle of the wrong colour, 11 of them lost
+  const withColour = (bar, side) => side === "CE" ? bar.close >= bar.open : bar.close <= bar.open;
   function signalAt(bar, prev, levels, used, signal, from) {
     const crossed = L => { const p = from ? from(L) : prev; return (p < L && bar.close > L) || (p > L && bar.close < L) || (bar.low < L && bar.close > L) || (bar.high > L && bar.close < L); };
     const held = L => !crossed(L) && ((prev > L && bar.low <= L && bar.close > L) || (prev < L && bar.high >= L && bar.close < L));
     const hits = levels.filter(l => {
-      const kind = crossed(l.price) ? "crossed" : held(l.price) ? "held" : null;
-      return kind && (signal === "both" || signal === kind) && !used[l.price + "|" + (bar.close > l.price ? "CE" : "PE")];
+      const kind = crossed(l.price) ? "crossed" : held(l.price) ? "held" : null, side = bar.close > l.price ? "CE" : "PE";
+      return kind && (signal === "both" || signal === kind) && withColour(bar, side) && !used[l.price + "|" + side];
     });
     if (!hits.length) return null;
     const at = hits.reduce((a, b) => Math.abs(b.price - bar.close) < Math.abs(a.price - bar.close) ? b : a);
