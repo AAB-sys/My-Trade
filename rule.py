@@ -255,7 +255,7 @@ def atr_before(bars: list, period: int) -> list:
     return out
 
 
-TRAIL = {"lines": "all", "buffer": "none", "place": "back"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choices, 9 October (see static/rules.js TRAIL)
+TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choices, 9 October; the stop on the line crossed itself since 21 October, Change 4 (see static/rules.js TRAIL)
 
 # idea 13 (12 October, no call against a fresh run) was removed from the rule on 18 October (the owner: "all three remove")
 

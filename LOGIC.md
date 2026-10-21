@@ -481,13 +481,15 @@ The rule, in the order it is applied:
    **Rule 2: the stop moves line by line** (the owner's "Trading Rules
    Specification", 9 October; the settings the owner chose that afternoon, each
    in its own PR: "Rule 2 on all 7 lines" (#115), then "Stop one Fibonacci level
-   back"). Once a closed candle of a held break closes beyond a further line
-   than L in the call's direction (judged on the lines the candle is judged
-   against, as the signals: the day's range up to the candle before it, with
-   *Today so far*), the stop moves to the Fibonacci line one behind it (the line
-   just behind the one crossed, as the lines stand at that candle; when that is
-   L itself, the stop stays on L); each further line crossed moves it again,
-   never back; one candle past several lines counts the furthest. All seven
+   back"; then 21 October, Change 4, the owner on a trailing stop loss: "point
+   no 3", the stop on the line crossed itself). Once a closed candle of a held
+   break closes beyond a further line than L in the call's direction (judged on
+   the lines the candle is judged against, as the signals: the day's range up to
+   the candle before it, with *Today so far*), the stop moves to that line (from
+   9 to 21 October: to the Fibonacci line one behind it, the line just behind the
+   one crossed; when that was L itself, the stop stayed on L); each further line
+   crossed moves it again, never back; one candle past several lines counts the
+   furthest. All seven
    lines count, so with *Today so far* a close past the day's low or high so far
    (the 0% or 100% line) counts as crossing that line. Each
    candle is first checked against the stop as it stood before it, then the
