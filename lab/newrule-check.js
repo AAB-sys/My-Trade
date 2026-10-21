@@ -224,3 +224,99 @@ console.log("New Rule Chart: the double top rule, Rule 1 and Rule 2 match the do
   assert(rB.trades.length === 1 && rB.trades[0].side === "PE" && rB.trades[0].entry === 93.5, "TB PE-1 entry at 93.5: " + JSON.stringify(rB.trades[0]));
   console.log("New Rule Chart: the triple bottom matches its document's cases (CE-1 to CE-15, PE-1 to PE-8)");
 }
+
+// ---- The falling wedge and the rising wedge (the owner's "Falling Wedge Chart Pattern" and "Rising Wedge Chart Pattern" documents):
+// each document's Appendix A and B, ATR fixed at 1.5, the buffer 0.375; the scanner stepped candle by candle as the documents' reference
+// code runs it. Falling: CE-1 to CE-13, PE-1 to PE-9; rising: PE-1 to PE-13, CE-1 to CE-9 (the 5-minute settings; the daily chart is not built)
+{
+  const FA = [[103.5,104.0,103.0,103.7],[103.7,104.6,103.5,104.4],[104.4,105.2,104.2,105.0],[105.0,105.6,104.7,105.4],[105.4,106.0,105.0,105.2],[105.2,105.3,104.0,104.2],[104.2,104.4,103.0,103.2],[103.2,103.5,102.1,102.3],[102.3,102.6,101.3,101.5],[101.5,101.8,100.7,100.9],[100.9,101.2,100.3,100.6],[100.6,101.0,100.0,100.7],[100.7,101.1,100.4,101.0],[101.0,101.3,100.8,101.2],[101.2,101.4,100.9,101.0],[101.0,101.5,100.8,101.4],[101.4,101.6,101.1,101.3],[101.3,101.7,101.1,101.6],[101.6,101.8,101.1,101.2],[101.2,101.4,100.4,100.6],[100.6,100.8,99.8,100.0],[100.0,100.2,99.1,99.3],[99.3,99.5,98.5,98.7],[98.7,99.0,98.0,98.2],[98.2,98.5,97.6,97.8],[97.8,98.1,97.2,97.9],[97.9,98.6,97.5,98.4],[98.4,99.1,98.1,98.8],[98.8,99.2,98.4,98.6],[98.6,99.4,98.5,99.2],[99.2,100.2,99.0,100.0],[100.0,101.0,99.7,100.8],[100.8,101.8,100.5,101.6],[101.6,102.6,101.2,102.4],[102.4,103.4,102.1,103.2],[103.2,104.1,102.8,103.9],[103.9,105.0,103.6,104.7],[104.7,105.6,104.3,105.4]];
+  const FB = FA.slice(0, 29).concat([[98.6,98.7,97.4,97.6],[97.6,97.8,96.4,96.6],[96.6,96.8,95.2,95.4],[95.4,95.7,94.4,94.6],[94.6,94.9,93.6,93.8],[93.8,94.1,92.9,93.1],[93.1,93.4,92.2,92.4],[92.4,92.7,91.6,91.8],[91.8,92.1,91.0,91.2]]);
+  const RA = [[96.5,97.0,96.0,96.3],[96.3,96.5,95.4,95.6],[95.6,95.8,94.8,95.0],[95.0,95.3,94.4,94.6],[94.6,95.0,94.0,94.8],[94.8,96.0,94.7,95.8],[95.8,97.0,95.6,96.8],[96.8,97.9,96.5,97.7],[97.7,98.7,97.4,98.5],[98.5,99.3,98.2,99.1],[99.1,99.7,98.8,99.4],[99.4,100.0,99.0,99.3],[99.3,99.6,98.9,99.0],[99.0,99.2,98.7,98.8],[98.8,99.1,98.6,99.0],[99.0,99.2,98.5,98.6],[98.6,98.9,98.4,98.7],[98.7,98.9,98.3,98.4],[98.4,98.9,98.2,98.8],[98.8,99.6,98.6,99.4],[99.4,100.2,99.2,100.0],[100.0,100.9,99.8,100.7],[100.7,101.5,100.5,101.3],[101.3,102.0,101.0,101.8],[101.8,102.4,101.5,102.2],[102.2,102.8,101.9,102.1],[102.1,102.5,101.4,101.6],[101.6,101.9,100.9,101.2],[101.2,101.6,100.8,101.4],[101.4,101.5,100.6,100.8],[100.8,101.0,99.8,100.0],[100.0,100.3,99.0,99.2],[99.2,99.5,98.2,98.4],[98.4,98.8,97.4,97.6],[97.6,97.9,96.6,96.8],[96.8,97.2,95.9,96.1],[96.1,96.4,95.0,95.3],[95.3,95.7,94.4,94.6]];
+  const RB = RA.slice(0, 29).concat([[101.4,102.6,101.3,102.4],[102.4,103.6,102.2,103.4],[103.4,104.8,103.2,104.6],[104.6,105.6,104.3,105.4],[105.4,106.4,105.1,106.2],[106.2,107.1,105.9,106.9],[106.9,107.8,106.6,107.6],[107.6,108.4,107.3,108.2],[108.2,109.0,107.9,108.8]]);
+  const mk = rows => rows.map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const fA = mk(FA), fB = mk(FB), rA = mk(RA), rB = mk(RB);
+  const vary = (bars, i, r) => bars.map((b, k) => k === i ? { time: b.time, open: r[0], high: r[1], low: r[2], close: r[3] } : b);
+  const wcfg = (o) => ({ ...cfg, wedge: o });
+  // the scanner over every candle: the signals (with their candle) and the skips, as the reference code runs it
+  const scan = (bars, shape, c = cfg) => { const st = { active: null, used: new Set() }, out = [], skipped = []; for (let k = 0; k < bars.length; k++) { const s = N.wedgeStep(st, bars, k, shape, ATR, c, skipped); if (s) out.push(s); } return { out, skipped, fires: out.map(s => s.signalCandle).join() }; };
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  // falling wedge, CE-1: the signal on candle 29; High 1 candle 4 (106.0), High 2 candle 18 (101.8), slope -0.3; Low 1 candle 11 (100.0), Low 2
+  // candle 25 (97.2), slope -0.2; locked on candle 28; break level 98.5, widest width 4.6, target 103.1; Buy CE at candle 30's open, 99.2
+  const c1 = scan(fA, "falling");
+  assert(c1.fires === "29", "FW CE-1, CE-2: only candle 29 signals: " + c1.fires);
+  const s1 = c1.out[0];
+  assert(s1.side === "CE" && s1.rule === "falling wedge" && s1.kind === "falling wedge broke out" && s1.h1 === 4 && s1.h2 === 18 && s1.l1 === 11 && s1.l2 === 25 && near(s1.su, -0.3) && near(s1.sl, -0.2)
+    && s1.lockTime === fA[28].time && s1.L === 98.5 && s1.width === 4.6 && s1.target === 103.1, "FW CE-1: " + JSON.stringify(s1));
+  const w1 = N.wedgeAt(fA, 28, "falling", ATR); assert(w1 && near(w1.apex, 50) && w1.first === 4 && w1.last === 25 && near(w1.upper(29), 98.5) && near(w1.lower(29), 96.4), "FW section 6: apex 50, upper(29) 98.5, lower(29) 96.4");
+  assert(N.wedgeAt(fA, 27, "falling", ATR) === null, "FW: Low 2 is confirmed on candle 28, not before");
+  assert(scan(vary(fA, 18, [101.6, 103.2, 101.1, 101.2]), "falling").fires === "", "FW CE-3: parallel lines");
+  assert(scan(fA, "falling", wcfg({ minNarrowing: 0.5 })).fires === "", "FW CE-4: narrowing 54%, not 50%");
+  assert(scan(fA, "falling", wcfg({ minWidthAtr: 4.0 })).fires === "", "FW CE-5: width 4.6 under 6.0");
+  assert(scan(fA, "falling", wcfg({ minLen: 25 })).fires === "", "FW CE-6: 21 candles long");
+  assert(scan(vary(fA, 22, [99.3, 99.5, 97.3, 97.4]), "falling").fires === "", "FW CE-7: a close below the lower line while forming");
+  const c8 = scan(vary(fA, 29, [98.6, 99.4, 98.5, 98.7]), "falling"); assert(c8.fires === "30" && near(c8.out[0].L, 98.2), "FW CE-8: no signal on 29, the signal on 30 (upper line 98.2): " + c8.fires);
+  const c9 = scan(vary(fA, 29, [98.6, 102.0, 98.5, 101.8]), "falling"); assert(c9.fires === "" && c9.skipped.length === 1 && c9.skipped[0].why === "too far past the line", "FW CE-9: 3.3 past the line, the wedge used up");
+  assert(scan(fA, "falling", wcfg({ maxWait: 3 })).fires === "", "FW CE-10: the break 4 candles after the last touch");
+  const c11 = scan(vary(vary(fA, 27, [98.4, 100.0, 98.1, 99.8]), 28, [99.8, 100.2, 99.4, 99.9]), "falling"); assert(c11.fires === "28" && near(c11.out[0].L, 98.8), "FW CE-11: the lock candle is the signal (upper line 98.8): " + c11.fires);
+  assert(scan(fB, "falling").out.every(s => s.side !== "CE"), "FW CE-12: the upper line is never broken on the B data");
+  const c13 = N.runDay({ bars: fA.map((b, k) => ({ ...b, time: 1792381500 + 300 + (k - 29) * 300 })), levels: [], atrFixed: ATR, rules: ["falling wedge"] });
+  assert(c13.trades.length === 0 && c13.skipped.some(s => s.why === "outside entry window"), "FW CE-13: " + JSON.stringify(c13.skipped));
+  const rfA = N.runDay({ bars: fA, levels: [], atrFixed: ATR, rules: ["falling wedge"] });
+  assert(rfA.trades.length === 1 && rfA.trades[0].side === "CE" && rfA.trades[0].entry === 99.2 && rfA.trades[0].entryTime === fA[30].time && rfA.trades[0].L === 98.5, "FW CE-1 entry at 99.2: " + JSON.stringify(rfA.trades[0]));
+  // falling wedge, PE-1: the B data, the signal on candle 31 (lower line 96.0), break level 96.0, target 91.4; Buy PE at candle 32's open, 95.4
+  const p1 = scan(fB, "falling");
+  assert(p1.fires === "31" && p1.out[0].side === "PE" && p1.out[0].kind === "falling wedge failed" && p1.out[0].L === 96 && p1.out[0].target === 91.4 && p1.out[0].width === 4.6, "FW PE-1, PE-2: " + p1.fires + " " + JSON.stringify(p1.out[0]));
+  const p3 = scan(vary(fB, 31, [96.6, 96.8, 95.2, 95.8]), "falling"); assert(p3.fires === "32" && near(p3.out[0].L, 95.8), "FW PE-3: no signal on 31, the signal on 32 (lower line 95.8): " + p3.fires);
+  const p4 = scan(vary(fB, 31, [96.6, 96.8, 92.6, 92.8]), "falling"); assert(p4.fires === "" && p4.skipped.length === 1, "FW PE-4: 3.2 past the line, the wedge used up");
+  assert(scan(fA, "falling").out.every(s => s.side !== "PE"), "FW PE-5: the A data broke out upward");
+  const p6 = scan(vary(fA, 30, [99.2, 99.4, 95.4, 95.5]), "falling"); assert(p6.fires === "29" && p6.out[0].side === "CE", "FW PE-6: no PE on 30, the wedge already broke out on 29: " + p6.fires);
+  assert(scan(fB, "falling", wcfg({ minWidthAtr: 4.0 })).fires === "" && scan(fB, "falling", wcfg({ maxWait: 5 })).fires === "", "FW PE-7, PE-8");
+  const rfB = N.runDay({ bars: fB, levels: [], atrFixed: ATR, rules: ["falling wedge"] });
+  assert(rfB.trades.length === 1 && rfB.trades[0].side === "PE" && rfB.trades[0].entry === 95.4 && rfB.trades[0].entryTime === fB[32].time, "FW PE-1 entry at 95.4: " + JSON.stringify(rfB.trades[0]));
+  // PE-9: a trade already open: the A data (its CE trade open to the day end), then the B data 10 points higher (a second wedge, the same
+  // four touches 38 candles later): its PE signal while the CE trade is open is skipped, "one trade at a time"
+  const two = FA.concat(FB.map(r => r.map(v => v + 10))).map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const r9 = N.runDay({ bars: two, levels: [], atrFixed: ATR, rules: ["falling wedge"] });
+  assert(r9.trades.length === 1 && r9.trades[0].side === "CE" && r9.trades[0].how === "day end" && r9.skipped.some(s => s.why === "one trade at a time" && s.side === "PE" && s.time === two[31 + 38].time), "FW PE-9: " + JSON.stringify([r9.trades.map(t => [t.side, t.how]), r9.skipped]));
+  console.log("New Rule Chart: the falling wedge matches its document's cases (CE-1 to CE-13, PE-1 to PE-9)");
+  // rising wedge, PE-1: the signal on candle 29; High 1 candle 11 (100.0), High 2 candle 25 (102.8), slope 0.2; Low 1 candle 4 (94.0), Low 2
+  // candle 18 (98.2), slope 0.3; locked on candle 28; break level 101.5, widest width 4.6, target 96.9; Buy PE at candle 30's open, 100.8
+  const q1 = scan(rA, "rising");
+  assert(q1.fires === "29", "RW PE-1, PE-2: only candle 29 signals: " + q1.fires);
+  const t1 = q1.out[0];
+  assert(t1.side === "PE" && t1.rule === "rising wedge" && t1.kind === "rising wedge broke down" && t1.h1 === 11 && t1.h2 === 25 && t1.l1 === 4 && t1.l2 === 18 && near(t1.su, 0.2) && near(t1.sl, 0.3)
+    && t1.lockTime === rA[28].time && t1.L === 101.5 && t1.width === 4.6 && t1.target === 96.9, "RW PE-1: " + JSON.stringify(t1));
+  const v1 = N.wedgeAt(rA, 28, "rising", ATR); assert(v1 && near(v1.apex, 50) && near(v1.lower(29), 101.5) && near(v1.upper(29), 103.6), "RW section 6: apex 50, lower(29) 101.5, upper(29) 103.6");
+  assert(scan(vary(rA, 18, [98.4, 98.9, 96.8, 98.8]), "rising").fires === "", "RW PE-3: parallel lines");
+  assert(scan(rA, "rising", wcfg({ minNarrowing: 0.5 })).fires === "", "RW PE-4");
+  assert(scan(rA, "rising", wcfg({ minWidthAtr: 4.0 })).fires === "", "RW PE-5");
+  assert(scan(rA, "rising", wcfg({ minLen: 25 })).fires === "", "RW PE-6");
+  assert(scan(vary(rA, 22, [100.7, 102.7, 100.5, 102.6]), "rising").fires === "", "RW PE-7: a close above the upper line while forming");
+  const q8 = scan(vary(rA, 29, [101.4, 101.5, 100.6, 101.3]), "rising"); assert(q8.fires === "30" && near(q8.out[0].L, 101.8), "RW PE-8: the signal on 30 (lower line 101.8): " + q8.fires);
+  const q9 = scan(vary(rA, 29, [101.4, 101.5, 98.0, 98.2]), "rising"); assert(q9.fires === "" && q9.skipped.length === 1, "RW PE-9: 3.3 past the line, the wedge used up");
+  assert(scan(rA, "rising", wcfg({ maxWait: 3 })).fires === "", "RW PE-10");
+  const q11 = scan(vary(vary(rA, 27, [101.6, 101.9, 100.0, 100.2]), 28, [100.2, 100.6, 99.8, 100.1]), "rising"); assert(q11.fires === "28" && near(q11.out[0].L, 101.2), "RW PE-11: the lock candle is the signal (lower line 101.2): " + q11.fires);
+  assert(scan(rB, "rising").out.every(s => s.side !== "PE"), "RW PE-12: the lower line is never broken on the B data");
+  const q13 = N.runDay({ bars: rA.map((b, k) => ({ ...b, time: 1792381500 + 300 + (k - 29) * 300 })), levels: [], atrFixed: ATR, rules: ["rising wedge"] });
+  assert(q13.trades.length === 0 && q13.skipped.some(s => s.why === "outside entry window"), "RW PE-13");
+  const rrA = N.runDay({ bars: rA, levels: [], atrFixed: ATR, rules: ["rising wedge"] });
+  assert(rrA.trades.length === 1 && rrA.trades[0].side === "PE" && rrA.trades[0].entry === 100.8 && rrA.trades[0].entryTime === rA[30].time && rrA.trades[0].L === 101.5, "RW PE-1 entry at 100.8: " + JSON.stringify(rrA.trades[0]));
+  // rising wedge, CE-1: the B data, the signal on candle 31 (upper line 104.0), break level 104.0, target 108.6; Buy CE at candle 32's open, 104.6
+  const u1 = scan(rB, "rising");
+  assert(u1.fires === "31" && u1.out[0].side === "CE" && u1.out[0].kind === "rising wedge failed" && u1.out[0].L === 104 && u1.out[0].target === 108.6, "RW CE-1, CE-2: " + u1.fires + " " + JSON.stringify(u1.out[0]));
+  const u3 = scan(vary(rB, 31, [103.4, 104.8, 103.2, 104.2]), "rising"); assert(u3.fires === "32" && near(u3.out[0].L, 104.2), "RW CE-3: the signal on 32 (upper line 104.2): " + u3.fires);
+  const u4 = scan(vary(rB, 31, [103.4, 107.4, 103.2, 107.2]), "rising"); assert(u4.fires === "" && u4.skipped.length === 1, "RW CE-4: 3.2 past the line, the wedge used up");
+  assert(scan(rA, "rising").out.every(s => s.side !== "CE"), "RW CE-5: the A data broke down");
+  const u6 = scan(vary(rA, 30, [100.8, 104.6, 100.6, 104.5]), "rising"); assert(u6.fires === "29" && u6.out[0].side === "PE", "RW CE-6: no CE on 30, the wedge already broke down on 29: " + u6.fires);
+  assert(scan(rB, "rising", wcfg({ minWidthAtr: 4.0 })).fires === "" && scan(rB, "rising", wcfg({ maxWait: 5 })).fires === "", "RW CE-7, CE-8");
+  const rrB = N.runDay({ bars: rB, levels: [], atrFixed: ATR, rules: ["rising wedge"] });
+  assert(rrB.trades.length === 1 && rrB.trades[0].side === "CE" && rrB.trades[0].entry === 104.6 && rrB.trades[0].entryTime === rB[32].time, "RW CE-1 entry at 104.6: " + JSON.stringify(rrB.trades[0]));
+  const two2 = RA.concat(RB.map(r => r.map(v => v - 10))).map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));  // CE-9: the A data's PE trade open, the B data's CE signal skipped
+  const u9 = N.runDay({ bars: two2, levels: [], atrFixed: ATR, rules: ["rising wedge"] });
+  assert(u9.trades.length === 1 && u9.trades[0].side === "PE" && u9.trades[0].how === "day end" && u9.skipped.some(s => s.why === "one trade at a time" && s.side === "CE"), "RW CE-9: " + JSON.stringify([u9.trades.map(t => [t.side, t.how]), u9.skipped]));
+  // the mirror: the falling wedge rule on the rising wedge's data turned upside down gives the same signals with CE and PE swapped (the documents' note)
+  const flip = bars => bars.map(b => ({ time: b.time, open: 200 - b.open, high: 200 - b.low, low: 200 - b.high, close: 200 - b.close }));
+  const m1 = scan(flip(rA), "falling"), m2 = scan(flip(rB), "falling");
+  assert(m1.fires === "29" && m1.out[0].side === "CE" && near(m1.out[0].L, 200 - 101.5) && m2.fires === "31" && m2.out[0].side === "PE" && near(m2.out[0].L, 200 - 104), "the falling wedge is the rising wedge upside down");
+  console.log("New Rule Chart: the rising wedge matches its document's cases (PE-1 to PE-13, CE-1 to CE-9)");
+}
