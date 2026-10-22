@@ -409,5 +409,13 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   // a wider trail (1.5 ATR = 2.25): candle 25's close 89.5 gives a stop of 91.75, 26's 88.0 one of 90.25
   const t5 = run(peD, { ...atrCfg, trailAtr: 1.5 });
   assert(t5.stop === 88.75 && t5.how === "day end", "ATR trail x1.5: " + JSON.stringify([t5.stop, t5.how]));
+  // the page's setting, half an ATR (0.75): candle 24's close 91.5 gives a stop of 92.25, above L: stays 91.8; 25's 89.5 one of 90.25; 26's 88.0
+  // one of 88.75; 27's 86.5 one of 87.25; the day end sells at 85.5
+  assert(N.DT.trailAtr === 0.5, "the page trails half an ATR");
+  const t7 = run(peD, { ...N.DT });
+  assert(t7.stop === 87.25 && t7.how === "day end" && t7.points === 5.3, "ATR trail x0.5: " + JSON.stringify([t7.stop, t7.how, t7.points]));
+  // ...and candle 27 closing at 89.0, past the stop of 88.75 (one ATR would have held it, its stop at 89.5): sold, +1.8
+  const t8 = run(vary(peD, 27, [88.0, 89.3, 87.9, 89.0]), { ...N.DT });
+  assert(t8.how === "trail" && t8.exit === 89 && t8.points === 1.8, "ATR trail x0.5 sells where x1 holds: " + JSON.stringify([t8.how, t8.exit, t8.points]));
   console.log("New Rule Chart: the ATR trail holds, moves one ATR behind the best close, never back, and sells on a close past it");
 }

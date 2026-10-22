@@ -100,8 +100,10 @@ step on every closed candle, a trade open or not: their signal while a trade is 
 L is the line the signal broke (the neckline, the support, the resistance, or a wedge's or triangle's break level). Rule 1 first:
 sold on a close back across L (the reclaim); on the candle after the signal candle opening past the signal candle's close and
 touching its open (the retouch); or at the day end. Then the trailing stop, the owner's choice of 22 October ("build the 1 ATR
-trail"): once a candle has closed in profit, the stop sits one ATR behind the best close so far (the ATR as of the candle before),
-moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it (`trailAtr`, 1.0).
+trail", then the same evening "tighten it to half an ATR"): once a candle has closed in profit, the stop sits half an ATR behind the
+best close so far (the ATR as of the candle before), moved only in the call's favour and never loosened; sold at the close of the
+first candle that closes past it (`trailAtr`, 0.5). On the 25 calls of the 16 saved days and 22 October: +137.35 against +112.10
+with one ATR, 9 won against 8; on 22 October itself +131.80 against +102.35.
 No Fibonacci levels anywhere on this page or in its engine (the owner, 22 October: "I dont want it at all as of now"), and nothing
 of the Paper calls page: not its rule, not its lines ("completely separate and isolated").
 
