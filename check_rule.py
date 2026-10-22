@@ -17,17 +17,19 @@ JS = r"""
 require(process.argv[1]);
 const R = globalThis.Rules;
 const { minutes: table, jobs } = JSON.parse(require("fs").readFileSync(0, "utf8"));  // the days' one-minute candles once, by key: in every job they made the input too long for node
+const gateOf = (j) => j.gate === undefined ? undefined : j.gate === null ? null : { ...R.GATE, ...j.gate };  // the Call Gate (22 October night) as the job sets it
 const out = jobs.map(j => {
   const levels = j.levels;  // the live page: the levels as they stand now, for every candle
   j.minutes = j.minutes ? table[j.minutes] : null;
   const res = j.mode === "replay" ? R.replayDay({ bars: j.bars, move: j.move, previous: j.previous, seconds: j.seconds, signal: j.signal, ideas: j.ideas || undefined,
-                                                 trail: "trail" in j ? j.trail : undefined, newHighLow: !!j.newHighLow, minutes: j.minutes || null })  // Rule 2: as the page runs it, or another setting, or null (Rule 1 alone)
+                                                 trail: "trail" in j ? j.trail : undefined, newHighLow: !!j.newHighLow, minutes: j.minutes || null,
+                                                 gate: gateOf(j), atrSeed: j.atrSeed ?? null })  // Rule 2; the Call Gate as the job sets it: as the page runs it, or another setting, or null (Rule 1 alone)
     : j.mode === "live-close" ? R.paperTrades({ bars: j.bars, levelsAt: R.closeLevelsAt(j.bars, j.close), now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, holdBreaks: true,
-                                                trail: R.TRAIL, given: j.given || undefined, prevClose: j.close, minutes: j.minutes || null })  // the previous close's lines, redrawn (15 October)
+                                                trail: R.TRAIL, given: j.given || undefined, prevClose: j.close, minutes: j.minutes || null , gate: gateOf(j), atrSeed: j.atrSeed ?? null })  // the previous close's lines, redrawn (15 October)
     : j.mode === "live-today" ? R.paperTrades({ bars: j.bars, levelsAt: R.todayLevelsAt(j.bars), targetsAt: R.todayLinesAt(j.bars), now: j.now, seconds: j.seconds,
                                                 dayCandles: false, signal: j.signal, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined,
-                                                newHighLow: !!j.newHighLow, minutes: j.minutes || null })  // the index page and the watcher today
-    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined, newHighLow: !!j.newHighLow, minutes: j.minutes || null });
+                                                newHighLow: !!j.newHighLow, minutes: j.minutes || null , gate: gateOf(j), atrSeed: j.atrSeed ?? null })  // the index page and the watcher today
+    : R.paperTrades({ bars: j.bars, levelsAt: () => levels, now: j.now, seconds: j.seconds, dayCandles: false, signal: j.signal, ideas: j.ideas || undefined, holdBreaks: true, trail: R.TRAIL, given: j.given || undefined, newHighLow: !!j.newHighLow, minutes: j.minutes || null , gate: gateOf(j), atrSeed: j.atrSeed ?? null });
   res.trades.forEach(t => { t.read = R.readOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now });  // the candle verdict too
     t.carry = R.carryOf({ trade: t, bars: j.bars, seconds: j.seconds, now: j.mode === "replay" ? Infinity : j.now }); });  // and the carry read
   return res;
@@ -55,15 +57,17 @@ def py_run(jobs: list) -> list:
     out = []
     for j in jobs:
         j = {**j, "minutes": MINUTES.get(j["minutes"]) if j.get("minutes") else None}
+        gate = rule.GATE if "gate" not in j else (None if j["gate"] is None else {**rule.GATE, **j["gate"]})  # the Call Gate (22 October night) as the job sets it
+        seed = j.get("atrSeed")
         if j["mode"] == "replay":
-            res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL, bool(j.get("newHighLow")), j.get("minutes"))
+            res = rule.replay_day(j["bars"], j["move"], j["previous"], j["seconds"], j["signal"], j.get("ideas"), j["trail"] if "trail" in j else rule.TRAIL, bool(j.get("newHighLow")), j.get("minutes"), gate, seed)
         elif j["mode"] == "live-close":
-            res = rule.paper_trades(j["bars"], rule.close_levels_at(j["bars"], j["close"]), j["now"], j["seconds"], False, j["signal"], None, None, True, rule.TRAIL, given_of(j), False, j["close"], j.get("minutes"))
+            res = rule.paper_trades(j["bars"], rule.close_levels_at(j["bars"], j["close"]), j["now"], j["seconds"], False, j["signal"], None, None, True, rule.TRAIL, given_of(j), False, j["close"], j.get("minutes"), gate, seed)
         elif j["mode"] == "live-today":
-            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")), None, j.get("minutes"))
+            res = rule.paper_trades(j["bars"], rule.today_levels_at(j["bars"]), j["now"], j["seconds"], False, j["signal"], None, rule.today_lines_at(j["bars"]), True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")), None, j.get("minutes"), gate, seed)
         else:
             levels = j["levels"]
-            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")), None, j.get("minutes"))
+            res = rule.paper_trades(j["bars"], lambda i, L=levels: L, j["now"], j["seconds"], False, j["signal"], j.get("ideas"), None, True, rule.TRAIL, given_of(j), bool(j.get("newHighLow")), None, j.get("minutes"), gate, seed)
         for t in res["trades"]:
             t["read"] = rule.read_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # the candle verdict too
             t["carry"] = rule.carry_of(t, j["bars"], j["seconds"], rule.INF if j["mode"] == "replay" else j["now"])  # and the carry read
@@ -152,6 +156,8 @@ def main() -> int:
                         jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "newHighLow": True, "ideas": {"minDepth": 0.25, "exitBack": 0.25, "carryOn": 0.25},
                                      "what": f"{d['date']} {name} {key} {move} {signal} idea 24 with P3 to P5"})
                         jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "newHighLow": True, "what": f"{d['date']} {name} {key} {move} {signal} idea 24"})
+                        for gate, seed, tag in (({"mode": "LIVE"}, None, "gate live"), ({"mode": "SHADOW"}, 41.5, "gate seeded"), ({"mode": "LIVE"}, 41.5, "gate live seeded"), (None, None, "no gate")):  # the Call Gate (22 October night)
+                            jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "minutes": mins, "gate": gate, "atrSeed": seed, "what": f"{d['date']} {name} {key} {move} {signal} {tag}"})
                         if candles.get("1m"):  # the stops settled by the day's one-minute candles, as the Study page runs them
                             for share in (1, 0.5):
                                 jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal,
@@ -172,6 +178,8 @@ def main() -> int:
                         jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "minutes": mins, "what": f"{d['date']} {name} live today at {cut} {signal}"})
                         if prev:
                             jobs.append({"mode": "live-close", "bars": shown, "close": prev["close"], "now": now, "seconds": 300, "signal": signal, "minutes": mins, "what": f"{d['date']} {name} live close at {cut} {signal}"})
+                            jobs.append({"mode": "live-close", "bars": shown, "close": prev["close"], "now": now, "seconds": 300, "signal": signal, "minutes": mins, "gate": {"mode": "LIVE"}, "atrSeed": 38.0,
+                                         "what": f"{d['date']} {name} live close at {cut} {signal} gate live"})  # the Call Gate live, with the previous day's ATR
                         jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "newHighLow": True, "what": f"{d['date']} {name} live today at {cut} {signal} idea 24"})
                         jobs.append({"mode": "live-today", "bars": shown, "now": now, "seconds": 300, "signal": signal, "newHighLow": True, "what": f"{d['date']} {name} live today at {cut} {signal} idea 24"})
                     # calls given live (9 October): some candles' calls kept on a side the final prices may not give
@@ -207,6 +215,8 @@ def main() -> int:
         close = round(shown[0]["open"] * (1 + extra.uniform(-0.015, 0.015)), 2)  # the previous close's lines near the day's prices, redrawn when it runs past +-1.5% (15 October); its own random stream, so the other random days stay as they were
         jobs.append({"mode": "live-close", "bars": shown, "close": close, "now": shown[-1]["time"] + extra.randrange(1, 300), "seconds": 300, "signal": ("held", "crossed", "both")[k % 3], "what": f"random {k} live close"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + rnd.randrange(1, 300), "seconds": 300, "signal": "both", "what": f"random {k} live today"})
+        jobs.append({"mode": "live-close", "bars": shown, "close": close, "now": shown[-1]["time"] + extra.randrange(1, 300), "seconds": 300, "signal": "both", "gate": {"mode": ("LIVE", "SHADOW")[k % 2]},
+                     "atrSeed": (None, 6.0)[(k // 2) % 2], "what": f"random {k} live close gate"})  # the Call Gate on a random day, live and shadow, seeded and not
         given = {str(b["time"]): kept.choice(["CE", "PE"]) for b in kept.sample(shown[1:-1], min(5, len(shown) - 2))} if len(shown) > 2 else {}
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "what": f"random {k} live today given"})
         jobs.append({"mode": "live-today", "bars": shown, "now": shown[-1]["time"] + 299, "seconds": 300, "signal": "both", "given": given, "newHighLow": True,

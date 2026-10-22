@@ -628,3 +628,63 @@ console.log("rules unit checks passed");
   assert(rd.every(x => !/the \d/.test(x.why)), "the candle verdict names a previous close's line with its + or -: " + rd.map(x => x.why));
   console.log("previous close lines checks passed");
 }
+
+// ---- The Call Gate (the owner's "Call Gate" document, 22 October night; Rules.GATE and paperTrades gate/atrSeed): the document's
+// Appendix A (22 October read from a screenshot), yesterday's close 22,811.35 as the 0% line, ATR seeded at 30, replayed through the
+// live engine, which is the source of truth ("if its calls for 22 October differ from the replay, re-run the gate on its calls")
+{
+  const A = require("fs").readFileSync(require("path").join(__dirname, "call-gate-appendix-a.json"), "utf8");
+  const rows = JSON.parse(A), day0 = Math.floor((1792381500 + IST) / 86400) * 86400 - IST;  // 22 October 2026, 00:00 IST
+  const bars = rows.map(r => ({ time: day0 + r[0] * 3600 + r[1] * 60, open: r[2], high: r[3], low: r[4], close: r[5] }));
+  const hhmm = t => new Date(t * 1000).toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
+  const run = (mode, extra = {}) => R.replayDay({ bars, move: "close", previous: { close: 22811.35 }, seconds: 300, signal: "both", gate: { ...R.GATE, mode, ...extra }, atrSeed: 30 });
+  const shadow = run("SHADOW");
+  // the document's section 7 verdicts, on the calls the live engine gives too (its own 09:15, 10:20 and 12:25 signals are not in the
+  // document's replay; the 12:45 CE is parallel to its 12:25 CE here)
+  const want = { "09:25 CE": ["SKIP", "opening window"], "09:30 PE": ["SKIP", "opening window"], "09:35 CE": ["SKIP", "opening window"], "09:40 CE": ["SKIP", "parallel"],
+                 "10:05 CE": ["TAKE", "bounce from the bottom third of the zone (33% up)"], "10:10 CE": ["SKIP", "parallel"], "10:30 CE": ["SKIP", "parallel"],
+                 "10:40 PE": ["TAKE", "no sideways zone active"], "10:55 CE": ["SKIP", "buying in the top third of a sideways zone (71% up)"],
+                 "11:30 PE": ["TAKE", "middle of the zone, but a strong candle"], "11:45 PE": ["SKIP", "parallel"], "12:50 CE": ["SKIP", "parallel"],
+                 "12:55 PE": ["TAKE", "no sideways zone active"], "13:10 PE": ["SKIP", "parallel"], "14:00 PE": ["SKIP", "weak call from the middle of a sideways zone (40% up"],
+                 "14:30 CE": ["TAKE", "no sideways zone active"], "14:40 CE": ["SKIP", "parallel"], "14:45 PE": ["TAKE", "no sideways zone active"] };
+  const got = Object.fromEntries(shadow.trades.map(t => [`${hhmm(t.signalTime)} ${t.side}`, [t.gate, t.gateWhy]]));
+  for (const k in want) assert(got[k] && got[k][0] === want[k][0] && got[k][1].startsWith(want[k][1]), `Call Gate ${k}: wanted ${want[k].join(" · ")}, got ${(got[k] || []).join(" · ")}`);
+  assert(shadow.trades.length === 22 && shadow.gated.length === 0 && shadow.trades.every(t => t.entry != null), "shadow: every call fires as before, with its verdict: " + shadow.trades.length);
+  const p10 = shadow.trades.find(t => hhmm(t.signalTime) === "10:05"), p11 = shadow.trades.find(t => hhmm(t.signalTime) === "11:30");
+  assert(p10.points === 82.8 && p10.entry === 22634.5 && p10.how === "trail" && p11.points === 88.2 && p11.how === "trail", "RP-2, RP-3: " + JSON.stringify([p10.points, p11.points]));
+  const atrs = R.gateAtr(bars, 14, 30, 22811.35);
+  assert(Math.round(43.7 / atrs[27] * 10) / 10 === 1.1, "the 11:30 body is 1.1 x ATR as of the previous candle: " + atrs[27]);
+  // mode LIVE: a SKIP signal gives no order and comes back in `gated`; the TAKE calls alone fire; the lines stay locked either way
+  const live = run("LIVE");
+  assert(live.trades.length === 7 && live.trades.every(t => t.gate === "TAKE") && live.gated.length === 19 && live.gated.every(t => t.gate === "SKIP" && t.how === "gated"), "live: " + JSON.stringify([live.trades.length, live.gated.length]));
+  assert(R.round2(live.trades.reduce((a, t) => a + t.points, 0)) === 201.65 && R.round2(shadow.trades.reduce((a, t) => a + t.points, 0)) === -166.45, "live +201.65 against shadow -166.45");
+  assert(live.gated.find(t => hhmm(t.signalTime) === "15:25" && t.gateWhy.startsWith("late: signal after 14:45")), "the 15:25 signal is late");
+  // each check alone (the document's S-2, on the engine's own calls): off, the others still answer
+  const only = (o) => run("LIVE", o).trades.length;
+  assert(only({ noParallel: false, zoneRule: false, chaseAtr: 1000 }) === 17 && only({ zoneRule: false, chaseAtr: 1000, firstSignal: 0, lastSignal: 86400 }) === 13, "the window alone 17 calls, parallel alone 13: " + [only({ noParallel: false, zoneRule: false, chaseAtr: 1000 }), only({ zoneRule: false, chaseAtr: 1000, firstSignal: 0, lastSignal: 86400 })]);  // the engine's own calls (the document's replay: 15 and 12)
+  assert(R.replayDay({ bars, move: "close", previous: { close: 22811.35 }, seconds: 300, signal: "both", gate: null }).trades.every(t => t.gate === undefined), "no gate: no verdict on the calls");
+  // M-1, the day mirrored through yesterday's close (each price p becomes 45,622.70 - p): the same calls with CE and PE swapped, the same verdicts
+  const flip = bars.map(b => ({ time: b.time, open: R.round2(45622.7 - b.open), high: R.round2(45622.7 - b.low), low: R.round2(45622.7 - b.high), close: R.round2(45622.7 - b.close) }));
+  const m = R.replayDay({ bars: flip, move: "close", previous: { close: 22811.35 }, seconds: 300, signal: "both", gate: { ...R.GATE, mode: "SHADOW" }, atrSeed: 30 });
+  assert(m.trades.length === shadow.trades.length, "M-1 count");
+  const norm = (w) => w.replace(/\b(CE|PE)\b/, "x").replace(/[\d.,]+/g, "#").replace(/\b(top|bottom)\b/g, "edge").replace(/\b(above|below)\b/g, "past").replace(/\b(buying|selling)\b/g, "dealing").replace(/\b(breakout|breakdown)\b/g, "break").replace(/\b(high|low)\b/g, "end");  // the mirror swaps top and bottom, above and below
+  const mv = m.trades.map(t => [hhmm(t.signalTime), t.side, t.gate, norm(t.gateWhy)].join("|"));
+  const sv = shadow.trades.map(t => [hhmm(t.signalTime), t.side === "CE" ? "PE" : "CE", t.gate, norm(t.gateWhy)].join("|"));
+  assert(mv.join("\n") === sv.join("\n"), "M-1, the mirrored day: the same verdicts with CE and PE swapped:\n" + mv.join("\n") + "\n--\n" + sv.join("\n"));
+  assert(R.round2(m.trades.reduce((a, t) => a + t.points, 0)) === -166.45, "M-1: the same points");
+  // the zone itself: found at 10:05 from 22,587.4 to 22,678.9 and at 10:50 from 22,676.2 to 22,767.8 (the document's section 5.1 example)
+  const z = { box: null }, ga = R.gateAtr(bars, 14, 30, 22811.35);
+  for (let i = 0; i <= 10; i++) R.zoneStep(z, bars, i, ga[i], 0, 22811.35, R.GATE);
+  assert(z.box && z.box.lo === 22587.4 && z.box.hi === 22678.9, "the zone at 10:05: " + JSON.stringify(z.box));
+  for (let i = 11; i <= 19; i++) R.zoneStep(z, bars, i, ga[i], 0, 22811.35, R.GATE);
+  assert(z.box && z.box.lo === 22676.2 && z.box.hi === 22767.8, "the zone at 10:50: " + JSON.stringify(z.box));
+  // the gate's checks one by one, on a made-up candle at 11:00 with ATR 40 and no zone: parallel first, then the window, then the chase
+  const g = R.GATE, at = (h, mi) => ({ time: day0 + h * 3600 + mi * 60, open: 100, high: 110, low: 90, close: 105 });
+  assert(R.gateVerdict([at(11, 0)], 0, "CE", 40, { box: null }, true, 0, g).why.startsWith("parallel call: a CE call"), "A first");
+  assert(R.gateVerdict([at(9, 40)], 0, "CE", 40, { box: null }, false, 0, g).why.startsWith("opening window") && R.gateVerdict([at(9, 45)], 0, "CE", 40, { box: null }, false, 0, g).gate === "TAKE", "B: 09:40 out, 09:45 in");
+  assert(R.gateVerdict([at(14, 45)], 0, "PE", 40, { box: null }, false, 0, g).gate === "TAKE" && R.gateVerdict([at(14, 50)], 0, "PE", 40, { box: null }, false, 0, g).why.startsWith("late"), "B: 14:45 in, 14:50 out");
+  assert(R.gateVerdict([{ ...at(11, 0), high: 160, low: 50 }], 0, "CE", 40, { box: null }, false, 0, g).why.startsWith("chase: the signal candle's range 110 is more than 2.5 x ATR (40)"), "C: 110 > 100");
+  assert(R.gateVerdict([{ ...at(11, 0), high: 150, low: 50 }], 0, "CE", 40, { box: null }, false, 0, g).gate === "TAKE", "C: 100 is not more than 100");
+  assert(R.gateVerdict([at(11, 0)], 0, "CE", null, { box: null }, false, 0, g).why === "no sideways zone active", "no ATR yet: the chase and the zone cannot judge, TAKE");
+  console.log("Call Gate checks passed (the document's Appendix A, its verdicts, mode LIVE, the mirror, the zone, the checks one by one)");
+}

@@ -71,7 +71,8 @@ CALL_FIELDS = ("date", "index", "time_frame", "levels", "signal_mode", "first_se
                "contract", "premium_paid", "premium_now", "sell_below", "sold_at_premium",
                "candles_say", "exit_said_at_ist", "candles_why",  # the candle verdict (rules.js readOf / rule.read_of), 7 October: off the table, in the CSV
                "carry_deep", "beyond_level", "beyond_reached",  # the carry read (idea P5's question, rule.carry_of), 7 October evening
-               "exit_at_ist", "parallel", "reason")  # 21 October: the early exit's minute (19 October), the parallel mark (18 October), the page's Reason column
+               "exit_at_ist", "parallel", "reason",  # 21 October: the early exit's minute (19 October), the parallel mark (18 October), the page's Reason column
+               "gate", "gate_reason")  # 22 October night: the Call Gate's verdict on the signal, TAKE or SKIP, and why
 live_calls: dict = {}  # date -> {key: row}
 _calls_lock = threading.Lock()
 _calls_version = 0
@@ -128,7 +129,8 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                         "candles_why": str(c.get("candles_why") or "")[:60],
                         "carry_deep": str(c.get("carry_deep") or "")[:3], "beyond_level": _num(c.get("beyond_level")), "beyond_reached": str(c.get("beyond_reached") or "")[:3],
                         "exit_at_ist": _stamp(c.get("exit_at")) if c.get("exit_at") else "", "parallel": "yes" if c.get("parallel") else "",
-                        "reason": str(c.get("reason") or "")[:120] or row.get("reason", "")})  # the page's Reason column; the watcher's rows carry none, so they never blank it
+                        "reason": str(c.get("reason") or "")[:120] or row.get("reason", ""),  # the page's Reason column; the watcher's rows carry none, so they never blank it
+                        "gate": str(c.get("gate") or "")[:5], "gate_reason": str(c.get("gate_reason") or "")[:140]})  # the Call Gate (22 October night)
             day[key] = row
             if before is None or tuple(row.get(k) for k in HURRY) != before:
                 changed = True

@@ -157,6 +157,8 @@
   #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
   #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
   #paper td.why { text-align: left; color: var(--ink-2); }  /* "Reason" (19 October): what stood in brackets under the status */
+  #paper td.gate { font-weight: 600; } #paper td.gate.take, #paper tr.ended td.gate.take { color: var(--up); } #paper td.gate.skip, #paper tr.ended td.gate.skip { color: var(--down); }  /* the Call Gate's verdict (22 October night) */
+  #paper tr.gated td { color: var(--muted); }
   #paper td.pl small { display: block; color: var(--muted); font-weight: 400; }  /* "Total Profit/Loss" (19 October): one lot, or per unit */
   #paper td.cand.watch { color: var(--watch); }
   #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
@@ -380,7 +382,7 @@
     <div id="feed-note" hidden></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -862,11 +864,15 @@
     const levelsAt = judgedToday() ? Rules.todayLevelsAt(bars) : fromClose || (() => levels), targetsAt = judgedToday() ? Rules.todayLinesAt(bars) : null;
     return Rules.paperTrades({ bars, levelsAt, targetsAt, now: serverNow(), seconds: SECONDS[state.interval],
                                dayCandles: longCandles(), signal: state.signal, holdBreaks: !longCandles(), trail: Rules.TRAIL,
+                               atrSeed: gateSeed(),  // the Call Gate's ATR carried in from the sessions before the one shown (22 October night; Rules.GATE)
                                given: longCandles() || state.view === "1w" || !["today", "prev"].includes(state.period) ? null : givenCalls(),
                                newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                prevClose: judgedToday() ? null : prevCloseOf(),  // the first candle judged from the previous close (18 October; not on today's range, which has no lines before it); ideas 13, 8 and 5 left the rule that day
                                minutes: longCandles() ? null : sessionMinutes() });  // the session's one-minute candles: the owner's early exit of a held break (19 October)
   }
+  // The Call Gate's ATR seed: Wilder's ATR over the candles of the sessions loaded before the one shown (the page loads the last five
+  // days), as the server's watcher carries it in from the days before; null when fewer than 14 candles came before
+  const gateSeed = () => { const key = currentSession(); return key && key !== "all" ? Rules.atrSeedOf(state.candles.filter(b => sessionOf(b) < key), Rules.GATE.atrPeriod) : null; };
   // The shown session's one-minute candles (the owner's early exit, 19 October: a held break ends inside a candle once three minutes
   // stayed beyond the close before it and the price crossed one line back; Rules.paperTrades minutes): today's are fetched once a
   // minute, and the minute closing now comes from the ticks (applyTick), so the exit is judged the moment the minute closes; a past
@@ -917,7 +923,7 @@
     const table = document.getElementById("paper"), note = document.getElementById("paper-note");
     // the score line and the no-call notes (idea 13, ideas 8 and 5) stood here until 16 October: the owner took them off
     // the page with the Download CSV button ("remove all the red marked boxed things"); the rule gives the same calls
-    const { trades } = paperTrades(levels);
+    const { trades, gated } = paperTrades(levels);
     markSold(trades);
     lastPaper = { trades, levels };
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
@@ -929,9 +935,10 @@
     drawFeedNote();
     // in time order, the newest call at the top, open or finished alike (the owner's ask, 7 October: an open call
     // listed above a later one read as if it had been given later); a finished row is greyed, its target cell says how it ended
-    const rows = trades.slice().sort((a, b) => b.signalTime - a.signalTime);
+    const rows = trades.concat(gated || []).sort((a, b) => b.signalTime - a.signalTime);  // the signals the Call Gate held back (mode LIVE) keep their row
     table.querySelector("tbody").replaceChildren(...rows.map(t => {
       const tr = document.createElement("tr");
+      if (t.how === "gated") { tr.className = "gated"; tr.innerHTML = gatedCells(t); return tr; }
       tr.dataset.key = callKey(t);  // so a live premium finds its row
       tr.className = t.exit != null ? "ended" : "";
       tr.innerHTML = rowCells(t, optionRecords[callKey(t)]);
@@ -968,6 +975,7 @@
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
       exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
+      gate: t.gate || "", gate_reason: t.gateWhy || "",  // the Call Gate's verdict on the signal (22 October night)
       candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
@@ -989,8 +997,15 @@
     return `<td class="when">${callTime(t.signalTime)}${t.entryTime != null ? `<small>fired ${firedWhen(t)}</small>` : ""}</td>`
       + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r);
+      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t);
   }
+  // The Call Gate (the owner's document, 22 October night; Rules.GATE): "Gate" TAKE or SKIP, and why. In mode SHADOW a SKIP changes
+  // nothing ("shadow: order placed anyway"); in mode LIVE a SKIP signal gives no order and keeps its row (gatedCells)
+  const gateCells = (t) => !t.gate ? `<td class="gate"></td><td class="why"></td>`
+    : `<td class="gate ${t.gate === "SKIP" ? "skip" : "take"}">${t.gate}</td><td class="why">${t.gateWhy || ""}${t.gate === "SKIP" && Rules.GATE.mode !== "LIVE" ? " · shadow: order placed anyway" : ""}</td>`;
+  const gatedCells = (t) => `<td class="when">${callTime(t.signalTime)}</td><td class="call">Buy ${t.side}</td><td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
+    + `<td class="entry">no order</td><td>—</td><td class="opt">—</td><td class="opt">—</td><td class="cand">No order</td><td class="why"></td>`
+    + `<td class="gate skip">SKIP</td><td class="why">${t.gateWhy || ""} · live: no order</td>`;
   // The owner's words (12 October): "On the line" for a held signal; a crossed one says which way, "Crossed above" (Buy CE) or
   // "Crossed below" (Buy PE) the Fibonacci level
   const signalWord = (t) => t.kind === "held" ? "On the line" : t.side === "CE" ? "Crossed above" : "Crossed below";
