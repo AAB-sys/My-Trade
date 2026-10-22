@@ -1,5 +1,5 @@
 // New Rule Chart: the engine of the rules under Calls with Signals, built from the owner's chart pattern documents (21 and 22
-// October): the double top, double bottom, triple top, triple bottom, falling wedge, rising wedge, symmetrical triangle and bullish
+// October): the double top, double bottom, triple top, triple bottom, falling wedge, rising wedge and bullish
 // rectangle, with Rule 1 (the reclaim, the retouch, the day end) and the ATR trail after the entry. All on closed 5-minute index
 // candles. Apart from the Paper calls rule in rules.js, which it never touches and takes nothing from (the owner, 22 October:
 // "completely separate and isolated"). No Fibonacci levels anywhere in here (the owner, 22 October: "I dont want it at all as of now")
@@ -295,48 +295,6 @@
              lowerLine: [{ time: at(a.first), price: round2(a.lower(a.first)) }, { time: at(k), price: round2(a.lower(k)) }],
              signalCandle: k, signalTime: at(k), buffer: round2(buf), atr: round2(atr) };
   }
-  // ---- The symmetrical triangle (the owner's "Symmetrical Triangle Chart Pattern" document, 21 October): price between a falling
-  // upper line (through the two latest confirmed swing highs) and a rising lower line (through the two latest confirmed swing lows),
-  // neither more than 3 times steeper than the other (section 8, checks 4 and 5); the touches alternate, 10 to 60 candles first to
-  // last, the width at the first touch at least 2 ATR and at the last touch at most 70% of it, before the apex, every close inside
-  // the lines by the buffer, within 20 candles of the last touch. Section 9: the trend into it, from the 20 candles before the first
-  // touch: rise = the middle of the triangle at the first touch minus their lowest low, fall = their highest high minus that middle;
-  // bullish when the rise is at least 2 ATR and not less than the fall, bearish when the fall is at least 2 ATR and more than the
-  // rise, else no clear trend and no triangle. The side follows the break: a close above the upper line Buy CE, below the lower
-  // line Buy PE; the type only names it (bullish broke out / failed, bearish broke down / failed) and, with sides CONTINUATION_ONLY,
-  // switches the failures off. The window of 20 candles is taken from the day's own candles (the document lets it reach into the
-  // previous day; runDay runs one day). The daily chart is not built
-  const TRIANGLE = { swingN: 3, minLen: 10, maxLen: 60, maxWait: 20, minWidthAtr: 2.0, minNarrowing: 0.3, symRatioMax: 3.0, priorLookback: 20, priorMoveAtr: 2.0, sides: "BOTH", maxChaseAtr: 2.0 };
-  function triangleAt(bars, k, atr, cfg = DT) {
-    const w = { ...TRIANGLE, ...(cfg.triangle || {}) }, buf = bufferOf(atr, cfg);
-    if (atr == null || buf == null) return null;
-    const upTo = bars.slice(0, k + 1), highs = findSwings(upTo, 1, w.swingN), lows = findSwings(upTo, -1, w.swingN);
-    if (highs.length < 2 || lows.length < 2) return null;                                        // 1
-    const h1 = highs[highs.length - 2], h2 = highs[highs.length - 1], l1 = lows[lows.length - 2], l2 = lows[lows.length - 1];
-    if (!(h1 < l2 && l1 < h2)) return null;                                                      // 2: overlap
-    const first = Math.min(h1, l1), last = Math.max(h2, l2);
-    if (last - first < w.minLen || last - first > w.maxLen) return null;                        // 3: length
-    if (k - last > w.maxWait) return null;                                                       // 10: recent
-    const H1 = bars[h1].high, H2 = bars[h2].high, L1 = bars[l1].low, L2 = bars[l2].low;
-    const su = (H2 - H1) / (h2 - h1), sl = (L2 - L1) / (l2 - l1);
-    if (!(su < 0 && sl > 0)) return null;                                                        // 4: lower highs, higher lows
-    if (Math.max(-su, sl) / Math.min(-su, sl) > w.symRatioMax) return null;                       // 5: symmetrical
-    const upper = (t) => H1 + su * (t - h1), lower = (t) => L1 + sl * (t - l1);
-    const wFirst = upper(first) - lower(first), wLast = upper(last) - lower(last);
-    if (wFirst < w.minWidthAtr * atr) return null;                                               // 6: wide enough
-    if (wLast > (1 - w.minNarrowing) * wFirst) return null;                                      // 7: narrowing
-    const apex = (L1 - sl * l1 - H1 + su * h1) / (su - sl);
-    if (k >= apex) return null;                                                                  // 8: before the apex
-    for (let j = first; j <= last; j++) if (bars[j].close > upper(j) + buf || bars[j].close < lower(j) - buf) return null;  // 9: inside
-    const s0 = Math.max(0, first - w.priorLookback);                                             // 11: the trend into it (section 9)
-    if (s0 >= first) return null;
-    const mid = (upper(first) + lower(first)) / 2;
-    let lo = Infinity, hi = -Infinity; for (let j = s0; j < first; j++) { lo = Math.min(lo, bars[j].low); hi = Math.max(hi, bars[j].high); }
-    const rise = mid - lo, fall = hi - mid, need = w.priorMoveAtr * atr;
-    const type = rise >= need && rise >= fall ? "bullish" : fall >= need ? "bearish" : null;
-    if (!type) return null;
-    return { rule: "symmetrical triangle", type, key: `${h1},${h2},${l1},${l2}`, h1, h2, l1, l2, first, last, su, sl, upper, lower, width: wFirst, apex, rise, fall, lockCandle: k };
-  }
   // ---- The bullish rectangle (the owner's "Bullish Rectangle Chart Pattern" document, 21 October): after a rise, two swing highs
   // within half an ATR of each other and two swing lows within half an ATR, alternating; the resistance the higher high, the support
   // the lower low, both flat, the height at least 2 ATR; the support at least 2 ATR above the lowest low of the 20 candles before the
@@ -365,7 +323,7 @@
     for (let j = first; j <= last; j++) if (bars[j].close > resistance + buf || bars[j].close < support - buf) return null;  // 7: inside
     return { rule: "bullish rectangle", key: `${h1},${h2},${l1},${l2}`, h1, h2, l1, l2, first, last, upper: () => resistance, lower: () => support, resistance, support, height, width: height, apex: Infinity, priorRise: support - lo, lockCandle: k };
   }
-  // the documents' scanner for the triangle and the rectangle, stepped by one closed candle (sections 15 and 13): st = { active, used };
+  // the document's scanner for the rectangle, stepped by one closed candle (section 13): st = { active, used };
   // detect gives the pattern passing every check on candle k. A pattern that has already closed outside its lines since its last
   // touch was confirmed is never locked (one break cannot give a second signal through a later set of touches); locked, it is dropped
   // after maxWait candles from the last touch or at the apex; the first close outside the locked lines by the buffer decides the side
@@ -387,12 +345,11 @@
     else if (a.lower(k) - close > buf) { side = "PE"; dist = a.lower(k) - close; level = a.lower(k); }
     else return null;                                                                            // still inside
     st.used.add(a.key); st.active = null;                                                        // one trade per pattern
-    const at = (t) => bars[t].time, works = a.type ? (a.type === "bullish" ? side === "CE" : side === "PE") : side === "CE";
-    if (a.type && w.sides === "CONTINUATION_ONLY" && !works) { if (skipped) skipped.push({ time: at(k), side, rule: a.rule, why: "failure switched off" }); return null; }
+    const at = (t) => bars[t].time, works = side === "CE";
     if (dist > w.maxChaseAtr * atr) { if (skipped) skipped.push({ time: at(k), side, rule: a.rule, why: "too far past the line" }); return null; }
-    const kind = a.type ? `${a.type} symmetrical triangle ${works ? (side === "CE" ? "broke out" : "broke down") : "failed"}` : `bullish rectangle ${works ? "broke out" : "failed"}`;
-    return { side, rule: a.rule, kind, type: a.type || null, works, h1: a.h1, h2: a.h2, l1: a.l1, l2: a.l2, h1Time: at(a.h1), h2Time: at(a.h2), l1Time: at(a.l1), l2Time: at(a.l2), lockTime: at(a.lockCandle),
-             su: a.su, sl: a.sl, width: round2(a.width), rise: a.rise != null ? round2(a.rise) : undefined, fall: a.fall != null ? round2(a.fall) : undefined,
+    const kind = `bullish rectangle ${works ? "broke out" : "failed"}`;
+    return { side, rule: a.rule, kind, works, h1: a.h1, h2: a.h2, l1: a.l1, l2: a.l2, h1Time: at(a.h1), h2Time: at(a.h2), l1Time: at(a.l1), l2Time: at(a.l2), lockTime: at(a.lockCandle),
+             width: round2(a.width),
              resistance: a.resistance != null ? round2(a.resistance) : undefined, support: a.support != null ? round2(a.support) : undefined, height: a.height != null ? round2(a.height) : undefined,
              L: round2(level), target: round2(side === "CE" ? level + a.width : level - a.width),
              upperLine: [{ time: at(a.first), price: round2(a.upper(a.first)) }, { time: at(k), price: round2(a.upper(k)) }],
@@ -402,7 +359,6 @@
   // the rules with a scanner of their own: the name, and the step over one candle
   const SCANNERS = { "falling wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "falling", atr, cfg, skipped),
                      "rising wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "rising", atr, cfg, skipped),
-                     "symmetrical triangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, triangleAt, { ...TRIANGLE, ...(cfg.triangle || {}) }, atr, cfg, skipped),
                      "bullish rectangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, rectangleAt, { ...RECT, ...(cfg.rect || {}) }, atr, cfg, skipped) };
   const istHM = (t) => { const s = (t + 19800) % 86400; return `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`; };
   // The day replayed: the entries, Rule 1 and the ATR trail over closed candles.
@@ -412,15 +368,15 @@
   // sides: the double top ("PE") alone for now (the owner, 21 October: the double bottom's logic comes in another document)
   // rules: which patterns run, in order: the double top (Buy PE), the double bottom (Buy CE, or Buy PE when it fails), the triple top
   // (Buy PE, or Buy CE when it fails), the triple bottom (Buy CE, or Buy PE when it fails), the falling wedge (Buy CE, or Buy PE when
-  // it fails), the rising wedge (Buy PE, or Buy CE when it fails), the symmetrical triangle (the side of the break), the bullish rectangle
+  // it fails), the rising wedge (Buy PE, or Buy CE when it fails), the bullish rectangle
   // (Buy CE, or Buy PE when it fails). Rules firing on one candle the same way: the first in the list; different ways: nothing.
-  // The wedge, triangle and rectangle rules keep state (the locked pattern, the patterns used up): their scanners step on every closed
+  // The wedge and rectangle rules keep state (the locked pattern, the patterns used up): their scanners step on every closed
   // candle, a trade open or not, so the first close outside the locked lines always uses the pattern up; a signal while a trade is open is skipped ("one trade at a time")
   const RULES = { "double top": (bars, k, atr, cfg) => [detectEntry(bars, k, "PE", atr, cfg)],
                   "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg), detectDoubleBottom(bars, k, "PE", atr, cfg)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
                   "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)] };
-  function runDay({ bars, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "symmetrical triangle", "bullish rectangle"] }) {
+  function runDay({ bars, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle"] }) {
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
@@ -473,5 +429,5 @@
     }
     return { trades, skipped };
   }
-  root.NewRule = { CFG, DT, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, TRIANGLE, triangleAt, RECT, rectangleAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
