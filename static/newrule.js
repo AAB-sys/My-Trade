@@ -42,7 +42,7 @@
   const DT = { swingN: 3, minGap: 5, maxGap: 40, maxWait: 20, eqAtr: 0.5, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
                buffer: "ATR", atrMult: 0.25, fixedPoints: 0, entryFrom: "09:30", entryTo: "14:45", eod: "15:30",
                maxLossesInRow: 2, maxTradesPerDay: null, maxLossPerDay: null, skipExpiryDay: true,
-               trailAtr: 1.0 };  // the trailing stop after the entry (22 October, the owner: "build the 1 ATR trail"): one ATR behind the best close
+               trailAtr: 0.5 };  // the trailing stop after the entry (22 October, the owner: "build the 1 ATR trail", then "tighten it to half an ATR"): half an ATR behind the best close
   const bufferOf = (atr, cfg) => cfg.buffer === "ATR" ? (atr == null ? null : cfg.atrMult * atr) : cfg.buffer === "FIXED" ? cfg.fixedPoints : 0;
   // Section 9.8: the double top (side "PE", d = +1) or bottom ("CE", d = -1) whose signal candle is k. atr: as of candle k - 1
   function detectEntry(bars, k, side, atr, cfg = DT) {
@@ -439,7 +439,7 @@
         if (k === lastK && dayEnd && !how) how = "day end";
         else {  // Rule 1, then the ATR trail (22 October): the stop starts on L; a close back across it is the reclaim (Exit A); on C2 the retouch
           // (Exit B). Once a candle has closed in profit the stop sits trailAtr x ATR (the ATR as of the candle before) behind the best close so
-          // far, moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it
+          // far (half an ATR since 22 October evening), moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it
           if (d * (bar.close - t.stop) < 0) how = t.stage === 1 ? "reclaim" : "trail";
           else if (t.stage === 1 && k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";
           if (!how && atr != null) {

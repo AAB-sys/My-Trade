@@ -1909,8 +1909,8 @@
         : t.kind === "double bottom failed" || t.kind === "triple bottom failed" ? `BUY PE: ${t.rule} failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`  // the documents' entry messages
         : t.kind === "triple top failed" ? `BUY CE: triple top failed · ${points} · resistance ${fmt.format(t.resistance)} broken · pattern target ${fmt.format(t.target)}`
         : `BUY ${t.side}: ${t.kind} · ${points} · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
-      const trailName = `the trailing stop ${fmt.format(t.stop)}`;  // the ATR trail (22 October: one ATR behind the best close)
-      const reason = t.exit == null ? (t.stage === 2 ? `In profit, continue · sell if a candle closes ${sideWord} ${trailName} · it follows the best close, one ATR behind, never back` : entryMsg)
+      const trailName = `the trailing stop ${fmt.format(t.stop)}`;  // the ATR trail (22 October: half an ATR behind the best close)
+      const reason = t.exit == null ? (t.stage === 2 ? `In profit, continue · sell if a candle closes ${sideWord} ${trailName} · it follows the best close, half an ATR behind, never back` : entryMsg)
         : t.how === "trail" ? `${callTime(t.exitTime)} candle · Sell: index candle closed ${sideWord} ${trailName}`
         : t.how === "reclaim" ? `${callTime(t.exitTime)} candle · Reclaim: closed back ${sideWord} ${fmt.format(t.L)}`
         : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
