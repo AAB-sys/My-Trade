@@ -95,13 +95,16 @@ firing on one candle the same way: the first in the order double top, double bot
 wedge, symmetrical triangle, bullish rectangle; different ways: nothing. The wedge, triangle and rectangle scanners keep state and
 step on every closed candle, a trade open or not: their signal while a trade is open is skipped, "one trade at a time".
 
-## After the entry: Rule 1 and Rule 2
+## After the entry: Rule 1, then the ATR trail (22 October)
 
-L is the line the signal broke (the neckline, the support, the resistance, or a wedge's or triangle's break level). Rule 1 until the first of the chart's lines is
-crossed: sold on a close back across L (the reclaim); on the candle after the signal candle opening past the signal candle's close
-and touching its open (the retouch); or at the day end. Once a candle closes beyond the first line in the profit direction by the
-buffer, Rule 2: the stop on each line crossed (AT_LEVEL; ONE_LEVEL_BACK is an option), never back; sold on a close back past it.
-The lines are the chart's own lines of the day, the Previous close lines (hidden on the plain chart, used by the rule).
+L is the line the signal broke (the neckline, the support, the resistance, or a wedge's or triangle's break level). Rule 1 first:
+sold on a close back across L (the reclaim); on the candle after the signal candle opening past the signal candle's close and
+touching its open (the retouch); or at the day end. Then the trailing stop, the owner's choice of 22 October ("build the 1 ATR
+trail"): once a candle has closed in profit, the stop sits one ATR behind the best close so far (the ATR as of the candle before),
+moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it. On the 25 calls of
+the 16 saved days and 22 October this gave +106.60 against +33.50 with the stop on the chart's lines. The lines (Rule 2 of document
+02: the stop on each Previous close line crossed, AT_LEVEL or ONE_LEVEL_BACK) stay in the engine as the `exit: "lines"` option,
+and `trailAtr` sets the distance (1.0). Nothing of this touches the Paper calls rule, whose Rule 2 on the lines is its own.
 
 ## On the page
 
@@ -109,7 +112,7 @@ The Calls with Signals table always carries every rule's calls (Time with the en
 the index at entry, the pattern target with the stop or the exit, the points, the status, the documents' messages). The Settings
 popup has a tick per rule (and Fib Levels, waiting for its logic): ticked, the chart marks the pattern's points (T1, T2, T3 or
 B1, B2, B3; a wedge's, triangle's or rectangle's H1, H2, L1, L2) and the signal, and draws the broken line (the pattern's two
-lines too, from the first touch to the signal candle) and an open call's stop.
+lines too, from the first touch to the signal candle) and an open call's trailing stop (dashed).
 
 ## Figures
 

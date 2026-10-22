@@ -76,7 +76,8 @@
   // closed 5-minute index candles. The settings are the document's section 9.9 and 6.6 defaults
   const DT = { swingN: 3, minGap: 5, maxGap: 40, maxWait: 20, eqAtr: 0.5, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
                buffer: "ATR", atrMult: 0.25, fixedPoints: 0, stopPlacement: "AT_LEVEL", entryFrom: "09:30", entryTo: "14:45", eod: "15:30",
-               maxLossesInRow: 2, maxTradesPerDay: null, maxLossPerDay: null, skipExpiryDay: true };
+               maxLossesInRow: 2, maxTradesPerDay: null, maxLossPerDay: null, skipExpiryDay: true,
+               exit: "atr", trailAtr: 1.0 };  // the trailing stop after the entry (22 October, the owner: "build the 1 ATR trail"): "atr", one ATR behind the best close; "lines", Rule 2 on the chart's lines as before
   const bufferOf = (atr, cfg) => cfg.buffer === "ATR" ? (atr == null ? null : cfg.atrMult * atr) : cfg.buffer === "FIXED" ? cfg.fixedPoints : 0;
   // Section 9.8: the double top (side "PE", d = +1) or bottom ("CE", d = -1) whose signal candle is k. atr: as of candle k - 1
   function detectEntry(bars, k, side, atr, cfg = DT) {
@@ -485,7 +486,18 @@
         const t = open, d = t.side === "CE" ? 1 : -1, buf = bufferOf(atr, cfg) || 0;
         let how = null;
         if (k === lastK && dayEnd && !how) how = "day end";
-        else if (t.stage === 1) {
+        else if (cfg.exit === "atr") {  // the ATR trail (22 October): the stop starts on L (Rule 1's reclaim), and once a candle has closed in profit it
+          // sits one ATR (trailAtr x ATR, the ATR as of the candle before) behind the best close so far, moved only in the call's favour;
+          // sold at the close of the first candle that closes past it. The retouch (Exit B) on C2 as before. Replaces Rule 2's line stops
+          // for the new rules (the study of 22 October: +106.60 against +33.50 on the 25 calls of the 16 saved days and that day)
+          if (d * (bar.close - t.stop) < 0) how = t.stage === 1 ? "reclaim" : "trail";
+          else if (t.stage === 1 && k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";
+          if (!how && atr != null) {
+            const gain = d * (bar.close - t.entry);
+            if (gain > 0) { t.best = round2(Math.max(t.best || 0, gain)); const s = round2(bar.close - d * cfg.trailAtr * atr);  // behind this close: the best close, as the stop never moves back
+              if (d * (s - t.stop) > 0) { t.stop = s; t.stage = 2; t.stopPct = ""; } }
+          }
+        } else if (t.stage === 1) {
           if (d * (bar.close - t.L) < 0) how = "reclaim";                   // Exit A
           else if (k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";  // Exit B, C2 only
           if (!how) {  // the first level crossed (by the buffer) starts the trailing: the stop sits on it (or one back, never behind L)
@@ -493,7 +505,7 @@
             if (trailStep(st, bar.close, t.lv, d, buf, cfg) === "HOLD" && st.trailIdx >= 0) { t.stage = 2; t.st = st; }
           }
         } else if (trailStep(t.st, bar.close, t.lv, d, buf, cfg) === "SELL") how = "trail";
-        t.stop = t.stage === 2 ? t.st.stop : t.L; t.stopPct = t.stage === 2 ? t.st.stopPct : t.Lpct;
+        if (cfg.exit !== "atr") { t.stop = t.stage === 2 ? t.st.stop : t.L; t.stopPct = t.stage === 2 ? t.st.stopPct : t.Lpct; }
         if (how) { t.exit = bar.close; t.exitTime = bar.time; t.how = how; t.points = round2(d * (bar.close - t.entry)); open = null;
           if (t.points < 0) { lossesInRow++; dayLoss += -t.points; } else lossesInRow = 0; }
         if (open || how === "day end") { wedgeSigs.forEach(s => skipped.push({ time: bar.time, side: s.side, rule: s.rule, why: open ? "one trade at a time" : "day end" })); continue; }

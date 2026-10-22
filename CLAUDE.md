@@ -191,7 +191,8 @@ their own logic. Read this before touching the code.
   PR), `detectEntry` / `runDay` (the double top and bottom rule with Rule 1 and Rule 2 of the "Trading Rules Specification"; the page
   runs it under Calls with Signals, `drawSignals`; `detectDoubleBottom`, `detectTripleTop`, `detectTripleBottom`, `wedgeAt` /
   `wedgeStep` (the falling and rising wedge, a locked-lines scanner with state), `triangleAt` / `rectangleAt` / `lockedStep` (the
-  symmetrical triangle and the bullish rectangle) from their documents). Described in
+  symmetrical triangle and the bullish rectangle) from their documents; `runDay`'s exits: Rule 1, then the ATR trail, 22 October,
+  the stop one ATR behind the best close; `exit: "lines"` keeps Rule 2 on the lines). Described in
   `NEW_RULES.md`, apart from LOGIC.md. `lab/newrule-check.js` runs every case the documents give. PRs for it are named "New Rule Chart_".
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day

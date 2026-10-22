@@ -1882,7 +1882,7 @@
       const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom" || t.rule === "triple bottom", wedge = t.upperLine != null;
       const lineName = t.rule === "bullish rectangle" ? (t.side === "CE" ? "resistance" : "support") : wedge ? "break level" : bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
       lines.push({ nr: true, price: t.L, name: lineName, up, solid: true });
-      if (t.exit == null && t.stop != null && t.stop !== t.L) lines.push({ nr: true, price: t.stop, name: "stop " + (t.stopPct || ""), up, solid: false });
+      if (t.exit == null && t.stop != null && t.stop !== t.L) lines.push({ nr: true, price: t.stop, name: ("stop " + (t.stopPct || "")).trim(), up, solid: false });
       if (wedge) {  // the wedge's, triangle's or rectangle's two lines from the first touch to the signal candle, High 1, High 2 above, Low 1, Low 2 below
         segs.push({ points: t.upperLine, color: colour }, { points: t.lowerLine, color: colour });
         marks.push({ time: t.h1Time + IST_OFFSET, position: "aboveBar", color: colour, shape: "circle", text: "H1" }, { time: t.h2Time + IST_OFFSET, position: "aboveBar", color: colour, shape: "circle", text: "H2" });
@@ -1908,8 +1908,9 @@
         : t.kind === "double bottom failed" || t.kind === "triple bottom failed" ? `BUY PE: ${t.rule} failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`  // the documents' entry messages
         : t.kind === "triple top failed" ? `BUY CE: triple top failed · ${points} · resistance ${fmt.format(t.resistance)} broken · pattern target ${fmt.format(t.target)}`
         : `BUY ${t.side}: ${t.kind} · ${points} · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
-      const reason = t.exit == null ? (t.stage === 2 ? `Target passed, continue · sell if a candle closes ${sideWord} ${t.stopPct || ""} (${fmt.format(t.stop)})` : entryMsg)
-        : t.how === "trail" ? `${callTime(t.exitTime)} candle · Sell: index candle closed ${sideWord} ${t.stopPct || ""} (${fmt.format(t.stop)})`
+      const trailName = t.stopPct ? `${t.stopPct} (${fmt.format(t.stop)})` : `the trailing stop ${fmt.format(t.stop)}`;  // Rule 2 on a line, or the ATR trail (22 October: one ATR behind the best close)
+      const reason = t.exit == null ? (t.stage === 2 ? `In profit, continue · sell if a candle closes ${sideWord} ${trailName}${t.stopPct ? "" : " · it follows the best close, one ATR behind, never back"}` : entryMsg)
+        : t.how === "trail" ? `${callTime(t.exitTime)} candle · Sell: index candle closed ${sideWord} ${trailName}`
         : t.how === "reclaim" ? `${callTime(t.exitTime)} candle · Reclaim: closed back ${sideWord} ${fmt.format(t.L)}`
         : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
       tr.innerHTML = `<td class="when">${callTime(t.signalTime)}<small>in at ${callTime(t.entryTime)}</small></td>`
