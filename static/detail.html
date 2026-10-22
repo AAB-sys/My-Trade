@@ -1835,8 +1835,8 @@
   })();
   // ---- New Rule Chart: the double top (Buy PE) and double bottom (Buy CE) rule of the owner's "Trading Rules Specification" (21 October),
   // with Rule 1 (break-and-hold) and Rule 2 (trailing) after the entry: NewRule.runDay over the session's closed 5-minute candles,
-  // the candle forming now lending only its open to an entry. The trailing levels are the chart's own lines of the day, the Previous
-  // close lines (hidden on the plain chart, used by the rule). The ATR carries over from the previous day's candles. Its rows fill the
+  // the candle forming now lending only its open to an entry. The exits are Rule 1 and the ATR trail (22 October): nothing of the
+  // Paper calls page's lines or rule is used here. The ATR carries over from the previous day's candles. Its rows fill the
   // Calls with Signals table; the chart shows each call's neckline (solid) and the open call's stop (dashed), with T1 and T2 marked.
   // Paper only, index points: no option yet (the next New Rule Chart PR). Nothing here touches the Paper calls rule (rules.js)
   let signalMarkers = null;  // the chart library's marker set for the series drawn now (v5: createSeriesMarkers; older: series.setMarkers)
@@ -1852,11 +1852,13 @@
     if (!key || key === "all" || longCandles()) return null;  // the rule always runs for the table (the owner, 21 October: "it should always be in the table"); the tick is for the chart
     const now = serverNow(), bars = sessionBars(), closed = bars.filter(b => endOf(b) <= now).length;
     if (!closed) return null;
-    const day = dayBefore(key), levels = day && day.close != null ? Rules.closeLevels(day.close).map(l => ({ pct: Rules.levelName(l.ratio, true), price: l.price })) : [];
+    // no lines of the Paper calls page here (the owner, 22 October: "this page should only work on chart rules ... completely separate
+    // and isolated"): the new rules' exits are Rule 1 and the ATR trail, nothing from rules.js or its Previous close lines
+    const levels = [];
     const before = state.candles.filter(b => sessionOf(b) < key);  // the previous sessions loaded, for the ATR's warm-up
     const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
     const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
-    return { ...NewRule.runDay({ bars, levels, atrSeed: seed, closedCount: closed, dayEnd }), levels, bars };
+    return { ...NewRule.runDay({ bars, levels, atrSeed: seed, closedCount: closed, dayEnd }), bars };
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -1900,7 +1902,7 @@
     const body = document.querySelector("#signals tbody");
     const rows = run.trades.slice().sort((a, b) => b.signalTime - a.signalTime).map(t => {
       const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";
-      const sideWord = t.side === "PE" ? "above" : "below", now = (run.bars && run.bars.length ? run.bars[run.bars.length - 1].close : t.entry), pts = t.exit != null ? t.points : Rules.round2(t.side === "CE" ? now - t.entry : t.entry - now);  // an open call: against the price now (the forming candle's close)
+      const sideWord = t.side === "PE" ? "above" : "below", now = (run.bars && run.bars.length ? run.bars[run.bars.length - 1].close : t.entry), pts = t.exit != null ? t.points : NewRule.round2(t.side === "CE" ? now - t.entry : t.entry - now);  // an open call: against the price now (the forming candle's close)
       const status = t.exit != null ? "Take Exit" : t.stage === 2 ? "Hold" : `Buy ${t.side}`;
       const tag = t.rule === "double bottom" || t.rule === "triple bottom" ? "B" : "T", points = t.upperLine ? `H1 ${callTime(t.h1Time)} · H2 ${callTime(t.h2Time)} · L1 ${callTime(t.l1Time)} · L2 ${callTime(t.l2Time)}` : `${tag}1 ${callTime(t.t1Time)} · ${tag}2 ${callTime(t.t2Time)}` + (t.t3Time ? ` · ${tag}3 ${callTime(t.t3Time)}` : "");
       const entryMsg = t.rule === "bullish rectangle" ? (t.side === "CE" ? `BUY CE: bullish rectangle broke out · ${points} · resistance ${fmt.format(t.resistance)} · pattern target ${fmt.format(t.target)}` : `BUY PE: bullish rectangle failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`)  // the rectangle document's messages, section 11

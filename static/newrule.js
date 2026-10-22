@@ -454,7 +454,9 @@
   }
   const istHM = (t) => { const s = (t + 19800) % 86400; return `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`; };
   const pctName = (l) => l.pct != null ? l.pct : "";
-  // The day replayed: the entries, Rule 1 and Rule 2 over closed candles. levels: [{pct, price}] of the chart (sorted by price);
+  // The day replayed: the entries, Rule 1 and the ATR trail (or Rule 2 on levels) over closed candles. levels: [{pct, price}], the
+  // Fibonacci levels of document 02 once the owner's own are built: the page passes none (22 October: this page is separate from
+  // the Paper calls page and takes nothing from its lines);
   // atrSeed: the ATR to start the day with (from the previous day's candles), else the day warms up on its own 14 candles;
   // atrFixed: a test's fixed ATR. One trade at a time; both sides firing on one candle skip both; the filters of section 9.5
   // closedCount: how many of the bars have closed (the rest is the candle forming now: an entry may take its open, nothing else)

@@ -102,9 +102,10 @@ sold on a close back across L (the reclaim); on the candle after the signal cand
 touching its open (the retouch); or at the day end. Then the trailing stop, the owner's choice of 22 October ("build the 1 ATR
 trail"): once a candle has closed in profit, the stop sits one ATR behind the best close so far (the ATR as of the candle before),
 moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it. On the 25 calls of
-the 16 saved days and 22 October this gave +106.60 against +33.50 with the stop on the chart's lines. The lines (Rule 2 of document
-02: the stop on each Previous close line crossed, AT_LEVEL or ONE_LEVEL_BACK) stay in the engine as the `exit: "lines"` option,
-and `trailAtr` sets the distance (1.0). Nothing of this touches the Paper calls rule, whose Rule 2 on the lines is its own.
+the 16 saved days and 22 October this gave +106.60 against +33.50 with the stop on the chart's lines. Rule 2 of document 02 (the stop on
+Fibonacci levels crossed, AT_LEVEL or ONE_LEVEL_BACK) stays in the engine as the `exit: "lines"` option for the day the owner's own
+levels are built; the page passes no levels. `trailAtr` sets the distance (1.0). This page takes nothing from the Paper calls page:
+not its rule, not its Previous close lines (the owner, 22 October: "completely separate and isolated").
 
 ## On the page
 
