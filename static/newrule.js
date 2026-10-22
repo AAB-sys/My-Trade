@@ -1,18 +1,12 @@
-// New Rule Chart (the owner's documents 04 and 02, 21 October): the Fibonacci retracement levels of the latest clear move, drawn
-// on the chart when the Fib Levels tick is on under Calls with Signals. This file is the new set of rules' engine, apart from the
-// Paper calls rule in rules.js, which it never touches. First PR: the levels alone, no entry, no filter, no call.
-//
-// The move (document 04, sections 4 and 5): B is the latest swing high (a candle whose high is at least as high as the 3 candles
-// before and the 3 after; known once the third candle after it has closed); A is the lowest low in the 36 candles before B; no high
-// between A and B above B; B at least 3 candles after A; B - A at least 3 times the ATR(14) (Wilder, as of the candle before B).
-// A down-move is the mirror: B a swing low, A the highest high before it. When both sides have a move, the later B wins.
-// The levels (section 3): leg = |B - A|; up-move: price(r) = B - r x leg; down-move: price(r) = B + r x leg, for r = 1 (A), 0.786,
-// 0.618, 0.5, 0.382, 0.236, 0 (B), -0.272, -0.618, -1 (the extensions beyond B).
+// New Rule Chart: the engine of the rules under Calls with Signals, built from the owner's chart pattern documents (21 and 22
+// October): the double top, double bottom, triple top, triple bottom, falling wedge, rising wedge, symmetrical triangle and bullish
+// rectangle, with Rule 1 (the reclaim, the retouch, the day end) and the ATR trail after the entry. All on closed 5-minute index
+// candles. Apart from the Paper calls rule in rules.js, which it never touches and takes nothing from (the owner, 22 October:
+// "completely separate and isolated"). No Fibonacci levels anywhere in here (the owner, 22 October: "I dont want it at all as of now")
 (function (root) {
   "use strict";
   const round2 = (x) => Math.round(x * 100) / 100;
-  const RATIOS = [1, 0.786, 0.618, 0.5, 0.382, 0.236, 0, -0.272, -0.618, -1];
-  const CFG = { swingN: 3, maxLeg: 36, minLegCandles: 3, impulseAtr: 3, atrPeriod: 14 };
+  const CFG = { swingN: 3, atrPeriod: 14 };
 
   // ATR(14) with Wilder smoothing, seeded by the simple average of the first 14 true ranges: atr[i] is the ATR as of candle i
   // (candles 0..i); null until 14 true ranges exist (the first candle has no previous close: its true range is its own range)
@@ -40,44 +34,15 @@
     }
     return out;
   }
-  // The latest clear move on one side, or null. atrAt: the ATR to measure the move with (a test may fix it); else the series'
-  function moveOnSide(bars, d, cfg = CFG, atrFixed = null) {
-    const swings = findSwings(bars, d, cfg.swingN);
-    const atrs = atrFixed == null ? atrSeries(bars, cfg.atrPeriod) : null;
-    const end = (b) => d > 0 ? b.high : b.low, start = (b) => d > 0 ? b.low : b.high;
-    for (let s = swings.length - 1; s >= 0; s--) {  // the latest swing first; an unfit one lets the one before stand
-      const b = swings[s], B = end(bars[b]);
-      const w0 = Math.max(0, b - cfg.maxLeg);
-      let a = -1;
-      for (let j = w0; j < b; j++) if (a < 0 || d * (start(bars[j]) - start(bars[a])) < 0) a = j;
-      if (a < 0 || b - a < cfg.minLegCandles) continue;
-      let clean = true;
-      for (let j = a; j < b && clean; j++) if (d * (end(bars[j]) - B) > 0) clean = false;
-      if (!clean) continue;
-      const A = start(bars[a]), leg = d * (B - A);
-      const atr = atrFixed != null ? atrFixed : (b > 0 ? atrs[b - 1] : null);
-      if (atr == null || leg < cfg.impulseAtr * atr) continue;
-      return { side: d > 0 ? "CE" : "PE", up: d > 0, a, b, A: round2(A), B: round2(B), leg: round2(leg), atr: round2(atr), aTime: bars[a].time, bTime: bars[b].time,
-               levels: RATIOS.map(r => ({ ratio: r, price: round2(B - d * r * leg), name: levelName(r) })) };
-    }
-    return null;
-  }
-  const levelName = (r) => (r === 0 ? "0" : r === 1 ? "100" : (r * 100).toFixed(1).replace(/\.0$/, "")) + "%";  // "78.6%", "0%" (B), "-27.2%", "100%" (A)
-  // The latest clear move on either side (the later B wins), on the closed candles given
-  function moveAt(bars, cfg = CFG, atrFixed = null) {
-    const up = moveOnSide(bars, 1, cfg, atrFixed), down = moveOnSide(bars, -1, cfg, atrFixed);
-    if (up && down) return up.b >= down.b ? up : down;
-    return up || down;
-  }
   const atrStep = (prevAtr, tr, period = CFG.atrPeriod) => (prevAtr * (period - 1) + tr) / period;  // one Wilder step (document 02, T11)
 
-  // ---- The double top (Buy PE) and double bottom (Buy CE) rule, with Rule 1 (break-and-hold) and Rule 2 (trailing) after the
+  // ---- The double top (Buy PE) and double bottom (Buy CE) rule, with Rule 1 (break-and-hold) after the
   // entry: the owner's "Trading Rules Specification" of 21 October (document 02, double top with candle stick pattern). All on
   // closed 5-minute index candles. The settings are the document's section 9.9 and 6.6 defaults
   const DT = { swingN: 3, minGap: 5, maxGap: 40, maxWait: 20, eqAtr: 0.5, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
-               buffer: "ATR", atrMult: 0.25, fixedPoints: 0, stopPlacement: "AT_LEVEL", entryFrom: "09:30", entryTo: "14:45", eod: "15:30",
+               buffer: "ATR", atrMult: 0.25, fixedPoints: 0, entryFrom: "09:30", entryTo: "14:45", eod: "15:30",
                maxLossesInRow: 2, maxTradesPerDay: null, maxLossPerDay: null, skipExpiryDay: true,
-               exit: "atr", trailAtr: 1.0 };  // the trailing stop after the entry (22 October, the owner: "build the 1 ATR trail"): "atr", one ATR behind the best close; "lines", Rule 2 on the chart's lines as before
+               trailAtr: 1.0 };  // the trailing stop after the entry (22 October, the owner: "build the 1 ATR trail"): one ATR behind the best close
   const bufferOf = (atr, cfg) => cfg.buffer === "ATR" ? (atr == null ? null : cfg.atrMult * atr) : cfg.buffer === "FIXED" ? cfg.fixedPoints : 0;
   // Section 9.8: the double top (side "PE", d = +1) or bottom ("CE", d = -1) whose signal candle is k. atr: as of candle k - 1
   function detectEntry(bars, k, side, atr, cfg = DT) {
@@ -439,22 +404,8 @@
                      "rising wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "rising", atr, cfg, skipped),
                      "symmetrical triangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, triangleAt, { ...TRIANGLE, ...(cfg.triangle || {}) }, atr, cfg, skipped),
                      "bullish rectangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, rectangleAt, { ...RECT, ...(cfg.rect || {}) }, atr, cfg, skipped) };
-  // Rule 2 (sections 6.5 and 5): one closed candle against the stop and the levels; st = { trailIdx, stop }; lv ordered in the
-  // profit direction. Returns "SELL" or "HOLD"; the exit is checked on the stop as it stood before the candle
-  function trailStep(st, close, lv, d, buf, cfg = DT) {
-    if (d * (close - st.stop) < 0) return "SELL";
-    let next = st.trailIdx;
-    lv.forEach((l, i) => { if (i > st.trailIdx && d * (close - l.price) > buf) next = i; });
-    if (next > st.trailIdx) {
-      st.trailIdx = next;
-      const stopIdx = cfg.stopPlacement === "AT_LEVEL" ? next : next - 1;
-      if (stopIdx >= 0 && d * (lv[stopIdx].price - st.stop) > 0) { st.stop = lv[stopIdx].price; st.stopPct = lv[stopIdx].pct; }
-    }
-    return "HOLD";
-  }
   const istHM = (t) => { const s = (t + 19800) % 86400; return `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`; };
-  const pctName = (l) => l.pct != null ? l.pct : "";
-  // The day replayed: the entries, Rule 1 and Rule 2 over closed candles. levels: [{pct, price}] of the chart (sorted by price);
+  // The day replayed: the entries, Rule 1 and the ATR trail over closed candles.
   // atrSeed: the ATR to start the day with (from the previous day's candles), else the day warms up on its own 14 candles;
   // atrFixed: a test's fixed ATR. One trade at a time; both sides firing on one candle skip both; the filters of section 9.5
   // closedCount: how many of the bars have closed (the rest is the candle forming now: an entry may take its open, nothing else)
@@ -469,7 +420,7 @@
                   "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg), detectDoubleBottom(bars, k, "PE", atr, cfg)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
                   "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)] };
-  function runDay({ bars, levels, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "symmetrical triangle", "bullish rectangle"] }) {
+  function runDay({ bars, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "symmetrical triangle", "bullish rectangle"] }) {
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
@@ -483,29 +434,20 @@
       const wedgeSigs = [];  // the wedge scanners step first, every candle (see above)
       for (const name of rules) if (scanners[name]) { const s = SCANNERS[name](scanners[name], bars, k, atr, cfg, skipped); if (s) wedgeSigs.push(s); }
       if (open) {  // the trade on this candle's close (the entry candle itself is judged too, as C2 is the candle after C1)
-        const t = open, d = t.side === "CE" ? 1 : -1, buf = bufferOf(atr, cfg) || 0;
+        const t = open, d = t.side === "CE" ? 1 : -1;
         let how = null;
         if (k === lastK && dayEnd && !how) how = "day end";
-        else if (cfg.exit === "atr") {  // the ATR trail (22 October): the stop starts on L (Rule 1's reclaim), and once a candle has closed in profit it
-          // sits one ATR (trailAtr x ATR, the ATR as of the candle before) behind the best close so far, moved only in the call's favour;
-          // sold at the close of the first candle that closes past it. The retouch (Exit B) on C2 as before. Replaces Rule 2's line stops
-          // for the new rules (the study of 22 October: +106.60 against +33.50 on the 25 calls of the 16 saved days and that day)
+        else {  // Rule 1, then the ATR trail (22 October): the stop starts on L; a close back across it is the reclaim (Exit A); on C2 the retouch
+          // (Exit B). Once a candle has closed in profit the stop sits trailAtr x ATR (the ATR as of the candle before) behind the best close so
+          // far, moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it
           if (d * (bar.close - t.stop) < 0) how = t.stage === 1 ? "reclaim" : "trail";
           else if (t.stage === 1 && k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";
           if (!how && atr != null) {
             const gain = d * (bar.close - t.entry);
             if (gain > 0) { t.best = round2(Math.max(t.best || 0, gain)); const s = round2(bar.close - d * cfg.trailAtr * atr);  // behind this close: the best close, as the stop never moves back
-              if (d * (s - t.stop) > 0) { t.stop = s; t.stage = 2; t.stopPct = ""; } }
+              if (d * (s - t.stop) > 0) { t.stop = s; t.stage = 2; } }
           }
-        } else if (t.stage === 1) {
-          if (d * (bar.close - t.L) < 0) how = "reclaim";                   // Exit A
-          else if (k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";  // Exit B, C2 only
-          if (!how) {  // the first level crossed (by the buffer) starts the trailing: the stop sits on it (or one back, never behind L)
-            const st = { trailIdx: -1, stop: t.L, stopPct: t.Lpct };
-            if (trailStep(st, bar.close, t.lv, d, buf, cfg) === "HOLD" && st.trailIdx >= 0) { t.stage = 2; t.st = st; }
-          }
-        } else if (trailStep(t.st, bar.close, t.lv, d, buf, cfg) === "SELL") how = "trail";
-        if (cfg.exit !== "atr") { t.stop = t.stage === 2 ? t.st.stop : t.L; t.stopPct = t.stage === 2 ? t.st.stopPct : t.Lpct; }
+        }
         if (how) { t.exit = bar.close; t.exitTime = bar.time; t.how = how; t.points = round2(d * (bar.close - t.entry)); open = null;
           if (t.points < 0) { lossesInRow++; dayLoss += -t.points; } else lossesInRow = 0; }
         if (open || how === "day end") { wedgeSigs.forEach(s => skipped.push({ time: bar.time, side: s.side, rule: s.rule, why: open ? "one trade at a time" : "day end" })); continue; }
@@ -526,13 +468,10 @@
       if (cfg.maxLossPerDay != null && dayLoss >= cfg.maxLossPerDay) { skipped.push({ time: bar.time, side: sig.side, why: "daily loss limit" }); continue; }
       if (lossesInRow >= cfg.maxLossesInRow) { skipped.push({ time: bar.time, side: sig.side, why: `${cfg.maxLossesInRow} losses in a row` }); continue; }
       if (cfg.skipExpiryDay && expiryDay) { skipped.push({ time: bar.time, side: sig.side, why: "expiry day" }); continue; }
-      const d = sig.side === "CE" ? 1 : -1;
-      const lv = levels.slice().sort((x, y) => d * (x.price - y.price)).filter(l => d * (l.price - sig.L) > 0);  // the levels beyond L in the profit direction
-      const Lpct = (levels.find(l => Math.abs(l.price - sig.L) < 1e-9) || {}).pct;
-      open = { ...sig, entryTime: entryBar.time, entry: entryBar.open, c1: bar, Lpct, lv, stage: 1, stop: sig.L, stopPct: Lpct, exit: null, exitTime: null, points: null, how: "open" };
+      open = { ...sig, entryTime: entryBar.time, entry: entryBar.open, c1: bar, stage: 1, stop: sig.L, best: 0, exit: null, exitTime: null, points: null, how: "open" };
       trades.push(open);
     }
     return { trades, skipped };
   }
-  root.NewRule = { RATIOS, CFG, DT, RULES, atrSeries, atrStep, findSwings, moveOnSide, moveAt, levelName, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, TRIANGLE, triangleAt, RECT, rectangleAt, lockedStep, SCANNERS, trailStep, runDay, istHM };
+  root.NewRule = { CFG, DT, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, TRIANGLE, triangleAt, RECT, rectangleAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
