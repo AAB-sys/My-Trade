@@ -94,7 +94,11 @@ their own logic. Read this before touching the code.
   and fails on one differing call. Any change to the rule goes into both files
   and must pass it; a research round runs it too.
 - `dhan.py` - the owner's broker API (DhanHQ v2) as a data source: settings from
-  `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. Real-time candles,
+  `DHAN_CLIENT_ID`/`DHAN_ACCESS_TOKEN`, data endpoints only. A refused request is named in the error (`/charts/historical
+  refused: HTTP 400 DH-905 ...`); a chart request tries every toDate form (tomorrow, today, now) and remembers the one Dhan
+  accepted (`_chart_form`); the daily list may be refused (22 October morning, DH-905 on every index while the minute
+  candles worked): `daily_or_none` then builds the previous session from the candles, the refusal on `/health` as
+  `feed.daily_problem`, so the dashboard, the pages and the daily save keep working. Real-time candles,
   quotes for `QUOTE_IDS` (NIFTY 50, NIFTY BANK, SENSEX; the ids are checked
   against Dhan's instrument list once it is read, `id_problem()` on `/health`
   as `feed.ids`; `list_report()` as `feed.option_list`: ids per underlying, SENSEX's expiries, a few SENSEX rows as written;

@@ -1027,6 +1027,7 @@ def feed_state() -> dict:
     return {"server_time": now_ist(), "started_at": started_at, "tick_hours": in_tick_hours(), "watching": sorted(set(live_subs.values())),
             "status": d["status"], "stream": d["stream"], "stream_tick": d["stream_tick"], "poll": d["poll"], "tiles": d["tiles"],
             "tiles_problem": d["tiles_problem"],
+            "daily_problem": dhan.daily_problem(),  # Dhan refusing the daily list (22 October): the previous session then comes from the candles
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
             "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
