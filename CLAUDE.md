@@ -190,7 +190,7 @@ their own logic. Read this before touching the code.
   with Signals, apart from `rules.js`, which it never touches and takes nothing from (the owner, 22 October: "completely separate and
   isolated"; no Fibonacci levels anywhere in it, "I dont want it at all as of now"). `detectEntry` (the double top), `detectDoubleBottom`,
   `detectTripleTop`, `detectTripleBottom`, `wedgeAt` / `wedgeStep` (the falling and rising wedge, a locked-lines scanner with state),
-  `triangleAt` / `rectangleAt` / `lockedStep` (the symmetrical triangle and the bullish rectangle); `runDay` runs a day: the entries,
+  `rectangleAt` / `lockedStep` (the bullish rectangle; the symmetrical triangle was removed on 22 October, new documents to come); `runDay` runs a day: the entries,
   Rule 1 (the reclaim, the retouch, the day end), then the ATR trail (the stop half an ATR behind the best close, 22 October evening). The page runs it under
   Calls with Signals (`drawSignals`). Described in `NEW_RULES.md`, apart from LOGIC.md. `lab/newrule-check.js` runs every case the
   documents give. PRs for it are named "New Rule Chart_".
