@@ -72,17 +72,45 @@ confirmed), dropped 20 candles after the last touch, never taken twice. One trad
 the buffer, Buy CE (the breakout); before any breakout, a close below the support by the buffer, Buy PE (the failure). More than 2
 ATR past the line, skipped. L is the resistance (CE) or the support (PE); the target that line plus or minus the height.
 
+## The four triangles (the "Bullish Symmetrical Triangle", "Bearish Symmetrical Triangle", "Ascending Triangle" and "Descending
+Triangle" documents, built 22 October night)
+
+Each gives one trade only, in one direction, and never the other side. Shared: the upper line through the two latest confirmed
+swing highs, the lower through the two latest confirmed swing lows, the touches alternating; first to last touch 10 to 60
+candles; the width (height) at the first touch at least 2 ATR, at the last touch at most 70% of it; every close in between inside
+the lines by the buffer; before the apex; within 20 candles of the last touch. The lines are locked the first time every check
+passes and never redrawn; a triangle already closed outside its lines since its last touch was confirmed is never locked; a used
+one (signalled, cancelled, skipped or expired) is never taken again. Locked, each candle in this order: expired (20 candles after
+the last touch, or the apex) drops it; a close past the other line by the buffer cancels it, no trade; a close past the break line
+by the buffer and at most 2 ATR past it is the signal; further than that is skipped. L is the break line's value on the signal
+candle; the target L plus or minus the widest width.
+
+- Bullish symmetrical triangle, Buy CE: a falling upper line and a rising lower line, neither more than 3 times steeper than
+  the other, after a rise into it (the 20 candles before the first touch: the rise into the triangle's middle at least 2 ATR and
+  not less than the fall). A close below the lower line cancels.
+- Bearish symmetrical triangle, Buy PE: the same shape after a fall into it (the fall at least 2 ATR and more than the rise,
+  so the two rules never take the same triangle). A close above the upper line cancels.
+- Ascending triangle, Buy CE: a flat top (the two highs within half an ATR; the resistance the higher) and a rising support
+  line through the two lows; no trend check. L is the resistance. A close below the support cancels. A new triangle is taken
+  only with its last touch after the last drop, so a redraw with one more touch never gives a call right after a cancel.
+- Descending triangle, Buy PE: a flat bottom (the two lows within half an ATR; the support the lower) and a falling resistance
+  line through the two highs; no trend check. L is the support. A close above the resistance cancels. The same no-redraw rule.
+
+The 20-candle trend window of the symmetrical ones is taken from the day's own candles. The documents' daily chart, VWAP and
+strength filters are not built.
+
 ## The entry and the filters (every rule)
 
 The entry at the next candle's open, 09:30 to 14:45; one trade at a time across the rules; two losses in a row end the day's
 entries; max trades and max loss a day off until the owner sets them; the expiry-day skip waits for the option (not built). Rules
 firing on one candle the same way: the first in the order double top, double bottom, triple top, triple bottom, falling wedge, rising
-wedge, bullish rectangle; different ways: nothing. The wedge and rectangle scanners keep state and
+wedge, bullish rectangle, bullish symmetrical triangle, bearish symmetrical triangle, ascending triangle, descending triangle;
+different ways: nothing. The wedge, rectangle and triangle scanners keep state and
 step on every closed candle, a trade open or not: their signal while a trade is open is skipped, "one trade at a time".
 
 ## After the entry: Rule 1, then the ATR trail (22 October)
 
-L is the line the signal broke (the neckline, the support, the resistance, or a wedge's break level). Rule 1 first:
+L is the line the signal broke (the neckline, the support, the resistance, or a wedge's or triangle's break level). Rule 1 first:
 sold on a close back across L (the reclaim); on the candle after the signal candle opening past the signal candle's close and
 touching its open (the retouch); or at the day end. Then the trailing stop, the owner's choice of 22 October ("build the 1 ATR
 trail", then the same evening "tighten it to half an ATR"): once a candle has closed in profit, the stop sits half an ATR behind the
@@ -97,12 +125,12 @@ of the Paper calls page: not its rule, not its lines ("completely separate and i
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,
 the index at entry, the pattern target with the stop or the exit, the points, the status, the documents' messages). The Settings
 popup has a tick per rule (and the Fib Levels tick of 21 October, which draws nothing): ticked, the chart marks the pattern's points (T1, T2, T3 or
-B1, B2, B3; a wedge's or rectangle's H1, H2, L1, L2) and the signal, and draws the broken line (the pattern's two
+B1, B2, B3; a wedge's, rectangle's or triangle's H1, H2, L1, L2) and the signal, and draws the broken line (the pattern's two
 lines too, from the first touch to the signal candle) and an open call's trailing stop (dashed).
 
 ## Figures
 
 The 15 saved days, 29 September to 21 October, NIFTY 50: see the figures in the pull requests and the Candle Logic artifact.
 
-The symmetrical triangle, built on 21 October from its document, was removed on 22 October evening (the owner: "remove that one only";
-four new documents are to come for it).
+The symmetrical triangle of 21 October (both sides from one rule) was removed on 22 October evening at the owner's word and replaced the
+same night by the four triangles above, from their own documents.
