@@ -135,7 +135,7 @@ def call(method: str, path: str, payload: dict | None = None) -> dict:
         pause = _refused()
         raise DhanError("rate", f"Dhan's rate limit was hit ({said}); every request waits {pause:g} s")
     if response.status_code >= 400 or code or body.get("status") == "failure":
-        raise DhanError("other", f"HTTP {response.status_code} {code} {said}".strip())
+        raise DhanError("other", f"{path} refused: HTTP {response.status_code} {code} {said}".strip())  # the request named (22 October): the page's reason said only "HTTP 400 DH-905" and left the request to guess
     _got_through()
     return body
 
@@ -286,17 +286,35 @@ def _bars(body: dict) -> list:
     return bars
 
 
+_chart_form: dict = {}  # path -> the toDate form Dhan accepted last ("tomorrow", "today", "now"): asked for first from then on
+
+
 def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
-    """A chart request for the last days_back days. Dhan's toDate has been exclusive in some versions,
-    so tomorrow is asked for first; if Dhan refuses the date, today is tried."""
+    """A chart request for the last days_back days. Dhan's toDate has been exclusive in some versions, so tomorrow is
+    asked for first; when Dhan refuses the request (any refusal, not only one that names the date: on 22 October morning
+    /charts/historical was refused with "DH-905 Missing required fields, bad values for parameters" for every index, the
+    same request that had worked the day before), today is tried, then, for the minute candles, today up to this minute
+    in Dhan's date-and-time form. The form Dhan accepted is remembered per request and asked for first next time."""
     start = (today_ist() - timedelta(days=days_back)).isoformat()
     base = {"securityId": str(QUOTE_IDS[name]), "exchangeSegment": SEGMENT, "instrument": "INDEX", "oi": False, "fromDate": start, **extra}
-    try:
-        return _bars(call("POST", path, {**base, "toDate": (today_ist() + timedelta(days=1)).isoformat()}))
-    except DhanError as exc:
-        if exc.kind != "other" or "date" not in exc.message.lower():
-            raise
-        return _bars(call("POST", path, {**base, "toDate": today_ist().isoformat()}))
+    forms = {"tomorrow": (today_ist() + timedelta(days=1)).isoformat(), "today": today_ist().isoformat()}
+    if path == "/charts/intraday":
+        forms["now"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    order = [_chart_form.get(path)] + [f for f in forms if f != _chart_form.get(path)] if _chart_form.get(path) in forms else list(forms)
+    last = None
+    for form in order:
+        try:
+            bars = _bars(call("POST", path, {**base, "toDate": forms[form]}))
+        except DhanError as exc:
+            if exc.kind != "other":
+                raise
+            last = exc
+            continue
+        if _chart_form.get(path) != form:
+            log.warning("Dhan %s: toDate as %s (%s) accepted%s", path, form, forms[form], f", after {last.message}" if last else "")
+        _chart_form[path] = form
+        return bars
+    raise last
 
 
 SESSION_OPEN, SESSION_CLOSE = (9, 15), (15, 30)   # NSE hours, IST: an index has no candle outside them
@@ -351,6 +369,34 @@ def daily(name: str, days_back: int = 45) -> list:
                   lambda: [{**b, "time": bucket_start(b["time"], 86400)} for b in _chart("/charts/historical", name, {"expiryCode": 0}, days_back)])
 
 
+_daily_problem: dict = {}  # name -> {"at": time.time(), "message": ...} while Dhan refuses the daily list (22 October)
+
+
+def daily_or_none(name: str, days_back: int = 45) -> list | None:
+    """Dhan's daily list, or None when Dhan refuses it (22 October morning: /charts/historical answered DH-905 for every
+    index while /charts/intraday worked, and the dashboard and the pages went blank for a list they could build from the
+    candles). A refusal is remembered for a minute, so the refused request is not repeated on every refresh and page."""
+    problem = _daily_problem.get(name)
+    if problem and time.time() - problem["at"] < 60:
+        return None
+    try:
+        bars = daily(name, days_back)
+    except DhanError as exc:
+        if exc.kind != "other":
+            raise  # the token, the subscription, the network: the caller's problem as ever
+        _daily_problem[name] = {"at": time.time(), "message": exc.message}
+        log.warning("Dhan's daily list for %s refused, the previous session is built from the candles: %s", name, exc.message)
+        return None
+    _daily_problem.pop(name, None)
+    return bars
+
+
+def daily_problem() -> str | None:
+    """What Dhan said when it refused the daily list within the last 5 minutes, for /health; else None."""
+    recent = [(name, p) for name, p in _daily_problem.items() if time.time() - p["at"] < 300]
+    return "; ".join(f"{name}: {p['message']}" for name, p in recent) or None
+
+
 def quote(name: str) -> dict:
     """{"last_price": ..., "ohlc": {...}} for an index, refreshed at most every 3 s."""
     def make():
@@ -369,7 +415,7 @@ def previous_day(name: str, all_candles: list) -> dict | None:
     today = today_ist()
     bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
     sessions = sorted({bar_date(b) for b in all_candles})
-    days = list(daily(name))
+    days = list(daily_or_none(name) or [])  # refused: every session from the candles (22 October)
     known = {bar_date(d) for d in days}
     for day in sessions:
         if day not in known:
@@ -404,8 +450,9 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
         out.sort(key=lambda d: d["time"])
         return out
 
-    days = with_recent(daily(name))
-    year = with_recent(cached(("year", name), 3600, lambda: daily(name, 370)))
+    day_list = daily_or_none(name)  # None when Dhan refuses the list (22 October): with_recent then builds every session from the candles
+    days = with_recent(day_list or [])
+    year = with_recent(cached(("year", name), 3600, lambda: daily(name, 370))) if day_list is not None else days
     if seconds >= 86400:
         cal_days = ranges[range_key].get("cal_days", 370)
         # the longer views (15 October): Dhan asked once an hour for as far back as the view needs; where its list

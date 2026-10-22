@@ -221,7 +221,7 @@ def build_day(day: date, complete: bool) -> dict | None:
         for b in all_minutes:
             by_date.setdefault(ist_date(b["time"]), []).append(b)
         days = {d: day_figures(bars) for d, bars in by_date.items()}
-        days.update({ist_date(d["time"]): {k: d[k] for k in ("open", "high", "low", "close")} for d in dhan.daily(name)})
+        days.update({ist_date(d["time"]): {k: d[k] for k in ("open", "high", "low", "close")} for d in (dhan.daily_or_none(name) or [])})  # refused (22 October): the candles' figures stand
         earlier = sorted(d for d in days if d < day)
         previous = {"date": earlier[-1].isoformat(), **days[earlier[-1]]} if earlier else None
         indices[name] = {"candles": candles, "day": day_figures(minutes), "previous": previous}
