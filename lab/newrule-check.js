@@ -4,6 +4,7 @@
 const path = require("path");
 require(path.join(__dirname, "..", "static", "newrule.js")); const N = globalThis.NewRule;
 const assert = (ok, msg) => { if (!ok) throw new Error(msg); };
+N.DT.exit = "lines";  // the documents' cases below were checked with Rule 2 on the lines; the ATR trail (the page's default) has its own cases at the end
 const rows = [[22640,22645,22625,22630],[22630,22632,22610,22615],[22615,22618,22600,22605],[22605,22640,22603,22635],[22635,22680,22630,22675],[22675,22720,22670,22715],[22715,22760,22710,22755],[22755,22800,22750,22790],[22790,22795,22760,22765],[22765,22770,22730,22735],[22735,22740,22700,22705],[22705,22710,22680,22688],[22688,22694,22682,22690],[22690,22702,22686,22698],[22698,22730,22695,22725],[22725,22760,22720,22755],[22755,22790,22750,22785],[22785,22815,22780,22810],[22810,22860,22805,22858],[22858,22865,22820,22825],[22825,22830,22790,22795]];
 const ce = rows.map((r, i) => ({ time: 1792381500 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
 const pe = ce.map(b => ({ time: b.time, open: 45400 - b.open, high: 45400 - b.low, low: 45400 - b.high, close: 45400 - b.close }));  // the mirror around 22,700 (Appendix B)
@@ -413,4 +414,33 @@ console.log("New Rule Chart: the double top rule, Rule 1 and Rule 2 match the do
   const p9 = N.runDay({ bars: two, levels: [], atrFixed: ATR, rules: ["bullish rectangle"] });
   assert(p9.trades.length === 1 && p9.trades[0].side === "CE" && p9.trades[0].how === "day end" && p9.skipped.some(s => s.why === "one trade at a time" && s.side === "PE" && s.time === two[29 + 35].time), "BR PE-9: " + JSON.stringify([p9.trades.map(t => [t.side, t.how]), p9.skipped]));
   console.log("New Rule Chart: the bullish rectangle matches its document's cases (CE-1 to CE-13, PE-1 to PE-9)");
+}
+
+// ---- The ATR trail (22 October, the owner: "build the 1 ATR trail"): the stop starts on L; once a candle closes in profit it sits one ATR
+// behind the best close, never moved back or loosened; sold at the close of the first candle closing past it. On the double top data
+// (ATR fixed at 1.5): the Buy PE enters at candle 23's open, 90.8, L 91.8
+{
+  const atrCfg = { ...N.DT, exit: "atr", trailAtr: 1.0 };
+  const run = (bars, c = atrCfg) => N.runDay({ bars, levels: [], atrFixed: ATR, rules: ["double top"], cfg: c }).trades[0];
+  const vary = (bars, i, r) => bars.map((b, k) => k === i ? { time: b.time, open: r[0], high: r[1], low: r[2], close: r[3] } : b);
+  // the base data: candle 24 closes 91.5 (0.7 in profit, but 91.5 + 1.5 is above L: the stop stays 91.8, never loosened); 25 closes 89.5 (stop 91.0);
+  // 26 closes 88.0 (stop 89.5); 27 closes 86.5 (stop 88.0); 28 is the day end: sold at 85.5, +5.3
+  const t1 = run(peD);
+  assert(t1.how === "day end" && t1.points === 5.3 && t1.stop === 88 && t1.stage === 2 && t1.best === 4.3, "ATR trail, the base day: " + JSON.stringify([t1.how, t1.points, t1.stop, t1.best]));
+  // candle 27 closes back up at 90.5, past the stop of 89.5: sold there, "trail", +0.3
+  const t2 = run(vary(peD, 27, [88.0, 90.8, 87.9, 90.5]));
+  assert(t2.how === "trail" && t2.exit === 90.5 && t2.points === 0.3 && t2.exitTime === peD[27].time && t2.stop === 89.5, "ATR trail, sold on the close past the stop: " + JSON.stringify([t2.how, t2.exit, t2.points, t2.stop]));
+  // candle 27 closes at 89.5 exactly, on the stop: not past it, held; the stop then stays 89.5 (89.5 + 1.5 is behind it)
+  const t3 = run(vary(peD, 27, [88.0, 89.8, 87.9, 89.5]));
+  assert(t3.how === "day end" && t3.stop === 89.5, "ATR trail, a close on the stop holds: " + JSON.stringify([t3.how, t3.stop]));
+  // never in profit: candle 24 closes 92.0, back above L: the reclaim, as Rule 1
+  const t4 = run(vary(peD, 24, [91.8, 92.6, 91.0, 92.0]));
+  assert(t4.how === "reclaim" && t4.exit === 92 && t4.points === -1.2 && t4.stage === 1, "ATR trail, the reclaim before any profit: " + JSON.stringify([t4.how, t4.points]));
+  // the retouch (Exit B) on the candle after the signal candle, as before
+  const b2 = peD.map((b, k) => k === 23 ? { time: b.time, open: 90.5, high: 93.3, low: 90.0, close: 91.8 } : b);
+  assert(run(b2).how === "retouch", "ATR trail, the retouch stays");
+  // a wider trail (1.5 ATR = 2.25): candle 25's close 89.5 gives a stop of 91.75, 26's 88.0 one of 90.25
+  const t5 = run(peD, { ...atrCfg, trailAtr: 1.5 });
+  assert(t5.stop === 88.75 && t5.how === "day end", "ATR trail x1.5: " + JSON.stringify([t5.stop, t5.how]));
+  console.log("New Rule Chart: the ATR trail holds, moves one ATR behind the best close, never back, and sells on a close past it");
 }
