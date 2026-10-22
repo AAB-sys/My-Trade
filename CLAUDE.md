@@ -186,14 +186,14 @@ their own logic. Read this before touching the code.
   (removed: "remove this study tab and everything under it"); the save alone came
   back on 21 October ("bring back the daily save, without study page"). No page
   over it: the lab and `check_rule.py` read the saved days. 16 to 20 October are not saved.
-- `static/newrule.js` - New Rule Chart (21 October, the owner's documents): the new set of rules' engine, apart from `rules.js`,
-  which it never touches. `moveAt` (the Fibonacci retracement levels of the latest move, not drawn yet: the owner rejected the lines
-  PR), `detectEntry` / `runDay` (the double top and bottom rule with Rule 1 and Rule 2 of the "Trading Rules Specification"; the page
-  runs it under Calls with Signals, `drawSignals`; `detectDoubleBottom`, `detectTripleTop`, `detectTripleBottom`, `wedgeAt` /
-  `wedgeStep` (the falling and rising wedge, a locked-lines scanner with state), `triangleAt` / `rectangleAt` / `lockedStep` (the
-  symmetrical triangle and the bullish rectangle) from their documents; `runDay`'s exits: Rule 1, then the ATR trail, 22 October,
-  the stop one ATR behind the best close; `exit: "lines"` keeps Rule 2 on the lines). Described in
-  `NEW_RULES.md`, apart from LOGIC.md. `lab/newrule-check.js` runs every case the documents give. PRs for it are named "New Rule Chart_".
+- `static/newrule.js` - New Rule Chart (21 and 22 October, the owner's chart pattern documents): the engine of the rules under Calls
+  with Signals, apart from `rules.js`, which it never touches and takes nothing from (the owner, 22 October: "completely separate and
+  isolated"; no Fibonacci levels anywhere in it, "I dont want it at all as of now"). `detectEntry` (the double top), `detectDoubleBottom`,
+  `detectTripleTop`, `detectTripleBottom`, `wedgeAt` / `wedgeStep` (the falling and rising wedge, a locked-lines scanner with state),
+  `triangleAt` / `rectangleAt` / `lockedStep` (the symmetrical triangle and the bullish rectangle); `runDay` runs a day: the entries,
+  Rule 1 (the reclaim, the retouch, the day end), then the ATR trail (the stop one ATR behind the best close). The page runs it under
+  Calls with Signals (`drawSignals`). Described in `NEW_RULES.md`, apart from LOGIC.md. `lab/newrule-check.js` runs every case the
+  documents give. PRs for it are named "New Rule Chart_".
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all

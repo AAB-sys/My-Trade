@@ -1852,13 +1852,12 @@
     if (!key || key === "all" || longCandles()) return null;  // the rule always runs for the table (the owner, 21 October: "it should always be in the table"); the tick is for the chart
     const now = serverNow(), bars = sessionBars(), closed = bars.filter(b => endOf(b) <= now).length;
     if (!closed) return null;
-    // no lines of the Paper calls page here (the owner, 22 October: "this page should only work on chart rules ... completely separate
-    // and isolated"): the new rules' exits are Rule 1 and the ATR trail, nothing from rules.js or its Previous close lines
-    const levels = [];
+    // nothing of the Paper calls page here (the owner, 22 October: "this page should only work on chart rules ... completely separate
+    // and isolated"; "no fib levels"): the new rules' exits are Rule 1 and the ATR trail
     const before = state.candles.filter(b => sessionOf(b) < key);  // the previous sessions loaded, for the ATR's warm-up
     const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
     const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
-    return { ...NewRule.runDay({ bars, levels, atrSeed: seed, closedCount: closed, dayEnd }), bars };
+    return { ...NewRule.runDay({ bars, atrSeed: seed, closedCount: closed, dayEnd }), bars };
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -1884,7 +1883,7 @@
       const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom" || t.rule === "triple bottom", wedge = t.upperLine != null;
       const lineName = t.rule === "bullish rectangle" ? (t.side === "CE" ? "resistance" : "support") : wedge ? "break level" : bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
       lines.push({ nr: true, price: t.L, name: lineName, up, solid: true });
-      if (t.exit == null && t.stop != null && t.stop !== t.L) lines.push({ nr: true, price: t.stop, name: ("stop " + (t.stopPct || "")).trim(), up, solid: false });
+      if (t.exit == null && t.stop != null && t.stop !== t.L) lines.push({ nr: true, price: t.stop, name: "stop", up, solid: false });
       if (wedge) {  // the wedge's, triangle's or rectangle's two lines from the first touch to the signal candle, High 1, High 2 above, Low 1, Low 2 below
         segs.push({ points: t.upperLine, color: colour }, { points: t.lowerLine, color: colour });
         marks.push({ time: t.h1Time + IST_OFFSET, position: "aboveBar", color: colour, shape: "circle", text: "H1" }, { time: t.h2Time + IST_OFFSET, position: "aboveBar", color: colour, shape: "circle", text: "H2" });
@@ -1910,8 +1909,8 @@
         : t.kind === "double bottom failed" || t.kind === "triple bottom failed" ? `BUY PE: ${t.rule} failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`  // the documents' entry messages
         : t.kind === "triple top failed" ? `BUY CE: triple top failed · ${points} · resistance ${fmt.format(t.resistance)} broken · pattern target ${fmt.format(t.target)}`
         : `BUY ${t.side}: ${t.kind} · ${points} · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
-      const trailName = t.stopPct ? `${t.stopPct} (${fmt.format(t.stop)})` : `the trailing stop ${fmt.format(t.stop)}`;  // Rule 2 on a line, or the ATR trail (22 October: one ATR behind the best close)
-      const reason = t.exit == null ? (t.stage === 2 ? `In profit, continue · sell if a candle closes ${sideWord} ${trailName}${t.stopPct ? "" : " · it follows the best close, one ATR behind, never back"}` : entryMsg)
+      const trailName = `the trailing stop ${fmt.format(t.stop)}`;  // the ATR trail (22 October: one ATR behind the best close)
+      const reason = t.exit == null ? (t.stage === 2 ? `In profit, continue · sell if a candle closes ${sideWord} ${trailName} · it follows the best close, one ATR behind, never back` : entryMsg)
         : t.how === "trail" ? `${callTime(t.exitTime)} candle · Sell: index candle closed ${sideWord} ${trailName}`
         : t.how === "reclaim" ? `${callTime(t.exitTime)} candle · Reclaim: closed back ${sideWord} ${fmt.format(t.L)}`
         : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;

@@ -101,17 +101,15 @@ L is the line the signal broke (the neckline, the support, the resistance, or a 
 sold on a close back across L (the reclaim); on the candle after the signal candle opening past the signal candle's close and
 touching its open (the retouch); or at the day end. Then the trailing stop, the owner's choice of 22 October ("build the 1 ATR
 trail"): once a candle has closed in profit, the stop sits one ATR behind the best close so far (the ATR as of the candle before),
-moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it. On the 25 calls of
-the 16 saved days and 22 October this gave +106.60 against +33.50 with the stop on the chart's lines. Rule 2 of document 02 (the stop on
-Fibonacci levels crossed, AT_LEVEL or ONE_LEVEL_BACK) stays in the engine as the `exit: "lines"` option for the day the owner's own
-levels are built; the page passes no levels. `trailAtr` sets the distance (1.0). This page takes nothing from the Paper calls page:
-not its rule, not its Previous close lines (the owner, 22 October: "completely separate and isolated").
+moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it (`trailAtr`, 1.0).
+No Fibonacci levels anywhere on this page or in its engine (the owner, 22 October: "I dont want it at all as of now"), and nothing
+of the Paper calls page: not its rule, not its lines ("completely separate and isolated").
 
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,
 the index at entry, the pattern target with the stop or the exit, the points, the status, the documents' messages). The Settings
-popup has a tick per rule (and Fib Levels, waiting for its logic): ticked, the chart marks the pattern's points (T1, T2, T3 or
+popup has a tick per rule (and the Fib Levels tick of 21 October, which draws nothing): ticked, the chart marks the pattern's points (T1, T2, T3 or
 B1, B2, B3; a wedge's, triangle's or rectangle's H1, H2, L1, L2) and the signal, and draws the broken line (the pattern's two
 lines too, from the first touch to the signal candle) and an open call's trailing stop (dashed).
 
