@@ -470,3 +470,21 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
     f2(R, "PE", DE_A, -10, 24);
     console.log("New Rule Chart: the descending triangle matches its document's cases (PE-1 to PE-6, S-1 to S-11, F-1, F-2)"); }
 }
+
+// the symmetrical triangles' trend window reaches into the previous day (the document, section 9) when runDay is given prevBars
+{
+  // the bullish document's Appendix A with its first 6 candles (the rise into the triangle) at the end of the previous day; the day opens
+  // with 3 flat candles before High 1 (a swing needs 3 candles on each side), so the day's own window shows no rise at all
+  const A = [[92.0,93.4,91.6,93.1],[93.1,94.9,92.8,94.6],[94.6,96.3,94.3,96.0],[96.0,97.8,95.7,97.5],[97.5,99.3,97.2,99.0],[99.0,101.0,98.7,100.7],[100.7,102.0,100.3,100.9],[100.9,101.2,99.4,99.6],[99.6,99.9,98.3,98.5],[98.5,98.8,97.5,97.7],[97.7,98.3,97.0,98.1],[98.1,98.9,97.8,98.7],[98.7,99.5,98.4,99.3],[99.3,100.0,99.0,99.8],[99.8,100.5,99.5,100.2],[100.2,100.8,99.9,100.5],[100.5,101.0,100.1,100.3],[100.3,100.6,99.4,99.6],[99.6,99.9,98.8,99.0],[99.0,99.3,98.3,98.5],[98.5,99.0,98.0,98.8],[98.8,99.5,98.5,99.3],[99.3,99.9,99.0,99.7],[99.7,100.2,99.4,100.0],[100.0,101.0,99.8,100.8],[100.8,101.7,100.6,101.5],[101.5,102.4,101.3,102.2]];
+  const bar = (r, t) => ({ time: t, open: r[0], high: r[1], low: r[2], close: r[3] });
+  const prev = Array(20).fill([100.0, 100.2, 99.8, 100.0]).concat(A.slice(0, 6)).map((r, i) => bar(r, t0 - 86400 + i * 300));
+  const day = Array(3).fill([100.3, 100.6, 100.2, 100.4]).concat(A.slice(6)).map((r, i) => bar(r, t0 + i * 300));
+  const R = ["bullish symmetrical triangle"];
+  const w = N.runDay({ bars: day, prevBars: prev, atrFixed: ATR, rules: R }), wo = N.runDay({ bars: day, atrFixed: ATR, rules: R });
+  assert(w.trades.length === 1 && w.trades[0].side === "CE" && w.trades[0].rise === 7.7 && w.trades[0].fall === 1.7 && wo.trades.length === 0, "the trend window reaches into the previous day: " + JSON.stringify([w.trades.map(t => [t.side, t.rise, t.fall]), wo.trades.length]));
+  // only the 20 candles before the first touch count (3 of the day, 17 of the previous day): a spike older than that does not turn it bearish
+  const spike = Array(5).fill([120.0, 121.0, 119.0, 120.0]).map((r, i) => bar(r, t0 - 86400 - 1500 + i * 300));
+  const far = N.runDay({ bars: day, prevBars: spike.concat(prev), atrFixed: ATR, rules: R });
+  assert(far.trades.length === 1 && far.trades[0].rise === 7.7 && far.trades[0].fall === 1.7, "candles older than the window do not count: " + JSON.stringify(far.trades.map(t => [t.rise, t.fall])));
+  console.log("New Rule Chart: the symmetrical triangles' trend window reaches into the previous day when the page has its candles");
+}

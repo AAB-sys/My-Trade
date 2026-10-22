@@ -1879,7 +1879,7 @@
     const before = state.candles.filter(b => sessionOf(b) < key);  // the previous sessions loaded, for the ATR's warm-up
     const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
     const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
-    return { ...NewRule.runDay({ bars, atrSeed: seed, closedCount: closed, dayEnd }), bars };
+    return { ...NewRule.runDay({ bars, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd }), bars };  // the previous sessions' candles also feed the symmetrical triangles' trend window
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {

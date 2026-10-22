@@ -96,7 +96,8 @@ candle; the target L plus or minus the widest width.
 - Descending triangle, Buy PE: a flat bottom (the two lows within half an ATR; the support the lower) and a falling resistance
   line through the two highs; no trend check. L is the support. A close above the resistance cancels. The same no-redraw rule.
 
-The 20-candle trend window of the symmetrical ones is taken from the day's own candles. The documents' daily chart, VWAP and
+The 20-candle trend window of the symmetrical ones may reach into the previous day (the document: "the window may reach into the previous
+day"): the page gives the engine the previous sessions' candles it has loaded (the ATR warm-up's), the day's first candles use what is there. The documents' daily chart, VWAP and
 strength filters are not built.
 
 ## The entry and the filters (every rule)

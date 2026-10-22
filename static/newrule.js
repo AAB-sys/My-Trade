@@ -406,10 +406,13 @@
     if (Math.max(-su, sl) / Math.min(-su, sl) > w.symRatioMax) return null;                      // 5: symmetrical
     const upper = (x) => t.H1 + su * (x - t.h1), lower = (x) => t.L1 + sl * (x - t.l1);
     const apex = (t.L1 - sl * t.l1 - t.H1 + su * t.h1) / (su - sl);
-    const s0 = Math.max(0, t.first - w.priorLookback);                                           // 11: the trend into it (section 9)
-    if (s0 >= t.first) return null;
+    // 11: the trend into it (section 9): the priorLookback candles before the first touch; on the 5-minute chart "the window may reach into
+    // the previous day" (cfg.prevBars, the previous sessions' candles when the page has them); fewer: what is there; none: not taken
+    const prev = cfg.prevBars || [], s0 = Math.max(0, t.first - w.priorLookback), fromPrev = Math.min(prev.length, w.priorLookback - (t.first - s0));
+    const win = prev.slice(prev.length - fromPrev).concat(bars.slice(s0, t.first));
+    if (!win.length) return null;
     const mid = (upper(t.first) + lower(t.first)) / 2;
-    let lo = Infinity, hi = -Infinity; for (let j = s0; j < t.first; j++) { lo = Math.min(lo, bars[j].low); hi = Math.max(hi, bars[j].high); }
+    let lo = Infinity, hi = -Infinity; for (const b of win) { lo = Math.min(lo, b.low); hi = Math.max(hi, b.high); }
     const rise = mid - lo, fall = hi - mid, need = w.priorMoveAtr * atr;
     if (type === "bullish" ? !(rise >= need && rise >= fall) : !(fall >= need && fall > rise)) return null;
     return shaped(bars, k, t, upper, lower, apex, w, atr, buf, { rule: type + " symmetrical triangle", su, sl, rise, fall });
@@ -491,19 +494,19 @@
                   "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg), detectDoubleBottom(bars, k, "PE", atr, cfg)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
                   "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)] };
-  function runDay({ bars, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
+  function runDay({ bars, cfg = DT, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
     }
-    const trades = [], skipped = [], scanners = {};
+    const trades = [], skipped = [], scanners = {}, scanCfg = prevBars && prevBars.length ? { ...cfg, prevBars } : cfg;  // the previous day's candles: the symmetrical triangles' trend window only
     rules.forEach(name => { if (SCANNERS[name]) scanners[name] = { active: null, used: new Set(), lastDrop: null }; });
     let open = null, lossesInRow = 0, dayLoss = 0;
     const lastK = (closedCount == null ? bars.length : Math.min(closedCount, bars.length)) - 1;
     for (let k = 0; k <= lastK; k++) {
       const bar = bars[k], atr = k > 0 ? atrs[k - 1] : null;
       const wedgeSigs = [];  // the wedge scanners step first, every candle (see above)
-      for (const name of rules) if (scanners[name]) { const s = SCANNERS[name](scanners[name], bars, k, atr, cfg, skipped); if (s) wedgeSigs.push(s); }
+      for (const name of rules) if (scanners[name]) { const s = SCANNERS[name](scanners[name], bars, k, atr, scanCfg, skipped); if (s) wedgeSigs.push(s); }
       if (open) {  // the trade on this candle's close (the entry candle itself is judged too, as C2 is the candle after C1)
         const t = open, d = t.side === "CE" ? 1 : -1;
         let how = null;
