@@ -683,12 +683,13 @@ def watch_index(name: str) -> dict:
     all_candles = dhan.intraday(name, seconds // 60)
     todays = [b for b in all_candles if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
     bars = with_live_candles(todays, name, key)
+    atr_seed = rule.atr_seed_of([b for b in all_candles if datetime.fromtimestamp(b["time"], dhan.IST).date() < today], rule.GATE["atrPeriod"])  # the Call Gate's ATR carried in from the days before (22 October night)
     out = {"calls": 0, "open": 0, "problem": None}
     if not bars:
         return out
     for levels_mode in WATCH_LEVELS:
         try:
-            got = watch_levels(name, levels_mode, bars, all_candles, today)
+            got = watch_levels(name, levels_mode, bars, all_candles, today, atr_seed)
         except Exception as exc:
             out["problem"] = out["problem"] or f"{name} {levels_mode}: {type(exc).__name__}: {str(exc)[:120]}"
             log.warning("watch: %s %s: %s", name, levels_mode, exc)
@@ -698,7 +699,7 @@ def watch_index(name: str) -> dict:
     return out
 
 
-def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, today) -> dict:
+def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, today, atr_seed=None) -> dict:
     """The rule on one levels mode: the levels (previous day's; the previous close's, drawn again only after a close beyond
     the outermost line, 15 October; or today so far, each candle against the day's range up to it, as the page judges it since
     8 October), the rule, then the records and the day's calls brought up to date."""
@@ -729,7 +730,7 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
                                key == "5m" and today_so_far and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                previous["close"] if previous else None,  # the first candle judged from the previous close; ideas 13, 8 and 5 removed (18 October)
-                               minutes)["trades"]
+                               minutes, rule.GATE, atr_seed)["trades"]  # the Call Gate (22 October night), with the ATR carried in from the days before
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, levels_mode)
@@ -773,7 +774,8 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "contract": f"{round(rec['strike'])} {rec['side']} {rec['expiry']}" if rec else "", "premium_paid": rec["premium_paid"] if rec else None,
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None,
-                     "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": ""})  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
+                     "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": "",  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
+                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or ""})  # the Call Gate's verdict on the signal (22 October night)
     if rows:
         record.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)  # the day's calls CSV (the daily save, back on 21 October)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}

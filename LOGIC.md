@@ -594,6 +594,54 @@ The rule, in the order it is applied:
    still open (owner's decision, 4 October). Several calls can run at once, each
    to its own exit.
 
+8. **The Call Gate** (the owner's "Call Gate" document, 22 October night: "implement
+   the logic ... for the paper calls page only ... very precisely"; `Rules.GATE`,
+   `rule.GATE`). One extra step between a signal and its order; the lines, the
+   signals, the firing, the entries and the exits are not changed. Judged on the
+   signal candle the moment the signal is born (item 1, after the colour, no-repeat
+   and no-outward checks), on closed candles only, with the ATR(14) as of the
+   previous candle (Wilder, carried in from the previous day: the page seeds it from
+   the sessions loaded before the one shown, the watcher from the days before today;
+   the day's first candle's true range is taken against the previous close). The
+   first check that answers decides:
+   - **A, parallel**: a call the same way is open at the signal candle's close (the
+     "Can be bought parallelly" case): SKIP.
+   - **B, time window**: the signal candle begins before 09:45 or after 14:45: SKIP.
+   - **C, chase**: the signal candle's range is more than 2.5 x ATR: SKIP.
+   - **D, sideways zone**: a zone is active: the verdict by where the candle closes
+     in it. The zone: the last 6 candles of the day fit in a band no taller than
+     2 x ATR and the price went almost nowhere over them (the net move over the path
+     of the closes 0.30 or less); the band from their lowest low to their highest
+     high is the zone, kept as found until a candle closes outside it by 0.25 x ATR.
+     A Buy CE closing above the band: breakout, TAKE; in the bottom third: a bounce,
+     TAKE; in the top third: buying at the top, SKIP, unless the candle's high (the
+     entry trigger) is already above the band, TAKE; in the middle third: TAKE only
+     on a strong candle (a body of at least 0.5 x ATR, a close within the last 30% of
+     its range the call's way, beyond the previous 3 candles by 0.25 x ATR) or a
+     trend continuation (the close a new low or high of a leg of at least 2 x ATR in
+     the last 12 candles that ran at least 60% one way); else SKIP. A Buy PE the
+     mirror.
+   - Otherwise TAKE: "no sideways zone active".
+   The no-repeat lock on the line is taken whether the gate takes or skips. **Shadow
+   mode first** (the document's section 6, the setting `mode: "SHADOW"`): every call
+   fires exactly as before; the verdict and its reason sit in two new columns of the
+   table, Gate (TAKE / SKIP) and Gate reason, and in the day's calls CSV (`gate`,
+   `gate_reason`). In `mode: "LIVE"` a SKIP signal is not armed (no order), its row
+   stays on the table greyed, "no order", with the reason; a call given live stays.
+   The documents' other settings are the defaults of its section 9. Checked call for
+   call on its Appendix A (22 October as read from a screenshot, ATR seeded at 30):
+   every verdict of its section 7 on the calls the live engine gives too (the engine's
+   own 09:15, 10:20 and 12:25 signals are not in the document's replay), the mirror
+   M-1, mode LIVE (7 calls fire, +201.65; shadow 22, -166.45); page and server proven
+   the same by `check_rule.py`. On the 16 saved days 29 September to 21 October and
+   22 October, NIFTY 50, 5-minute, the previous close's lines: 249 calls, +1,686; the
+   TAKE calls alone 91, +305; LIVE mode 107 calls, +725 (22 October alone: 24 calls
+   -61.50 → 9 calls +175.15; 13 October +512.75 → +178.90, 21 October +553.75 →
+   +97.90: the parallel calls it skips were the winners of the trend days, as the
+   document warns: "it was tuned on one range day and will skip some winners on a
+   trend day"). The document's missed-winner report and daily gate report are not
+   built; the CSV carries what they need.
+
 As in layer 2, a candle is judged against the previous closed candle, and the
 first candle of a day against the last candle of the day before. Points are
 **index points**: exit minus entry for a CE, entry minus exit for a PE; won means
