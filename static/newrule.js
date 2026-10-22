@@ -1,6 +1,6 @@
 // New Rule Chart: the engine of the rules under Calls with Signals, built from the owner's chart pattern documents (21 and 22
-// October): the double top, double bottom, triple top, triple bottom, falling wedge, rising wedge and bullish
-// rectangle, with Rule 1 (the reclaim, the retouch, the day end) and the ATR trail after the entry. All on closed 5-minute index
+// October): the double top, double bottom, triple top, triple bottom, falling wedge, rising wedge, bullish rectangle, bullish and
+// bearish symmetrical triangle, ascending and descending triangle, with Rule 1 (the reclaim, the retouch, the day end) and the ATR trail after the entry. All on closed 5-minute index
 // candles. Apart from the Paper calls rule in rules.js, which it never touches and takes nothing from (the owner, 22 October:
 // "completely separate and isolated"). No Fibonacci levels anywhere in here (the owner, 22 October: "I dont want it at all as of now")
 (function (root) {
@@ -357,9 +357,127 @@
              signalCandle: k, signalTime: at(k), buffer: round2(buf), atr: round2(atr) };
   }
   // the rules with a scanner of their own: the name, and the step over one candle
+  // ---- The four triangles of the owner's documents of 22 October evening, each one trade only, in one direction:
+  //   the bullish symmetrical triangle (Buy CE): a falling upper line through the two latest swing highs, a rising lower line through
+  //     the two latest swing lows, neither more than 3 times steeper than the other, after a rise into it (the 20 candles before the
+  //     first touch: the rise into the triangle's middle at least 2 ATR and not less than the fall);
+  //   the bearish symmetrical triangle (Buy PE): the same shape after a fall into it (the fall at least 2 ATR and more than the rise);
+  //   the ascending triangle (Buy CE): a flat top (the two highs within half an ATR, the resistance the higher) and a rising support
+  //     line through the two lows, no trend check;
+  //   the descending triangle (Buy PE): a flat bottom (the two lows within half an ATR, the support the lower) and a falling
+  //     resistance line through the two highs, no trend check.
+  // Shared (section 8 of each): the touches alternate, first to last touch 10 to 60 candles, the width (height) at the first touch
+  // at least 2 ATR and at the last touch at most 70% of it, before the apex, every close from the first to the last touch inside
+  // the lines by the buffer, within 20 candles of the last touch. Section 9/10: the lines are locked the first time every check
+  // passes and never redrawn; a triangle already closed outside its lines since its last touch was confirmed is never locked; the
+  // ascending and descending ones also take no triangle whose last touch is not after the last drop (a redraw with one more touch).
+  // Locked, each candle in this order: expired (20 candles after the last touch, or the apex) drops it; a close past the OTHER line
+  // by the buffer CANCELS it, no trade, never the other side; a close past the break line by the buffer and at most 2 ATR past it is
+  // the signal; further than that is skipped, the triangle used up. L is the break line's value on the signal candle (the resistance
+  // or the support for the flat ones); the target L plus or minus the widest width. The daily chart of the documents is not built
+  const TRI = { swingN: 3, minLen: 10, maxLen: 60, maxWait: 20, minWidthAtr: 2.0, minNarrowing: 0.3, symRatioMax: 3.0, priorLookback: 20, priorMoveAtr: 2.0, flatTolAtr: 0.5, maxChaseAtr: 2.0 };
+  // the four touches and the common checks (1, 2, 3, recent), or null
+  function touchesAt(bars, k, w) {
+    const upTo = bars.slice(0, k + 1), highs = findSwings(upTo, 1, w.swingN), lows = findSwings(upTo, -1, w.swingN);
+    if (highs.length < 2 || lows.length < 2) return null;
+    const h1 = highs[highs.length - 2], h2 = highs[highs.length - 1], l1 = lows[lows.length - 2], l2 = lows[lows.length - 1];
+    if (!(h1 < l2 && l1 < h2)) return null;
+    const first = Math.min(h1, l1), last = Math.max(h2, l2);
+    if (last - first < w.minLen || last - first > w.maxLen) return null;
+    if (k - last > w.maxWait) return null;
+    return { h1, h2, l1, l2, first, last, H1: bars[h1].high, H2: bars[h2].high, L1: bars[l1].low, L2: bars[l2].low };
+  }
+  // the shape's last checks: the width at the first touch, the narrowing, the apex, the closes inside; null or the triangle
+  function shaped(bars, k, t, upper, lower, apex, w, atr, buf, extra) {
+    const wFirst = upper(t.first) - lower(t.first), wLast = upper(t.last) - lower(t.last);
+    if (wFirst < w.minWidthAtr * atr) return null;
+    if (wLast > (1 - w.minNarrowing) * wFirst) return null;
+    if (k >= apex) return null;
+    for (let j = t.first; j <= t.last; j++) if (bars[j].close > upper(j) + buf || bars[j].close < lower(j) - buf) return null;
+    return { ...t, ...extra, key: `${t.h1},${t.h2},${t.l1},${t.l2}`, upper, lower, width: wFirst, apex, lockCandle: k };
+  }
+  // the symmetrical shape (checks 4 and 5 of the two symmetrical documents) and the trend into it (section 9): type "bullish" or "bearish"
+  function symmetricalAt(bars, k, atr, cfg, type) {
+    const w = { ...TRI, ...(cfg.tri || {}) }, buf = bufferOf(atr, cfg);
+    if (atr == null || buf == null) return null;
+    const t = touchesAt(bars, k, w); if (!t) return null;
+    const su = (t.H2 - t.H1) / (t.h2 - t.h1), sl = (t.L2 - t.L1) / (t.l2 - t.l1);
+    if (!(su < 0 && sl > 0)) return null;                                                        // 4: lower highs, higher lows
+    if (Math.max(-su, sl) / Math.min(-su, sl) > w.symRatioMax) return null;                      // 5: symmetrical
+    const upper = (x) => t.H1 + su * (x - t.h1), lower = (x) => t.L1 + sl * (x - t.l1);
+    const apex = (t.L1 - sl * t.l1 - t.H1 + su * t.h1) / (su - sl);
+    // 11: the trend into it (section 9): the priorLookback candles before the first touch; on the 5-minute chart "the window may reach into
+    // the previous day" (cfg.prevBars, the previous sessions' candles when the page has them); fewer: what is there; none: not taken
+    const prev = cfg.prevBars || [], s0 = Math.max(0, t.first - w.priorLookback), fromPrev = Math.min(prev.length, w.priorLookback - (t.first - s0));
+    const win = prev.slice(prev.length - fromPrev).concat(bars.slice(s0, t.first));
+    if (!win.length) return null;
+    const mid = (upper(t.first) + lower(t.first)) / 2;
+    let lo = Infinity, hi = -Infinity; for (const b of win) { lo = Math.min(lo, b.low); hi = Math.max(hi, b.high); }
+    const rise = mid - lo, fall = hi - mid, need = w.priorMoveAtr * atr;
+    if (type === "bullish" ? !(rise >= need && rise >= fall) : !(fall >= need && fall > rise)) return null;
+    return shaped(bars, k, t, upper, lower, apex, w, atr, buf, { rule: type + " symmetrical triangle", su, sl, rise, fall });
+  }
+  // the ascending triangle (a flat top, a rising support) and the descending one (a flat bottom, a falling resistance)
+  function flatAt(bars, k, atr, cfg, kind) {
+    const w = { ...TRI, ...(cfg.tri || {}) }, buf = bufferOf(atr, cfg);
+    if (atr == null || buf == null) return null;
+    const t = touchesAt(bars, k, w); if (!t) return null;
+    let upper, lower, apex, extra;
+    if (kind === "ascending") {
+      if (Math.abs(t.H2 - t.H1) > w.flatTolAtr * atr) return null;                               // 4: a flat top
+      const R = Math.max(t.H1, t.H2), sl = (t.L2 - t.L1) / (t.l2 - t.l1);
+      if (!(sl > 0)) return null;                                                                 // 5: a rising support
+      upper = () => R; lower = (x) => t.L1 + sl * (x - t.l1); apex = t.l1 + (R - t.L1) / sl; extra = { rule: "ascending triangle", resistance: R, sl };
+    } else {
+      if (Math.abs(t.L2 - t.L1) > w.flatTolAtr * atr) return null;                               // 4: a flat bottom
+      const S = Math.min(t.L1, t.L2), su = (t.H2 - t.H1) / (t.h2 - t.h1);
+      if (!(su < 0)) return null;                                                                 // 5: a falling resistance
+      upper = (x) => t.H1 + su * (x - t.h1); lower = () => S; apex = t.h1 + (t.H1 - S) / (-su); extra = { rule: "descending triangle", support: S, su };
+    }
+    return shaped(bars, k, t, upper, lower, apex, w, atr, buf, extra);
+  }
+  // the documents' scanner for a one-sided triangle, stepped by one closed candle: st = { active, used, lastDrop }; side "CE" breaks
+  // the upper line (the lower one cancels), "PE" the lower (the upper cancels); noRedraw: the ascending and descending rule of a new
+  // triangle only with its last touch after the last drop. The events go to skipped as the documents' log (lock, cancelled, expired...)
+  function triangleStep(st, bars, k, detect, side, noRedraw, atr, cfg = DT, skipped = null) {
+    const w = { ...TRI, ...(cfg.tri || {}) }, buf = bufferOf(atr, cfg);
+    if (atr == null || buf == null) return null;
+    const at = (t) => bars[t].time, log = (why, rule) => { if (skipped) skipped.push({ time: at(k), rule, why }); };
+    const drop = (why) => { st.used.add(st.active.key); st.lastDrop = k; log(why, st.active.rule); st.active = null; };
+    if (!st.active) {
+      const found = detect(bars, k, atr, cfg);
+      if (!found || st.used.has(found.key) || (noRedraw && found.last <= (st.lastDrop == null ? -1 : st.lastDrop))) return null;
+      let broke = false; for (let j = found.last + w.swingN; j < k; j++) if (bars[j].close > found.upper(j) + buf || bars[j].close < found.lower(j) - buf) broke = true;
+      if (broke) { st.used.add(found.key); st.lastDrop = k; log("not locked: already closed outside its lines", found.rule); return null; }
+      st.active = found; log("locked", found.rule);
+    }
+    const a = st.active, d = side === "CE" ? 1 : -1;
+    if (k - a.last > w.maxWait || k >= a.apex) { drop("expired"); return null; }
+    const close = bars[k].close;
+    const other = d > 0 ? a.lower(k) - close : close - a.upper(k);
+    if (other > buf) { drop("cancelled: closed " + (d > 0 ? "below the lower line" : "above the upper line")); return null; }
+    const level = d > 0 ? a.upper(k) : a.lower(k), dist = d * (close - level);
+    if (dist <= buf) return null;                                                                  // keep waiting
+    const rule = a.rule, tri = a; drop(dist > w.maxChaseAtr * atr ? "too far past the line" : "signal");
+    if (dist > w.maxChaseAtr * atr) return null;
+    const kind = rule + (d > 0 ? " broke out" : " broke down");
+    return { side, rule, kind, h1: tri.h1, h2: tri.h2, l1: tri.l1, l2: tri.l2, h1Time: at(tri.h1), h2Time: at(tri.h2), l1Time: at(tri.l1), l2Time: at(tri.l2), lockTime: at(tri.lockCandle),
+             width: round2(tri.width), rise: tri.rise != null ? round2(tri.rise) : undefined, fall: tri.fall != null ? round2(tri.fall) : undefined,
+             resistance: tri.resistance != null ? round2(tri.resistance) : undefined, support: tri.support != null ? round2(tri.support) : undefined,
+             L: round2(level), target: round2(level + d * tri.width),
+             upperLine: [{ time: at(tri.first), price: round2(tri.upper(tri.first)) }, { time: at(k), price: round2(tri.upper(k)) }],
+             lowerLine: [{ time: at(tri.first), price: round2(tri.lower(tri.first)) }, { time: at(k), price: round2(tri.lower(k)) }],
+             signalCandle: k, signalTime: at(k), buffer: round2(buf), atr: round2(atr) };
+  }
+  const bullishTriangleAt = (bars, k, atr, cfg) => symmetricalAt(bars, k, atr, cfg, "bullish"), bearishTriangleAt = (bars, k, atr, cfg) => symmetricalAt(bars, k, atr, cfg, "bearish");
+  const ascendingAt = (bars, k, atr, cfg) => flatAt(bars, k, atr, cfg, "ascending"), descendingAt = (bars, k, atr, cfg) => flatAt(bars, k, atr, cfg, "descending");
   const SCANNERS = { "falling wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "falling", atr, cfg, skipped),
                      "rising wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "rising", atr, cfg, skipped),
-                     "bullish rectangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, rectangleAt, { ...RECT, ...(cfg.rect || {}) }, atr, cfg, skipped) };
+                     "bullish rectangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, rectangleAt, { ...RECT, ...(cfg.rect || {}) }, atr, cfg, skipped),
+                     "bullish symmetrical triangle": (st, bars, k, atr, cfg, skipped) => triangleStep(st, bars, k, bullishTriangleAt, "CE", false, atr, cfg, skipped),
+                     "bearish symmetrical triangle": (st, bars, k, atr, cfg, skipped) => triangleStep(st, bars, k, bearishTriangleAt, "PE", false, atr, cfg, skipped),
+                     "ascending triangle": (st, bars, k, atr, cfg, skipped) => triangleStep(st, bars, k, ascendingAt, "CE", true, atr, cfg, skipped),
+                     "descending triangle": (st, bars, k, atr, cfg, skipped) => triangleStep(st, bars, k, descendingAt, "PE", true, atr, cfg, skipped) };
   const istHM = (t) => { const s = (t + 19800) % 86400; return `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`; };
   // The day replayed: the entries, Rule 1 and the ATR trail over closed candles.
   // atrSeed: the ATR to start the day with (from the previous day's candles), else the day warms up on its own 14 candles;
@@ -376,19 +494,19 @@
                   "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg), detectDoubleBottom(bars, k, "PE", atr, cfg)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
                   "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)] };
-  function runDay({ bars, cfg = DT, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle"] }) {
+  function runDay({ bars, cfg = DT, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
     }
-    const trades = [], skipped = [], scanners = {};
-    rules.forEach(name => { if (SCANNERS[name]) scanners[name] = { active: null, used: new Set() }; });
+    const trades = [], skipped = [], scanners = {}, scanCfg = prevBars && prevBars.length ? { ...cfg, prevBars } : cfg;  // the previous day's candles: the symmetrical triangles' trend window only
+    rules.forEach(name => { if (SCANNERS[name]) scanners[name] = { active: null, used: new Set(), lastDrop: null }; });
     let open = null, lossesInRow = 0, dayLoss = 0;
     const lastK = (closedCount == null ? bars.length : Math.min(closedCount, bars.length)) - 1;
     for (let k = 0; k <= lastK; k++) {
       const bar = bars[k], atr = k > 0 ? atrs[k - 1] : null;
       const wedgeSigs = [];  // the wedge scanners step first, every candle (see above)
-      for (const name of rules) if (scanners[name]) { const s = SCANNERS[name](scanners[name], bars, k, atr, cfg, skipped); if (s) wedgeSigs.push(s); }
+      for (const name of rules) if (scanners[name]) { const s = SCANNERS[name](scanners[name], bars, k, atr, scanCfg, skipped); if (s) wedgeSigs.push(s); }
       if (open) {  // the trade on this candle's close (the entry candle itself is judged too, as C2 is the candle after C1)
         const t = open, d = t.side === "CE" ? 1 : -1;
         let how = null;
@@ -429,5 +547,5 @@
     }
     return { trades, skipped };
   }
-  root.NewRule = { CFG, DT, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
