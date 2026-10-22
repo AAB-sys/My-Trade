@@ -492,7 +492,21 @@
   document.getElementById("name").textContent = name;
 
   // ---- chart
-  const chart = LightweightCharts.createChart(document.getElementById("chart"), {
+  // The time axis under Calls with Signals (the owner, 22 October: "add time start from 9.15 and every hour should have 3 time
+  // intervals"): marks at 09:15, 09:35, 09:55, 10:15 and so on, every 20 minutes from the open. The chart picks its labels from
+  // weights on the candles (its own: 30 an hour mark, 50 and up a day's first candle, 21 a 5-minute candle); with Calls with Signals
+  // open the 20-minute candles get the hour's weight and a day's first candle too, so it reads 09:15; the rest fall to a 5-minute
+  // weight. Paper calls and the OI chart keep the chart's own marks: the weights are filled again when the tab changes (showPanel)
+  const SignalsAxis = (() => { const Base = LightweightCharts.defaultHorzScaleBehavior(); return class extends Base {
+    fillWeightsForPoints(points, start) {
+      super.fillWeightsForPoints(points, start);
+      if (!plainChart()) return;
+      for (let k = start; k < points.length; k++) {
+        const p = points[k], m = Math.floor((this.key(p.time) % 86400) / 60) - (9 * 60 + 15);  // minutes since 09:15: the chart's times are already shifted to read as IST (toPoints)
+        p.timeWeight = m >= 0 && m % 20 === 0 ? 30 : Math.min(p.timeWeight, 21);
+      }
+    } }; })();
+  const chart = LightweightCharts.createChartEx(document.getElementById("chart"), new SignalsAxis(), {
     autoSize: true,
     layout: { background: { color: "transparent" }, textColor: cssVar("--muted"), fontFamily: "system-ui, sans-serif", fontSize: phone() ? 10 : 11 },  // smaller on a phone: more times fit on the time scale
     grid: { vertLines: { color: cssVar("--grid") }, horzLines: { color: cssVar("--grid") } },
@@ -1783,6 +1797,7 @@
       // the next refresh tries again
     } finally { chain.loading = false; }
   }
+  let wasSignals = false;  // which marks the time axis carries now (SignalsAxis)
   function showPanel(which) {
     try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
     document.getElementById("panels").dataset.panel = which;
@@ -1791,6 +1806,13 @@
     document.getElementById("tab-chain").classList.toggle("on", which === "chain");
     document.getElementById("chain-box").hidden = which !== "chain";
     document.getElementById("signals-box").hidden = which !== "signals";
+    if (series && bars.length && (which === "signals") !== wasSignals) {  // the time axis marks: the 20-minute ones under Calls with Signals, the chart's own elsewhere (SignalsAxis)
+      chart.timeScale().applyOptions({ tickMarkMaxCharacterLength: which === "signals" ? 5 : 8 });  // room for "10:35" every 20 minutes on a desktop; 8 is the chart's own default
+      const range = chart.timeScale().getVisibleLogicalRange(), pts = toPoints(bars);
+      series.setData([]); series.setData(pts);  // the weights are filled only for new candles: set them anew
+      if (range) chart.timeScale().setVisibleLogicalRange(range);
+    }
+    wasSignals = which === "signals";
     if (series) drawLevels();  // the chart: plain with Calls with Signals open, its lines back with Paper calls or the OI chart
     if (which === "chain") { drawChain(); loadChain(); }
   }
