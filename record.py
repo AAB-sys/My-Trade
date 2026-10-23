@@ -230,7 +230,7 @@ def build_day(day: date, complete: bool) -> dict | None:
         for b in all_minutes:
             by_date.setdefault(ist_date(b["time"]), []).append(b)
         days = {d: day_figures(bars) for d, bars in by_date.items()}
-        days.update({ist_date(d["time"]): {k: d[k] for k in ("open", "high", "low", "close")} for d in (dhan.daily_or_none(name) or [])})  # refused (22 October): the candles' figures stand
+        days.update({ist_date(d["time"]): {k: d[k] for k in ("open", "high", "low", "close")} for d in dhan.daily_or_saved(name)})  # refused (22 October): the saved days' figures, then the candles'
         earlier = sorted(d for d in days if d < day)
         previous = {"date": earlier[-1].isoformat(), **days[earlier[-1]]} if earlier else None
         indices[name] = {"candles": candles, "day": day_figures(minutes), "previous": previous}
@@ -255,6 +255,31 @@ def read_day(day: date) -> dict | None:
         return json.loads(path_of(day).read_text())
     except (OSError, ValueError):
         return None
+
+
+_saved_sessions: dict = {"stamp": None, "days": {}}  # the saved days' four figures per index, read again only when the files change
+
+
+def saved_sessions(name: str) -> list:
+    """The sessions the saved days know for an index, as daily bars (time: the day's 9:15 IST; open, high, low, close),
+    oldest first: each saved day's own figures and the previous day it names. For the previous session, the levels and
+    the dashboard when Dhan refuses its daily list (23 October: /charts/historical and /charts/intraday both refused
+    for the whole morning, with yesterday's complete copy sitting on the disk and on GitHub)."""
+    stamp = tuple((path.name, path.stat().st_mtime) for path in sorted(SESSIONS.glob("*.json")))
+    if stamp != _saved_sessions["stamp"]:
+        days = {}
+        for path in sorted(SESSIONS.glob("*.json")):
+            data = read_day(date.fromisoformat(path.stem)) if len(path.stem) == 10 else None
+            for index, got in ((data or {}).get("indices") or {}).items():
+                mine = days.setdefault(index, {})
+                if data.get("complete") and got.get("day"):
+                    mine[data["date"]] = got["day"]
+                if got.get("previous") and got["previous"].get("date"):
+                    mine.setdefault(got["previous"]["date"], {k: got["previous"][k] for k in ("open", "high", "low", "close")})
+        _saved_sessions.update(stamp=stamp, days=days)
+    mine = _saved_sessions["days"].get(name) or {}
+    return [{"time": int(datetime.combine(date.fromisoformat(d), datetime.min.time()).replace(hour=9, minute=15, tzinfo=dhan.IST).timestamp()),
+             **{k: mine[d][k] for k in ("open", "high", "low", "close")}} for d in sorted(mine)]
 
 
 def is_complete(day: date) -> bool:

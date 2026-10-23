@@ -439,6 +439,19 @@ def daily_or_none(name: str, days_back: int = 45) -> list | None:
     return bars
 
 
+saved_sessions_of = None  # set by the server: index name -> the saved days' daily bars (record.saved_sessions), oldest first
+
+
+def daily_or_saved(name: str) -> list:
+    """Dhan's daily list; when Dhan refuses it, the sessions the saved days know (23 October: both chart requests refused all
+    morning, and the page showed no previous session, no previous-day or previous-close lines, and the change against the live
+    price itself); when nothing is saved either, nothing: the callers build the sessions they can from the candles."""
+    bars = daily_or_none(name)
+    if bars is not None:
+        return bars
+    return list(saved_sessions_of(name) or []) if saved_sessions_of else []
+
+
 def daily_problem() -> str | None:
     """What Dhan said when it refused the daily list within the last 5 minutes, for /health; else None."""
     recent = [(name, p) for name, p in _daily_problem.items() if time.time() - p["at"] < 300]
@@ -463,7 +476,7 @@ def previous_day(name: str, all_candles: list) -> dict | None:
     today = today_ist()
     bar_date = lambda bar: datetime.fromtimestamp(bar["time"], IST).date()
     sessions = sorted({bar_date(b) for b in all_candles})
-    days = list(daily_or_none(name) or [])  # refused: every session from the candles (22 October)
+    days = daily_or_saved(name)  # refused: the saved days' sessions (23 October), then every session from the candles (22 October)
     known = {bar_date(d) for d in days}
     for day in sessions:
         if day not in known:
@@ -498,8 +511,8 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
         out.sort(key=lambda d: d["time"])
         return out
 
-    day_list = daily_or_none(name)  # None when Dhan refuses the list (22 October): with_recent then builds every session from the candles
-    days = with_recent(day_list or [])
+    day_list = daily_or_none(name)  # None when Dhan refuses the list (22 October): the saved days' sessions stand in (23 October), and
+    days = with_recent(day_list if day_list is not None else daily_or_saved(name))  # with_recent builds every session the candles know
     year = with_recent(cached(("year", name), 3600, lambda: daily(name, 370))) if day_list is not None else days
     if seconds >= 86400:
         cal_days = ranges[range_key].get("cal_days", 370)
