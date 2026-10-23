@@ -539,7 +539,14 @@
   function placeTags() {
     const box = document.getElementById("line-tags");
     const lv = state.move === "close" && series && !plainChart() ? lastLevels.levels.filter(l => l.signed) : [];  // no tags on the plain chart
-    box.parentElement.classList.toggle("left-tags", lv.length > 0);  // the chart makes room on its left for the column (it sizes itself to its box)
+    const room = lv.length > 0, holder = box.parentElement;
+    if (holder.classList.contains("left-tags") !== room) {  // the column comes or goes, and the chart (it sizes itself to its box) grows or shrinks
+      // by its width: the same candles stay in view. Until 23 October the chart's own resize slid the view two candles on, the first
+      // switch to Calls with Signals hid 9:15 and 9:20 at the left edge (the owner: "yes, fix it"), and every tab kept that view after
+      const view = chart.timeScale().getVisibleLogicalRange();
+      holder.classList.toggle("left-tags", room);
+      if (view) requestAnimationFrame(() => requestAnimationFrame(() => chart.timeScale().setVisibleLogicalRange(view)));
+    }
     const key = JSON.stringify(lv);
     if (box.dataset.key !== key) {
       box.innerHTML = lv.map(l => `<span style="color:${cssVar(l.ratio > 0 ? "--candle-up" : l.ratio < 0 ? "--candle-down" : "--ink-2")}">${Rules.levelName(l.ratio, true)}<small>${fmt.format(l.price)}</small></span>`).join("");  // the name and the price (the owner, 16 October: "values of levels can be shown to the left end"; until then the name only, 15 October: "Remove the index numbers from the febonachi lines. Just keep the percentage")
