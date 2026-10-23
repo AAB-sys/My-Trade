@@ -1108,6 +1108,7 @@ def feed_state() -> dict:
             "tiles_problem": d["tiles_problem"],
             "daily_problem": dhan.daily_problem(),  # Dhan refusing the daily list (22 October): the previous session then comes from the candles
             "intraday_problem": dhan.intraday_problem(),  # Dhan refusing the minute candles (23 October): today's candles then come from the ticks
+            "chart_form": dhan.chart_form_report(),  # the form each chart request is accepted in now: the candle size as "text" or "number" (23 October)
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
             "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
