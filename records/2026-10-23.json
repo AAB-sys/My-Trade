@@ -1,0 +1,18 @@
+[
+ {
+  "key": "NIFTY 50|5m|1792728000|PE|today",
+  "index": "NIFTY 50",
+  "side": "PE",
+  "expiry": "2026-10-27",
+  "strike": 22700.0,
+  "index_at_entry": 22676.15,
+  "premium_paid": 144.25,
+  "paid_at": "2026-10-23T09:35:46+05:30",
+  "premium_now": 146.05,
+  "now_at": "2026-10-23T09:35:58+05:30",
+  "sell_below": 93.76,
+  "sold": null,
+  "ended": null,
+  "security_id": 51341
+ }
+]
