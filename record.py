@@ -206,7 +206,7 @@ def day_figures(bars: list) -> dict:
 def build_day(day: date, complete: bool) -> dict | None:
     """The day's record from Dhan's candles (the last days are asked for in one request each, and cached briefly)
     None when Dhan has no candle for that day (a holiday, or not traded yet)."""
-    indices, missing = {}, {}
+    indices, missing, from_ticks = {}, {}, []
     for name in dhan.INDEX_IDS:
         try:
             all_minutes = dhan.intraday(name, 1)
@@ -216,6 +216,12 @@ def build_day(day: date, complete: bool) -> dict | None:
         minutes = [b for b in all_minutes if ist_date(b["time"]) == day]
         if not minutes:
             continue
+        if dhan.intraday_problem(name):  # today's candles are the ones built from the ticks (23 October): said in the file, and a day
+            from_ticks.append(name)       # that does not start at 09:15 (the server came up during the session) is not a complete day
+            first = datetime.fromtimestamp(minutes[0]["time"], dhan.IST)
+            if complete and (first.hour, first.minute) != (9, 15):
+                raise RecordError(f"{name}: the candles built from the ticks start at {first.strftime('%H:%M')}, not 09:15, and Dhan refuses its own; "
+                                  "the day is not saved as complete")
         candles = {"1m": minutes}
         for key in CANDLE_KEYS[1:]:
             candles[key] = [b for b in dhan.intraday(name, INTERVALS[key]["bar_seconds"] // 60) if ist_date(b["time"]) == day]
@@ -235,6 +241,8 @@ def build_day(day: date, complete: bool) -> dict | None:
     data = {"date": day.isoformat(), "saved_at": now_ist(), "complete": complete, "indices": indices}
     if missing:
         data["missing"] = missing
+    if from_ticks:
+        data["candles_from_ticks"] = from_ticks
     return data
 
 

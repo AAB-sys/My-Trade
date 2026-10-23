@@ -411,8 +411,9 @@ def live_price(name: str, within: float = 10) -> float | None:
 
 
 def fold_tick(name: str, last: float, now: float, via: str) -> None:
-    """One last price into the index's live entry and the candle of every size forming now. A candle that
-    just closed is kept (the last 48 of each size), so the detail answer carries it the second it closes."""
+    """One last price into the index's live entry and the candle of every size forming now. A candle that just closed
+    is kept (every closed one of today, of each size: until 23 October the last 48), so the detail answer carries it the
+    second it closes, and the whole day is there when Dhan refuses its minute candles (tick_candles_today)."""
     entry = live.setdefault(name, {"bars": {}, "closed": {}})
     entry.update(last=last, time=now_ist(), via=via)
     if not dhan.in_session({"time": now}):  # the pre-open (09:00 to 09:15) and after the close: the price moves, but the
@@ -426,7 +427,8 @@ def fold_tick(name: str, last: float, now: float, via: str) -> None:
             if bar and bar["time"] < bucket:
                 done = entry.setdefault("closed", {}).setdefault(key, [])
                 done.append(bar)
-                del done[:-48]
+                day_start = bucket_start(now, 86400)  # today's 09:15: the closed candles of earlier days go
+                done[:] = [b for b in done if b["time"] >= day_start]
             entry["bars"][key] = {"time": bucket, "open": last, "high": last, "low": last, "close": last}
 
 
@@ -438,6 +440,19 @@ def tick_candles(name: str, key: str) -> list:
     if forming:
         bars.append(forming)
     return bars
+
+
+def tick_candles_today(name: str, minutes: int) -> list:
+    """Today's candles of one size built from the ticks, closed ones then the one forming now: what dhan.intraday hands
+    out while Dhan refuses the minute candles (23 October). The size the entry keeps when there is one, else the
+    one-minute candles folded. Only from the server's start: a restart during the session loses the candles before it."""
+    today = datetime.now(dhan.IST).date()
+    key = next((k for k, spec in INTERVALS.items() if spec["bar_seconds"] == minutes * 60), None)
+    bars = tick_candles(name, key) if key else dhan.fold(tick_candles(name, "1m"), minutes * 60)
+    return [dict(b) for b in bars if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
+
+
+dhan.tick_candles_of = tick_candles_today
 
 
 CLOSE_FROM_TICKS_SECONDS = 60  # how long after a candle closes its close is the last tick's rather than Dhan's copy (8 October)
@@ -1062,6 +1077,7 @@ def feed_state() -> dict:
             "status": d["status"], "stream": d["stream"], "stream_tick": d["stream_tick"], "poll": d["poll"], "tiles": d["tiles"],
             "tiles_problem": d["tiles_problem"],
             "daily_problem": dhan.daily_problem(),  # Dhan refusing the daily list (22 October): the previous session then comes from the candles
+            "intraday_problem": dhan.intraday_problem(),  # Dhan refusing the minute candles (23 October): today's candles then come from the ticks
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
             "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
@@ -1170,7 +1186,8 @@ async def index_detail(
                         raise
                     await asyncio.sleep(1.5)  # Dhan's one-a-second rule: the next second is ours; one more try before anything else
                     payload = await asyncio.to_thread(dhan.fetch_detail, key, range_key, interval_key, INTERVALS, RANGES, live_price(key))
-                dhan_status(True, "Dhan: real-time candles and quotes from your account")
+                dhan_status(True, "Dhan: real-time prices from your account; " + ticks_note if (ticks_note := dhan.intraday_problem(key))
+                            else "Dhan: real-time candles and quotes from your account")
                 payload.update(source="dhan", simulated=False, poll_seconds=DHAN_POLL_SECONDS, auth_enabled=AUTH_ENABLED, dhan=store["dhan"])
                 detail_cache[("dhan", key, range_key, interval_key)] = (time.monotonic(), payload, now_ist()[11:19])
             except Exception as exc:
