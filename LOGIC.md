@@ -607,11 +607,17 @@ The rule, in the order it is applied:
    the day's first candle's true range is taken against the previous close). The
    first check that answers decides:
    - **A, parallel**: a call the same way is open at the signal candle's close (the
-     "Can be bought parallelly" case). Version 2: skipped only while the day is not
-     winning. Day health is the index points of every signal of the day that has
-     fired and already exited by that candle, taken or followed on paper; it must be
-     above 0 (`healthMinAtr` x ATR). The first parallel call of a day is always
-     skipped. (Version 1: every parallel call.)
+     "Can be bought parallelly" case). Version 2, revised the same morning (the
+     owner: the rule "was filtering out successful calls"): **never blocked**. The
+     call goes on to the other checks and carries an advice note (`gateAdvice`, on
+     the row and in the CSV): WOULD SKIP while the day is not winning, OK when it is.
+     Day health is the index points of every signal of the day that has fired and
+     already exited by that candle, taken or followed on paper; winning means above
+     0 (`healthMinAtr` x ATR), so the first parallel call of a day is always flagged.
+     The advice is judged like a check from the shadow log (the flagged calls that
+     went out must lose overall, their winner points less than half of their loser
+     points) and only the owner's decision makes it a block (`parallel: "health"`,
+     `GATE_HEALTH`). (Version 1: every parallel call skipped.)
    - **B, opening window**: the signal candle begins before 09:45. Version 2: it
      passes only when it closes beyond the opening range, the high and low of the
      day's first 3 candles, by 0.25 x ATR; a signal on one of those 3 candles has no
@@ -647,29 +653,30 @@ The rule, in the order it is applied:
    stays. The watcher writes the daily summary line of the brief (section 6) to the
    server's log once the day's last candle has closed: calls, TAKE, SKIP by check,
    the points if every call had been taken, the TAKE calls' points, the skipped
-   winners, the zones found, the day health at the last signal. The settings are
+   winners, the parallel advice (flagged, went out, their points), the zones found,
+   the day health at the last signal. The settings are
    the version 2 document's section 12, in `Rules.GATE` and `rule.GATE` (a change
    is a one-line PR, as the two engines must agree); the brief's weekly CSV export
    is the day's calls CSV on the data branch. Checked call for call on the
    document's Appendix A (22 October as read from a screenshot, ATR seeded at 30):
    the reference code's 53 tests pass as delivered; through the live engine every
    verdict of the document's section 9 on the calls the engine also gives (the
-   engine has three signals the replay did not, at 09:15, 10:20 and 12:25, so its
-   12:45 CE is a parallel call here and its day health carries the 09:15 call; the
-   brief defines "parallel" at the signal candle's close and so does the build, the
-   reference replay marks it at firing), the zones (13:50 and 15:15 only; version
-   1's 10:50 box gone), day health, the opening range, the chase, the version 1
-   settings, the mirror M-1; page and server proven the same by `check_rule.py`.
-   On the 16 saved days 29 September to 21 October and 22 October, NIFTY 50,
-   5-minute, the previous close's lines: 249 calls, +1,686; version 2 live 149
-   calls, +836.50 (version 1 live 91 calls, +305; a skipped signal followed on paper
-   counts as open for the parallel check, as in the reference replay); with only
-   the chase and parallel checks live, the brief's first step, 193 calls, +1,180;
-   22 October alone: 24 calls -61.50 → 10 calls +160.55. In shadow the skipped
-   calls made: parallel 53 calls +471, opening 26 calls +45, chase 3 calls +35,
-   zone 18 calls +299: the gate still skips more profit than loss on these days,
-   as version 1 did, which is what the shadow period is for. The document's
-   missed-winner report is the daily line's skipped-winner list.
+   engine has three signals the replay did not, at 09:15, 10:20 and 12:25, and nine
+   parallel calls to the document's seven; the brief defines "parallel" at the
+   signal candle's close and so does the build, the reference replay marks it at
+   firing), the advice on every parallel call, the zones (13:50 and 15:15 only;
+   version 1's 10:50 box gone), day health, the opening range, the chase, the
+   version 1 settings, the advice as a block, the mirror M-1; page and server
+   proven the same by `check_rule.py`. On the 16 saved days 29 September to 21
+   October and 22 October, NIFTY 50, 5-minute, the previous close's lines: 249
+   calls, +1,686; version 2 live (opening, chase and zone) 192 calls, +1,329; with
+   the advice as a block 149 calls, +836.50; version 1 live 91 calls, +305 (a skipped
+   signal followed on paper counts as open for the parallel mark, as in the
+   reference replay); 22 October alone: 24 calls -61.50 → 17 calls +146.25. In
+   shadow the skipped calls made: opening 33 calls +51, chase 5 calls +22, zone 19
+   calls +284; the parallel advice flagged 9 calls on 22 October, 7 went out for
+   -27.7. The document's missed-winner report is the daily line's skipped-winner
+   list.
 
 As in layer 2, a candle is judged against the previous closed candle, and the
 first candle of a day against the last candle of the day before. Points are

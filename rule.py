@@ -265,16 +265,17 @@ def atr_before(bars: list, period: int) -> list:
 # ---- The Call Gate, version 2 (the owner's "Call Gate" version 2 document, its Implementation Brief and reference code, 23 October
 # morning; static/rules.js GATE and the functions under it, which this copy follows line for line): one extra step between a signal and
 # its order, judged on the signal candle the moment the signal is born, with the ATR(14) as of the previous candle carried from the
-# previous day. A: a parallel call is skipped while the day is not winning (day health, the points of this day's signals that fired and
-# exited, taken or on paper); B: an opening call (before 09:45) passes only on a close beyond the opening range (the first 3 candles) by
+# previous day. A: a parallel call is never blocked in the default "log": it carries an advice note, OK or WOULD SKIP by day health (the
+# points of this day's signals that fired and exited, taken or on paper); "health" makes the advice a block; B: an opening call (before 09:45) passes only on a close beyond the opening range (the first 3 candles) by
 # 0.25 x ATR; no late rule; C: a range of more than 2.5 x ATR is a chase; D: inside a sideways zone (height 1.5 x ATR), by where the
 # candle closes in it. Mode SHADOW: every call fires, the verdict rides on it. Mode LIVE: a SKIP from a check in liveChecks is followed
 # on paper (no order). GATE_V1 is version 1 as settings
 GATE = {"mode": "SHADOW", "liveChecks": ["parallel", "opening", "late", "chase", "zone"],
-        "parallel": "health", "healthMinAtr": 0.0, "openingUntil": 9 * 3600 + 45 * 60, "opening": "orb", "orCandles": 3, "orbBufferAtr": 0.25,
+        "parallel": "log", "healthMinAtr": 0.0, "openingUntil": 9 * 3600 + 45 * 60, "opening": "orb", "orCandles": 3, "orbBufferAtr": 0.25,
         "lateAfter": None, "chaseAtr": 2.5, "zoneRule": True, "zoneN": 6, "zoneHeightAtr": 1.5, "zoneErMax": 0.30, "bufferAtr": 0.25,
         "strongBodyAtr": 0.5, "strongCloseFrac": 0.30, "strongLookback": 3, "legLookback": 12, "legSizeAtr": 2.0, "legErMin": 0.60, "atrPeriod": 14}
 GATE_V1 = {**GATE, "parallel": "skip", "opening": "skip", "lateAfter": 14 * 3600 + 45 * 60, "zoneHeightAtr": 2.0}
+GATE_HEALTH = {**GATE, "parallel": "health"}  # the parallel advice switched on as a block (what could go live later, the owner's decision)
 
 
 def _hm(sec) -> str:
@@ -432,11 +433,20 @@ def opening_range(closed: list, day_first: int, g: dict):
     return {"hi": max(b["high"] for b in closed[day_first:day_first + n]), "lo": min(b["low"] for b in closed[day_first:day_first + n])}
 
 
+def parallel_advice(parallel: bool, health: float, atr, g: dict) -> str:
+    """The advice on a parallel call (the revised version 2, section 6): a note only, never a block; '' for a call that is not parallel."""
+    if not parallel:
+        return ""
+    if atr is not None and health > g["healthMinAtr"] * atr:
+        return f"OK: parallel call, day winning (closed signals today {_signed1(health)} points)"
+    return f"WOULD SKIP: parallel call, day not winning (closed signals today {_signed1(health)} points)"
+
+
 def gate_verdict(closed: list, i: int, side: str, atr, zone: dict, parallel: bool, health: float, day_first: int, g: dict) -> dict:
     """The verdict for a signal born on candle i: gate, why, check (the one that decided; None on TAKE 'no sideways zone active')."""
     bar = closed[i]
     when = (bar["time"] + IST_OFFSET) % 86400
-    if parallel and g["parallel"] != "allow":
+    if parallel and g["parallel"] in ("health", "skip"):  # not in the default "log": a parallel call goes on to the other checks
         if g["parallel"] == "skip":
             return {"gate": "SKIP", "why": f"parallel call: a {side} call is already open", "check": "parallel"}
         if atr is None or not health > g["healthMinAtr"] * atr:
@@ -468,9 +478,13 @@ def gate_summary(res: dict, date: str) -> str:
     by = lambda c: sum(1 for t in skip if t.get("gateCheck") == c)
     pts = lambda lst: round2(sum(t.get("points") or 0 for t in lst))
     winners = [f"{_ist_hm(t['signalTime'])} {t['side']} {_signed1(t['points'])} ({t.get('gateCheck')})" for t in skip if (t.get("points") or 0) > 0]
+    flagged = [t for t in fired if (t.get("gateAdvice") or "").startswith("WOULD SKIP")]  # the parallel advice, judged like a check
+    out = [t for t in flagged if t["gate"] == "TAKE"]
+    won_pts, lost_pts = pts([t for t in out if (t.get("points") or 0) > 0]), pts([t for t in out if (t.get("points") or 0) <= 0])
     last = fired[-1] if fired else None
     return (f"GATE DAY {date} · calls {len(fired)} · TAKE {len(take)} · SKIP {len(skip)} · SKIP by check: parallel {by('parallel')} · opening {by('opening')} · late {by('late')} · chase {by('chase')} · zone {by('zone')}"
             f" · points if every call had been taken {_signed1(pts(fired))} · points of the TAKE calls {_signed1(pts(take))} · skipped winners: {' · '.join(winners) if winners else 'none'}"
+            f" · parallel advice: flagged {len(flagged)} · went out {len(out)} · points of those {_signed1(pts(out))} (winners {_signed1(won_pts)}, losers {_signed1(lost_pts)})"
             f" · zones found: {' · '.join(_ist_hm(t) for t in res.get('zonesFound') or []) or 'none'} · day health at the last signal ({_ist_hm(last['signalTime']) if last else '-'}): {_signed1(last.get('gateHealth') or 0) if last else '-'}")
 
 
@@ -790,8 +804,10 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         if sig and (was or (not late and not shallow)):
             if g:  # the Call Gate, the moment the signal is born: day health = this day's signals that have fired and exited by now, taken or on paper
                 health = round2(sum(t["points"] for t in trades if t.get("exit") is not None and t["signalTime"] >= closed[day_first]["time"]))
-                v = gate_verdict(closed, i, sig["side"], gate_atrs[i], zone, any(o["side"] == sig["side"] for o in open_), health, day_first, g)
+                parallel = any(o["side"] == sig["side"] for o in open_)
+                v = gate_verdict(closed, i, sig["side"], gate_atrs[i], zone, parallel, health, day_first, g)
                 sig["gate"], sig["gateWhy"], sig["gateCheck"], sig["gateHealth"] = v["gate"], v["why"], v["check"], health
+                sig["gateAdvice"] = parallel_advice(parallel, health, gate_atrs[i], g) if g["parallel"] in ("log", "health") else ""  # the note on a parallel call
                 if v["gate"] == "SKIP" and g["mode"] == "LIVE" and v["check"] in g["liveChecks"] and not was:
                     sig["paper"] = True  # a live check held the order: followed on paper, no order
             used[(sig["level"], sig["side"])] = True  # the no-repeat lock, taken or skipped

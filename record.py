@@ -72,7 +72,7 @@ CALL_FIELDS = ("date", "index", "time_frame", "levels", "signal_mode", "first_se
                "candles_say", "exit_said_at_ist", "candles_why",  # the candle verdict (rules.js readOf / rule.read_of), 7 October: off the table, in the CSV
                "carry_deep", "beyond_level", "beyond_reached",  # the carry read (idea P5's question, rule.carry_of), 7 October evening
                "exit_at_ist", "parallel", "reason",  # 21 October: the early exit's minute (19 October), the parallel mark (18 October), the page's Reason column
-               "gate", "gate_reason", "gate_check", "paper")  # the Call Gate's verdict on the signal, TAKE or SKIP, why, the check that decided; "yes" on a call followed on paper (version 2, 23 October)
+               "gate", "gate_reason", "gate_check", "gate_advice", "paper")  # the Call Gate's verdict on the signal, TAKE or SKIP, why, the check that decided, the parallel advice; "yes" on a call followed on paper (version 2, 23 October)
 live_calls: dict = {}  # date -> {key: row}
 _calls_lock = threading.Lock()
 _calls_version = 0
@@ -131,7 +131,7 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                         "exit_at_ist": _stamp(c.get("exit_at")) if c.get("exit_at") else "", "parallel": "yes" if c.get("parallel") else "",
                         "reason": str(c.get("reason") or "")[:120] or row.get("reason", ""),  # the page's Reason column; the watcher's rows carry none, so they never blank it
                         "gate": str(c.get("gate") or "")[:5], "gate_reason": str(c.get("gate_reason") or "")[:140],  # the Call Gate (version 2, 23 October)
-                        "gate_check": str(c.get("gate_check") or "")[:10], "paper": "yes" if c.get("paper") else ""})
+                        "gate_check": str(c.get("gate_check") or "")[:10], "gate_advice": str(c.get("gate_advice") or "")[:100], "paper": "yes" if c.get("paper") else ""})
             day[key] = row
             if before is None or tuple(row.get(k) for k in HURRY) != before:
                 changed = True

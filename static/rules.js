@@ -236,10 +236,12 @@
   // Judged on the signal candle the moment the signal is born, on closed candles only, with the ATR(14) as of the previous candle
   // (Wilder, carried from the previous day: atrSeed; the day's first candle's true range against the previous close). The first check
   // that answers decides, in this order:
-  //   A. parallel   a call the same way is open at the signal candle's close (the "Can be bought parallelly" case). Version 2: skipped
-  //                 only while the day is not winning: day health, the index points of every signal of the day that has fired and
-  //                 already exited (taken or followed on paper), must be above healthMinAtr x ATR (0: any profit). Setting parallel:
-  //                 "health" (version 2) | "skip" (version 1: every parallel call) | "allow"
+  //   A. parallel   a call the same way is open at the signal candle's close (the "Can be bought parallelly" case). Version 2 (revised,
+  //                 23 October: "parallel calls are never blocked; the gate only writes advice next to them"): setting parallel "log",
+  //                 the call goes on to the other checks and carries an advice note (gateAdvice): OK when the day is winning, WOULD SKIP
+  //                 otherwise. Day health: the index points of every signal of the day that has fired and already exited (taken or
+  //                 followed on paper); winning means above healthMinAtr x ATR (0: any profit). "health": the advice as a real block
+  //                 (GATE_HEALTH, the owner's later decision from the shadow log) | "skip" (version 1: every parallel call) | "allow"
   //   B. opening    the signal candle begins before openingUntil (09:45). Version 2 ("orb"): it passes only when it closes beyond the
   //                 opening range (the high and low of the day's first orCandles candles) by orbBufferAtr x ATR; a signal on one of
   //                 those first candles has no range yet and is skipped. "skip" (version 1: every opening call) | "allow"
@@ -264,10 +266,11 @@
   // The signals cancelled before firing come back in `cancelled`, each with its verdict (the brief: "both columns filled for every
   // signal, fired or cancelled"). The settings are the version 2 document's section 12; GATE_V1 is version 1 as settings
   const GATE = { mode: "SHADOW", liveChecks: ["parallel", "opening", "late", "chase", "zone"],
-                 parallel: "health", healthMinAtr: 0.0, openingUntil: 9 * 3600 + 45 * 60, opening: "orb", orCandles: 3, orbBufferAtr: 0.25,
+                 parallel: "log", healthMinAtr: 0.0, openingUntil: 9 * 3600 + 45 * 60, opening: "orb", orCandles: 3, orbBufferAtr: 0.25,
                  lateAfter: null, chaseAtr: 2.5, zoneRule: true, zoneN: 6, zoneHeightAtr: 1.5, zoneErMax: 0.30, bufferAtr: 0.25,
                  strongBodyAtr: 0.5, strongCloseFrac: 0.30, strongLookback: 3, legLookback: 12, legSizeAtr: 2.0, legErMin: 0.60, atrPeriod: 14 };
   const GATE_V1 = { ...GATE, parallel: "skip", opening: "skip", lateAfter: 14 * 3600 + 45 * 60, zoneHeightAtr: 2.0 };
+  const GATE_HEALTH = { ...GATE, parallel: "health" };  // the parallel advice switched on as a block (what could go live later, the owner's decision)
   const hm = (sec) => `${String(Math.floor(sec / 3600)).padStart(2, "0")}:${String(Math.floor(sec % 3600 / 60)).padStart(2, "0")}`;
   const num1 = (x) => String(Math.round(x * 10) / 10);  // a number to one decimal, written as JavaScript writes it (3, 3.5): the server's copy writes the same
   const signed1 = (x) => (x < 0 ? "-" : "+") + Math.abs(Math.round(x * 10) / 10).toFixed(1);
@@ -352,10 +355,16 @@
     return { gate: "SKIP", why: `weak call from the middle of a sideways zone (${pct}; not ${st.failed.join(", not ")})` };
   }
   function openingRange(closed, dayFirst, g) { const n = g.orCandles; if (closed.length - dayFirst < n) return null; let hi = -Infinity, lo = Infinity; for (let j = dayFirst; j < dayFirst + n; j++) { hi = Math.max(hi, closed[j].high); lo = Math.min(lo, closed[j].low); } return { hi, lo }; }
+  // The advice on a parallel call (the revised version 2, section 6): a note only, never a block; "" for a call that is not parallel
+  function parallelAdvice(parallel, health, atr, g) {
+    if (!parallel) return "";
+    if (atr != null && health > g.healthMinAtr * atr) return `OK: parallel call, day winning (closed signals today ${signed1(health)} points)`;
+    return `WOULD SKIP: parallel call, day not winning (closed signals today ${signed1(health)} points)`;
+  }
   // The verdict for a signal born on candle i: { gate, why, check } (check: the one that decided; null on TAKE "no sideways zone active")
   function gateVerdict(closed, i, side, atr, zone, parallel, health, dayFirst, g) {
     const bar = closed[i], when = (bar.time + IST_OFFSET) % 86400;
-    if (parallel && g.parallel !== "allow") {
+    if (parallel && (g.parallel === "health" || g.parallel === "skip")) {  // not in the default "log": a parallel call goes on to the other checks
       if (g.parallel === "skip") return { gate: "SKIP", why: `parallel call: a ${side} call is already open`, check: "parallel" };
       if (atr == null || !(health > g.healthMinAtr * atr)) return { gate: "SKIP", why: `parallel call on a day that is not winning (closed signals today ${signed1(health)} points)`, check: "parallel" };
     }
@@ -374,9 +383,12 @@
     const fired = res.trades.filter(t => t.entry != null && t.gate), take = fired.filter(t => t.gate === "TAKE"), skip = fired.filter(t => t.gate === "SKIP");
     const by = (c) => skip.filter(t => t.gateCheck === c).length, pts = (list) => round2(list.reduce((a, t) => a + (t.points || 0), 0));
     const winners = skip.filter(t => t.points > 0).map(t => `${istHM(t.signalTime)} ${t.side} ${signed1(t.points)} (${t.gateCheck})`);
+    const flagged = fired.filter(t => (t.gateAdvice || "").startsWith("WOULD SKIP")), out = flagged.filter(t => t.gate === "TAKE");  // the parallel advice, judged like a check
+    const wonPts = pts(out.filter(t => t.points > 0)), lostPts = pts(out.filter(t => t.points <= 0));
     const last = fired[fired.length - 1];
     return `GATE DAY ${date} · calls ${fired.length} · TAKE ${take.length} · SKIP ${skip.length} · SKIP by check: parallel ${by("parallel")} · opening ${by("opening")} · late ${by("late")} · chase ${by("chase")} · zone ${by("zone")}`
       + ` · points if every call had been taken ${signed1(pts(fired))} · points of the TAKE calls ${signed1(pts(take))} · skipped winners: ${winners.length ? winners.join(" · ") : "none"}`
+      + ` · parallel advice: flagged ${flagged.length} · went out ${out.length} · points of those ${signed1(pts(out))} (winners ${signed1(wonPts)}, losers ${signed1(lostPts)})`
       + ` · zones found: ${(res.zonesFound || []).map(istHM).join(" · ") || "none"} · day health at the last signal (${last ? istHM(last.signalTime) : "-"}): ${last ? signed1(last.gateHealth || 0) : "-"}`;
   }
   const istHM = (t) => { const s = (t + IST_OFFSET) % 86400; return hm(s); };
@@ -443,7 +455,7 @@
   //              the minute's end). Judged on the minutes the same way live and in a replay; without them (null) nothing changes.
   //              A retouch earlier in the same candle still comes first. Bounce (held) calls keep their target
   //   gate       the Call Gate (GATE above, version 2), judged on every signal the moment it is born: in mode SHADOW the verdict, its
-  //              reason and the check that decided ride on the call (gate, gateWhy, gateCheck, gateHealth) and nothing else changes; in
+  //              reason, the check that decided and the parallel advice ride on the call (gate, gateWhy, gateCheck, gateHealth, gateAdvice) and nothing else changes; in
   //              mode LIVE a SKIP from a live check is followed on paper (paper: true, no order). The signals cancelled before firing come
   //              back in `cancelled` with their verdicts, the zones found in `zonesFound`. null: no gate (the research engine's comparisons)
   //   atrSeed    the gate's ATR carried in from the previous day (atrSeedOf over its candles); null: the plain average of the first 14
@@ -604,8 +616,9 @@
       if (sig && (was || (!late && !shallow))) {
         if (g) {  // the Call Gate, the moment the signal is born: day health = this day's signals that have fired and exited by now, taken or on paper
           const health = round2(trades.filter(t => t.exit != null && t.signalTime >= closed[dayFirst].time).reduce((a, t) => a + t.points, 0));
-          const v = gateVerdict(closed, i, sig.side, gateAtrs[i], zone, open.some(o => o.side === sig.side), health, dayFirst, g);
+          const parallel = open.some(o => o.side === sig.side), v = gateVerdict(closed, i, sig.side, gateAtrs[i], zone, parallel, health, dayFirst, g);
           sig.gate = v.gate; sig.gateWhy = v.why; sig.gateCheck = v.check; sig.gateHealth = health;
+          sig.gateAdvice = g.parallel === "log" || g.parallel === "health" ? parallelAdvice(parallel, health, gateAtrs[i], g) : "";  // the note on a parallel call
           if (v.gate === "SKIP" && g.mode === "LIVE" && g.liveChecks.includes(v.check) && !was) sig.paper = true;  // a live check held the order: followed on paper, no order
         }
         used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side };  // the no-repeat lock, taken or skipped
@@ -798,5 +811,5 @@
 
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, NEW_HIGH_LOW, pastEdgeAt,
-                 breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary };
+                 breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary };
 })(typeof window !== "undefined" ? window : globalThis);

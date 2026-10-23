@@ -783,7 +783,7 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None,
                      "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": "",  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
-                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "paper": False})  # the Call Gate's verdict on the signal, the check that decided (version 2)
+                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": False})  # the Call Gate's verdict on the signal, the check that decided, the parallel advice (version 2)
     if rows:
         record.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)  # the day's calls CSV (the daily save, back on 21 October)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
@@ -810,7 +810,7 @@ def paper_row(t: dict) -> dict:
             "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
             "points": t.get("points"), "how": t["how"], "candles_say": "", "exit_said_at": None, "candles_why": "", "carry_deep": "", "beyond_level": None, "beyond_reached": "",
             "contract": "", "premium_paid": None, "premium_now": None, "sell_below": None, "sold_at": None, "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")),
-            "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "paper": True}
+            "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": True}
 
 
 gate_daily_logged: set = set()  # (index, levels mode, date) whose daily summary line is in the log

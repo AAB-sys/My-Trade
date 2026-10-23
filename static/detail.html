@@ -975,7 +975,7 @@
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
       exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
-      gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", paper: !!t.paper,  // the Call Gate's verdict on the signal, the check that decided, a paper-followed call (version 2)
+      gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", gate_advice: t.gateAdvice || "", paper: !!t.paper,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
       candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
@@ -1004,7 +1004,7 @@
   // Version 2 (23 October): the check that decided is named; a SKIP held by a live check reads "live: no order" (the call is followed on
   // paper, t.paper), every other SKIP "shadow: order placed anyway"; a signal cancelled before firing keeps a quiet row with its verdict
   const gateCells = (t) => !t.gate ? `<td class="gate"></td><td class="why"></td>`
-    : `<td class="gate ${t.gate === "SKIP" ? "skip" : "take"}">${t.gate}</td><td class="why">${t.gateWhy || ""}${t.gate === "SKIP" ? (t.paper ? " · live: no order" : " · shadow: order placed anyway") : ""}</td>`;
+    : `<td class="gate ${t.gate === "SKIP" ? "skip" : "take"}">${t.gate}</td><td class="why">${t.gateWhy || ""}${t.gate === "SKIP" ? (t.paper ? " · live: no order" : " · shadow: order placed anyway") : ""}${t.gateAdvice ? ` · advice: ${t.gateAdvice}` : ""}</td>`;  // the advice on a parallel call (revised version 2): a note, never a block
   const cancelledCells = (t) => `<td class="when">${callTime(t.signalTime)}</td><td class="call">Buy ${t.side}</td><td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
     + `<td class="entry">never fired</td><td>—</td><td class="opt">—</td><td class="opt">—</td><td class="cand">Cancelled</td><td class="why">${callTime(t.cancelTime)} candle closed back across ${pctOf(t)}</td>`
     + gateCells({ ...t, paper: false }).replace(" · shadow: order placed anyway", "");

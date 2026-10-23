@@ -160,7 +160,8 @@ def main() -> int:
                         for gate, seed, tag in (({"mode": "LIVE"}, None, "gate live"), ({"mode": "SHADOW"}, 41.5, "gate seeded"), ({"mode": "LIVE"}, 41.5, "gate live seeded"), (None, None, "no gate"),
                                                 ({**V1, "mode": "SHADOW"}, 41.5, "gate v1 shadow"), ({**V1, "mode": "LIVE"}, 41.5, "gate v1 live"),
                                                 ({"mode": "LIVE", "liveChecks": ["chase", "parallel"]}, 41.5, "gate live chase and parallel"), ({"mode": "LIVE", "liveChecks": ["opening"]}, None, "gate live opening"),
-                                                ({"parallel": "allow", "opening": "allow"}, 41.5, "gate allow parallel and opening")):
+                                                ({"parallel": "allow", "opening": "allow"}, 41.5, "gate allow parallel and opening"),
+                                                ({"parallel": "health"}, 41.5, "gate health shadow"), ({"parallel": "health", "mode": "LIVE"}, None, "gate health live")):
                             jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "minutes": mins, "gate": gate, "atrSeed": seed, "what": f"{d['date']} {name} {key} {move} {signal} {tag}"})
                         if candles.get("1m"):  # the stops settled by the day's one-minute candles, as the Study page runs them
                             for share in (1, 0.5):
