@@ -156,7 +156,11 @@ def main() -> int:
                         jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "newHighLow": True, "ideas": {"minDepth": 0.25, "exitBack": 0.25, "carryOn": 0.25},
                                      "what": f"{d['date']} {name} {key} {move} {signal} idea 24 with P3 to P5"})
                         jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "newHighLow": True, "what": f"{d['date']} {name} {key} {move} {signal} idea 24"})
-                        for gate, seed, tag in (({"mode": "LIVE"}, None, "gate live"), ({"mode": "SHADOW"}, 41.5, "gate seeded"), ({"mode": "LIVE"}, 41.5, "gate live seeded"), (None, None, "no gate")):  # the Call Gate (22 October night)
+                        V1 = {"parallel": "skip", "opening": "skip", "lateAfter": 14 * 3600 + 45 * 60, "zoneHeightAtr": 2.0}  # the Call Gate: version 2 (23 October) in shadow and live, version 1 as settings, live one check at a time, no gate
+                        for gate, seed, tag in (({"mode": "LIVE"}, None, "gate live"), ({"mode": "SHADOW"}, 41.5, "gate seeded"), ({"mode": "LIVE"}, 41.5, "gate live seeded"), (None, None, "no gate"),
+                                                ({**V1, "mode": "SHADOW"}, 41.5, "gate v1 shadow"), ({**V1, "mode": "LIVE"}, 41.5, "gate v1 live"),
+                                                ({"mode": "LIVE", "liveChecks": ["chase", "parallel"]}, 41.5, "gate live chase and parallel"), ({"mode": "LIVE", "liveChecks": ["opening"]}, None, "gate live opening"),
+                                                ({"parallel": "allow", "opening": "allow"}, 41.5, "gate allow parallel and opening")):
                             jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "minutes": mins, "gate": gate, "atrSeed": seed, "what": f"{d['date']} {name} {key} {move} {signal} {tag}"})
                         if candles.get("1m"):  # the stops settled by the day's one-minute candles, as the Study page runs them
                             for share in (1, 0.5):

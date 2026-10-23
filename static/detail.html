@@ -158,7 +158,7 @@
   #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
   #paper td.why { text-align: left; color: var(--ink-2); }  /* "Reason" (19 October): what stood in brackets under the status */
   #paper td.gate { font-weight: 600; } #paper td.gate.take, #paper tr.ended td.gate.take { color: var(--up); } #paper td.gate.skip, #paper tr.ended td.gate.skip { color: var(--down); }  /* the Call Gate's verdict (22 October night) */
-  #paper tr.gated td { color: var(--muted); }
+  #paper tr.gated td, #paper tr.paper td { color: var(--muted); }  /* a signal cancelled before firing; a call followed on paper (the Call Gate live) */
   #paper td.pl small { display: block; color: var(--muted); font-weight: 400; }  /* "Total Profit/Loss" (19 October): one lot, or per unit */
   #paper td.cand.watch { color: var(--watch); }
   #paper td.cand small { display: block; font-weight: 400; color: var(--muted); }
@@ -923,7 +923,7 @@
     const table = document.getElementById("paper"), note = document.getElementById("paper-note");
     // the score line and the no-call notes (idea 13, ideas 8 and 5) stood here until 16 October: the owner took them off
     // the page with the Download CSV button ("remove all the red marked boxed things"); the rule gives the same calls
-    const { trades, gated } = paperTrades(levels);
+    const { trades, cancelled } = paperTrades(levels);
     markSold(trades);
     lastPaper = { trades, levels };
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
@@ -935,12 +935,12 @@
     drawFeedNote();
     // in time order, the newest call at the top, open or finished alike (the owner's ask, 7 October: an open call
     // listed above a later one read as if it had been given later); a finished row is greyed, its target cell says how it ended
-    const rows = trades.concat(gated || []).sort((a, b) => b.signalTime - a.signalTime);  // the signals the Call Gate held back (mode LIVE) keep their row
+    const rows = trades.concat(cancelled || []).sort((a, b) => b.signalTime - a.signalTime);  // the signals cancelled before firing keep a row with the gate's verdict (version 2)
     table.querySelector("tbody").replaceChildren(...rows.map(t => {
       const tr = document.createElement("tr");
-      if (t.how === "gated") { tr.className = "gated"; tr.innerHTML = gatedCells(t); return tr; }
+      if (t.how === "cancelled") { tr.className = "gated"; tr.innerHTML = cancelledCells(t); return tr; }
       tr.dataset.key = callKey(t);  // so a live premium finds its row
-      tr.className = t.exit != null ? "ended" : "";
+      tr.className = (t.exit != null ? "ended" : "") + (t.paper ? " paper" : "");
       tr.innerHTML = rowCells(t, optionRecords[callKey(t)]);
       return tr;
     }));
@@ -975,7 +975,7 @@
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
       exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
-      gate: t.gate || "", gate_reason: t.gateWhy || "",  // the Call Gate's verdict on the signal (22 October night)
+      gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", paper: !!t.paper,  // the Call Gate's verdict on the signal, the check that decided, a paper-followed call (version 2)
       candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
@@ -995,17 +995,19 @@
   function rowCells(t, r) {
     const strike = strikeOf(t, r);
     return `<td class="when">${callTime(t.signalTime)}${t.entryTime != null ? `<small>fired ${firedWhen(t)}</small>` : ""}</td>`
-      + `<td class="call">Buy ${t.side}${strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
+      + `<td class="call">Buy ${t.side}${t.paper ? " · paper, no order" : strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
       + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t);
   }
   // The Call Gate (the owner's document, 22 October night; Rules.GATE): "Gate" TAKE or SKIP, and why. In mode SHADOW a SKIP changes
   // nothing ("shadow: order placed anyway"); in mode LIVE a SKIP signal gives no order and keeps its row (gatedCells)
+  // Version 2 (23 October): the check that decided is named; a SKIP held by a live check reads "live: no order" (the call is followed on
+  // paper, t.paper), every other SKIP "shadow: order placed anyway"; a signal cancelled before firing keeps a quiet row with its verdict
   const gateCells = (t) => !t.gate ? `<td class="gate"></td><td class="why"></td>`
-    : `<td class="gate ${t.gate === "SKIP" ? "skip" : "take"}">${t.gate}</td><td class="why">${t.gateWhy || ""}${t.gate === "SKIP" && Rules.GATE.mode !== "LIVE" ? " · shadow: order placed anyway" : ""}</td>`;
-  const gatedCells = (t) => `<td class="when">${callTime(t.signalTime)}</td><td class="call">Buy ${t.side}</td><td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-    + `<td class="entry">no order</td><td>—</td><td class="opt">—</td><td class="opt">—</td><td class="cand">No order</td><td class="why"></td>`
-    + `<td class="gate skip">SKIP</td><td class="why">${t.gateWhy || ""} · live: no order</td>`;
+    : `<td class="gate ${t.gate === "SKIP" ? "skip" : "take"}">${t.gate}</td><td class="why">${t.gateWhy || ""}${t.gate === "SKIP" ? (t.paper ? " · live: no order" : " · shadow: order placed anyway") : ""}</td>`;
+  const cancelledCells = (t) => `<td class="when">${callTime(t.signalTime)}</td><td class="call">Buy ${t.side}</td><td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
+    + `<td class="entry">never fired</td><td>—</td><td class="opt">—</td><td class="opt">—</td><td class="cand">Cancelled</td><td class="why">${callTime(t.cancelTime)} candle closed back across ${pctOf(t)}</td>`
+    + gateCells({ ...t, paper: false }).replace(" · shadow: order placed anyway", "");
   // The owner's words (12 October): "On the line" for a held signal; a crossed one says which way, "Crossed above" (Buy CE) or
   // "Crossed below" (Buy PE) the Fibonacci level
   const signalWord = (t) => t.kind === "held" ? "On the line" : t.side === "CE" ? "Crossed above" : "Crossed below";
@@ -1263,6 +1265,7 @@
       const post = (path, body) => fetch(path, { method: "POST", headers: { "Content-Type": "application/json", ...withTab().headers }, body: JSON.stringify(body) });
       for (const t of trades) {
         const key = callKey(t);
+        if (t.paper) continue;  // a call the Call Gate held (mode LIVE): followed on paper, no option, no order
         if (t.how === "open" && !registered.has(key) && !optionRecords[key]) {
           registered.add(key);
           const r = await post(`/options/${encodeURIComponent(name)}/calls`, { key, side: t.side, index_at_entry: t.entry });

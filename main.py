@@ -30,6 +30,9 @@ STATIC = BASE / "static"
 NO_CACHE = {"Cache-Control": "no-cache"}
 COMMIT = os.environ.get("RENDER_GIT_COMMIT", "")[:7]  # the code this server runs (Render sets it): /health says it, and the pages reload on a new one
 log = logging.getLogger("my-trade")
+if not logging.getLogger().handlers:  # under uvicorn the root logger has no handler, so this logger's info lines were dropped: the Call Gate's daily line (23 October) must reach the log
+    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
+log.setLevel(logging.INFO)
 
 
 def load_dotenv(path: Path = BASE / ".env") -> None:
@@ -730,10 +733,15 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
                                key == "5m" and today_so_far and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                previous["close"] if previous else None,  # the first candle judged from the previous close; ideas 13, 8 and 5 removed (18 October)
-                               minutes, rule.GATE, atr_seed)["trades"]  # the Call Gate (22 October night), with the ATR carried in from the days before
+                               minutes, rule.GATE, atr_seed)  # the Call Gate (version 2, 23 October), with the ATR carried in from the days before
+    trades, result = trades["trades"], trades
+    gate_daily_line(name, levels_mode, result, bars, today)
     rows = []
     for t in trades:
         call_key = rule.call_key(name, key, t, levels_mode)
+        if t.get("paper"):  # the Call Gate held the order (mode LIVE): the call is followed on paper, no option is registered
+            rows.append(paper_row(t))
+            continue
         read = rule.read_of(t, bars, seconds, now)  # the candle verdict, for the day's calls CSV (the research engine's), as the page gives it
         carry = rule.carry_of(t, bars, seconds, now)  # and the carry read (idea P5's question), the same way
         rec = dhan.record_of(call_key)
@@ -775,7 +783,7 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None,
                      "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": "",  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
-                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or ""})  # the Call Gate's verdict on the signal (22 October night)
+                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "paper": False})  # the Call Gate's verdict on the signal, the check that decided (version 2)
     if rows:
         record.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)  # the day's calls CSV (the daily save, back on 21 October)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
@@ -794,6 +802,30 @@ def sale_minute(name: str, t: dict, seconds: int) -> int:
             if start <= b["time"] < end and (b["high"] >= t["exit"] if up else b["low"] <= t["exit"]):
                 return b["time"]
     return min(end, int(time.time()) // 60 * 60 + 60) - 60  # the candle forming now: the minute now
+
+
+def paper_row(t: dict) -> dict:
+    """The day's calls CSV row of a call the Call Gate held in mode LIVE and followed on paper: its index points, no option."""
+    return {"signal_time": t["signalTime"], "level": t["level"], "ratio": t["ratio"], "kind": t["kind"], "side": t["side"],
+            "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
+            "points": t.get("points"), "how": t["how"], "candles_say": "", "exit_said_at": None, "candles_why": "", "carry_deep": "", "beyond_level": None, "beyond_reached": "",
+            "contract": "", "premium_paid": None, "premium_now": None, "sell_below": None, "sold_at": None, "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")),
+            "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "paper": True}
+
+
+gate_daily_logged: set = set()  # (index, levels mode, date) whose daily summary line is in the log
+
+
+def gate_daily_line(name: str, levels_mode: str, result: dict, bars: list, today) -> None:
+    """The Call Gate's daily summary line (the brief, section 6), once per index and levels mode after the day's last candle has closed."""
+    key = (name, levels_mode, today.isoformat())
+    if key in gate_daily_logged or not bars or not result.get("trades"):
+        return
+    last = bars[-1]
+    if time.time() < last["time"] + INTERVALS[WATCH_INTERVAL]["bar_seconds"] or datetime.fromtimestamp(last["time"], dhan.IST).hour * 60 + datetime.fromtimestamp(last["time"], dhan.IST).minute < 15 * 60 + 25:
+        return  # the day's last candle (15:25) has not closed yet
+    gate_daily_logged.add(key)
+    log.info("%s %s: %s", name, levels_mode, rule.gate_summary(result, today.isoformat()))
 
 
 def sold_trade(t: dict, rec: dict, bars: list, seconds: int) -> dict:
