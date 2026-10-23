@@ -363,13 +363,52 @@ def fold(bars: list, seconds: int) -> list:
     return out
 
 
+tick_candles_of = None  # set by the server: (index name, minutes) -> today's candles of that size built from the live ticks, oldest first
+_intraday_problem: dict = {}  # name -> {"at", "since", "message"} while Dhan refuses the index's minute candles (23 October)
+
+
 def intraday(name: str, minutes: int, days_back: int = 8) -> list:
     """Minute candles of an index inside market hours, oldest first, refreshed at most every 10 s.
-    Dhan has no 30-minute candles: two 15-minute ones make one, from 9:15."""
+    Dhan has no 30-minute candles: two 15-minute ones make one, from 9:15.
+    When Dhan refuses the request (23 October, from 08:55: /charts/intraday answered DH-905 for every index, in every
+    date form, for the whole morning, while the tick stream, the prices, the daily list and the option list came as ever),
+    today's candles are the ones the server builds from the live ticks (tick_candles_of): the pages, the watcher and the
+    day's save go on with those. Dhan is asked again a minute later, and its candles take over the moment it answers."""
     if minutes == 30:
         return cached(("intraday", name, 30, days_back), 10, lambda: fold(intraday(name, 15, days_back), 1800))
-    return cached(("intraday", name, minutes, days_back), 10,
-                  lambda: [b for b in _chart("/charts/intraday", name, {"interval": str(minutes)}, days_back) if in_session(b)])
+    return cached(("intraday", name, minutes, days_back), 10, lambda: _intraday(name, minutes, days_back))
+
+
+def _intraday(name: str, minutes: int, days_back: int) -> list:
+    problem = _intraday_problem.get(name)
+    if not (problem and time.time() - problem["at"] < 60):  # a refusal is remembered for a minute: no flood of refused requests
+        try:
+            bars = [b for b in _chart("/charts/intraday", name, {"interval": str(minutes)}, days_back) if in_session(b)]
+        except DhanError as exc:
+            if exc.kind != "other" or tick_candles_of is None:
+                raise  # the token, the subscription, the network: the caller's problem as ever
+            with _cache_lock:  # two callers refused at once (the page and the watcher): one log line
+                fresh = name not in _intraday_problem
+                problem = _intraday_problem[name] = {"at": time.time(), "since": (problem or {}).get("since") or time.time(), "message": exc.message}
+            if fresh:
+                log.warning("Dhan's minute candles for %s refused, today's candles are built from the ticks meanwhile: %s", name, exc.message)
+        else:
+            if problem:
+                log.warning("Dhan's minute candles for %s are back", name)
+                _intraday_problem.pop(name, None)
+            return bars
+    mine = tick_candles_of(name, minutes) or []
+    if not mine:  # no tick of today yet (before 09:15, or the server just started): the refusal stands, as before
+        raise DhanError("other", problem["message"])
+    return mine
+
+
+def intraday_problem(name: str | None = None) -> str | None:
+    """What Dhan said when it refused the minute candles within the last 5 minutes (for /health and the page's note;
+    for one index with name), else None."""
+    recent = [(n, p) for n, p in _intraday_problem.items() if time.time() - p["at"] < 300 and (name is None or n == name)]
+    return "; ".join(f"{n}: today's candles are built from the live ticks since {datetime.fromtimestamp(p['since'], IST).strftime('%H:%M')} IST, "
+                     f"Dhan refuses its minute candles ({p['message']})" for n, p in recent) or None
 
 
 def daily(name: str, days_back: int = 45) -> list:

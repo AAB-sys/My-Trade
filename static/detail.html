@@ -1249,6 +1249,7 @@
         + "Add DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN to Render's Environment page (or to .env on the laptop) and it starts by itself.");
     } else {
       if (state.feed !== "dhan" && d.status) problems.push(d.status);
+      if (state.feed === "dhan" && d.status && /built from the live ticks/.test(d.status)) problems.push(d.status);  // Dhan refuses the minute candles (23 October)
       if (state.feed === "dhan" && state.optionStatus && !/live from your account/.test(state.optionStatus)) problems.push(state.optionStatus);
       if (d.stream && !/connected/.test(d.stream)) problems.push(d.stream);
       if (d.poll && /^Poll: (off|failed)/.test(d.poll)) problems.push(d.poll);
