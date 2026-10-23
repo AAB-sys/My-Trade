@@ -287,6 +287,21 @@ def _bars(body: dict) -> list:
 
 
 _chart_form: dict = {}  # path -> (the date form, the candle size's form: "text" or "number") Dhan accepted last: asked for first from then on
+_chart_form_at: dict = {}  # path -> when Dhan accepted that form, and what it said before it, for /health (chart_form_report)
+
+
+def chart_form_report() -> dict:
+    """For /health (the owner, 23 October: "add it to the health check"): per chart request, the form Dhan accepts now,
+    since when, and the refusal it gave just before, if any. The candle size "number" means Dhan refuses the text form
+    this code sent until 23 October; "text" means it takes it as ever."""
+    out = {}
+    for path, (form, style) in _chart_form.items():
+        seen = _chart_form_at.get(path) or {}
+        entry = {"dates": form, "accepted_at": seen.get("at"), "refused_before": seen.get("after")}
+        if path == "/charts/intraday":
+            entry = {"candle_size": style, **entry}
+        out[path] = entry
+    return out
 
 
 def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
@@ -330,6 +345,7 @@ def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
             last = exc
             continue
         if _chart_form.get(path) != (form, style):
+            _chart_form_at[path] = {"at": datetime.now(IST).strftime("%H:%M:%S"), "after": last.message if last else None}
             log.warning("Dhan %s: dates as %s (%s to %s)%s accepted%s", path, form, forms[form][0], forms[form][1],
                         f", candle size as {style}," if "interval" in extra else "", f", after {last.message}" if last else "")
         _chart_form[path] = (form, style)
