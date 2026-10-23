@@ -262,25 +262,38 @@ def atr_before(bars: list, period: int) -> list:
     return out
 
 
-# ---- The Call Gate (the owner's "Call Gate" document, 22 October night; static/rules.js GATE and the functions under it, which this
-# copy follows line for line): one extra step between a signal and its order, judged on the signal candle the moment the signal is
-# born, with the ATR(14) as of the previous candle (Wilder, carried from the previous day). A: a call the same way already open: SKIP;
-# B: the signal candle begins before 09:45 or after 14:45: SKIP; C: its range more than 2.5 x ATR: SKIP; D: inside a sideways zone,
-# by where the candle closes in it; else TAKE. Mode SHADOW: the verdict rides on the call, every call fires as before. Mode LIVE: a
-# SKIP signal is not armed (no order) and comes back in "gated"; its line is locked either way
-GATE = {"mode": "SHADOW", "noParallel": True, "firstSignal": 9 * 3600 + 45 * 60, "lastSignal": 14 * 3600 + 45 * 60, "chaseAtr": 2.5, "zoneRule": True,
-        "zoneN": 6, "zoneHeightAtr": 2.0, "zoneErMax": 0.30, "bufferAtr": 0.25, "strongBodyAtr": 0.5, "strongCloseFrac": 0.30,
-        "legLookback": 12, "legSizeAtr": 2.0, "legErMin": 0.60, "atrPeriod": 14}
+# ---- The Call Gate, version 2 (the owner's "Call Gate" version 2 document, its Implementation Brief and reference code, 23 October
+# morning; static/rules.js GATE and the functions under it, which this copy follows line for line): one extra step between a signal and
+# its order, judged on the signal candle the moment the signal is born, with the ATR(14) as of the previous candle carried from the
+# previous day. A: a parallel call is never blocked in the default "log": it carries an advice note, OK or WOULD SKIP by day health (the
+# points of this day's signals that fired and exited, taken or on paper); "health" makes the advice a block; B: an opening call (before 09:45) passes only on a close beyond the opening range (the first 3 candles) by
+# 0.25 x ATR; no late rule; C: a range of more than 2.5 x ATR is a chase; D: inside a sideways zone (height 1.5 x ATR), by where the
+# candle closes in it. Mode SHADOW: every call fires, the verdict rides on it. Mode LIVE: a SKIP from a check in liveChecks is followed
+# on paper (no order). GATE_V1 is version 1 as settings
+GATE = {"mode": "SHADOW", "liveChecks": ["parallel", "opening", "late", "chase", "zone"],
+        "parallel": "log", "healthMinAtr": 0.0, "openingUntil": 9 * 3600 + 45 * 60, "opening": "orb", "orCandles": 3, "orbBufferAtr": 0.25,
+        "lateAfter": None, "chaseAtr": 2.5, "zoneRule": True, "zoneN": 6, "zoneHeightAtr": 1.5, "zoneErMax": 0.30, "bufferAtr": 0.25,
+        "strongBodyAtr": 0.5, "strongCloseFrac": 0.30, "strongLookback": 3, "legLookback": 12, "legSizeAtr": 2.0, "legErMin": 0.60, "atrPeriod": 14}
+GATE_V1 = {**GATE, "parallel": "skip", "opening": "skip", "lateAfter": 14 * 3600 + 45 * 60, "zoneHeightAtr": 2.0}
+GATE_HEALTH = {**GATE, "parallel": "health"}  # the parallel advice switched on as a block (what could go live later, the owner's decision)
 
 
 def _hm(sec) -> str:
     return f"{int(sec // 3600):02d}:{int(sec % 3600 // 60):02d}"
 
 
-def _js(x) -> str:
-    """A number written as JavaScript writes it in the page's messages: 22531, not 22531.0."""
-    x = round2(x)
-    return str(int(x)) if float(x).is_integer() else str(x)
+def _round1(x: float) -> float:
+    return math.floor(x * 10 + 0.5) / 10  # Math.round(x * 10) / 10: halves up, towards +infinity, as JavaScript rounds them (-166.45 -> -166.4)
+
+
+def _num1(x) -> str:
+    """A number to one decimal, written as JavaScript writes it: 3, 3.5 (static/rules.js num1)."""
+    v = _round1(x)
+    return str(int(v)) if float(v).is_integer() else str(v)
+
+
+def _signed1(x) -> str:
+    return ("-" if x < 0 else "+") + f"{abs(_round1(x)):.1f}"
 
 
 def _pct(pos: float) -> str:
@@ -323,69 +336,67 @@ def atr_seed_of(bars: list, period: int):
     return atr
 
 
-def zone_step(zone: dict, closed: list, i: int, atr, day_first: int, prev_close, g: dict) -> None:
-    """One closed candle: the active zone ends on a close outside it by the buffer; else a zone is looked for over the last zoneN candles."""
+def efficiency(closes: list) -> float:
+    moves = sum(abs(closes[j] - closes[j - 1]) for j in range(1, len(closes)))
+    return abs(closes[-1] - closes[0]) / moves if moves else 0.0
+
+
+def zone_step(zone: dict, closed: list, i: int, atr, day_first: int, g: dict) -> None:
+    """One closed candle, before any signal on it is judged: the active zone ends on a close outside it by the buffer; else, from the day's
+    7th candle on, a zone is looked for over the last zoneN candles."""
     bar = closed[i]
+    zone["broke"] = None
     if zone["box"] and atr is not None:
         buf = g["bufferAtr"] * atr
         if bar["close"] > zone["box"]["hi"] + buf or bar["close"] < zone["box"]["lo"] - buf:
+            zone["broke"] = "up" if bar["close"] > zone["box"]["hi"] else "down"
             zone["box"] = None
-    if zone["box"] or atr is None:
+    if zone["box"] or zone["broke"] or atr is None or i - day_first < g["zoneN"]:
         return
     s = i - g["zoneN"] + 1
-    if s < day_first:
-        return
-    hi, lo, path = -INF, INF, 0.0
-    c0 = closed[s - 1]["close"] if s > 0 else prev_close
-    for j in range(s, i + 1):
-        hi, lo = max(hi, closed[j]["high"]), min(lo, closed[j]["low"])
-        p = closed[j - 1]["close"] if j > s else c0
-        if p is not None:
-            path += abs(closed[j]["close"] - p)
-    net = abs(closed[i]["close"] - (c0 if c0 is not None else closed[s]["close"]))
-    er = net / path if path > 0 else 0
+    hi, lo = max(b["high"] for b in closed[s:i + 1]), min(b["low"] for b in closed[s:i + 1])
+    er = efficiency([b["close"] for b in closed[i - g["zoneN"]:i + 1]])
     if hi - lo <= g["zoneHeightAtr"] * atr and er <= g["zoneErMax"]:
         zone["box"] = {"lo": lo, "hi": hi, "found": bar["time"]}
+        zone["found"].append(bar["time"])
 
 
-def strong_candle(closed: list, i: int, side: str, atr: float, day_first: int, g: dict) -> bool:
+def strong_candle(closed: list, i: int, side: str, atr: float, day_first: int, g: dict) -> dict:
     b = closed[i]
-    rng, body = b["high"] - b["low"], abs(b["close"] - b["open"])
-    if body < g["strongBodyAtr"] * atr:
-        return False
-    if rng > 0 and ((b["high"] - b["close"]) / rng > g["strongCloseFrac"] if side == "CE" else (b["close"] - b["low"]) / rng > g["strongCloseFrac"]):
-        return False
+    rng, buf = b["high"] - b["low"], g["bufferAtr"] * atr
+    body = abs(b["close"] - b["open"]) >= g["strongBodyAtr"] * atr
+    end = rng > 0 and (b["high"] - b["close"] if side == "CE" else b["close"] - b["low"]) <= g["strongCloseFrac"] * rng
     ext = None
-    for j in range(i - 1, max(day_first, i - 3) - 1, -1):
+    for j in range(max(day_first, i - g["strongLookback"]), i):
         v = closed[j]["high"] if side == "CE" else closed[j]["low"]
         ext = v if ext is None else (max(ext, v) if side == "CE" else min(ext, v))
-    return ext is not None and (b["close"] - ext if side == "CE" else ext - b["close"]) >= g["bufferAtr"] * atr
+    beyond = ext is not None and (b["close"] > ext + buf if side == "CE" else b["close"] < ext - buf)
+    failed = [n for n, ok in (("body", body), ("close near end", end), ("beyond last3", beyond)) if not ok]
+    return {"ok": not failed, "failed": failed}
 
 
-def trend_continuation(closed: list, i: int, side: str, atr: float, day_first: int, g: dict) -> bool:
-    s, c = max(day_first, i - g["legLookback"] + 1), closed[i]["close"]
-    e, ext = -1, None
-    for j in range(s, i):
-        v = closed[j]["close"]
-        if e < 0 or (v > ext if side == "PE" else v < ext):
-            e, ext = j, v
-    if e < 0:
-        return False
-    size = ext - c if side == "PE" else c - ext
-    if size < g["legSizeAtr"] * atr:
-        return False
-    path = sum(abs(closed[j]["close"] - closed[j - 1]["close"]) for j in range(e + 1, i + 1))
-    if not path > 0 or size / path < g["legErMin"]:
-        return False
-    for j in range(s, i):  # a new low (PE) or high (CE) of the window
-        if closed[j]["close"] <= c if side == "PE" else closed[j]["close"] >= c:
-            return False
-    return True
+def trend_continuation(closed: list, i: int, side: str, atr: float, day_first: int, g: dict) -> dict:
+    s0, c = max(day_first, i - g["legLookback"]), closed[i]
+    h = s0
+    for j in range(s0, i + 1):
+        if closed[j]["high"] > closed[h]["high"] if side == "PE" else closed[j]["low"] < closed[h]["low"]:
+            h = j
+    ext = None
+    for j in range(h, i):
+        v = closed[j]["low"] if side == "PE" else closed[j]["high"]
+        ext = v if ext is None else (min(ext, v) if side == "PE" else max(ext, v))
+    size = closed[h]["high"] - c["close"] if side == "PE" else c["close"] - closed[h]["low"]
+    new_ext = h < i and (c["close"] < ext if side == "PE" else c["close"] > ext)
+    half = (c["close"] - c["low"] if side == "PE" else c["high"] - c["close"]) <= 0.5 * (c["high"] - c["low"])
+    er = efficiency([b["close"] for b in closed[h:i + 1]])
+    return {"ok": size >= g["legSizeAtr"] * atr and er >= g["legErMin"] and new_ext and half, "sizeAtr": size / atr, "er": er}
 
 
 def zone_verdict(closed: list, i: int, side: str, atr: float, box: dict, day_first: int, g: dict) -> dict:
     c, lo, hi = closed[i], box["lo"], box["hi"]
-    pos = (c["close"] - lo) / (hi - lo) if hi > lo else 0.5
+    if hi - lo <= 0:
+        return {"gate": "TAKE", "why": "zone has no height"}
+    pos = (c["close"] - lo) / (hi - lo)
     pct = _pct(pos)
     trig = c["high"] if side == "CE" else c["low"]
     if side == "CE":
@@ -393,7 +404,7 @@ def zone_verdict(closed: list, i: int, side: str, atr: float, box: dict, day_fir
             return {"gate": "TAKE", "why": "closes above the sideways zone (breakout)"}
         if pos >= 2 / 3:
             if trig > hi:
-                return {"gate": "TAKE", "why": f"top third of the zone, but the entry trigger {_js(trig)} is above the zone high {_js(hi)}"}
+                return {"gate": "TAKE", "why": f"top third of the zone, but the entry trigger {_num1(trig)} is above the zone high {_num1(hi)}"}
             return {"gate": "SKIP", "why": f"buying in the top third of a sideways zone ({pct}), trigger still inside it"}
         if pos <= 1 / 3:
             return {"gate": "TAKE", "why": f"bounce from the bottom third of the zone ({pct})"}
@@ -402,31 +413,79 @@ def zone_verdict(closed: list, i: int, side: str, atr: float, box: dict, day_fir
             return {"gate": "TAKE", "why": "closes below the sideways zone (breakdown)"}
         if pos <= 1 / 3:
             if trig < lo:
-                return {"gate": "TAKE", "why": f"bottom third of the zone, but the entry trigger {_js(trig)} is below the zone low {_js(lo)}"}
+                return {"gate": "TAKE", "why": f"bottom third of the zone, but the entry trigger {_num1(trig)} is below the zone low {_num1(lo)}"}
             return {"gate": "SKIP", "why": f"selling in the bottom third of a sideways zone ({pct}), trigger still inside it"}
         if pos >= 2 / 3:
             return {"gate": "TAKE", "why": f"bounce from the top third of the zone ({pct})"}
-    if trend_continuation(closed, i, side, atr, day_first, g):
-        return {"gate": "TAKE", "why": "middle of the zone, but a trend continuation"}
-    if strong_candle(closed, i, side, atr, day_first, g):
+    t = trend_continuation(closed, i, side, atr, day_first, g)
+    if t["ok"]:
+        return {"gate": "TAKE", "why": f"middle of the zone, but a trend continuation (leg {_num1(t['sizeAtr'])} x ATR, {int(math.floor(t['er'] * 100 + 0.5))}% one-way)"}
+    st = strong_candle(closed, i, side, atr, day_first, g)
+    if st["ok"]:
         return {"gate": "TAKE", "why": "middle of the zone, but a strong candle"}
-    return {"gate": "SKIP", "why": f"weak call from the middle of a sideways zone ({pct}; not beyond last3)"}
+    return {"gate": "SKIP", "why": f"weak call from the middle of a sideways zone ({pct}; not {', not '.join(st['failed'])})"}
 
 
-def gate_verdict(closed: list, i: int, side: str, atr, zone: dict, parallel: bool, day_first: int, g: dict) -> dict:
+def opening_range(closed: list, day_first: int, g: dict):
+    n = g["orCandles"]
+    if len(closed) - day_first < n:
+        return None
+    return {"hi": max(b["high"] for b in closed[day_first:day_first + n]), "lo": min(b["low"] for b in closed[day_first:day_first + n])}
+
+
+def parallel_advice(parallel: bool, health: float, atr, g: dict) -> str:
+    """The advice on a parallel call (the revised version 2, section 6): a note only, never a block; '' for a call that is not parallel."""
+    if not parallel:
+        return ""
+    if atr is not None and health > g["healthMinAtr"] * atr:
+        return f"OK: parallel call, day winning (closed signals today {_signed1(health)} points)"
+    return f"WOULD SKIP: parallel call, day not winning (closed signals today {_signed1(health)} points)"
+
+
+def gate_verdict(closed: list, i: int, side: str, atr, zone: dict, parallel: bool, health: float, day_first: int, g: dict) -> dict:
+    """The verdict for a signal born on candle i: gate, why, check (the one that decided; None on TAKE 'no sideways zone active')."""
     bar = closed[i]
     when = (bar["time"] + IST_OFFSET) % 86400
-    if g["noParallel"] and parallel:
-        return {"gate": "SKIP", "why": f"parallel call: a {side} call is already open"}
-    if when < g["firstSignal"]:
-        return {"gate": "SKIP", "why": f"opening window: signal before {_hm(g['firstSignal'])}"}
-    if when > g["lastSignal"]:
-        return {"gate": "SKIP", "why": f"late: signal after {_hm(g['lastSignal'])}"}
+    if parallel and g["parallel"] in ("health", "skip"):  # not in the default "log": a parallel call goes on to the other checks
+        if g["parallel"] == "skip":
+            return {"gate": "SKIP", "why": f"parallel call: a {side} call is already open", "check": "parallel"}
+        if atr is None or not health > g["healthMinAtr"] * atr:
+            return {"gate": "SKIP", "why": f"parallel call on a day that is not winning (closed signals today {_signed1(health)} points)", "check": "parallel"}
+    if when < g["openingUntil"] and g["opening"] != "allow":
+        r = opening_range(closed, day_first, g) if g["opening"] == "orb" and atr is not None and i - day_first >= g["orCandles"] else None
+        buf = g["orbBufferAtr"] * atr if atr is not None else 0
+        beyond = bool(r) and (bar["close"] > r["hi"] + buf if side == "CE" else bar["close"] < r["lo"] - buf)
+        if not beyond:
+            return {"gate": "SKIP", "why": f"opening window: signal before {_hm(g['openingUntil'])}" + ("" if g["opening"] == "skip" else ", no close beyond the opening range"), "check": "opening"}
+    if g["lateAfter"] is not None and when > g["lateAfter"]:
+        return {"gate": "SKIP", "why": f"late: signal after {_hm(g['lateAfter'])}", "check": "late"}
     if atr is not None and bar["high"] - bar["low"] > g["chaseAtr"] * atr:
-        return {"gate": "SKIP", "why": f"chase: the signal candle's range {_js(bar['high'] - bar['low'])} is more than {g['chaseAtr']} x ATR ({_js(atr)})"}
+        return {"gate": "SKIP", "why": f"chase: signal candle range {_num1((bar['high'] - bar['low']) / atr)} x ATR", "check": "chase"}
     if g["zoneRule"] and zone["box"] and atr is not None:
-        return zone_verdict(closed, i, side, atr, zone["box"], day_first, g)
-    return {"gate": "TAKE", "why": "no sideways zone active"}
+        return {**zone_verdict(closed, i, side, atr, zone["box"], day_first, g), "check": "zone"}
+    return {"gate": "TAKE", "why": "no sideways zone active", "check": None}
+
+
+def _ist_hm(t) -> str:
+    return _hm((t + IST_OFFSET) % 86400)
+
+
+def gate_summary(res: dict, date: str) -> str:
+    """The daily summary line (the brief, section 6) for a finished day, from the rule's result (static/rules.js gateSummary)."""
+    fired = [t for t in res["trades"] if t.get("entry") is not None and t.get("gate")]
+    take = [t for t in fired if t["gate"] == "TAKE"]
+    skip = [t for t in fired if t["gate"] == "SKIP"]
+    by = lambda c: sum(1 for t in skip if t.get("gateCheck") == c)
+    pts = lambda lst: round2(sum(t.get("points") or 0 for t in lst))
+    winners = [f"{_ist_hm(t['signalTime'])} {t['side']} {_signed1(t['points'])} ({t.get('gateCheck')})" for t in skip if (t.get("points") or 0) > 0]
+    flagged = [t for t in fired if (t.get("gateAdvice") or "").startswith("WOULD SKIP")]  # the parallel advice, judged like a check
+    out = [t for t in flagged if t["gate"] == "TAKE"]
+    won_pts, lost_pts = pts([t for t in out if (t.get("points") or 0) > 0]), pts([t for t in out if (t.get("points") or 0) <= 0])
+    last = fired[-1] if fired else None
+    return (f"GATE DAY {date} · calls {len(fired)} · TAKE {len(take)} · SKIP {len(skip)} · SKIP by check: parallel {by('parallel')} · opening {by('opening')} · late {by('late')} · chase {by('chase')} · zone {by('zone')}"
+            f" · points if every call had been taken {_signed1(pts(fired))} · points of the TAKE calls {_signed1(pts(take))} · skipped winners: {' · '.join(winners) if winners else 'none'}"
+            f" · parallel advice: flagged {len(flagged)} · went out {len(out)} · points of those {_signed1(pts(out))} (winners {_signed1(won_pts)}, losers {_signed1(lost_pts)})"
+            f" · zones found: {' · '.join(_ist_hm(t) for t in res.get('zonesFound') or []) or 'none'} · day health at the last signal ({_ist_hm(last['signalTime']) if last else '-'}): {_signed1(last.get('gateHealth') or 0) if last else '-'}")
 
 
 TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choices, 9 October; the stop on the line crossed itself since 21 October, Change 4 (see static/rules.js TRAIL)
@@ -453,8 +512,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     minutes: the session's one-minute candles, for the owner's early exit of a held break (19 October; static/rules.js paperTrades):
     inside a candle, at the close of the first minute by whose end the last three minutes all stayed on the exit side of the close
     before the candle and that minute closed across the first line beyond that close ("early", exitAt the minute's end).
-    gate: the Call Gate (GATE; 22 October night), judged on every signal as it is born: SHADOW rides on the call (gate, gateWhy), LIVE
-    holds a SKIP signal back into "gated". atr_seed: the gate's ATR carried in from the previous day (atr_seed_of)."""
+    gate: the Call Gate (GATE, version 2), judged on every signal as it is born: SHADOW rides on the call (gate, gateWhy, gateCheck,
+    gateHealth); LIVE follows a SKIP from a live check on paper (paper: True, no order). The signals cancelled before firing come back in
+    "cancelled", the zones found in "zonesFound". atr_seed: the gate's ATR carried in from the previous day (atr_seed_of)."""
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -472,7 +532,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     atr = atr_before(closed, trail.get("period") or 14) if trail and trail.get("buffer") == "atr" else None
     g = gate or None
     gate_atrs = gate_atr(closed, g["atrPeriod"], atr_seed, prev_close) if g else None  # the Call Gate's ATR, its sideways zone, the signals held back (LIVE)
-    zone, gated = {"box": None}, []
+    zone, cancelled = {"box": None, "broke": None, "found": []}, []
     day_first = 0  # the index of the day's first closed candle
 
     def trail_lines(levels):
@@ -682,7 +742,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             for t in open_:
                 end(t, prev_bar["close"], prev_bar, "day end")
             open_, armed = [], []
-            day_first, zone["box"] = i, None
+            day_first, zone["box"], zone["broke"] = i, None, None
         fire(bar)  # the signals of earlier candles, fired by this candle's prices before its close is judged
         levels, lines, lines_before = levels_at(i), lines_at(i), lines_at(max(0, i - 1))
         for t in open_:
@@ -715,14 +775,21 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         for price, side in list(used):  # closed back across: the line may call again (kept by its price, 8 October)
             if (bar["close"] < price) if side == "CE" else (bar["close"] > price):
                 del used[(price, side)]
-        armed = [sg for sg in armed if not ((bar["close"] < sg["level"]) if sg["side"] == "CE" else (bar["close"] > sg["level"]))]  # a close back across its line cancels a waiting signal (the owner's B)
+        still = []
+        for sg in armed:  # a close back across its line cancels a waiting signal (the owner's B)
+            if (bar["close"] < sg["level"]) if sg["side"] == "CE" else (bar["close"] > sg["level"]):
+                if g:
+                    cancelled.append({**{k: v for k, v in sg.items() if k not in ("prices", "fireAt")}, "how": "cancelled", "cancelTime": bar["time"]})
+            else:
+                still.append(sg)
+        armed = still
         def frm(L, i=i, before=before):  # the last close off line L
             for j in range(i - 1, -1, -1):
                 if closed[j]["close"] != L:
                     return closed[j]["close"]
             return before
         if g:
-            zone_step(zone, closed, i, gate_atrs[i], day_first, prev_close, g)  # the Call Gate's zone, brought up to this candle before any signal on it is judged
+            zone_step(zone, closed, i, gate_atrs[i], day_first, g)  # the Call Gate's zone, brought up to this candle before any signal on it is judged
         sig = signal_at(bar, before, levels, used, signal, frm)
         if not sig and new_high_low and signal != "held":
             sig = past_edge_at(bar, levels, used)  # idea 24: a close past the day's high or low
@@ -735,17 +802,17 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
         depth = abs(sig["close"] - sig["level"]) / abs(sig["target"] - sig["level"]) if sig and sig["kind"] == "crossed" and sig["target"] is not None and sig["target"] != sig["level"] else None
         shallow = depth is not None and not sig.get("hold") and bool(min_depth) and depth < min_depth  # idea P3
         if sig and (was or (not late and not shallow)):
-            v = None
-            if g:  # the Call Gate, the moment the signal is born
-                v = gate_verdict(closed, i, sig["side"], gate_atrs[i], zone, any(o["side"] == sig["side"] for o in open_), day_first, g)
-                sig["gate"], sig["gateWhy"] = v["gate"], v["why"]
+            if g:  # the Call Gate, the moment the signal is born: day health = this day's signals that have fired and exited by now, taken or on paper
+                health = round2(sum(t["points"] for t in trades if t.get("exit") is not None and t["signalTime"] >= closed[day_first]["time"]))
+                parallel = any(o["side"] == sig["side"] for o in open_)
+                v = gate_verdict(closed, i, sig["side"], gate_atrs[i], zone, parallel, health, day_first, g)
+                sig["gate"], sig["gateWhy"], sig["gateCheck"], sig["gateHealth"] = v["gate"], v["why"], v["check"], health
+                sig["gateAdvice"] = parallel_advice(parallel, health, gate_atrs[i], g) if g["parallel"] in ("log", "health") else ""  # the note on a parallel call
+                if v["gate"] == "SKIP" and g["mode"] == "LIVE" and v["check"] in g["liveChecks"] and not was:
+                    sig["paper"] = True  # a live check held the order: followed on paper, no order
             used[(sig["level"], sig["side"])] = True  # the no-repeat lock, taken or skipped
-            if not g or g["mode"] != "LIVE" or was or v["gate"] == "TAKE":
-                sig["fireAt"] = bar["high"] if sig["side"] == "CE" else bar["low"]
-                armed.append(sig)
-            else:  # mode LIVE: no order; the row stays
-                gated.append({"signalTime": sig["signalTime"], "level": sig["level"], "ratio": sig["ratio"], **({"signed": True} if sig.get("signed") else {}),
-                              "kind": sig["kind"], "side": sig["side"], "close": sig["close"], "gate": "SKIP", "gateWhy": v["why"], "how": "gated"})
+            sig["fireAt"] = bar["high"] if sig["side"] == "CE" else bar["low"]
+            armed.append(sig)
     last = closed[-1] if closed else None
     over = False if day_candles else (day_over(day_of(last["time"]), now) if last else True)
     if forming and last and not over and not new_day(forming, last):  # the candle forming now: a waiting signal fires on its price so far, open calls run on its live price
@@ -784,7 +851,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 end(t, last["close"], last, "day end")
             else:
                 t["points"], t["last"] = gain(t, last["close"]), last["close"]
-    return {"trades": trades, "closed": len(closed), "gated": gated}
+    return {"trades": trades, "closed": len(closed), "cancelled": cancelled, "zonesFound": zone["found"]}
 
 
 

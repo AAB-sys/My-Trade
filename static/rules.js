@@ -230,31 +230,50 @@
 
   // Idea 13 (12 October: no call against a fresh run) was removed from the rule on 18 October (the owner: "all three remove")
 
-  // ---- The Call Gate (the owner's "Call Gate" document, 22 October night: "One extra step between a signal and its order. Your call
-  // logic (lines, signals, firing, entries, exits) is not changed"). Judged on the signal candle the moment the signal is born, on
-  // closed candles only, with the ATR(14) as of the previous candle (Wilder, carried from the previous day: atrSeed; the day's first
-  // candle's true range against the previous close). The first check that answers decides:
-  //   A. parallel     a call the same way is open at the signal candle's close (the "Can be bought parallelly" case): SKIP
-  //   B. time window  the signal candle begins before firstSignal (09:45) or after lastSignal (14:45): SKIP
-  //   C. chase        the signal candle's range is more than chaseAtr x ATR: SKIP
-  //   D. zone         a sideways zone is active (zoneStep): the verdict by where the candle closes in it (zoneVerdict); else TAKE
-  // The sideways zone (the document's section 5, from its Sideways Market Filter): the last zoneN candles of the day fit in a band no
-  // taller than zoneHeightAtr x ATR and the price went almost nowhere over them (efficiency, the net move over the path of the closes,
-  // zoneErMax or less); the band from their lowest low to their highest high is the zone, kept as found until a candle closes outside
-  // it by bufferAtr x ATR. Inside it a Buy CE closing above the band is a breakout (TAKE), in the bottom third a bounce (TAKE), in the
-  // top third buying at the top (SKIP, unless the candle's high, the entry trigger, is already above the band: TAKE), in the middle
-  // third TAKE only on a strong candle or a trend continuation (5.1); a Buy PE the mirror. Strong candle: a body of at least
-  // strongBodyAtr x ATR, a close within the last strongCloseFrac of its range the call's way, and beyond the previous 3 candles by
-  // bufferAtr x ATR. Trend continuation: the close is a new low (PE) or high (CE) of a leg of at least legSizeAtr x ATR within the last
-  // legLookback candles that ran at least legErMin one way.
-  // mode SHADOW (the document's section 6: "for 2 to 4 weeks the system trades exactly as now. The gate only writes its verdict and
-  // reason"): every call fires as before, with its verdict and reason on the row. Mode LIVE: a SKIP signal is not armed (no order), its
-  // row stays on the table with the reason ("gated"); the no-repeat lock on its line is taken either way, as the document asks. The
-  // settings are the document's section 9 defaults
-  const GATE = { mode: "SHADOW", noParallel: true, firstSignal: 9 * 3600 + 45 * 60, lastSignal: 14 * 3600 + 45 * 60, chaseAtr: 2.5, zoneRule: true,
-                 zoneN: 6, zoneHeightAtr: 2.0, zoneErMax: 0.30, bufferAtr: 0.25, strongBodyAtr: 0.5, strongCloseFrac: 0.30,
-                 legLookback: 12, legSizeAtr: 2.0, legErMin: 0.60, atrPeriod: 14 };
+  // ---- The Call Gate, version 2 (the owner's "Call Gate" version 2 document, its Implementation Brief and reference code
+  // call_gate_reference.py with sideways_filter_reference.py, 23 October morning; version 1 was built on 22 October night, PR #204).
+  // "One extra step between a signal and its order. Your call logic (lines, signals, firing, entries, exits) is not changed."
+  // Judged on the signal candle the moment the signal is born, on closed candles only, with the ATR(14) as of the previous candle
+  // (Wilder, carried from the previous day: atrSeed; the day's first candle's true range against the previous close). The first check
+  // that answers decides, in this order:
+  //   A. parallel   a call the same way is open at the signal candle's close (the "Can be bought parallelly" case). Version 2 (revised,
+  //                 23 October: "parallel calls are never blocked; the gate only writes advice next to them"): setting parallel "log",
+  //                 the call goes on to the other checks and carries an advice note (gateAdvice): OK when the day is winning, WOULD SKIP
+  //                 otherwise. Day health: the index points of every signal of the day that has fired and already exited (taken or
+  //                 followed on paper); winning means above healthMinAtr x ATR (0: any profit). "health": the advice as a real block
+  //                 (GATE_HEALTH, the owner's later decision from the shadow log) | "skip" (version 1: every parallel call) | "allow"
+  //   B. opening    the signal candle begins before openingUntil (09:45). Version 2 ("orb"): it passes only when it closes beyond the
+  //                 opening range (the high and low of the day's first orCandles candles) by orbBufferAtr x ATR; a signal on one of
+  //                 those first candles has no range yet and is skipped. "skip" (version 1: every opening call) | "allow"
+  //   late          lateAfter null in version 2 (version 1: no call after 14:45)
+  //   C. chase      the signal candle's range is more than chaseAtr x ATR: SKIP
+  //   D. zone       a sideways zone is active (zoneStep): the verdict by where the candle closes in it (zoneVerdict); else TAKE
+  // The sideways zone (the Sideways Market Filter's tracker, zone height 1.5 x ATR in version 2, 2.0 in version 1): the day's last zoneN
+  // candles, from the 7th candle of the day on, fit in a band no taller than zoneHeightAtr x ATR and the price went almost nowhere
+  // over them (efficiency, the net move over the path of the closes from the close before them, zoneErMax or less); the band from their
+  // lowest low to their highest high is the zone, kept as found until a candle closes outside it by bufferAtr x ATR (no new zone is
+  // looked for on that candle). Inside it a Buy CE closing above the band is a breakout (TAKE), in the bottom third a bounce (TAKE), in
+  // the top third buying at the top (SKIP, unless the candle's high, the entry trigger, is already above the band: TAKE), in the middle
+  // third TAKE only on a trend continuation or a strong candle (the filter's section 6); a Buy PE the mirror. Strong candle: a body of at
+  // least strongBodyAtr x ATR, a close within the last strongCloseFrac of its range the call's way, and beyond the previous strongLookback
+  // candles' highs (lows) by bufferAtr x ATR. Trend continuation: from the highest high (PE; lowest low, CE) of the last legLookback
+  // candles the price moved at least legSizeAtr x ATR, at least legErMin of the way one way, the candle closes at a new low (high) of
+  // that leg and in its own lower (upper) half.
+  // mode SHADOW (the brief: "delivered in shadow mode"): every call fires as before; the verdict, its reason and the check that decided
+  // ride on the call (gate, gateWhy, gateCheck). Mode LIVE: a SKIP decided by a check named in liveChecks holds the order: the signal is
+  // still armed, fired and exited by the rule on paper (paper: true, no option, no order) so its points feed day health and the daily
+  // report, and its row stays on the table; a SKIP from a check not yet live is logged only. The no-repeat lock is taken either way.
+  // The signals cancelled before firing come back in `cancelled`, each with its verdict (the brief: "both columns filled for every
+  // signal, fired or cancelled"). The settings are the version 2 document's section 12; GATE_V1 is version 1 as settings
+  const GATE = { mode: "SHADOW", liveChecks: ["parallel", "opening", "late", "chase", "zone"],
+                 parallel: "log", healthMinAtr: 0.0, openingUntil: 9 * 3600 + 45 * 60, opening: "orb", orCandles: 3, orbBufferAtr: 0.25,
+                 lateAfter: null, chaseAtr: 2.5, zoneRule: true, zoneN: 6, zoneHeightAtr: 1.5, zoneErMax: 0.30, bufferAtr: 0.25,
+                 strongBodyAtr: 0.5, strongCloseFrac: 0.30, strongLookback: 3, legLookback: 12, legSizeAtr: 2.0, legErMin: 0.60, atrPeriod: 14 };
+  const GATE_V1 = { ...GATE, parallel: "skip", opening: "skip", lateAfter: 14 * 3600 + 45 * 60, zoneHeightAtr: 2.0 };
+  const GATE_HEALTH = { ...GATE, parallel: "health" };  // the parallel advice switched on as a block (what could go live later, the owner's decision)
   const hm = (sec) => `${String(Math.floor(sec / 3600)).padStart(2, "0")}:${String(Math.floor(sec % 3600 / 60)).padStart(2, "0")}`;
+  const num1 = (x) => String(Math.round(x * 10) / 10);  // a number to one decimal, written as JavaScript writes it (3, 3.5): the server's copy writes the same
+  const signed1 = (x) => (x < 0 ? "-" : "+") + Math.abs(Math.round(x * 10) / 10).toFixed(1);
   const trueRange = (b, p) => p == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - p), Math.abs(b.low - p));
   // gateAtr(closed)[i]: the ATR as of the candle before closed[i]. Wilder from the seed (the previous day's ATR); without a seed the plain
   // average of the first `period` true ranges, null until then
@@ -278,65 +297,101 @@
     }
     return atr;
   }
-  function zoneStep(zone, closed, i, atr, dayFirst, prevClose, g) {  // one closed candle: the active zone ends on a close outside it; else a zone is looked for
+  const efficiency = (closes) => { let moves = 0; for (let j = 1; j < closes.length; j++) moves += Math.abs(closes[j] - closes[j - 1]); return moves ? Math.abs(closes[closes.length - 1] - closes[0]) / moves : 0; };
+  function zoneStep(zone, closed, i, atr, dayFirst, g) {  // one closed candle, before any signal on it is judged (the filter's ZoneTracker.update)
     const bar = closed[i];
-    if (zone.box && atr != null) { const buf = g.bufferAtr * atr; if (bar.close > zone.box.hi + buf || bar.close < zone.box.lo - buf) zone.box = null; }
-    if (zone.box || atr == null) return;
+    zone.broke = null;
+    if (zone.box && atr != null) {
+      const buf = g.bufferAtr * atr;
+      if (bar.close > zone.box.hi + buf || bar.close < zone.box.lo - buf) { zone.broke = bar.close > zone.box.hi ? "up" : "down"; zone.box = null; }
+    }
+    if (zone.box || zone.broke || atr == null || i - dayFirst < g.zoneN) return;
     const s = i - g.zoneN + 1;
-    if (s < dayFirst) return;
-    let hi = -Infinity, lo = Infinity, path = 0;
-    const c0 = s > 0 ? closed[s - 1].close : prevClose;
-    for (let j = s; j <= i; j++) { hi = Math.max(hi, closed[j].high); lo = Math.min(lo, closed[j].low); const p = j > s ? closed[j - 1].close : c0; if (p != null) path += Math.abs(closed[j].close - p); }
-    const net = Math.abs(closed[i].close - (c0 != null ? c0 : closed[s].close)), er = path > 0 ? net / path : 0;
-    if (hi - lo <= g.zoneHeightAtr * atr && er <= g.zoneErMax) zone.box = { lo, hi, found: bar.time };
+    let hi = -Infinity, lo = Infinity;
+    for (let j = s; j <= i; j++) { hi = Math.max(hi, closed[j].high); lo = Math.min(lo, closed[j].low); }
+    const er = efficiency(closed.slice(i - g.zoneN, i + 1).map(b => b.close));
+    if (hi - lo <= g.zoneHeightAtr * atr && er <= g.zoneErMax) { zone.box = { lo, hi, found: bar.time }; zone.found.push(bar.time); }
   }
-  function strongCandle(closed, i, side, atr, dayFirst, g) {
-    const b = closed[i], range = b.high - b.low, body = Math.abs(b.close - b.open);
-    if (body < g.strongBodyAtr * atr) return false;
-    if (range > 0 && (side === "CE" ? (b.high - b.close) / range > g.strongCloseFrac : (b.close - b.low) / range > g.strongCloseFrac)) return false;
+  function strongCandle(closed, i, side, atr, dayFirst, g) {  // the filter's section 6.2: { ok, failed: the checks that failed, by name }
+    const b = closed[i], rng = b.high - b.low, buf = g.bufferAtr * atr;
+    const body = Math.abs(b.close - b.open) >= g.strongBodyAtr * atr;
+    const end = rng > 0 && (side === "CE" ? b.high - b.close : b.close - b.low) <= g.strongCloseFrac * rng;
     let ext = null;
-    for (let j = i - 1; j >= Math.max(dayFirst, i - 3); j--) { const v = side === "CE" ? closed[j].high : closed[j].low; ext = ext == null ? v : side === "CE" ? Math.max(ext, v) : Math.min(ext, v); }
-    return ext != null && (side === "CE" ? b.close - ext : ext - b.close) >= g.bufferAtr * atr;
+    for (let j = Math.max(dayFirst, i - g.strongLookback); j < i; j++) { const v = side === "CE" ? closed[j].high : closed[j].low; ext = ext == null ? v : side === "CE" ? Math.max(ext, v) : Math.min(ext, v); }
+    const beyond = ext != null && (side === "CE" ? b.close > ext + buf : b.close < ext - buf);
+    const failed = [body ? null : "body", end ? null : "close near end", beyond ? null : "beyond last3"].filter(Boolean);
+    return { ok: !failed.length, failed };
   }
-  function trendContinuation(closed, i, side, atr, dayFirst, g) {
-    const s = Math.max(dayFirst, i - g.legLookback + 1), c = closed[i].close;
-    let e = -1, ext = null;
-    for (let j = s; j < i; j++) { const v = closed[j].close; if (e < 0 || (side === "PE" ? v > ext : v < ext)) { e = j; ext = v; } }
-    if (e < 0) return false;
-    const size = side === "PE" ? ext - c : c - ext;
-    if (size < g.legSizeAtr * atr) return false;
-    let path = 0; for (let j = e + 1; j <= i; j++) path += Math.abs(closed[j].close - closed[j - 1].close);
-    if (!(path > 0) || size / path < g.legErMin) return false;
-    for (let j = s; j < i; j++) if (side === "PE" ? closed[j].close <= c : closed[j].close >= c) return false;  // a new low (PE) or high (CE) of the window
-    return true;
+  function trendContinuation(closed, i, side, atr, dayFirst, g) {  // the filter's section 6.1: { ok, sizeAtr, er }
+    const s0 = Math.max(dayFirst, i - g.legLookback), c = closed[i];
+    let h = s0;
+    for (let j = s0; j <= i; j++) if (side === "PE" ? closed[j].high > closed[h].high : closed[j].low < closed[h].low) h = j;
+    let ext = null; for (let j = h; j < i; j++) { const v = side === "PE" ? closed[j].low : closed[j].high; ext = ext == null ? v : side === "PE" ? Math.min(ext, v) : Math.max(ext, v); }
+    const size = side === "PE" ? closed[h].high - c.close : c.close - closed[h].low;
+    const newExt = h < i && (side === "PE" ? c.close < ext : c.close > ext);
+    const half = (side === "PE" ? c.close - c.low : c.high - c.close) <= 0.5 * (c.high - c.low);
+    const er = efficiency(closed.slice(h, i + 1).map(b => b.close));
+    return { ok: size >= g.legSizeAtr * atr && er >= g.legErMin && newExt && half, sizeAtr: size / atr, er };
   }
-  function zoneVerdict(closed, i, side, atr, box, dayFirst, g) {
-    const c = closed[i], { lo, hi } = box, pos = hi > lo ? (c.close - lo) / (hi - lo) : 0.5, pct = `${Math.round(pos * 100)}% up`;
-    const trig = side === "CE" ? c.high : c.low;
+  function zoneVerdict(closed, i, side, atr, box, dayFirst, g) {  // inside an active zone: by where the candle closes in it (section 5)
+    const c = closed[i], { lo, hi } = box;
+    if (hi - lo <= 0) return { gate: "TAKE", why: "zone has no height" };
+    const pos = (c.close - lo) / (hi - lo), pct = `${Math.round(pos * 100)}% up`, trig = side === "CE" ? c.high : c.low;
     if (side === "CE") {
       if (c.close > hi) return { gate: "TAKE", why: "closes above the sideways zone (breakout)" };
-      if (pos >= 2 / 3) return trig > hi ? { gate: "TAKE", why: `top third of the zone, but the entry trigger ${round2(trig)} is above the zone high ${round2(hi)}` }
+      if (pos >= 2 / 3) return trig > hi ? { gate: "TAKE", why: `top third of the zone, but the entry trigger ${num1(trig)} is above the zone high ${num1(hi)}` }
                                          : { gate: "SKIP", why: `buying in the top third of a sideways zone (${pct}), trigger still inside it` };
       if (pos <= 1 / 3) return { gate: "TAKE", why: `bounce from the bottom third of the zone (${pct})` };
     } else {
       if (c.close < lo) return { gate: "TAKE", why: "closes below the sideways zone (breakdown)" };
-      if (pos <= 1 / 3) return trig < lo ? { gate: "TAKE", why: `bottom third of the zone, but the entry trigger ${round2(trig)} is below the zone low ${round2(lo)}` }
+      if (pos <= 1 / 3) return trig < lo ? { gate: "TAKE", why: `bottom third of the zone, but the entry trigger ${num1(trig)} is below the zone low ${num1(lo)}` }
                                          : { gate: "SKIP", why: `selling in the bottom third of a sideways zone (${pct}), trigger still inside it` };
       if (pos >= 2 / 3) return { gate: "TAKE", why: `bounce from the top third of the zone (${pct})` };
     }
-    if (trendContinuation(closed, i, side, atr, dayFirst, g)) return { gate: "TAKE", why: "middle of the zone, but a trend continuation" };
-    if (strongCandle(closed, i, side, atr, dayFirst, g)) return { gate: "TAKE", why: "middle of the zone, but a strong candle" };
-    return { gate: "SKIP", why: `weak call from the middle of a sideways zone (${pct}; not beyond last3)` };
+    const t = trendContinuation(closed, i, side, atr, dayFirst, g);
+    if (t.ok) return { gate: "TAKE", why: `middle of the zone, but a trend continuation (leg ${num1(t.sizeAtr)} x ATR, ${Math.round(t.er * 100)}% one-way)` };
+    const st = strongCandle(closed, i, side, atr, dayFirst, g);
+    if (st.ok) return { gate: "TAKE", why: "middle of the zone, but a strong candle" };
+    return { gate: "SKIP", why: `weak call from the middle of a sideways zone (${pct}; not ${st.failed.join(", not ")})` };
   }
-  function gateVerdict(closed, i, side, atr, zone, parallel, dayFirst, g) {
+  function openingRange(closed, dayFirst, g) { const n = g.orCandles; if (closed.length - dayFirst < n) return null; let hi = -Infinity, lo = Infinity; for (let j = dayFirst; j < dayFirst + n; j++) { hi = Math.max(hi, closed[j].high); lo = Math.min(lo, closed[j].low); } return { hi, lo }; }
+  // The advice on a parallel call (the revised version 2, section 6): a note only, never a block; "" for a call that is not parallel
+  function parallelAdvice(parallel, health, atr, g) {
+    if (!parallel) return "";
+    if (atr != null && health > g.healthMinAtr * atr) return `OK: parallel call, day winning (closed signals today ${signed1(health)} points)`;
+    return `WOULD SKIP: parallel call, day not winning (closed signals today ${signed1(health)} points)`;
+  }
+  // The verdict for a signal born on candle i: { gate, why, check } (check: the one that decided; null on TAKE "no sideways zone active")
+  function gateVerdict(closed, i, side, atr, zone, parallel, health, dayFirst, g) {
     const bar = closed[i], when = (bar.time + IST_OFFSET) % 86400;
-    if (g.noParallel && parallel) return { gate: "SKIP", why: `parallel call: a ${side} call is already open` };
-    if (when < g.firstSignal) return { gate: "SKIP", why: `opening window: signal before ${hm(g.firstSignal)}` };
-    if (when > g.lastSignal) return { gate: "SKIP", why: `late: signal after ${hm(g.lastSignal)}` };
-    if (atr != null && bar.high - bar.low > g.chaseAtr * atr) return { gate: "SKIP", why: `chase: the signal candle's range ${round2(bar.high - bar.low)} is more than ${g.chaseAtr} x ATR (${round2(atr)})` };
-    if (g.zoneRule && zone.box && atr != null) return zoneVerdict(closed, i, side, atr, zone.box, dayFirst, g);
-    return { gate: "TAKE", why: "no sideways zone active" };
+    if (parallel && (g.parallel === "health" || g.parallel === "skip")) {  // not in the default "log": a parallel call goes on to the other checks
+      if (g.parallel === "skip") return { gate: "SKIP", why: `parallel call: a ${side} call is already open`, check: "parallel" };
+      if (atr == null || !(health > g.healthMinAtr * atr)) return { gate: "SKIP", why: `parallel call on a day that is not winning (closed signals today ${signed1(health)} points)`, check: "parallel" };
+    }
+    if (when < g.openingUntil && g.opening !== "allow") {
+      const r = g.opening === "orb" && atr != null && i - dayFirst >= g.orCandles ? openingRange(closed, dayFirst, g) : null, buf = atr != null ? g.orbBufferAtr * atr : 0;
+      const beyond = !!r && (side === "CE" ? bar.close > r.hi + buf : bar.close < r.lo - buf);
+      if (!beyond) return { gate: "SKIP", why: `opening window: signal before ${hm(g.openingUntil)}` + (g.opening === "skip" ? "" : ", no close beyond the opening range"), check: "opening" };
+    }
+    if (g.lateAfter != null && when > g.lateAfter) return { gate: "SKIP", why: `late: signal after ${hm(g.lateAfter)}`, check: "late" };
+    if (atr != null && bar.high - bar.low > g.chaseAtr * atr) return { gate: "SKIP", why: `chase: signal candle range ${num1((bar.high - bar.low) / atr)} x ATR`, check: "chase" };
+    if (g.zoneRule && zone.box && atr != null) return { ...zoneVerdict(closed, i, side, atr, zone.box, dayFirst, g), check: "zone" };
+    return { gate: "TAKE", why: "no sideways zone active", check: null };
   }
+  // The daily summary line (the brief, section 6): one line for a finished day, from the rule's result for that day
+  function gateSummary(res, date) {
+    const fired = res.trades.filter(t => t.entry != null && t.gate), take = fired.filter(t => t.gate === "TAKE"), skip = fired.filter(t => t.gate === "SKIP");
+    const by = (c) => skip.filter(t => t.gateCheck === c).length, pts = (list) => round2(list.reduce((a, t) => a + (t.points || 0), 0));
+    const winners = skip.filter(t => t.points > 0).map(t => `${istHM(t.signalTime)} ${t.side} ${signed1(t.points)} (${t.gateCheck})`);
+    const flagged = fired.filter(t => (t.gateAdvice || "").startsWith("WOULD SKIP")), out = flagged.filter(t => t.gate === "TAKE");  // the parallel advice, judged like a check
+    const wonPts = pts(out.filter(t => t.points > 0)), lostPts = pts(out.filter(t => t.points <= 0));
+    const last = fired[fired.length - 1];
+    return `GATE DAY ${date} · calls ${fired.length} · TAKE ${take.length} · SKIP ${skip.length} · SKIP by check: parallel ${by("parallel")} · opening ${by("opening")} · late ${by("late")} · chase ${by("chase")} · zone ${by("zone")}`
+      + ` · points if every call had been taken ${signed1(pts(fired))} · points of the TAKE calls ${signed1(pts(take))} · skipped winners: ${winners.length ? winners.join(" · ") : "none"}`
+      + ` · parallel advice: flagged ${flagged.length} · went out ${out.length} · points of those ${signed1(pts(out))} (winners ${signed1(wonPts)}, losers ${signed1(lostPts)})`
+      + ` · zones found: ${(res.zonesFound || []).map(istHM).join(" · ") || "none"} · day health at the last signal (${last ? istHM(last.signalTime) : "-"}): ${last ? signed1(last.gateHealth || 0) : "-"}`;
+  }
+  const istHM = (t) => { const s = (t + IST_OFFSET) % 86400; return hm(s); };
 
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
   //   bars       the session's candles, oldest first (several days together are allowed: a new day ends the old day's calls)
@@ -399,9 +454,10 @@
   //              that minute closed across the first line beyond that close on the exit side, one level back ("early"; exitAt:
   //              the minute's end). Judged on the minutes the same way live and in a replay; without them (null) nothing changes.
   //              A retouch earlier in the same candle still comes first. Bounce (held) calls keep their target
-  //   gate       the Call Gate (GATE above; 22 October night), judged on every signal the moment it is born: in mode SHADOW the verdict and
-  //              its reason ride on the call (gate, gateWhy) and nothing else changes; in mode LIVE a SKIP signal is not armed and is
-  //              returned in `gated` instead, its line locked as if it had been armed. null: no gate (the research engine's comparisons)
+  //   gate       the Call Gate (GATE above, version 2), judged on every signal the moment it is born: in mode SHADOW the verdict, its
+  //              reason, the check that decided and the parallel advice ride on the call (gate, gateWhy, gateCheck, gateHealth, gateAdvice) and nothing else changes; in
+  //              mode LIVE a SKIP from a live check is followed on paper (paper: true, no order). The signals cancelled before firing come
+  //              back in `cancelled` with their verdicts, the zones found in `zonesFound`. null: no gate (the research engine's comparisons)
   //   atrSeed    the gate's ATR carried in from the previous day (atrSeedOf over its candles); null: the plain average of the first 14
   function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes, gate = GATE, atrSeed = null }) {
     const linesAt = targetsAt || levelsAt;
@@ -412,7 +468,7 @@
     const closed = bars.filter(b => endOf(b, seconds) <= now);
     const forming = bars.length > closed.length ? bars[closed.length] : null;  // the candle forming now, built from the ticks
     const atr = trail && trail.buffer === "atr" ? atrBefore(closed, trail.period || 14) : null;
-    const g = gate || null, gateAtrs = g ? gateAtr(closed, g.atrPeriod, atrSeed, prevClose) : null, zone = { box: null }, gated = [];  // the Call Gate's ATR, its sideways zone, and the signals it held back (mode LIVE)
+    const g = gate || null, gateAtrs = g ? gateAtr(closed, g.atrPeriod, atrSeed, prevClose) : null, zone = { box: null, broke: null, found: [] }, cancelled = [];  // the Call Gate's ATR, its sideways zone, the signals cancelled before firing
     let dayFirst = 0;  // the index of the day's first closed candle (the zone and the strong-candle checks stay inside the day)
     const bufferAt = (i) => !trail ? 0 : trail.buffer === "fixed" ? trail.points : trail.buffer === "atr" ? (atr[i] != null ? trail.mult * atr[i] : trail.points || 0) : 0;  // Rule 2's buffer for closed candle i
     const trailLines = (levels) => trail.lines === "all" ? levels : levels.filter(l => l.ratio !== 0 && Math.abs(l.ratio) !== 1);  // the lines that move Rule 2's stop (setting "middle": without 0% and 100%; only research settings use it, the page, the watcher and the replays run "all")
@@ -534,7 +590,7 @@
     for (let i = first; i < closed.length; i++) {
       const bar = closed[i], prevBar = i > 0 ? closed[i - 1] : null, before = prevBar ? prevBar.close : prevClose;  // the close before this candle
       if (prevBar && newDay(bar, prevBar)) {  // a new day: yesterday's calls ended with yesterday, and its waiting signals are gone
-        open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = []; armed = []; dayFirst = i; zone.box = null;
+        open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = []; armed = []; dayFirst = i; zone.box = null; zone.broke = null;
       }
       fire(bar);  // the signals of earlier candles, fired by this candle's prices before its close is judged
       const levels = levelsAt(i), lines = linesAt(i), linesBefore = linesAt(Math.max(0, i - 1));
@@ -545,9 +601,10 @@
       if (exitBack) open = open.filter(t => { if (!t.hold && backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit, at its close
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
       for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
-      armed = armed.filter(s => !(s.side === "CE" ? bar.close < s.level : bar.close > s.level));  // a close back across its line cancels a signal still waiting to fire (the owner's B, 18 October)
+      armed = armed.filter(s => { const gone = s.side === "CE" ? bar.close < s.level : bar.close > s.level;  // a close back across its line cancels a signal still waiting to fire (the owner's B, 18 October)
+        if (gone && g) { const { prices, fireAt, ...rest } = s; cancelled.push({ ...rest, how: "cancelled", cancelTime: bar.time }); } return !gone; });
       const from = (L) => { for (let j = i - 1; j >= 0; j--) if (closed[j].close !== L) return closed[j].close; return before; };  // the last close off line L
-      if (g) zoneStep(zone, closed, i, gateAtrs[i], dayFirst, prevClose, g);  // the Call Gate's zone, brought up to this candle before any signal on it is judged
+      if (g) zoneStep(zone, closed, i, gateAtrs[i], dayFirst, g);  // the Call Gate's zone, brought up to this candle before any signal on it is judged
       let sig = signalAt(bar, before, levels, used, signal, from);  // the signal, at the candle's close
       if (!sig && newHighLow && signal !== "held") sig = pastEdgeAt(bar, levels, used);  // idea 24: a close past the day's high or low
       const was = given && given[bar.time];  // a call given live at this candle (its option recorded): it stays
@@ -557,11 +614,15 @@
       const depth = sig && sig.kind === "crossed" && sig.target != null && sig.target !== sig.level ? Math.abs(sig.close - sig.level) / Math.abs(sig.target - sig.level) : null;  // how far past its line the candle closed, a share of the gap to the next line
       const shallow = depth != null && !sig.hold && !!minDepth && depth < minDepth;  // idea P3
       if (sig && (was || (!late && !shallow))) {
-        let v = null;
-        if (g) { v = gateVerdict(closed, i, sig.side, gateAtrs[i], zone, open.some(o => o.side === sig.side), dayFirst, g); sig.gate = v.gate; sig.gateWhy = v.why; }  // the Call Gate, the moment the signal is born
+        if (g) {  // the Call Gate, the moment the signal is born: day health = this day's signals that have fired and exited by now, taken or on paper
+          const health = round2(trades.filter(t => t.exit != null && t.signalTime >= closed[dayFirst].time).reduce((a, t) => a + t.points, 0));
+          const parallel = open.some(o => o.side === sig.side), v = gateVerdict(closed, i, sig.side, gateAtrs[i], zone, parallel, health, dayFirst, g);
+          sig.gate = v.gate; sig.gateWhy = v.why; sig.gateCheck = v.check; sig.gateHealth = health;
+          sig.gateAdvice = g.parallel === "log" || g.parallel === "health" ? parallelAdvice(parallel, health, gateAtrs[i], g) : "";  // the note on a parallel call
+          if (v.gate === "SKIP" && g.mode === "LIVE" && g.liveChecks.includes(v.check) && !was) sig.paper = true;  // a live check held the order: followed on paper, no order
+        }
         used[sig.level + "|" + sig.side] = { price: sig.level, side: sig.side };  // the no-repeat lock, taken or skipped
-        if (!g || g.mode !== "LIVE" || was || v.gate === "TAKE") armed.push({ ...sig, fireAt: sig.side === "CE" ? bar.high : bar.low });
-        else gated.push({ signalTime: sig.signalTime, level: sig.level, ratio: sig.ratio, ...(sig.signed ? { signed: true } : {}), kind: sig.kind, side: sig.side, close: sig.close, gate: "SKIP", gateWhy: v.why, how: "gated" });  // mode LIVE: no order; the row stays
+        armed.push({ ...sig, fireAt: sig.side === "CE" ? bar.high : bar.low });
       }
     }
     const last = closed[closed.length - 1];
@@ -579,7 +640,7 @@
     } else {
       open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
     }
-    return { trades, closed: closed.length, gated };
+    return { trades, closed: closed.length, cancelled, zonesFound: zone.found };
   }
 
   // A finished day replayed: every candle has closed, so the clock is set past the day's end. "Previous day" levels
@@ -750,5 +811,5 @@
 
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, NEW_HIGH_LOW, pastEdgeAt,
-                 breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, gateAtr, atrSeedOf, gateVerdict, zoneStep };
+                 breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary };
 })(typeof window !== "undefined" ? window : globalThis);
