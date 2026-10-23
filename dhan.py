@@ -294,24 +294,33 @@ def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
     asked for first; when Dhan refuses the request (any refusal, not only one that names the date: on 22 October morning
     /charts/historical was refused with "DH-905 Missing required fields, bad values for parameters" for every index, the
     same request that had worked the day before), today is tried, then, for the minute candles, today up to this minute
-    in Dhan's date-and-time form. The form Dhan accepted is remembered per request and asked for first next time."""
-    start = (today_ist() - timedelta(days=days_back)).isoformat()
-    base = {"securityId": str(QUOTE_IDS[name]), "exchangeSegment": SEGMENT, "instrument": "INDEX", "oi": False, "fromDate": start, **extra}
-    forms = {"tomorrow": (today_ist() + timedelta(days=1)).isoformat(), "today": today_ist().isoformat()}
+    in Dhan's date-and-time form, then (23 October morning: /charts/intraday refused all three for every index from 08:55,
+    while the ticks, the prices and the option list came as ever) the forms Dhan's own document shows for the minute candles,
+    with the date AND the time in both fromDate and toDate ("2024-09-11 09:30:00"): from the session's open of the first day
+    up to this minute, and up to the day's close; last, the same with a shorter range. The form Dhan accepted is remembered
+    per request and asked for first next time."""
+    first = today_ist() - timedelta(days=days_back)
+    start = first.isoformat()
+    base = {"securityId": str(QUOTE_IDS[name]), "exchangeSegment": SEGMENT, "instrument": "INDEX", "oi": False, **extra}
+    forms = {"tomorrow": (start, (today_ist() + timedelta(days=1)).isoformat()), "today": (start, today_ist().isoformat())}
     if path == "/charts/intraday":
-        forms["now"] = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        forms["now"] = (start, now)
+        forms["span now"] = (f"{start} 09:15:00", now)
+        forms["span close"] = (f"{start} 09:15:00", f"{today_ist().isoformat()} 15:30:00")
+        forms["short span"] = (f"{(today_ist() - timedelta(days=min(days_back, 4))).isoformat()} 09:15:00", now)
     order = [_chart_form.get(path)] + [f for f in forms if f != _chart_form.get(path)] if _chart_form.get(path) in forms else list(forms)
     last = None
     for form in order:
         try:
-            bars = _bars(call("POST", path, {**base, "toDate": forms[form]}))
+            bars = _bars(call("POST", path, {**base, "fromDate": forms[form][0], "toDate": forms[form][1]}))
         except DhanError as exc:
             if exc.kind != "other":
                 raise
             last = exc
             continue
         if _chart_form.get(path) != form:
-            log.warning("Dhan %s: toDate as %s (%s) accepted%s", path, form, forms[form], f", after {last.message}" if last else "")
+            log.warning("Dhan %s: dates as %s (%s to %s) accepted%s", path, form, forms[form][0], forms[form][1], f", after {last.message}" if last else "")
         _chart_form[path] = form
         return bars
     raise last
@@ -946,14 +955,18 @@ def option_minutes(name: str, security_id: int) -> list:
     """Today's one-minute candles of one option contract, oldest first, refreshed at most every 30 s."""
     def make():
         day = today_ist()
-        base = {"securityId": str(security_id), "exchangeSegment": OPTION_SEGMENTS[name], "instrument": "OPTIDX", "interval": "1",
-                "oi": False, "fromDate": day.isoformat()}
-        try:
-            return _bars(call("POST", "/charts/intraday", {**base, "toDate": (day + timedelta(days=1)).isoformat()}))
-        except DhanError as exc:  # Dhan's toDate has been exclusive in some versions (_chart)
-            if exc.kind != "other" or "date" not in exc.message.lower():
-                raise
-            return _bars(call("POST", "/charts/intraday", {**base, "toDate": day.isoformat()}))
+        base = {"securityId": str(security_id), "exchangeSegment": OPTION_SEGMENTS[name], "instrument": "OPTIDX", "interval": "1", "oi": False}
+        forms = [(day.isoformat(), (day + timedelta(days=1)).isoformat()), (day.isoformat(), day.isoformat()),  # Dhan's toDate has been exclusive in some versions (_chart)
+                 (f"{day.isoformat()} 09:15:00", datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S"))]  # the date-and-time form of Dhan's document (23 October: the plain forms refused)
+        last = None
+        for from_date, to_date in forms:
+            try:
+                return _bars(call("POST", "/charts/intraday", {**base, "fromDate": from_date, "toDate": to_date}))
+            except DhanError as exc:
+                if exc.kind != "other":
+                    raise
+                last = exc
+        raise last
     return cached(("option minutes", name, security_id), 30, make)
 
 
