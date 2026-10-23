@@ -453,6 +453,7 @@ def tick_candles_today(name: str, minutes: int) -> list:
 
 
 dhan.tick_candles_of = tick_candles_today
+dhan.saved_sessions_of = record.saved_sessions  # the previous session from the saved days while Dhan refuses its daily list (23 October)
 
 
 CLOSE_FROM_TICKS_SECONDS = 60  # how long after a candle closes its close is the last tick's rather than Dhan's copy (8 October)
