@@ -286,7 +286,7 @@ def _bars(body: dict) -> list:
     return bars
 
 
-_chart_form: dict = {}  # path -> the toDate form Dhan accepted last ("tomorrow", "today", "now"): asked for first from then on
+_chart_form: dict = {}  # path -> (the date form, the candle size's form: "text" or "number") Dhan accepted last: asked for first from then on
 
 
 def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
@@ -309,19 +309,30 @@ def _chart(path: str, name: str, extra: dict, days_back: int) -> list:
         forms["span now"] = (f"{start} 09:15:00", now)
         forms["span close"] = (f"{start} 09:15:00", f"{today_ist().isoformat()} 15:30:00")
         forms["short span"] = (f"{(today_ist() - timedelta(days=min(days_back, 4))).isoformat()} 09:15:00", now)
-    order = [_chart_form.get(path)] + [f for f in forms if f != _chart_form.get(path)] if _chart_form.get(path) in forms else list(forms)
+    # the candle size as Dhan's own library sends it (DhanHQ-py 2.3.0, 8 October: a number, 5), after the text this code has
+    # always sent ("5"): on 23 October both chart requests were refused from before 08:40 with every date form, the one
+    # difference between this request and the library's being that field
+    tries = [(form, "text") for form in forms]
+    if "interval" in extra:
+        tries += [(form, "number") for form in ("tomorrow", "today", "span now") if form in forms]
+    known = _chart_form.get(path)
+    order = [known] + [t for t in tries if t != known] if known in tries else tries
     last = None
-    for form in order:
+    for form, style in order:
+        body = {**base, "fromDate": forms[form][0], "toDate": forms[form][1]}
+        if style == "number":
+            body["interval"] = int(extra["interval"])
         try:
-            bars = _bars(call("POST", path, {**base, "fromDate": forms[form][0], "toDate": forms[form][1]}))
+            bars = _bars(call("POST", path, body))
         except DhanError as exc:
             if exc.kind != "other":
                 raise
             last = exc
             continue
-        if _chart_form.get(path) != form:
-            log.warning("Dhan %s: dates as %s (%s to %s) accepted%s", path, form, forms[form][0], forms[form][1], f", after {last.message}" if last else "")
-        _chart_form[path] = form
+        if _chart_form.get(path) != (form, style):
+            log.warning("Dhan %s: dates as %s (%s to %s)%s accepted%s", path, form, forms[form][0], forms[form][1],
+                        f", candle size as {style}," if "interval" in extra else "", f", after {last.message}" if last else "")
+        _chart_form[path] = (form, style)
         return bars
     raise last
 
