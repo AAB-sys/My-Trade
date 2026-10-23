@@ -442,14 +442,43 @@ def tick_candles(name: str, key: str) -> list:
     return bars
 
 
+_saved_today: dict = {"stamp": None, "day": None}  # the day's partial copy, read again only when the file changes
+
+
+def saved_candles_today(name: str, key: str) -> list:
+    """Today's candles of one size from the day's partial copy on the disk (written every few minutes during the session,
+    and pulled back from GitHub when the server starts): what the server before a restart had, built from the ticks or
+    Dhan's own. So a restart during the session (a merge, Render) loses no candle while Dhan refuses the minute candles
+    (23 October: the 09:27 and the 09:47 restarts each left the chart starting at that minute)."""
+    today = dhan.today_ist()
+    try:
+        stamp = record.path_of(today).stat().st_mtime
+    except OSError:
+        return []
+    if _saved_today["stamp"] != stamp:
+        _saved_today.update(stamp=stamp, day=record.read_day(today))
+    mine = (((_saved_today["day"] or {}).get("indices") or {}).get(name) or {}).get("candles") or {}
+    return list(mine.get(key) or [])
+
+
 def tick_candles_today(name: str, minutes: int) -> list:
-    """Today's candles of one size built from the ticks, closed ones then the one forming now: what dhan.intraday hands
-    out while Dhan refuses the minute candles (23 October). The size the entry keeps when there is one, else the
-    one-minute candles folded. Only from the server's start: a restart during the session loses the candles before it."""
+    """Today's candles of one size built from the ticks, closed ones then the one forming now, with the candles from before
+    a restart in front of them from the day's partial copy (saved_candles_today): what dhan.intraday hands out while Dhan
+    refuses the minute candles (23 October). The size the entry keeps when there is one, else the one-minute candles folded."""
     today = datetime.now(dhan.IST).date()
     key = next((k for k, spec in INTERVALS.items() if spec["bar_seconds"] == minutes * 60), None)
     bars = tick_candles(name, key) if key else dhan.fold(tick_candles(name, "1m"), minutes * 60)
-    return [dict(b) for b in bars if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
+    mine = [dict(b) for b in bars if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
+    saved = saved_candles_today(name, key) if key else dhan.fold(saved_candles_today(name, "1m"), minutes * 60)
+    saved = [dict(b) for b in saved if datetime.fromtimestamp(b["time"], dhan.IST).date() == today]
+    if saved and (not mine or saved[0]["time"] < mine[0]["time"]):
+        first = mine[0]["time"] if mine else None
+        before = [b for b in saved if first is None or b["time"] < first]
+        if mine and saved[-1]["time"] == first:  # the restart fell inside a candle: its first part from the copy, its last from the ticks
+            s = saved[-1]
+            mine[0] = {**mine[0], "open": s["open"], "high": max(s["high"], mine[0]["high"]), "low": min(s["low"], mine[0]["low"])}
+        mine = before + mine
+    return mine
 
 
 dhan.tick_candles_of = tick_candles_today
