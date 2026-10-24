@@ -817,7 +817,9 @@ reads the `records/<date>.json` files (the options behind the calls) at all.
 **The record.** After every session (at 15:40 IST, the `STUDY_SAVE_AT` setting)
 the server saves the day to `data/sessions/<date>.json`: the 1-, 5-, 15- and
 30-minute candles of each index on Dhan, and the day's and the previous
-session's open, high, low and close. Beside it, `data/sessions/<date>-calls.csv`
+session's open, high, low and close. Each index on Dhan means NIFTY 50, NIFTY
+BANK and, from 24 October on, SENSEX (the owner: "save SENSEX candles in the
+daily save too"); the days saved before then hold the first two only. Beside it, `data/sessions/<date>-calls.csv`
 (owner's ask, 7 October): **every call the index page suggested that day**, each
 and every one, as the page showed it: the setting it ran in (time frame, levels,
 signal), when it was first seen, the level, held or crossed, CE or PE, the entry,
