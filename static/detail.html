@@ -382,7 +382,7 @@
     <div id="feed-note" hidden></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -982,7 +982,9 @@
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
       exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
-      gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", gate_advice: t.gateAdvice || "", paper: !!t.paper,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
+      gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", gate_advice: t.gateAdvice || "", paper: !!t.paper,
+      lc: t.lc || "", lc_reason: t.lcWhy || "", lc_check: t.lcCheck || "", lc_advice: t.lcAdvice || "", lc_open_same: t.lcOpenSame ?? null,  // the Loss Cutter (24 October)
+      premium_low: r ? r.premium_low ?? null : null, premium_low_at: r ? r.premium_low_at ?? null : null, stop15_at: r && r.stop15 ? r.stop15.at : null, stop15_premium: r && r.stop15 ? r.stop15.premium : null,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
       candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
@@ -1004,7 +1006,7 @@
     return `<td class="when">${callTime(t.signalTime)}${t.entryTime != null ? `<small>fired ${firedWhen(t)}</small>` : ""}</td>`
       + `<td class="call">Buy ${t.side}${t.paper ? " · paper, no order" : strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t);
+      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t) + lcCells(t, r);
   }
   // The Call Gate (the owner's document, 22 October night; Rules.GATE): "Gate" TAKE or SKIP, and why. In mode SHADOW a SKIP changes
   // nothing ("shadow: order placed anyway"); in mode LIVE a SKIP signal gives no order and keeps its row (gatedCells)
@@ -1012,9 +1014,23 @@
   // paper, t.paper), every other SKIP "shadow: order placed anyway"; a signal cancelled before firing keeps a quiet row with its verdict
   const gateCells = (t) => !t.gate ? `<td class="gate"></td><td class="why"></td>`
     : `<td class="gate ${t.gate === "SKIP" ? "skip" : "take"}">${t.gate}</td><td class="why">${t.gateWhy || ""}${t.gate === "SKIP" ? (t.paper ? " · live: no order" : " · shadow: order placed anyway") : ""}${t.gateAdvice ? ` · advice: ${t.gateAdvice}` : ""}</td>`;  // the advice on a parallel call (revised version 2): a note, never a block
+  // The Loss Cutter (the owner's Loss_Cutter.docx and Sideways_Zone_v3.docx, 24 October; Rules.LC): its verdict beside the Call Gate's,
+  // why, the advice-only checks (worn line, strict zone, the stack cap in log mode), the calls open the same way when the order was
+  // placed, and from the option's record the premium path: the lowest premium so far and the 15% premium stop (log only, it sells nothing)
+  const lcLive = (check) => Rules.LC.mode === "LIVE" && Rules.LC.liveChecks.includes(check);
+  function lcCells(t, r) {
+    if (!t.lc) return `<td class="gate"></td><td class="why"></td>`;
+    const notes = [];
+    if (t.lc === "SKIP") notes.push(t.paper && lcLive(t.lcCheck) ? "live: no order" : "shadow: order placed anyway");
+    if (t.lcAdvice) notes.push(`advice: ${t.lcAdvice}`);
+    if (t.lcOpenSame != null) notes.push(`${t.lcOpenSame} open the same way when placed`);
+    if (r && r.premium_low != null && r.premium_paid) notes.push(`lowest premium ${fmt.format(r.premium_low)} (${Math.round((r.premium_low / r.premium_paid - 1) * 100)}%)${r.premium_low_at ? " at " + r.premium_low_at.slice(11, 16) : ""}`);
+    if (r && r.stop15) notes.push(`premium stop 15% (log only): would have sold at ${r.stop15.at.slice(11, 16)} at ${fmt.format(r.stop15.premium)}`);
+    return `<td class="gate ${t.lc === "SKIP" ? "skip" : "take"}">${t.lc}</td><td class="why">${t.lcWhy || ""}${notes.length ? " · " + notes.join(" · ") : ""}</td>`;
+  }
   const cancelledCells = (t) => `<td class="when">${callTime(t.signalTime)}</td><td class="call">Buy ${t.side}</td><td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
     + `<td class="entry">never fired</td><td>—</td><td class="opt">—</td><td class="opt">—</td><td class="cand">Cancelled</td><td class="why">${callTime(t.cancelTime)} candle closed back across ${pctOf(t)}</td>`
-    + gateCells({ ...t, paper: false }).replace(" · shadow: order placed anyway", "");
+    + gateCells({ ...t, paper: false }).replace(" · shadow: order placed anyway", "") + lcCells({ ...t, paper: false }, null).replace(" · shadow: order placed anyway", "");
   // The owner's words (12 October): "On the line" for a held signal; a crossed one says which way, "Crossed above" (Buy CE) or
   // "Crossed below" (Buy PE) the Fibonacci level
   const signalWord = (t) => t.kind === "held" ? "On the line" : t.side === "CE" ? "Crossed above" : "Crossed below";

@@ -677,6 +677,78 @@ The rule, in the order it is applied:
    calls +284; the parallel advice flagged 9 calls on 22 October, 7 went out for
    -27.7. The document's missed-winner report is the daily line's skipped-winner
    list.
+9. **The Loss Cutter** (the owner's `Loss_Cutter.docx` and `Sideways_Zone_v3.docx`
+   with their reference code, 24 October: "develope loss cutter and sideways zone
+   v3 rule and implement it on paper calls page very carefully"; `Rules.LC`,
+   `rule.LC`). Entry checks built on the Call Gate version 2 and judged **beside**
+   it on every signal: the table keeps the Call Gate's two columns and adds
+   **Loss Cutter** (TAKE or SKIP) and **Loss Cutter reason**. It changes nothing in
+   the lines, the signals, the firing, the entry or the exits. **Shadow mode**, as
+   the documents say: every order goes out as before; the verdicts are recorded for
+   the scoreboard. The checks, in order (the first that says SKIP decides):
+   1. the opening window, the late rule and the chase on the signal candle, as the
+      Call Gate;
+   2. **chase window** (new): the candle before the signal candle was more than
+      2.5 × ATR tall and went the same way as the call (green for a Buy CE, red for
+      a Buy PE): SKIP. Exactly 2.5 × ATR is not more; a candle the other way does
+      not count;
+   3. **sideways zone, version 3**: the Call Gate's zone with a taller box, up to
+      2.5 × ATR (version 2: 1.5), on the Loss Cutter's own tracker; inside a zone the
+      version 2 judgement (thirds of the box, trend continuation, strong candle). A
+      call whose trigger (the signal candle's high for a CE, low for a PE) or close
+      is beyond the box its way is a breakout and passes. The strict zone (only a
+      breakout passes) is advice only: "WOULD SKIP (strict zone) ...";
+   4. **worn line** (advice only): the signal's line (its price) has failed twice in
+      the last 120 minutes: an earlier signal on it, born at 09:45 or later, that was
+      cancelled before firing, or fired and closed at a loss in index points, on or
+      before this candle. A breakout from a zone is exempt. "WOULD SKIP (worn line:
+      ...)";
+   5. **stack cap** (new), judged when the call fires: three calls the same way that
+      the Loss Cutter took are still open: SKIP. A call it skipped is not counted, nor
+      one the other way. The count is kept on every call ("N open the same way when
+      placed"). The owner said on 23 October that parallel calls should never be
+      blocked; the cap blocks only the fourth, and in shadow nothing is blocked:
+      `stackMode: "log"` turns it into advice only, `stackCap: null` switches it off.
+   The **premium stop** of 15% is log only: the option's record keeps the lowest
+   premium of every call and when it came, and the first moment the premium was 15%
+   below what was paid (`dhan.PREMIUM_STOP`); the table and the calls CSV show it.
+   The 35% Sell mark stays the rule that sells. The calls CSV carries `lc`,
+   `lc_reason`, `lc_check`, `lc_advice`, `lc_open_same`, `premium_low`,
+   `premium_low_at_ist`, `stop15_at_ist`, `stop15_premium`; the server writes a
+   daily line ("LOSS CUTTER DAY ...": each check's calls and points, the zone skips
+   the Call Gate's zone did not make, the skipped winners, the advice, the zones).
+   Going live is the owner's decision, one check at a time (`Rules.LC.mode = "LIVE"`
+   with `liveChecks`; the documents' order: the chase window and the stack cap
+   first, then the wider zone). `LC_V2` gives the Call Gate version 2's verdict on
+   every signal; `LC_STRICT` makes the two advice-only checks block.
+   Checked against the documents: the reference code passes 28 of its 29 tests here
+   (ZV-14 needs `profit_lock_reference.py`, which was not sent); on the documents'
+   own 23 October data (the screenshot's candles, the owner's real call table) the
+   engine's functions give the reference's verdict, deciding check and advice for
+   every signal under eleven settings (`lab/loss-cutter-23oct.json`), the five zones
+   of version 3 and the three of version 2, and the documents' table 4.1: 22 calls
+   −₹4,098.25 → Call Gate version 2 18 calls −₹1,602.25 → box 1.5 with the chase
+   window and the stack cap 15 calls +₹2,986.75 → box 2.0 13 calls +₹4,884.75 →
+   the Loss Cutter 10 calls +₹7,104.50 (worn line blocking 9 calls +₹7,952.75,
+   strict 8 calls +₹8,966.75). In the engine itself: `LC_V2` equals the Call Gate on
+   every signal of both document days and their mirrors, no verdict changes when
+   the day is cut short, the mirrored day gives the mirrored verdicts, and live mode
+   holds only the live checks' orders; page and server proven the same by
+   `check_rule.py` (65,094 runs, 380,849 calls, all the same).
+   **On the real days** (Dhan's own candles, the page replayed with the day's
+   option records): 23 October NIFTY 50 gives the document's answer call for
+   call, the same 10 calls kept and 12 skipped, −₹4,098.25 → +₹7,104.50 (the Call
+   Gate −₹1,602.25). NIFTY BANK, which the documents did not study: 14 calls
+   +₹13,203.00 → the Call Gate 11 calls +₹7,258.50 → the Loss Cutter 6 calls
+   +₹9,070.50 (the opening window skips the 09:30 PE, +₹6,385.50, as the Call Gate
+   does; the zone skips the 12:20 PE, +₹2,628.00). Over the 17 saved days, 29
+   September to 23 October, in index points before costs: NIFTY 50 every call 271
+   calls +1,403.80, the Call Gate 210 calls +1,186.80, the Loss Cutter 139 calls
+   +1,378.35 (after 8 points a call, the documents' cost: −764.20, −493.20,
+   +266.35); NIFTY BANK every call 288 calls +2,405.70, the Call Gate 228 calls
+   +2,410.50, the Loss Cutter 142 calls +215.00: there the wider zone skipped 79
+   calls the Call Gate's zone did not, worth +2,334.15. So on NIFTY BANK the
+   version 3 zone is not to go live without the shadow log saying otherwise.
 
 As in layer 2, a candle is judged against the previous closed candle, and the
 first candle of a day against the last candle of the day before. Points are

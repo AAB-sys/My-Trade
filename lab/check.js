@@ -738,3 +738,157 @@ console.log("rules unit checks passed");
   assert(!sc.ok && sc.failed.join() === "beyond last3" && !R.trendContinuation(bars, k14, "PE", atr[k14], 0, g).ok, "5.1 example, the 14:00 PE: " + JSON.stringify(sc));
   console.log("Call Gate version 2 (revised) checks passed (A-1 to A-12 on the engine's own calls, the parallel advice, the zone tracker, day health, the opening range, the chase, the mirror)");
 }
+
+// ---- The Loss Cutter and the Sideways Zone version 3 (the owner's Loss_Cutter.docx and Sideways_Zone_v3.docx, 24 October). The
+// documents' tests on their own data: the 23 October candles read from the owner's screenshot and the real call table from the owner's
+// Excel (lab/loss-cutter-23oct.json: the reference code's verdicts for every setting the documents use, dumped by its run_loss_cutter).
+// The engine's own functions (zoneStep, lcVerdict, wornFailures, stackStep) are run over the same signals in the reference's order and
+// must give the same verdict, the same deciding rule and the same advice for every signal, and the documents' totals
+{
+  const F = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "loss-cutter-23oct.json"), "utf8"));
+  const day0 = Date.UTC(2026, 9, 23) / 1000 - IST, at = (t) => day0 + Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60;
+  const C = F.candles.map(([t, open, high, low, close]) => ({ time: at(t), open, high, low, close }));
+  const kOf = (t) => { let k = -1; C.forEach((c, i) => { if (c.time <= at(t)) k = i; }); return k; };
+  const hhmm = (sec) => new Date((sec + IST) * 1000).toISOString().slice(11, 16);
+  const KEYS = { opening_until: "openingUntil", opening: "opening", or_candles: "orCandles", orb_buffer_atr: "orbBufferAtr", chase_atr: "chaseAtr",
+                 zone_rule: "zoneRule", zone_n: "zoneN", zone_height_atr: "zoneHeightAtr", zone_er_max: "zoneErMax", zone_buffer_atr: "bufferAtr", zone_mode: "zoneMode",
+                 chase_window: "chaseWindow", chase_window_atr: "chaseWindowAtr", stack_cap: "stackCap", stack_mode: "stackMode", worn_mode: "wornMode",
+                 worn_failures: "wornFailures", worn_minutes: "wornMinutes", advice: "advice" };
+  const cfgOf = (name) => { const c = { ...R.LC }; for (const [k, v] of Object.entries(F.configs[name])) if (KEYS[k]) c[KEYS[k]] = k === "opening_until" ? at(v) - day0 : v; return c; };
+  const signals = () => F.table.map(r => ({ signalTime: at(r.signal), side: r.side, level: r.line, k: kOf(r.signal), line: (r.pct > 0 ? "+" : "") + r.pct.toFixed(1) + "%",
+    ...(r.cancelled ? { cancelTime: at(r.cancelled) } : {}), ...(r.fired ? { fired: r.fired, sold: r.sold, exit: 1, exitTime: C[kOf(r.sold)].time, points: r.rupees } : { exit: null }) }));
+  const run = (g) => {  // the reference's run_loss_cutter, on the engine's functions
+    const atr = R.gateAtr(C, g.atrPeriod, F.atrSeed, F.prevClose), zone = { box: null, broke: null, found: [], ended: [] }, sig = signals();
+    for (let k = 0; k < C.length; k++) {
+      R.zoneStep(zone, C, k, atr[k], 0, g);
+      for (const s of sig.filter(s => s.k === k)) {
+        s.failures = R.wornFailures(sig, s, g);
+        const v = R.lcVerdict(C, k, s.side, atr[k], zone, s.failures, 0, g, s.line);
+        s.lc = v.lc; s.lcWhy = v.why; s.lcCheck = v.check; s.lcAdvice = v.advice;
+      }
+    }
+    const fired = sig.filter(s => s.fired && s.lc === "TAKE").sort((a, b) => kOf(a.fired) - kOf(b.fired) || a.k - b.k), taken = [];
+    for (const o of fired) { R.stackStep(o, taken.filter(e => kOf(e.sold) >= kOf(o.fired)), g); if (o.lc === "TAKE") taken.push(o); }
+    return { sig, zone, taken };
+  };
+  const rule = (c) => c === "chasewindow" ? "chase" : c || "";
+  for (const name of Object.keys(F.configs)) {
+    const g = cfgOf(name), { sig, taken } = run(g), ref = F.verdicts[name], tot = F.verdicts[name + "_total"];
+    sig.forEach((s, j) => {
+      const r = ref[j], mine = `${hhmm(s.signalTime)} ${s.side} ${s.lc} ${rule(s.lcCheck)} [${s.lcAdvice}]`, theirs = `${r.signal} ${r.side} ${r.verdict} ${r.rule} [${r.advice}]`;
+      const adviceSame = ["strict zone", "worn line", "stack cap"].every(w => s.lcAdvice.includes(w) === r.advice.includes(w));
+      assert(hhmm(s.signalTime) === r.signal && s.side === r.side && s.lc === r.verdict && rule(s.lcCheck) === r.rule && adviceSame && s.failures === r.failures,
+             `${name}: the engine says ${mine}, the reference ${theirs} (failures ${s.failures} / ${r.failures})`);
+      if (s.lc === "SKIP" && /^(zone|opening)$/.test(s.lcCheck)) assert(s.lcWhy.replace(/\.0(?=[ %x])/g, "") === r.why.replace(/\.0(?=[ %x])/g, ""), `${name} ${r.signal}: reason "${s.lcWhy}" against "${r.why}"`);
+    });
+    const rupees = Math.round(taken.reduce((a, o) => a + o.points, 0) * 100) / 100;
+    assert(taken.length === tot.kept && rupees === tot.rupees && taken.filter(o => o.points > 0).length === tot.winners, `${name}: ${taken.length} calls ${rupees}, the reference ${tot.kept} ${tot.rupees}`);
+  }
+  // ZV-8, ZV-9, ZV-10: the zones of version 2 and version 3 on that day, found and ended, and the first box of version 3
+  for (const [name, ver] of [["LC_V2", "v2"], ["LC", "v3"]]) {
+    const { zone } = run(cfgOf(name)), mine = zone.found.map((f, k) => `${hhmm(f)}-${zone.ended[k] != null ? hhmm(zone.ended[k]) : "open"}`).join(" ");
+    const theirs = F.zones[ver].map(z => `${z.found}-${z.end || "open"}`).join(" ");
+    assert(mine === theirs, `zones ${ver}: ${mine} against ${theirs}`);
+  }
+  const doc = (name) => F.verdicts[name + "_total"];
+  assert(doc("LC").kept === 10 && doc("LC").rupees === 7104.5 && doc("LC_V2").kept === 18 && doc("LC_V2").rupees === -1602.25 && doc("BOX_1_5").rupees === 2986.75
+         && doc("BOX_2_0").rupees === 4884.75 && doc("BOX_3_0").rupees === 8424 && doc("WORN_SKIP").rupees === 7952.75 && doc("LC_STRICT").rupees === 8966.75, "the documents' table 4.1");
+  { const { sig } = run(cfgOf("LC_ZONE_ONLY")), zs = sig.filter(s => s.fired && s.lcCheck === "zone");  // ZV-11, ZV-12
+    assert(zs.map(s => hhmm(s.signalTime)).join() === "11:10,11:25,12:55,13:05,14:05,14:20" && zs.reduce((a, s) => a + s.points, 0) === -4589, "ZV-11");
+    const w = sig.find(s => hhmm(s.signalTime) === "13:30"); assert(w.lc === "TAKE" && w.lcWhy === "breakout from a sideways zone", "ZV-12"); }
+  { const { sig } = run(cfgOf("STACK_LOG")), st = sig.filter(s => /stack cap/.test(s.lcAdvice)).map(s => hhmm(s.signalTime));  // LC-14 on the real day
+    assert(st.join() === "10:10,10:30" && sig.every(s => s.lcCheck !== "stack"), "stack cap in log mode: " + st); }
+  // the documents' unit tests on hand-made candles (ATR 30), from 11:00
+  const mk5 = (rows, start = "11:00") => rows.map(([open, high, low, close], i) => ({ time: at(start) + i * 300, open, high, low, close }));
+  const boxRows = (lo, hi, n = 6) => { const h = (hi - lo) / 2; return Array.from({ length: n }, (_, i) => i % 2 === 0 ? [lo + 0.3 * h, lo + h, lo, lo + 0.4 * h] : [hi - 0.3 * h, hi, hi - h, hi - 0.4 * h]); };
+  const zoneAfter = (bars, g) => { const z = { box: null, broke: null, found: [], ended: [] }; bars.forEach((_, k) => R.zoneStep(z, bars, k, 30, 0, g)); return z; };
+  const V2 = cfgOf("LC_V2"), LC = cfgOf("LC"), STRICT = cfgOf("LC_STRICT"), box72 = boxRows(100, 172), C1 = mk5([...box72, [140, 150, 130, 140]]);
+  const z3 = zoneAfter(C1, LC);
+  assert(z3.box && z3.box.lo === 100 && z3.box.hi === 172 && z3.found[0] === C1[6].time && !zoneAfter(C1, V2).box, "ZV-1");
+  assert(!zoneAfter(mk5([...boxRows(100, 180), [140, 150, 130, 140]]), LC).box, "ZV-2");
+  assert(!zoneAfter(mk5(Array.from({ length: 7 }, (_, i) => [100 + 12 * i, 120 + 12 * i, 96 + 12 * i, 116 + 12 * i])), LC).box, "ZV-3");
+  const v4 = R.lcVerdict(mk5([...box72, [160, 170, 150, 165]]), 6, "CE", 30, z3, 0, 0, LC, "x");
+  assert(v4.lc === "SKIP" && v4.check === "zone" && /top third/.test(v4.why), "ZV-4 " + v4.why);
+  assert(R.lcVerdict(mk5([...box72, [160, 176, 150, 170]]), 6, "CE", 30, z3, 0, 0, LC, "x").why === "breakout from a sideways zone", "ZV-5");
+  const bounce = mk5([...box72, [110, 125, 105, 120]]), ve = R.lcVerdict(bounce, 6, "CE", 30, z3, 0, 0, LC, "x"), vs = R.lcVerdict(bounce, 6, "CE", 30, z3, 0, 0, STRICT, "x");
+  assert(ve.lc === "TAKE" && ve.advice.startsWith("WOULD SKIP (strict zone)") && vs.lc === "SKIP" && vs.check === "zone", "ZV-6");
+  const C7 = mk5([...box72, [140, 150, 130, 140], [170, 180, 168, 179.4], [179, 185, 178, 180.5]]), z7 = { box: null, broke: null, found: [], ended: [] };
+  for (let k = 0; k < 8; k++) R.zoneStep(z7, C7, k, 30, 0, LC);
+  const still = !!z7.box; R.zoneStep(z7, C7, 8, 30, 0, LC);
+  assert(still && !z7.box && z7.broke === "up" && z7.ended[0] === C7[7].time, "ZV-7");
+  const base = [[100, 110, 95, 105], [100, 110, 95, 105], [100, 110, 95, 105]], sigc = [185, 200, 180, 195], lc1 = (before, g = LC) => R.lcVerdict(mk5([...base, before, sigc]), 4, "CE", 30, { box: null }, 0, 0, g, "x");
+  assert(lc1([105, 190, 100, 185]).check === "chasewindow" && lc1([185, 190, 100, 105]).lc === "TAKE" && lc1([105, 185, 110, 180]).lc === "TAKE" && lc1([105, 190, 100, 185], { ...LC, chaseWindow: false }).lc === "TAKE", "LC-1");
+  const stk = (n, g = LC) => { const t = { side: "PE", lc: "TAKE" }; R.stackStep(t, Array.from({ length: n }, () => ({ side: "PE", lc: "TAKE" })), g); return t; };
+  assert(stk(2).lc === "TAKE" && stk(2).lcOpenSame === 2 && stk(3).lc === "SKIP" && stk(3).lcCheck === "stack" && stk(5, { ...LC, stackCap: null }).lc === "TAKE"
+         && stk(3, { ...LC, stackMode: "log" }).lcAdvice.startsWith("WOULD SKIP (stack cap"), "LC-2, LC-14");
+  const kk = kOf("12:00"), cur = { signalTime: at("12:00"), level: 22500, side: "PE" }, W = { ...LC, wornMode: "skip" };
+  const e = (t, extra) => ({ signalTime: at(t), level: 22500, ...extra });
+  const cancelled = e("11:30", { cancelTime: at("11:40") }), lost = e("11:40", { exit: 1, exitTime: C[kk - 2].time, points: -12 }), won = e("11:35", { exit: 1, exitTime: C[kk - 2].time, points: 30 });
+  const early = e("09:30", { exit: 1, exitTime: at("09:45"), points: -20 }), old = e("09:55", { cancelTime: at("10:00") }), openc = e("11:50", { exit: null }), other = { signalTime: at("11:45"), level: 22400, cancelTime: at("11:50") };
+  assert(R.wornFailures([cur, cancelled, lost], cur, W) === 2 && R.wornFailures([cur, cancelled, won], cur, W) === 1 && R.wornFailures([cur, cancelled, lost, early, old, openc, other], cur, W) === 2, "LC-4");
+  const j = (g, n) => R.lcVerdict(C, kk, "PE", 30, { box: null }, n, 0, g, "-61.8%");
+  assert(j(W, 2).check === "worn" && j(LC, 2).lc === "TAKE" && j(LC, 2).advice.startsWith("WOULD SKIP (worn line") && j(W, 1).lc === "TAKE", "LC-5");
+  console.log(`Loss Cutter checks passed (the reference's verdicts on its 23 October data for ${Object.keys(F.configs).length} settings, signal by signal; the zones of versions 2 and 3; the documents' table 4.1; ZV-1 to ZV-7, ZV-11, ZV-12, LC-1, LC-2, LC-4, LC-5, LC-14)`);
+}
+
+// The Loss Cutter inside the engine (paperTrades), on the engine's own calls of 22 October (the Call Gate's appendix day) and of the
+// 23 October candles of the documents, and on both days mirrored through the previous close
+{
+  const fs = require("fs"), path = require("path"), hhmm = (t) => new Date((t + IST) * 1000).toISOString().slice(11, 16);
+  const A = JSON.parse(fs.readFileSync(path.join(__dirname, "call-gate-appendix-a.json"), "utf8")), d22 = Math.floor((1792381500 + IST) / 86400) * 86400 - IST;
+  const F = JSON.parse(fs.readFileSync(path.join(__dirname, "loss-cutter-23oct.json"), "utf8")), d23 = Date.UTC(2026, 9, 23) / 1000 - IST;
+  const days = [
+    { name: "22 Oct", prev: 22811.35, bars: A.map(r => ({ time: d22 + r[0] * 3600 + r[1] * 60, open: r[2], high: r[3], low: r[4], close: r[5] })) },
+    { name: "23 Oct", prev: F.prevClose, bars: F.candles.map(([t, open, high, low, close]) => ({ time: d23 + Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60, open, high, low, close })) }];
+  days.push(...days.map(d => ({ name: d.name + " mirrored", prev: d.prev, mirror: true, bars: d.bars.map(b => ({ time: b.time, open: R.round2(2 * d.prev - b.open), high: R.round2(2 * d.prev - b.low), low: R.round2(2 * d.prev - b.high), close: R.round2(2 * d.prev - b.close) })) })));
+  const run = (d, lossCutter, gate = R.GATE, bars = d.bars) => R.replayDay({ bars, move: "close", previous: { close: d.prev }, seconds: 300, signal: "both", gate, atrSeed: 30, lossCutter });
+  const all = (r) => r.trades.concat(r.cancelled).sort((a, b) => a.signalTime - b.signalTime || (a.side < b.side ? -1 : 1));
+  for (const d of days) {
+    // ZV-14 on the engine: with the version 2 settings the Loss Cutter's verdict is the Call Gate's for every signal, fired or cancelled
+    const v2 = run(d, R.LC_V2), diff = all(v2).filter(t => t.lc !== t.gate || (t.lc === "SKIP" && (t.lcCheck !== t.gateCheck || t.lcWhy !== t.gateWhy)));  // a TAKE inside a zone: the Call Gate names the zone, the Loss Cutter (as the reference) no check
+    assert(all(v2).length > 15 && !diff.length, `${d.name}: LC_V2 differs from the Call Gate on ${diff.map(t => hhmm(t.signalTime) + t.side + " " + t.lc + "/" + t.gate).join(", ")}`);
+    // the stack cap, judged as each order is placed: lcOpenSame counts the calls the same way the Loss Cutter took that are still open then
+    const r = run(d, R.LC);
+    for (const t of r.trades.filter(t => t.lcOpenSame != null)) {
+      const before = r.trades.slice(0, r.trades.indexOf(t)).filter(o => o.side === t.side && o.lc === "TAKE" && !(o.exitTime < t.entryTime));
+      assert(before.length === t.lcOpenSame, `${d.name} ${hhmm(t.signalTime)} ${t.side}: lcOpenSame ${t.lcOpenSame}, open taken calls ${before.length}`);
+      assert((t.lcCheck === "stack") === (t.lcOpenSame >= 3), `${d.name} ${hhmm(t.signalTime)}: the stack cap at ${t.lcOpenSame} open`);
+    }
+    assert(r.trades.every(t => t.lc && (t.lc === "SKIP" ? !!t.lcCheck : t.lcCheck === null)) && r.cancelled.every(t => t.lc && t.lcOpenSame === undefined), d.name + ": every signal carries a verdict, a cancelled one no stack count");
+    assert(r.trades.every(t => !t.paper), d.name + ": shadow mode places every order");
+    // LC-12, no look-ahead: the day cut short gives the same verdicts to the signals born before the cut
+    for (const cut of [30, 45, 60]) {
+      const part = run(d, R.LC, R.GATE, d.bars.slice(0, cut)), born = d.bars[cut - 1].time;
+      const key = (t) => `${t.signalTime}${t.side}`, full = Object.fromEntries(all(r).filter(t => t.signalTime < born).map(t => [key(t), `${t.lc} ${t.lcCheck} ${t.lcAdvice}`]));
+      const mine = Object.fromEntries(all(part).filter(t => t.signalTime < born).map(t => [key(t), `${t.lc} ${t.lcCheck} ${t.lcAdvice}`]));
+      assert(JSON.stringify(full) === JSON.stringify(mine), `${d.name} cut at ${hhmm(born)}: ${JSON.stringify(full)} against ${JSON.stringify(mine)}`);
+    }
+    // LIVE, one check at a time (the documents' phase 2: the chase window and the stack cap first): only those hold an order, on paper
+    const live = run(d, { ...R.LC, mode: "LIVE" });
+    assert(live.trades.filter(t => t.paper).every(t => t.lc === "SKIP" && ["chasewindow", "stack"].includes(t.lcCheck)) &&
+           live.trades.filter(t => t.lc === "SKIP" && ["chasewindow", "stack"].includes(t.lcCheck)).every(t => t.paper), d.name + ": LIVE, only the live checks hold an order");
+    d.result = r;
+  }
+  // LC-13, mirror: the same verdicts, checks and advice with CE and PE swapped (the reasons with their words mirrored)
+  const norm = (s) => (s || "").replace(/\d+% up/g, "").replace(/[+-](\d+\.\d%)/g, "$1").replace(/\b(top|bottom|above|below|high|low|buying|selling|breakout|breakdown|CE|PE)\b/g, (w) => ({ top: "X", bottom: "X", above: "Y", below: "Y", high: "Z", low: "Z", buying: "W", selling: "W", breakout: "V", breakdown: "V", CE: "U", PE: "U" })[w]);
+  for (const k of [0, 1]) {
+    const a = all(days[k].result), b = all(days[k + 2].result), sw = { CE: "PE", PE: "CE" };
+    const one = (t, side) => `${hhmm(t.signalTime)} ${side} ${t.lc} ${t.lcCheck} ${norm(t.lcWhy)} ${norm(t.lcAdvice)} ${t.lcOpenSame}`;
+    { const x = a.map(t => one(t, sw[t.side])).sort(), y = b.map(t => one(t, t.side)).sort(); assert(JSON.stringify(x) === JSON.stringify(y), `${days[k].name}: the mirrored day verdicts differ: ${x.filter(v => !y.includes(v)).join(" ; ")} AGAINST ${y.filter(v => !x.includes(v)).join(" ; ")}`); }
+  }
+  // the stack cap's own counting: a call the Loss Cutter skipped is not counted, nor one the other way; a call born at the same moment is no earlier failure
+  const t1 = { side: "PE", lc: "TAKE" }; R.stackStep(t1, [{ side: "PE", lc: "TAKE" }, { side: "PE", lc: "TAKE" }, { side: "PE", lc: "SKIP" }, { side: "CE", lc: "TAKE" }], R.LC);
+  assert(t1.lc === "TAKE" && t1.lcOpenSame === 2, "the stack cap counts only the calls the Loss Cutter took, the same way");
+  const now0 = d23 + 12 * 3600;
+  assert(R.wornFailures([{ signalTime: now0, level: 1, cancelTime: now0 }], { signalTime: now0, level: 1 }, R.LC) === 0, "a signal born at the same moment is no earlier failure");
+  // the daily line
+  const line = R.lcSummary(days[1].result, "2026-10-23");
+  assert(line.startsWith("LOSS CUTTER DAY 2026-10-23 · calls ") && / · zones: \d\d:\d\d-/.test(line), "the daily line: " + line);
+  const r23 = days[1].result, take = r23.trades.filter(t => t.lc === "TAKE");
+  // ZV-9 inside the engine: its own Loss Cutter zone on the documents' 23 October candles is version 3's, five zones, found and ended as the documents say
+  const zones3 = r23.lcZonesFound.map((f, k) => `${hhmm(f)}-${hhmm(r23.lcZonesEnded[k])}`).join(" · ");
+  assert(zones3 === "11:05-12:20 · 12:30-12:40 · 12:55-13:30 · 14:05-14:30 · 15:05-15:20" && r23.zonesFound.map(hhmm).join() === "12:15,14:30,15:15", "the engine's zones on 23 October: " + zones3 + " / Call Gate " + r23.zonesFound.map(hhmm).join());
+  assert(take.length === 12 && R.round2(take.reduce((a, t) => a + t.points, 0)) === 50.35 && r23.trades.filter(t => t.lcCheck === "zone").length === 6, "the engine's own 23 October replay with the Loss Cutter: " + take.length);
+  console.log(`Loss Cutter in the engine checks passed (LC_V2 = Call Gate on every signal of both days and their mirrors; the stack count; no look-ahead at three cuts; LIVE one check at a time; the mirror). The engine's own 23 October replay: ${r23.trades.length} calls, Loss Cutter TAKE ${take.length}, ${R.round2(r23.trades.reduce((a, t) => a + t.points, 0))} -> ${R.round2(take.reduce((a, t) => a + t.points, 0))} points`);
+  console.log(line);
+}

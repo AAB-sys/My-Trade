@@ -828,7 +828,8 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None,
                      "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": "",  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
-                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": False})  # the Call Gate's verdict on the signal, the check that decided, the parallel advice (version 2)
+                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": False,
+                     **lc_fields(t, rec)})  # the Call Gate's verdict on the signal, the check that decided, the parallel advice (version 2)
     if rows:
         record.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)  # the day's calls CSV (the daily save, back on 21 October)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
@@ -855,7 +856,18 @@ def paper_row(t: dict) -> dict:
             "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
             "points": t.get("points"), "how": t["how"], "candles_say": "", "exit_said_at": None, "candles_why": "", "carry_deep": "", "beyond_level": None, "beyond_reached": "",
             "contract": "", "premium_paid": None, "premium_now": None, "sell_below": None, "sold_at": None, "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")),
-            "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": True}
+            "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": True,
+            **lc_fields(t, None)}
+
+
+def lc_fields(t: dict, rec: dict | None) -> dict:
+    """The Loss Cutter's fields of a call for the day's calls CSV (24 October): its verdict, why, the check that decided, its advice,
+    the calls open the same way when the order was placed; and from the option's record the premium path (the lowest premium,
+    when, and the 15% premium stop, log only)."""
+    stop = (rec or {}).get("stop15") or {}
+    return {"lc": t.get("lc") or "", "lc_reason": t.get("lcWhy") or "", "lc_check": t.get("lcCheck") or "", "lc_advice": t.get("lcAdvice") or "",
+            "lc_open_same": t.get("lcOpenSame"), "premium_low": (rec or {}).get("premium_low"), "premium_low_at": (rec or {}).get("premium_low_at"),
+            "stop15_at": stop.get("at"), "stop15_premium": stop.get("premium")}
 
 
 gate_daily_logged: set = set()  # (index, levels mode, date) whose daily summary line is in the log
@@ -871,6 +883,7 @@ def gate_daily_line(name: str, levels_mode: str, result: dict, bars: list, today
         return  # the day's last candle (15:25) has not closed yet
     gate_daily_logged.add(key)
     log.info("%s %s: %s", name, levels_mode, rule.gate_summary(result, today.isoformat()))
+    log.info("%s %s: %s", name, levels_mode, rule.lc_summary(result, today.isoformat()))  # the Loss Cutter's daily line (24 October), the documents' scoreboard for the day
 
 
 def sold_trade(t: dict, rec: dict, bars: list, seconds: int) -> dict:
