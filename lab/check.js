@@ -892,3 +892,141 @@ console.log("rules unit checks passed");
   console.log(`Loss Cutter in the engine checks passed (LC_V2 = Call Gate on every signal of both days and their mirrors; the stack count; no look-ahead at three cuts; LIVE one check at a time; the mirror). The engine's own 23 October replay: ${r23.trades.length} calls, Loss Cutter TAKE ${take.length}, ${R.round2(r23.trades.reduce((a, t) => a + t.points, 0))} -> ${R.round2(take.reduce((a, t) => a + t.points, 0))} points`);
   console.log(line);
 }
+
+// The Profit Lock (the owner's "Profit Lock Exit Rule" document, 24 October), its section 9 tests on the engine's own functions
+// (lockStep, lockFloor, LOCK_PRESETS). lab/profit-lock-reference.json holds the reference code's results on its own data: the
+// replayed calls of 23 October (candle colour first), of 22 October (colour first, and the older replay), lock_day's rows and
+// totals for every setting its tests use, and the hand-made calls of PL-13 to PL-17 (made by the reference's apply_lock)
+{
+  const P = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "profit-lock-reference.json"), "utf8"));
+  const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
+  const step = (side, entry, cfg, candles) => { const st = { peak: 0, peakTime: null }; let r = null; for (const [high, low, close] of candles) r = R.lockStep(st, side, entry, { time: 0, high, low, close }, cfg); return { st, r }; };
+  const MAX = R.LOCK_PRESETS.MAX, STEADY = R.LOCK_PRESETS.STEADY, RUNNER = R.LOCK_PRESETS.RUNNER, OFF = R.LOCK_PRESETS.OFF;
+  // the engine's settings are the reference's presets, and LOCK is MAX in shadow mode, NIFTY 50 only
+  for (const n of ["MAX", "STEADY", "RUNNER", "OFF"]) for (const k of ["armPts", "keep", "minTrailPts", "floorPts", "slipPts"]) assert(R.LOCK_PRESETS[n][k] === P.presets[n][k], `the ${n} setting's ${k}`);
+  assert(R.LOCK.mode === "SHADOW" && R.LOCK.name === "MAX" && ["armPts", "keep", "minTrailPts", "floorPts", "slipPts"].every(k => R.LOCK[k] === MAX[k]) && R.LOCK.indices.join() === "NIFTY 50", "LOCK is MAX in shadow mode, NIFTY 50");
+  // PL-1 to PL-12, the rule on hand-made candles
+  let x = step("CE", 100, MAX, [[119, 90, 95]]); assert(x.r === null && R.lockFloor(x.st.peak, MAX) === null, "PL-1: peak +19 never arms");
+  x = step("CE", 100, MAX, [[120, 110, 118]]); assert(x.st.peak === 20 && near(R.lockFloor(20, MAX), 12), "PL-2: peak +20 arms, floor +12");
+  assert(near(R.lockFloor(100, MAX), 80) && near(R.lockFloor(100, STEADY), 70) && near(R.lockFloor(30, RUNNER), 14), "PL-3 to PL-5: the floors at +100 (MAX, STEADY) and +30 (RUNNER)");
+  x = step("CE", 100, MAX, [[130, 120, 128], [129, 90, 123]]); assert(x.r === null, "PL-6: a wick to -10 closing at +23, above the floor +22, does nothing");
+  x = step("CE", 100, MAX, [[130, 120, 128], [129, 90, 123], [125, 118, 122]]); assert(x.r && x.r.price === 122 && near(x.r.floor, 22), "PL-7: a close at the floor closes the call at that close");
+  { const st = { peak: 0, peakTime: null }, fl = [];
+    for (const [h, l, c] of [[130, 120, 128], [125, 118, 124], [150, 124, 149]]) { R.lockStep(st, "CE", 100, { time: 0, high: h, low: l, close: c }, MAX); fl.push(R.lockFloor(st.peak, MAX)); }
+    assert(fl[0] === fl[1] && fl[2] > fl[1] && st.peak === 50, "PL-8: the floor never goes down; it rises only with a new best"); }
+  x = step("PE", 100, MAX, [[95, 70, 72], [80, 70, 78]]); assert(x.st.peak === 30 && x.r && x.r.price === 78 && near(x.r.points, 22), "PL-9: the PE mirror, the peak on the candle's low");
+  const slip = { ...MAX, slipPts: 2 };
+  assert(near(step("CE", 100, slip, [[130, 120, 128], [125, 118, 122]]).r.price, 120) && near(step("PE", 100, slip, [[95, 70, 72], [80, 70, 78]]).r.price, 80), "PL-10: slippage 2, CE 2 lower, PE 2 higher");
+  x = step("CE", 100, OFF, [[300, 100, 120], [120, 50, 60]]); assert(x.r === null && R.lockFloor(x.st.peak, OFF) === null, "PL-11: OFF never arms and never exits");
+  assert(near(R.lockFloor(25, { ...MAX, floorPts: 15, minTrailPts: 30 }), 15), "PL-12: floorPts keeps the floor from going under it");
+  // the reference's apply_lock on the engine's lockStep: asked from the candle the call fired on up to the one its existing exit is on
+  const applyLock = (C, call, cfg) => {
+    const st = { peak: 0, peakTime: null }, from = C.findIndex(c => c.time === call.fired); let hit = null, k = from;
+    for (; k < call.xk; k++) { hit = R.lockStep(st, call.side, call.entry, C[k], cfg); if (hit) break; }
+    const sign = call.side === "CE" ? 1 : -1, exit = hit ? hit.price : call.exit;
+    return { exit, exit_time: hit ? C[k].time : call.exit_time, locked: !!hit, peak: st.peak, pts: sign * (exit - call.entry) };
+  };
+  const toC = (rows) => rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close }));
+  // PL-13 to PL-17, the lock next to the existing exits (the reference's own results)
+  const HC = toC(P.hand.candles);
+  for (const [id, call] of Object.entries(P.hand.calls)) {
+    const mine = applyLock(HC, call, id === "PL-17" ? OFF : MAX), ref = call.result;
+    assert(mine.locked === ref.locked && mine.exit_time === ref.exit_time && near(mine.exit, ref.exit) && near(mine.pts, ref.pts, 0.05 + 1e-9), `${id}: ${JSON.stringify(mine)} against the reference ${JSON.stringify(ref)}`);
+  }
+  // PL-20 to PL-37: every call of the three replays, every setting, call by call against the reference's rows, and the document's totals
+  const total = {};
+  for (const [day, D] of Object.entries(P.days)) {
+    const C = toC(D.candles);
+    total[day] = {};
+    for (const [name, res] of Object.entries(D.results)) {
+      const cfg = P.configs[name], rows = D.calls.map(call => applyLock(C, call, cfg));
+      rows.forEach((m, i) => { const [exit, exitTime, locked, peak, pts] = res.rows[i];
+        assert(m.locked === locked && m.exit_time === exitTime && near(m.exit, exit) && near(m.peak, peak, 0.05 + 1e-9) && near(m.pts, pts, 0.05 + 1e-9),
+               `${day} ${name} ${D.calls[i].signal} ${D.calls[i].side}: ${JSON.stringify(m)} against the reference ${JSON.stringify(res.rows[i])}`); });
+      const sum = rows.reduce((a, m) => a + Math.round(m.pts * 10) / 10, 0);  // as the reference adds them: each call's points to one decimal
+      assert(near(sum, res.pts, 0.1), `${day} ${name}: ${sum} against the reference ${res.pts}`);
+      assert(rows.filter(m => m.locked).length === res.locked, `${day} ${name}: calls closed by the lock`);
+      total[day][name] = sum;
+      // PL-26: the lock only ever exits earlier; PL-34: a call it did not close ends as in the replay
+      rows.forEach((m, i) => assert(m.locked ? m.exit_time < D.calls[i].exit_time || C.findIndex(c => c.time === m.exit_time) < D.calls[i].xk : m.exit === D.calls[i].exit, `${day} ${name}: the lock exits earlier or not at all`));
+    }
+  }
+  const T = (day, n) => Math.round(total[day][n] * 10) / 10, both = (n) => Math.round((total["23 Oct"][n] + total["22 Oct"][n]) * 10) / 10;
+  assert(P.days["23 Oct"].calls.length === 8 && T("23 Oct", "OFF") === 115.5, "PL-20: 8 calls on 23 October, +115.5 without the lock");
+  assert(T("23 Oct", "MAX") === 245.4 && T("23 Oct", "STEADY") === 258.7 && T("23 Oct", "RUNNER") === 228.8, "PL-22: 23 October, MAX +245.4, STEADY +258.7, RUNNER +228.8");
+  { const C = toC(P.days["23 Oct"].candles), by = (s) => P.days["23 Oct"].calls.find(c => c.signal + " " + c.side === s), r = (s) => applyLock(C, by(s), MAX);
+    const a = r("10:10 PE"), b = r("10:30 PE"), c = r("11:10 CE"), w = r("09:45 PE");
+    assert(near(a.pts, 0, 0.05) && a.exit_time === "10:15" && near(b.pts, 3.4, 0.05) && b.exit_time === "10:35" && near(c.pts, 15.5, 0.05) && c.exit_time === "11:15", "PL-23: the three yellow calls");
+    assert(near(a.peak, 33.3, 0.05) && near(b.peak, 68.9, 0.05) && near(c.peak, 30, 0.05), "PL-24: their best moments +33.3, +68.9, +30.0");
+    assert(near(by("09:45 PE").pts, 153.2, 0.05) && w.pts >= 139 && near(applyLock(C, by("09:45 PE"), STEADY).pts, 153.2, 0.05), "PL-25: the runner of the day, 09:45 PE");
+    const nomin = applyLock(C, by("09:45 PE"), P.configs.NO_MINIMUM);
+    assert(nomin.exit_time === "09:50" && near(nomin.pts, 18.9, 0.05), "PL-36: with no minimum pullback the 09:45 PE runner is closed at 09:50 for +18.9"); }
+  assert(T("22 Oct", "OFF") === -210.9 && P.days["22 Oct"].calls.length === 21 && T("22 Oct", "MAX") === 106.3 && T("22 Oct", "STEADY") === 61.1 && T("22 Oct", "RUNNER") === 51.5, "PL-30, PL-31: 22 October");
+  assert(T("22 Oct older replay", "OFF") === -205.9 && T("22 Oct older replay", "MAX") === 37.6 && T("22 Oct older replay", "STEADY") === -7.6, "PL-32: the older replay");
+  assert(both("OFF") === -95.4 && both("MAX") === 351.7 && both("STEADY") === 319.8, "PL-33: both real days, no lock -95.4, MAX +351.7, STEADY +319.8");
+  const neigh = Object.keys(P.configs).filter(n => n.startsWith("N_")).map(both);
+  assert(neigh.length === 18 && neigh.every(v => v > both("OFF") + 300) && Math.min(...neigh) === 233.7 && Math.max(...neigh) === 351.7, "PL-35: the 18 neighbours, 233.7 to 351.7");
+  assert(both("NO_MINIMUM") === 183.1, "PL-36: both days with no minimum pullback +183.1");
+  assert(both("SLIP2_MAX") === 313.7 && both("SLIP2_STEADY") === 283.8 && both("SLIP2_RUNNER") === 244.3, "PL-37: 2 points of slippage, both days");
+  // PL-38: the lock never reads a candle's open (no guess about the path inside a candle); PL-39: it never changes a call
+  { const D = P.days["23 Oct"], C = toC(D.candles), noOpen = C.map(c => ({ ...c, open: NaN })), before = JSON.stringify(D.calls);
+    D.calls.forEach(call => { const a = applyLock(C, call, MAX), b = applyLock(noOpen, call, MAX); assert(JSON.stringify(a) === JSON.stringify(b), "PL-38: " + call.signal); });
+    assert(JSON.stringify(D.calls) === before, "PL-39: the calls are not changed"); }
+  console.log(`Profit Lock checks passed (PL-1 to PL-17, and PL-20 to PL-39 on the reference's own calls of 22 and 23 October: ${Object.keys(P.configs).length} settings, call by call; 23 Oct MAX ${T("23 Oct", "MAX")} STEADY ${T("23 Oct", "STEADY")} RUNNER ${T("23 Oct", "RUNNER")}; both days MAX ${both("MAX")})`);
+}
+
+// The Profit Lock inside the engine (paperTrades), on the engine's own calls of 22 October (the Call Gate's appendix day) and of the
+// 23 October candles of the documents, and on both days mirrored through the previous close
+{
+  const fs = require("fs"), path = require("path"), hhmm = (t) => new Date((t + IST) * 1000).toISOString().slice(11, 16);
+  const A = JSON.parse(fs.readFileSync(path.join(__dirname, "call-gate-appendix-a.json"), "utf8")), d22 = Math.floor((1792381500 + IST) / 86400) * 86400 - IST;
+  const F = JSON.parse(fs.readFileSync(path.join(__dirname, "loss-cutter-23oct.json"), "utf8")), d23 = Date.UTC(2026, 9, 23) / 1000 - IST;
+  const days = [
+    { name: "22 Oct", prev: 22811.35, bars: A.map(r => ({ time: d22 + r[0] * 3600 + r[1] * 60, open: r[2], high: r[3], low: r[4], close: r[5] })) },
+    { name: "23 Oct", prev: F.prevClose, bars: F.candles.map(([t, open, high, low, close]) => ({ time: d23 + Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60, open, high, low, close })) }];
+  days.push(...days.map(d => ({ name: d.name + " mirrored", prev: d.prev, bars: d.bars.map(b => ({ time: b.time, open: R.round2(2 * d.prev - b.open), high: R.round2(2 * d.prev - b.low), low: R.round2(2 * d.prev - b.high), close: R.round2(2 * d.prev - b.close) })) })));
+  const run = (d, profitLock, bars = d.bars, now = Number.POSITIVE_INFINITY) => R.paperTrades({ bars, levelsAt: R.closeLevelsAt(bars, d.prev), now, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true,
+    trail: R.TRAIL, prevClose: d.prev, gate: R.GATE, atrSeed: 30, lossCutter: R.LC, profitLock });
+  const plain = (t) => { const { lock, lockAlso, ...rest } = t; return rest; };
+  const exitOf = (t) => `${hhmm(t.signalTime)} ${t.side} ${t.entry} ${t.entryTime} ${t.exit} ${t.exitTime} ${t.how} ${t.points}`;
+  for (const d of days) {
+    const sh = run(d, R.LOCK), none = run(d, null), last = d.bars[d.bars.length - 1].time;
+    // shadow mode closes nothing: the calls, their exits and every other field are those of no lock at all
+    assert(JSON.stringify(sh.trades.map(plain)) === JSON.stringify(none.trades) && JSON.stringify(sh.cancelled) === JSON.stringify(none.cancelled), d.name + ": shadow mode changes nothing");
+    // the lock is asked from the candle the call fired on, never on the candle its existing exit is on, nor on the day's last candle
+    for (const t of sh.trades) {
+      if (!t.lock) { assert(t.exitTime === t.entryTime, `${d.name} ${hhmm(t.signalTime)}: a call the lock was never asked about ends on its firing candle`); continue; }
+      assert(t.lock.at == null || (t.lock.at >= t.entryTime && t.lock.at < t.exitTime && t.lock.at !== last), `${d.name} ${hhmm(t.signalTime)}: the lock's candle ${hhmm(t.lock.at)}, exit ${hhmm(t.exitTime)}`);
+      assert(t.lock.at == null || (t.lock.peak >= R.LOCK.armPts && t.lock.points <= t.lock.floor + 1e-9 && t.lock.price === bar(d, t.lock.at).close), `${d.name} ${hhmm(t.signalTime)}: the lock's exit at the close, at or under the floor`);
+      for (const n of R.LOCK.compare) assert(t.lockAlso[n] == null || (t.lockAlso[n].at >= t.entryTime && t.lockAlso[n].at < t.exitTime), `${d.name}: ${n} in shadow`);
+    }
+    // mode LIVE: every call ends where the shadow lock said exit (at that candle's close, "lock"), the others exactly as they did
+    const lv = run(d, { ...R.LOCK, mode: "LIVE" }, d.bars), want = sh.trades.map(t => t.lock && t.lock.at != null ? exitOf({ ...t, exit: t.lock.price, exitTime: t.lock.at, how: "lock", points: t.lock.points }) : exitOf(t));
+    assert(JSON.stringify(lv.trades.map(exitOf)) === JSON.stringify(want), `${d.name}: LIVE\n${lv.trades.map(exitOf).join("\n")}\n--\n${want.join("\n")}`);
+    // no look-ahead: the day cut short (the candle at the cut forming, as live) gives the same lock to every call it had already closed or was holding
+    for (const cut of [24, 40, 56]) {
+      const part = run(d, R.LOCK, d.bars.slice(0, cut + 1), d.bars[cut].time + 120), done = d.bars[cut].time;
+      for (const t of part.trades.filter(t => t.lock)) {
+        const full = sh.trades.find(f => f.signalTime === t.signalTime && f.side === t.side);
+        const was = full.lock.at != null && full.lock.at < done ? `${full.lock.at} ${full.lock.points}` : "none yet", now = t.lock.at != null ? `${t.lock.at} ${t.lock.points}` : "none yet";
+        assert(was === now, `${d.name} cut at ${hhmm(done)} ${hhmm(t.signalTime)} ${t.side}: ${now} against ${was}`);
+      }
+    }
+    // the day's last candle is the day end's, an existing exit: a day that ends on a candle the lock said exit on gives every call open then its day end
+    const at = sh.trades.find(t => t.lock && t.lock.at != null).lock.at, short = d.bars.filter(b => b.time <= at), end = run(d, R.LOCK, short);
+    const open = end.trades.filter(t => t.how === "day end");
+    assert(open.length && open.every(t => !t.lock || t.lock.at == null) && end.trades.every(t => !t.lock || t.lock.at !== at), `${d.name} ended at ${hhmm(at)}: the lock is not asked on the day's last candle`);
+    d.result = sh;
+  }
+  function bar(d, time) { return d.bars.find(b => b.time === time); }
+  // the mirror: the same locks with CE and PE swapped
+  for (const k of [0, 1]) {
+    const one = (t, side) => `${hhmm(t.signalTime)} ${side} ${t.lock ? `${t.lock.at} ${t.lock.points} ${t.lock.peak}` : "-"} ${JSON.stringify(t.lockAlso || null)}`, sw = { CE: "PE", PE: "CE" };
+    const a = days[k].result.trades.map(t => one(t, sw[t.side])).sort(), b = days[k + 2].result.trades.map(t => one(t, t.side)).sort();
+    assert(JSON.stringify(a) === JSON.stringify(b), `${days[k].name}: the mirrored day's locks differ: ${a.filter(v => !b.includes(v)).join(" ; ")} AGAINST ${b.filter(v => !a.includes(v)).join(" ; ")}`);
+  }
+  const r23 = days[1].result, line = R.lockSummary(r23, "2026-10-23", R.LOCK);
+  assert(line.startsWith("PROFIT LOCK DAY 2026-10-23 · MAX SHADOW · calls ") && line.includes(" · STEADY ") && line.includes(" · RUNNER "), "the daily line: " + line);
+  console.log(`Profit Lock in the engine checks passed (shadow changes nothing; asked from the firing candle, never on an exit candle or the day's last; LIVE ends each call where the shadow said; no look-ahead at three cuts; the mirror)`);
+  console.log(line);
+}

@@ -612,6 +612,55 @@ def lc_summary(res: dict, date: str) -> str:
             f" · advice: {part('worn line', adv('worn line'))} · {part('strict zone', adv('strict zone'))} · {part('stack cap', adv('stack cap'))} · zones: {' · '.join(zones) or 'none'}")
 
 
+# The Profit Lock (the owner's "Profit Lock Exit Rule" document and profit_lock_reference.py, 24 October; see static/rules.js LOCK):
+# an extra exit, asked after every existing exit of a closed candle, never on the day's last one. SHADOW: the lock rides on the call
+# (lock, lockAlso) and nothing is closed; LIVE: the call ends there ("lock"). The settings are index points of NIFTY 50
+LOCK_PRESETS = {"MAX": {"armPts": 20, "keep": 0.80, "minTrailPts": 8, "floorPts": 0, "slipPts": 0}}
+LOCK_PRESETS["STEADY"] = {**LOCK_PRESETS["MAX"], "keep": 0.70}
+LOCK_PRESETS["RUNNER"] = {**LOCK_PRESETS["STEADY"], "minTrailPts": 16}
+LOCK_PRESETS["OFF"] = {**LOCK_PRESETS["MAX"], "armPts": None}
+LOCK = {"mode": "SHADOW", "name": "MAX", **LOCK_PRESETS["MAX"], "compare": ["STEADY", "RUNNER"], "indices": ["NIFTY 50"]}
+
+
+def lock_floor(peak: float, g: dict):
+    """The floor in index points of profit; None while the lock is not armed (static/rules.js lockFloor)."""
+    if g["armPts"] is None or peak < g["armPts"]:
+        return None
+    return max(g["floorPts"], peak - max(g["minTrailPts"], (1 - g["keep"]) * peak))
+
+
+def lock_step(st: dict, side: str, entry: float, bar: dict, g: dict):
+    """One closed candle for one call's lock (the reference's ProfitLock.on_candle): st {peak, peakTime} changed in place;
+    the exit {price, points, floor}, or None to hold."""
+    d = 1 if side == "CE" else -1
+    best = d * ((bar["high"] if d == 1 else bar["low"]) - entry)
+    if best > st["peak"]:
+        st["peak"], st["peakTime"] = best, bar["time"]
+    floor = lock_floor(st["peak"], g)
+    profit = d * (bar["close"] - entry)
+    if floor is None or profit > floor:
+        return None
+    price = bar["close"] - d * g["slipPts"]
+    return {"price": price, "points": d * (price - entry), "floor": floor}
+
+
+def lock_summary(res: dict, date: str, g: dict) -> str:
+    """The Profit Lock's daily line (static/rules.js lockSummary)."""
+    fired = [t for t in res["trades"] if t.get("entry") is not None and not t.get("paper") and t.get("exit") is not None]
+    pts = lambda lst, f: round2(sum(f(t) for t in lst))
+    said = lambda t: bool(t.get("lock")) and t["lock"]["at"] is not None
+    with_lock = lambda t: t["lock"]["points"] if said(t) else t["points"]
+    give_up = pts([t for t in fired if t["points"] > 0], lambda t: max(0, t["points"] - with_lock(t)))
+    gain_on = pts([t for t in fired if t["points"] <= 0], lambda t: max(0, with_lock(t) - t["points"]))
+    also = []
+    for n in g.get("compare") or []:
+        hit = lambda t, n=n: (t.get("lockAlso") or {}).get(n)
+        also.append(f"{n} {_signed1(pts(fired, lambda t: hit(t)['points'] if hit(t) else t['points']))} ({sum(1 for t in fired if hit(t))} exits)")
+    exits = [f"{_ist_hm(t['signalTime'])} {t['side']} {_ist_hm(t['lock']['at'])} {_signed1(t['lock']['points'])} (best {_signed1(t['lock']['peak'])}, ended {_signed1(t['points'])})" for t in fired if said(t)]
+    return (f"PROFIT LOCK DAY {date} · {g['name']} {g['mode']} · calls {len(fired)} · the lock said exit on {sum(1 for t in fired if said(t))} · points as the calls ended {_signed1(pts(fired, lambda t: t['points']))}"
+            f" · with the lock {_signed1(pts(fired, with_lock))} · winners given up {_signed1(give_up)} · losers saved {_signed1(gain_on)}{(' · ' + ' · '.join(also)) if also else ''} · exits: {' · '.join(exits) or 'none'}")
+
+
 TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index page, the watcher and the replays run it: the owner's choices, 9 October; the stop on the line crossed itself since 21 October, Change 4 (see static/rules.js TRAIL)
 
 # idea 13 (12 October, no call against a fresh run) was removed from the rule on 18 October (the owner: "all three remove")
@@ -619,7 +668,7 @@ TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
                  hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, new_high_low: bool = False, prev_close=None,
-                 minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC) -> dict:
+                 minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC, profit_lock: dict | None = LOCK) -> dict:
     """The paper calls (see static/rules.js paperTrades). Since 18 October a call fires when a later candle's price goes past the
     signal candle's high (CE) or low (PE) and enters there, or at the candle's open when it opened past it; any later candle may
     fire it, until a candle closes back across the signal's line; a second call the same way while another is held runs beside
@@ -640,7 +689,9 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     gateHealth); LIVE follows a SKIP from a live check on paper (paper: True, no order). The signals cancelled before firing come back in
     "cancelled", the zones found in "zonesFound". atr_seed: the gate's ATR carried in from the previous day (atr_seed_of).
     loss_cutter: the Loss Cutter (LC, 24 October), judged beside the Call Gate on every signal (lc, lcWhy, lcCheck, lcAdvice, lcFailures; the
-    stack cap and lcOpenSame when the call fires); its zones in "lcZonesFound" and "lcZonesEnded". None: no Loss Cutter."""
+    stack cap and lcOpenSame when the call fires); its zones in "lcZonesFound" and "lcZonesEnded". None: no Loss Cutter.
+    profit_lock: the Profit Lock (LOCK, 24 October), after every existing exit of a closed candle: SHADOW rides on the call (lock, lockAlso),
+    LIVE ends the call there ("lock"). None: no lock."""
     lines_at = targets_at or levels_at  # the lines a call's target follows (the chart's); the levels a candle is judged against otherwise
     close_at = (ideas or {}).get("closeAt")
     no_new_after = (ideas or {}).get("noNewAfter")
@@ -661,6 +712,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     gate_atrs = gate_atr(closed, (g or lc)["atrPeriod"], atr_seed, prev_close) if (g or lc) else None  # the Call Gate's ATR, its sideways zone, the signals held back (LIVE)
     zone, cancelled = {"box": None, "broke": None, "found": []}, []
     lc_zone = {"box": None, "broke": None, "found": [], "ended": []}  # the Loss Cutter's own sideways zone (version 3: the taller box)
+    pl = profit_lock or None
+    locks = {}  # the Profit Lock: id of an open call -> its lock's state (the main setting's and the compared settings')
     day_first = 0  # the index of the day's first closed candle
 
     def trail_lines(levels):
@@ -837,6 +890,46 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
     def new_day(a, b):
         return not day_candles and day_of(a["time"]) != day_of(b["time"])
 
+    last = closed[-1] if closed else None
+    over = False if day_candles else (day_over(day_of(last["time"]), now) if last else True)
+
+    def day_last(i):
+        """The day's last candle: its close is the day end."""
+        return new_day(closed[i + 1], closed[i]) if i + 1 < len(closed) else over
+
+    def lock_ask(t, bar):
+        """The Profit Lock on one closed candle, the call still open after its existing exits; False: the lock closed it (LIVE)."""
+        if t.get("entry") is None:
+            return True
+        s_ = locks.get(id(t))
+        if s_ is None:  # asked for the first time: the candle the call fired on, or the first one after it that did not end it
+            s_ = {"main": {"peak": 0, "peakTime": None}, "also": {}}
+            t["lock"] = {"peak": 0, "peakTime": None, "floor": None, "at": None, "price": None, "points": None}
+            if pl.get("compare"):
+                t["lockAlso"] = {}
+                for n in pl["compare"]:
+                    s_["also"][n] = {"peak": 0, "peakTime": None}
+                    t["lockAlso"][n] = None
+            locks[id(t)] = s_
+        for n in pl.get("compare") or []:  # the other settings, in shadow
+            if t["lockAlso"][n]:
+                continue
+            hit = lock_step(s_["also"][n], t["side"], t["entry"], bar, LOCK_PRESETS[n])
+            if hit:
+                t["lockAlso"][n] = {"at": bar["time"], "points": round2(hit["points"]), "peak": round2(s_["also"][n]["peak"])}
+        if t["lock"]["at"] is not None:  # shadow: the lock said exit on an earlier candle; the call goes on to its own exit
+            return True
+        hit = lock_step(s_["main"], t["side"], t["entry"], bar, pl)
+        floor = lock_floor(s_["main"]["peak"], pl)
+        t["lock"]["peak"], t["lock"]["peakTime"], t["lock"]["floor"] = round2(s_["main"]["peak"]), s_["main"]["peakTime"], None if floor is None else round2(floor)
+        if not hit:
+            return True
+        t["lock"]["at"], t["lock"]["price"], t["lock"]["points"] = bar["time"], round2(hit["price"]), round2(hit["points"])
+        if pl["mode"] == "LIVE":
+            end(t, round2(hit["price"]), bar, "lock")
+            return False
+        return True
+
     trades, used, open_ = [], {}, []
     armed = []  # the signals waiting to fire (18 October), each with fireAt, its candle's high (CE) or low (PE)
 
@@ -903,6 +996,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             for t in open_:
                 end(t, bar["close"], bar, "time")
             open_ = []
+        if pl and not day_last(i):  # the Profit Lock, after every existing exit of this candle (never on the day's last one: its close is the day end)
+            open_ = [t for t in open_ if lock_ask(t, bar)]
         for price, side in list(used):  # closed back across: the line may call again (kept by its price, 8 October)
             if (bar["close"] < price) if side == "CE" else (bar["close"] > price):
                 del used[(price, side)]
@@ -954,8 +1049,6 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             used[(sig["level"], sig["side"])] = True  # the no-repeat lock, taken or skipped
             sig["fireAt"] = bar["high"] if sig["side"] == "CE" else bar["low"]
             armed.append(sig)
-    last = closed[-1] if closed else None
-    over = False if day_candles else (day_over(day_of(last["time"]), now) if last else True)
     if forming and last and not over and not new_day(forming, last):  # the candle forming now: a waiting signal fires on its price so far, open calls run on its live price
         fire(forming)
         lines, lines_before = lines_at(len(closed)), lines_at(len(closed) - 1)  # the lines as the chart draws them now, with the forming candle in the day's range
@@ -997,7 +1090,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
 
 
 def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL,
-               new_high_low: bool = False, minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC) -> dict:
+               new_high_low: bool = False, minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC,
+               profit_lock: dict | None = LOCK) -> dict:
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
     setting is given (None: Rule 1 alone); idea 24 when asked for, on "today so far" lines only. The first candle is judged from
     the previous day's close (18 October)."""
@@ -1008,7 +1102,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else from_close if move == "close" else today_levels_at(bars)
     return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if own else today_lines_at(bars), True, trail, None,
-                        not own and bool(new_high_low), previous.get("close") if own and previous else None, minutes or None, gate, atr_seed, loss_cutter)
+                        not own and bool(new_high_low), previous.get("close") if own and previous else None, minutes or None, gate, atr_seed, loss_cutter, profit_lock)
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},

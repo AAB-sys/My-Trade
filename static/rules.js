@@ -503,6 +503,53 @@
       + ` · advice: ${part("worn line", adv("worn line"))} · ${part("strict zone", adv("strict zone"))} · ${part("stack cap", adv("stack cap"))} · zones: ${zones.join(" · ") || "none"}`;
   }
 
+  // ---- The Profit Lock (the owner's "Profit Lock Exit Rule" document, its reference code profit_lock_reference.py and its stress test
+  // profit_lock_stress_test.py, 24 October): "An extra exit. It changes nothing in your lines, signals, entries or existing exits."
+  // One lock per call, from the candle the call fired on, asked on every closed candle on which the call is still open after all its
+  // existing exits (the target, the retouch, the close back, Rule 2, the early exit; never on the day's last candle, whose close is the
+  // day end, an existing exit that wins the tie). The peak is the best profit so far in index points (a Buy CE: the candle's high less
+  // the entry; a Buy PE: the entry less its low). Armed once the peak reaches armPts; the floor is then the peak less the larger of
+  // minTrailPts and (1 - keep) x the peak, never under floorPts, so it never goes down. A candle closing with the call at or under the
+  // floor closes the call at that close (less slipPts, the call's way). Candle closes only: a wick under the floor does nothing.
+  // The settings are the document's section 3: MAX (the default), STEADY, RUNNER; armPts null is OFF, the line system as it is.
+  // Mode SHADOW (the document's phase 1: "The lock runs on every real call but sends no order"): nothing is closed; the lock rides on
+  // the call (lock: { peak, peakTime, floor, at, price, points }; at: the candle it first said exit on, null while it has not) and the
+  // call goes on to its own exit. Mode LIVE (phase 2): the call ends there, "lock". compare: the other settings, in shadow always, so
+  // the shadow days can choose between them (lockAlso: { at, points, peak } or null for each). The settings are index points of
+  // NIFTY 50: indices ["NIFTY 50"], as the Loss Cutter. The option's premium at the lock's moment is the server's (dhan.py note_lock)
+  const LOCK_PRESETS = { MAX: { armPts: 20, keep: 0.80, minTrailPts: 8, floorPts: 0, slipPts: 0 } };
+  LOCK_PRESETS.STEADY = { ...LOCK_PRESETS.MAX, keep: 0.70 };
+  LOCK_PRESETS.RUNNER = { ...LOCK_PRESETS.STEADY, minTrailPts: 16 };
+  LOCK_PRESETS.OFF = { ...LOCK_PRESETS.MAX, armPts: null };
+  const LOCK = { mode: "SHADOW", name: "MAX", ...LOCK_PRESETS.MAX, compare: ["STEADY", "RUNNER"], indices: ["NIFTY 50"] };
+  function lockFloor(peak, g) {  // the floor in index points of profit; null while the lock is not armed
+    if (g.armPts == null || peak < g.armPts) return null;
+    return Math.max(g.floorPts, peak - Math.max(g.minTrailPts, (1 - g.keep) * peak));
+  }
+  // One closed candle for one call's lock (the reference's ProfitLock.on_candle): st { peak, peakTime } is changed in place; returns the
+  // exit { price, points, floor }, or null to hold
+  function lockStep(st, side, entry, bar, g) {
+    const d = side === "CE" ? 1 : -1, best = d * ((d === 1 ? bar.high : bar.low) - entry);
+    if (best > st.peak) { st.peak = best; st.peakTime = bar.time; }
+    const floor = lockFloor(st.peak, g), profit = d * (bar.close - entry);
+    if (floor == null || profit > floor) return null;
+    const price = bar.close - d * g.slipPts;
+    return { price, points: d * (price - entry), floor };
+  }
+  // The Profit Lock's daily line (the document's section 7 and the shadow report of section 11, one day, index points): the calls that
+  // went out, what they made as they ended, what they would have made with the lock, the winners' give-up and the losers' gain
+  function lockSummary(res, date, g) {
+    const fired = res.trades.filter(t => t.entry != null && !t.paper && t.exit != null);
+    const pts = (list, f) => round2(list.reduce((a, t) => a + f(t), 0));
+    const withLock = (t) => t.lock && t.lock.at != null ? t.lock.points : t.points;
+    const said = fired.filter(t => t.lock && t.lock.at != null);
+    const giveUp = pts(fired.filter(t => t.points > 0), t => Math.max(0, t.points - withLock(t))), gainOn = pts(fired.filter(t => t.points <= 0), t => Math.max(0, withLock(t) - t.points));
+    const also = (g.compare || []).map(n => { const hit = (t) => t.lockAlso && t.lockAlso[n]; return `${n} ${signed1(pts(fired, t => hit(t) ? hit(t).points : t.points))} (${fired.filter(hit).length} exits)`; });
+    const exits = said.map(t => `${istHM(t.signalTime)} ${t.side} ${istHM(t.lock.at)} ${signed1(t.lock.points)} (best ${signed1(t.lock.peak)}, ended ${signed1(t.points)})`);
+    return `PROFIT LOCK DAY ${date} · ${g.name} ${g.mode} · calls ${fired.length} · the lock said exit on ${said.length} · points as the calls ended ${signed1(pts(fired, t => t.points))}`
+      + ` · with the lock ${signed1(pts(fired, withLock))} · winners given up ${signed1(giveUp)} · losers saved ${signed1(gainOn)}${also.length ? " · " + also.join(" · ") : ""} · exits: ${exits.join(" · ") || "none"}`;
+  }
+
   // ---- Layer 3: the paper calls the rule gives on a list of candles.
   //   bars       the session's candles, oldest first (several days together are allowed: a new day ends the old day's calls)
   //   levelsAt   (i) => the levels bars[i] is judged against, sorted by price; a constant list for levels that do not move
@@ -569,7 +616,10 @@
   //              mode LIVE a SKIP from a live check is followed on paper (paper: true, no order). The signals cancelled before firing come
   //              back in `cancelled` with their verdicts, the zones found in `zonesFound`. null: no gate (the research engine's comparisons)
   //   atrSeed    the gate's ATR carried in from the previous day (atrSeedOf over its candles); null: the plain average of the first 14
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes, gate = GATE, atrSeed = null, lossCutter = LC }) {
+  //   profitLock the Profit Lock (LOCK above, 24 October), after every existing exit of a closed candle: in mode SHADOW its peak, floor and
+  //              the candle it would have closed the call on ride on the call (lock, lockAlso) and nothing else changes; in mode LIVE
+  //              the call ends there ("lock"). null: no lock
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -580,6 +630,7 @@
     const atr = trail && trail.buffer === "atr" ? atrBefore(closed, trail.period || 14) : null;
     const g = gate || null, lc = lossCutter || null, gateAtrs = g || lc ? gateAtr(closed, (g || lc).atrPeriod, atrSeed, prevClose) : null, zone = { box: null, broke: null, found: [] }, cancelled = [];  // the Call Gate's ATR, its sideways zone, the signals cancelled before firing
     const lcZone = { box: null, broke: null, found: [], ended: [] };  // the Loss Cutter's own sideways zone (version 3: the taller box)
+    const pl = profitLock || null, locks = new Map();  // the Profit Lock: open call -> its lock's state (the main setting's and the compared settings')
     let dayFirst = 0;  // the index of the day's first closed candle (the zone and the strong-candle checks stay inside the day)
     const bufferAt = (i) => !trail ? 0 : trail.buffer === "fixed" ? trail.points : trail.buffer === "atr" ? (atr[i] != null ? trail.mult * atr[i] : trail.points || 0) : 0;  // Rule 2's buffer for closed candle i
     const trailLines = (levels) => trail.lines === "all" ? levels : levels.filter(l => l.ratio !== 0 && Math.abs(l.ratio) !== 1);  // the lines that move Rule 2's stop (setting "middle": without 0% and 100%; only research settings use it, the page, the watcher and the replays run "all")
@@ -691,6 +742,31 @@
       return true;
     };
     const newDay = (a, b) => !dayCandles && dayOf(a.time) !== dayOf(b.time);
+    const last = closed[closed.length - 1];
+    const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
+    const dayLast = (i) => i + 1 < closed.length ? newDay(closed[i + 1], closed[i]) : over;  // the day's last candle: its close is the day end
+    const lockAsk = (t, bar) => {  // the Profit Lock on one closed candle, the call still open after its existing exits; false: the lock closed it (LIVE)
+      if (t.entry == null) return true;
+      let s = locks.get(t);
+      if (!s) {  // asked for the first time: the candle the call fired on, or the first one after it that did not end it
+        s = { main: { peak: 0, peakTime: null }, also: {} };
+        t.lock = { peak: 0, peakTime: null, floor: null, at: null, price: null, points: null };
+        if (pl.compare && pl.compare.length) { t.lockAlso = {}; for (const n of pl.compare) { s.also[n] = { peak: 0, peakTime: null }; t.lockAlso[n] = null; } }
+        locks.set(t, s);
+      }
+      for (const n of pl.compare || []) {  // the other settings, in shadow
+        if (t.lockAlso[n]) continue;
+        const hit = lockStep(s.also[n], t.side, t.entry, bar, LOCK_PRESETS[n]);
+        if (hit) t.lockAlso[n] = { at: bar.time, points: round2(hit.points), peak: round2(s.also[n].peak) };
+      }
+      if (t.lock.at != null) return true;  // shadow: the lock said exit on an earlier candle; the call goes on to its own exit
+      const hit = lockStep(s.main, t.side, t.entry, bar, pl), floor = lockFloor(s.main.peak, pl);
+      t.lock.peak = round2(s.main.peak); t.lock.peakTime = s.main.peakTime; t.lock.floor = floor == null ? null : round2(floor);
+      if (!hit) return true;
+      t.lock.at = bar.time; t.lock.price = round2(hit.price); t.lock.points = round2(hit.points);
+      if (pl.mode === "LIVE") { end(t, round2(hit.price), bar, "lock"); return false; }
+      return true;
+    };
     const trades = [];
     const used = {};  // "price|side" -> { price, side } while the line at that price has given a call that way
     let armed = [], open = [];  // armed: the signals waiting to fire (18 October), each with fireAt, its candle's high (CE) or low (PE)
@@ -711,6 +787,7 @@
       open = open.filter(t => settle(t, bar, before, levels, bufferAt(i)));
       if (exitBack) open = open.filter(t => { if (!t.hold && backAcross(t, bar.close) >= exitBack * Math.abs(t.target - t.level)) { end(t, bar.close, bar, "candle"); return false; } return true; });  // idea P4: the candle says exit, at its close
       if (closeAt && !dayCandles && clockEnd(bar) >= closeAt) { open.forEach(t => end(t, bar.close, bar, "time")); open = []; }  // idea P1: the clock ends the open calls
+      if (pl && !dayLast(i)) open = open.filter(t => lockAsk(t, bar));  // the Profit Lock, after every existing exit of this candle (never on the day's last one: its close is the day end)
       for (const k in used) { const u = used[k]; if (u.side === "CE" ? bar.close < u.price : bar.close > u.price) delete used[k]; }  // closed back across: the line may call again
       armed = armed.filter(s => { const gone = s.side === "CE" ? bar.close < s.level : bar.close > s.level;  // a close back across its line cancels a signal still waiting to fire (the owner's B, 18 October)
         if (gone && (g || lc)) { const { prices, fireAt, ...rest } = s; cancelled.push({ ...rest, how: "cancelled", cancelTime: bar.time }); } return !gone; });
@@ -744,8 +821,6 @@
         armed.push({ ...sig, fireAt: sig.side === "CE" ? bar.high : bar.low });
       }
     }
-    const last = closed[closed.length - 1];
-    const over = dayCandles ? false : last ? dayOver(dayOf(last.time), now) : true;  // day candles: no day end
     if (forming && last && !over && !newDay(forming, last)) {  // the candle forming now: a waiting signal fires on its price so far, and open calls run on its live price
       fire(forming);
       const lines = linesAt(closed.length), linesBefore = linesAt(closed.length - 1);  // the lines as the chart draws them now, with the forming candle in the day's range
@@ -767,14 +842,14 @@
   // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page, with Rule 2 as
   // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone. Idea 24 when
   // asked for, on "today so far" lines only. The first candle is judged from the previous day's close (18 October)
-  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow, minutes, gate = GATE, atrSeed = null, lossCutter = LC }) {
+  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK }) {
     const own = move === "prev" || move === "close";  // the previous day's lines, or the previous close's (15 October): not today's range so far
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null, fromClose = move === "close" && previous ? closeLevelsAt(bars, previous.close) : null;
     if ((move === "prev" && !fixed) || (move === "close" && !fromClose)) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : move === "close" ? fromClose : todayLevelsAt(bars), targetsAt = own ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
                          trail: trail === undefined ? TRAIL : trail, newHighLow: !own && !!newHighLow, prevClose: own && previous && previous.close != null ? previous.close : null,  // not on today's range: the first candle has no lines before it
-                         minutes: minutes || null, gate, atrSeed, lossCutter });  // the day's one-minute candles: the owner's early exit (19 October); the Call Gate and its ATR seed; the Loss Cutter
+                         minutes: minutes || null, gate, atrSeed, lossCutter, profitLock });  // the day's one-minute candles: the owner's early exit (19 October); the Call Gate and its ATR seed; the Loss Cutter; the Profit Lock
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -931,5 +1006,6 @@
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, NEW_HIGH_LOW, pastEdgeAt,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary,
-                 LC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary };
+                 LC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary,
+                 LOCK, LOCK_PRESETS, lockFloor, lockStep, lockSummary };
 })(typeof window !== "undefined" ? window : globalThis);

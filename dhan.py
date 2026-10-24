@@ -1135,6 +1135,58 @@ def _note_low(rec: dict, premium: float, at: str) -> None:
         rec["stop15"] = {"premium": premium, "at": at, "share": PREMIUM_STOP}
 
 
+LOCK_FRESH = 30  # the Profit Lock's premium from the feed: a quote at most this many seconds after the lock's moment; later, from the option's minutes
+
+
+def note_lock(name: str, key: str, moments: dict) -> dict | None:
+    """The option's premium at the Profit Lock's moments (the owner's "Profit Lock Exit Rule" document, 24 October: "for shadow mode,
+    what the lock would have sold at (premium at that time)"). moments: {setting: the close of the candle the lock said exit on, epoch},
+    for the settings that have one. Each is noted once, in the record's "lock": {setting: {"at", "premium", "from"}}: "live", the first
+    quote of the feed at or after that moment (within LOCK_FRESH seconds); "minutes", the open of the option's one-minute candle that
+    begins then (the server did not see that moment: asleep, or a restart); "sold", the 35% Sell mark sold the call before it (the existing
+    exit came first: no premium); "none", the option had no trade in the five minutes from then. Shadow mode: nothing is sold. Returns the record as the page shows it, or None when nothing changed;
+    raises DhanError when the minutes are needed and Dhan refuses them."""
+    stamp = lambda epoch: datetime.fromtimestamp(epoch, IST).isoformat(timespec="seconds")
+    with _records_lock:
+        rec = _records.get(key)
+        if not rec:
+            return None
+        todo = {n: at for n, at in moments.items() if at is not None and n not in (rec.get("lock") or {})}
+        if not todo:
+            return None
+        got, slow = {}, {}
+        for n, at in todo.items():
+            sold = rec.get("sold")
+            if sold and datetime.fromisoformat(sold["at"]).timestamp() <= at:
+                got[n] = {"at": stamp(at), "premium": None, "from": "sold"}
+                continue
+            seen = datetime.fromisoformat(rec["now_at"]).timestamp() if rec.get("now_at") else None
+            if seen is not None and at <= seen <= at + LOCK_FRESH:
+                got[n] = {"at": rec["now_at"], "premium": rec["premium_now"], "from": "live"}
+            elif time.time() >= at + LOCK_FRESH:  # the feed gave no quote in time (asleep, a restart, a quiet option): that minute is over, from its candle
+                slow[n] = at
+        expiry, strike, side, sid = rec["expiry"], rec["strike"], rec["side"], rec.get("security_id")
+    if slow:
+        sid = sid or option_security_id(name, expiry, strike, side)
+        bars = option_minutes(name, sid) if sid else []
+        for n, at in slow.items():
+            b = next((b for b in bars if at <= b["time"] < at + 300), None)  # a minute with no trade has no candle: the next one with a trade
+            if b is not None:
+                got[n] = {"at": stamp(b["time"]), "premium": b["open"], "from": "minutes"}
+            elif time.time() >= at + 900:  # no trade in the option for five minutes from then, and ten more gone: not known, asked no more
+                got[n] = {"at": stamp(at), "premium": None, "from": "none"}
+    if not got:
+        return None
+    with _records_lock:
+        rec = _records.get(key)
+        if not rec:
+            return None
+        rec["lock"] = {**(rec.get("lock") or {}), **{n: v for n, v in got.items() if n not in (rec.get("lock") or {})}}
+        _save_records()
+    _changed()
+    return dict(rec)
+
+
 def premium_stop_hit(paid: float, now: float, stop: float = PREMIUM_STOP) -> bool:
     """The documents' premium stop: hit at exactly `stop` below what was paid (loss_cutter_reference.premium_stop_hit)."""
     return now <= paid * (1.0 - stop)

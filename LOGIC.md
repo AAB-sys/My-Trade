@@ -723,8 +723,8 @@ The rule, in the order it is applied:
    with `liveChecks`; the documents' order: the chase window and the stack cap
    first, then the wider zone). `LC_V2` gives the Call Gate version 2's verdict on
    every signal; `LC_STRICT` makes the two advice-only checks block.
-   Checked against the documents: the reference code passes 28 of its 29 tests here
-   (ZV-14 needs `profit_lock_reference.py`, which was not sent); on the documents'
+   Checked against the documents: the reference code passes all 29 of its tests
+   here (ZV-14 since `profit_lock_reference.py` came with the Profit Lock); on the documents'
    own 23 October data (the screenshot's candles, the owner's real call table) the
    engine's functions give the reference's verdict, deciding check and advice for
    every signal under eleven settings (`lab/loss-cutter-23oct.json`), the five zones
@@ -750,6 +750,58 @@ The rule, in the order it is applied:
    +266.35); NIFTY BANK every call 288 calls +2,405.70, the Call Gate 228 calls
    +2,410.50, the Loss Cutter 142 calls +215.00: there the wider zone skipped 79
    calls the Call Gate's zone did not, worth +2,334.15. Hence NIFTY 50 only.
+10. **The Profit Lock** (the owner's `Profit_Lock.docx`, "Profit Lock Exit Rule",
+   with `profit_lock_reference.py` and `profit_lock_stress_test.py`, 24 October:
+   "check the attached document and use it wherever it is required and take the
+   changes into the existing PR"; `Rules.LOCK`, `rule.LOCK`). An **extra exit**: it
+   changes nothing in the lines, the signals, the firing, the entry or any existing
+   exit. One lock per call, from the candle the call fired on, asked at every candle
+   close on which the call is still open **after** all its existing exits (target,
+   retouch, close back, Rule 2, the 3-minute early exit; never on the day's last
+   candle, whose close is the day end; the 35% Sell mark on the premium sells first
+   when it comes first). The best profit so far in index points (a Buy CE: the
+   highest high less the entry; a Buy PE: the entry less the lowest low) arms the
+   lock at +20; the floor is then the best profit less the larger of 8 points and
+   20% of it (MAX), never under 0 and never going down; a candle **closing** with
+   the call at or under the floor closes it at that close. A wick under the floor
+   does nothing. The document's other settings: STEADY keeps 70%, RUNNER keeps 70%
+   with at least 16 points of room (`LOCK_PRESETS`). **NIFTY 50 only**, as the Loss
+   Cutter (`LOCK.indices`; the settings are NIFTY 50 points). **Shadow mode**, the
+   document's phase 1: nothing is sold. The table's new column **Profit Lock** says
+   where the lock stands: "Not armed" (best profit under +20), "Armed" with its
+   floor, or "Would exit" at a candle's close with the points, the best profit and
+   the floor then, the option's premium at that moment in rupees for one lot (the
+   server notes it: the feed's first quote within 30 seconds of the candle close,
+   else the open of the option's one-minute candle then, `dhan.note_lock`), and the
+   call's own exit that followed; under it STEADY and RUNNER, also in shadow. The
+   server logs the document's lines (`PROFIT LOCK ARMED`, `PROFIT LOCK SHADOW ...
+   sell_premium=...`) and a daily line (`PROFIT LOCK DAY ...`: the calls as they
+   ended, with the lock, the winners' give-up, the losers' gain, STEADY and
+   RUNNER); the calls CSV carries `lock`, `lock_at_ist`, `lock_points`,
+   `lock_peak`, `lock_floor`, `lock_premium`, `lock_from`, `lock_also`. Going live is
+   the owner's decision after the shadow days (`Rules.LOCK.mode = "LIVE"`: the call
+   then ends at that close, "Take Exit · profit lock: ...").
+   Checked against the document: its reference passes its 35 tests and its stress
+   test S-1 to S-3 here; the engine's own `lockStep` gives the reference's exit,
+   candle, best profit and points for every call of its 22 and 23 October replays
+   under 26 settings (`lab/profit-lock-reference.json`), and the document's numbers:
+   23 October +115.5 → MAX +245.4, STEADY +258.7, RUNNER +228.8; 22 October −210.9 →
+   +106.3; both days −95.4 → +351.7; the 18 neighbours 233.7 to 351.7; no minimum
+   pullback +183.1; 2 points of slippage +313.7 (PL-1 to PL-39). In the engine:
+   shadow changes nothing, the lock is never asked on an exit candle or the day's
+   last, live mode ends each call where the shadow said, no look-ahead, the mirror;
+   page and server the same (`check_rule.py`, 73,038 runs, 425,636 calls).
+   **On the real days** (Dhan's candles, the previous close's lines): 23 October
+   NIFTY 50, the owner's three yellow calls: 10:10 PE −0.3 at 10:15, 10:30 PE +3.3
+   at 10:35, 11:10 CE +15.8 at 11:15 (the document: +0.0, +3.4, +15.5); the day's
+   22 calls −282.55 → MAX +197.80 points. **But over the 17 saved days** (29
+   September to 23 October, index points before costs) NIFTY 50's 271 calls made
+   +1,403.80 as they ended and +1,342.80 with MAX (STEADY +1,302.45, RUNNER
+   +1,461.90); on the 139 calls the Loss Cutter would keep, +1,378.35 → MAX
+   +971.45. MAX cut 13 October's 13:30 CE from +175.1 to +16.6 and 1 October's
+   12:05 PE from +161.5 to +6.2: the document's own warning (section 8, "a ceiling,
+   not a forecast"; the trend-day cost). Hence shadow first, with STEADY and RUNNER
+   beside it, as the document says.
 
 As in layer 2, a candle is judged against the previous closed candle, and the
 first candle of a day against the last candle of the day before. Points are
