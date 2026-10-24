@@ -1,0 +1,4193 @@
+{
+ "prevClose": 22687.65,
+ "atrSeed": 30.0,
+ "candles": [
+  [
+   "09:15",
+   22742.0,
+   22786.4,
+   22717.6,
+   22725.4
+  ],
+  [
+   "09:20",
+   22727.6,
+   22746.5,
+   22698.7,
+   22711.0
+  ],
+  [
+   "09:25",
+   22713.2,
+   22763.1,
+   22709.8,
+   22725.4
+  ],
+  [
+   "09:30",
+   22728.7,
+   22732.0,
+   22675.4,
+   22681.0
+  ],
+  [
+   "09:35",
+   22683.2,
+   22694.3,
+   22663.2,
+   22685.4
+  ],
+  [
+   "09:40",
+   22689.5,
+   22729.8,
+   22688.8,
+   22688.8
+  ],
+  [
+   "09:45",
+   22685.4,
+   22702.1,
+   22656.6,
+   22661.0
+  ],
+  [
+   "09:50",
+   22661.0,
+   22668.8,
+   22629.9,
+   22637.7
+  ],
+  [
+   "09:55",
+   22639.9,
+   22649.9,
+   22602.2,
+   22608.8
+  ],
+  [
+   "10:00",
+   22608.8,
+   22610.0,
+   22554.5,
+   22560.0
+  ],
+  [
+   "10:05",
+   22560.0,
+   22583.3,
+   22520.1,
+   22523.4
+  ],
+  [
+   "10:10",
+   22525.6,
+   22532.3,
+   22492.3,
+   22504.5
+  ],
+  [
+   "10:15",
+   22509.0,
+   22509.0,
+   22459.0,
+   22492.3
+  ],
+  [
+   "10:20",
+   22492.3,
+   22528.9,
+   22484.5,
+   22516.7
+  ],
+  [
+   "10:25",
+   22514.5,
+   22534.5,
+   22503.4,
+   22526.25
+  ],
+  [
+   "10:30",
+   22517.8,
+   22524.5,
+   22475.7,
+   22475.7
+  ],
+  [
+   "10:35",
+   22476.8,
+   22502.3,
+   22406.8,
+   22472.3
+  ],
+  [
+   "10:40",
+   22477.9,
+   22518.9,
+   22465.7,
+   22503.4
+  ],
+  [
+   "10:45",
+   22503.4,
+   22505.6,
+   22483.4,
+   22483.4
+  ],
+  [
+   "10:50",
+   22481.2,
+   22481.2,
+   22456.8,
+   22473.4
+  ],
+  [
+   "10:55",
+   22476.8,
+   22476.8,
+   22425.7,
+   22426.8
+  ],
+  [
+   "11:00",
+   22426.8,
+   22471.2,
+   22424.6,
+   22434.6
+  ],
+  [
+   "11:05",
+   22435.7,
+   22463.4,
+   22432.4,
+   22462.3
+  ],
+  [
+   "11:10",
+   22462.3,
+   22492.3,
+   22459.0,
+   22479.0
+  ],
+  [
+   "11:15",
+   22483.4,
+   22522.3,
+   22477.9,
+   22507.8
+  ],
+  [
+   "11:20",
+   22507.8,
+   22511.2,
+   22483.4,
+   22493.4
+  ],
+  [
+   "11:25",
+   22494.4,
+   22502.5,
+   22466.0,
+   22468.4
+  ],
+  [
+   "11:30",
+   22468.4,
+   22478.2,
+   22458.7,
+   22462.8
+  ],
+  [
+   "11:35",
+   22463.6,
+   22470.1,
+   22446.5,
+   22458.7
+  ],
+  [
+   "11:40",
+   22458.7,
+   22473.3,
+   22450.6,
+   22456.3
+  ],
+  [
+   "11:45",
+   22460.3,
+   22478.2,
+   22444.9,
+   22444.9
+  ],
+  [
+   "11:50",
+   22447.3,
+   22457.1,
+   22434.4,
+   22437.6
+  ],
+  [
+   "11:55",
+   22437.6,
+   22444.1,
+   22410.0,
+   22426.2
+  ],
+  [
+   "12:00",
+   22427.9,
+   22444.1,
+   22419.8,
+   22419.8
+  ],
+  [
+   "12:05",
+   22420.0,
+   22427.9,
+   22409.6,
+   22418.5
+  ],
+  [
+   "12:10",
+   22419.8,
+   22450.6,
+   22416.5,
+   22443.3
+  ],
+  [
+   "12:15",
+   22442.5,
+   22457.1,
+   22426.2,
+   22456.3
+  ],
+  [
+   "12:20",
+   22457.1,
+   22461.1,
+   22421.4,
+   22423.8
+  ],
+  [
+   "12:25",
+   22424.6,
+   22429.5,
+   22410.0,
+   22415.7
+  ],
+  [
+   "12:30",
+   22418.9,
+   22427.1,
+   22410.0,
+   22417.3
+  ],
+  [
+   "12:35",
+   22418.9,
+   22431.1,
+   22411.6,
+   22417.3
+  ],
+  [
+   "12:40",
+   22418.1,
+   22422.2,
+   22406.0,
+   22410.0
+  ],
+  [
+   "12:45",
+   22411.6,
+   22418.1,
+   22388.1,
+   22393.8
+  ],
+  [
+   "12:50",
+   22396.2,
+   22401.9,
+   22370.3,
+   22392.2
+  ],
+  [
+   "12:55",
+   22393.8,
+   22426.2,
+   22390.6,
+   22423.0
+  ],
+  [
+   "13:00",
+   22423.8,
+   22444.1,
+   22417.3,
+   22428.7
+  ],
+  [
+   "13:05",
+   22429.5,
+   22431.1,
+   22397.0,
+   22398.7
+  ],
+  [
+   "13:10",
+   22399.5,
+   22422.2,
+   22397.0,
+   22402.7
+  ],
+  [
+   "13:15",
+   22401.9,
+   22408.4,
+   22385.7,
+   22405.2
+  ],
+  [
+   "13:20",
+   22404.5,
+   22408.9,
+   22389.7,
+   22405.2
+  ],
+  [
+   "13:25",
+   22404.3,
+   22418.1,
+   22397.0,
+   22408.4
+  ],
+  [
+   "13:30",
+   22410.0,
+   22448.2,
+   22410.0,
+   22428.7
+  ],
+  [
+   "13:35",
+   22427.9,
+   22521.2,
+   22418.1,
+   22512.3
+  ],
+  [
+   "13:40",
+   22511.4,
+   22588.5,
+   22509.0,
+   22578.8
+  ],
+  [
+   "13:45",
+   22579.6,
+   22592.6,
+   22547.1,
+   22557.7
+  ],
+  [
+   "13:50",
+   22558.5,
+   22560.9,
+   22499.3,
+   22500.9
+  ],
+  [
+   "13:55",
+   22500.9,
+   22543.1,
+   22500.9,
+   22520.4
+  ],
+  [
+   "14:00",
+   22519.6,
+   22568.2,
+   22516.3,
+   22560.1
+  ],
+  [
+   "14:05",
+   22560.1,
+   22572.3,
+   22540.6,
+   22543.55
+  ],
+  [
+   "14:10",
+   22542.3,
+   22558.5,
+   22539.0,
+   22553.6
+  ],
+  [
+   "14:15",
+   22551.2,
+   22568.2,
+   22551.2,
+   22560.35
+  ],
+  [
+   "14:20",
+   22564.2,
+   22565.8,
+   22535.8,
+   22542.3
+  ],
+  [
+   "14:25",
+   22542.3,
+   22551.2,
+   22519.6,
+   22546.3
+  ],
+  [
+   "14:30",
+   22545.5,
+   22572.3,
+   22540.6,
+   22564.15
+  ],
+  [
+   "14:35",
+   22566.6,
+   22569.0,
+   22478.2,
+   22480.6
+  ],
+  [
+   "14:40",
+   22481.4,
+   22484.7,
+   22453.0,
+   22479.8
+  ],
+  [
+   "14:45",
+   22480.6,
+   22504.9,
+   22479.0,
+   22495.2
+  ],
+  [
+   "14:50",
+   22494.4,
+   22502.5,
+   22477.4,
+   22487.1
+  ],
+  [
+   "14:55",
+   22487.9,
+   22507.4,
+   22482.2,
+   22496.0
+  ],
+  [
+   "15:00",
+   22496.0,
+   22520.4,
+   22480.6,
+   22482.2
+  ],
+  [
+   "15:05",
+   22483.0,
+   22491.2,
+   22474.1,
+   22478.2
+  ],
+  [
+   "15:10",
+   22479.0,
+   22523.6,
+   22474.9,
+   22516.3
+  ],
+  [
+   "15:15",
+   22516.3,
+   22516.3,
+   22516.3,
+   22516.3
+  ],
+  [
+   "15:20",
+   22516.3,
+   22516.3,
+   22516.3,
+   22516.3
+  ],
+  [
+   "15:25",
+   22515.5,
+   22600.0,
+   22515.5,
+   22600.0
+  ]
+ ],
+ "table": [
+  {
+   "signal": "09:15",
+   "fired": "09:20",
+   "sold": "09:43",
+   "side": "PE",
+   "pct": 23.6,
+   "line": 22767.96,
+   "kind": "Crossed below",
+   "rupees": 71.5,
+   "cancelled": null
+  },
+  {
+   "signal": "09:30",
+   "fired": "09:35",
+   "sold": "09:43",
+   "side": "PE",
+   "pct": 0.0,
+   "line": 22687.65,
+   "kind": "Crossed below",
+   "rupees": -1186.25,
+   "cancelled": null
+  },
+  {
+   "signal": "09:45",
+   "fired": "09:50",
+   "sold": "10:44",
+   "side": "PE",
+   "pct": 0.0,
+   "line": 22687.65,
+   "kind": "Crossed below",
+   "rupees": 5473.0,
+   "cancelled": null
+  },
+  {
+   "signal": "10:00",
+   "fired": "10:07",
+   "sold": "10:44",
+   "side": "PE",
+   "pct": -23.6,
+   "line": 22607.34,
+   "kind": "Crossed below",
+   "rupees": 1774.5,
+   "cancelled": null
+  },
+  {
+   "signal": "10:05",
+   "fired": "10:10",
+   "sold": "10:44",
+   "side": "PE",
+   "pct": -38.2,
+   "line": 22557.65,
+   "kind": "Crossed below",
+   "rupees": 221.0,
+   "cancelled": null
+  },
+  {
+   "signal": "10:10",
+   "fired": "10:15",
+   "sold": "10:25",
+   "side": "PE",
+   "pct": -50.0,
+   "line": 22517.49,
+   "kind": "Crossed below",
+   "rupees": -815.75,
+   "cancelled": null
+  },
+  {
+   "signal": "10:30",
+   "fired": "10:35",
+   "sold": "10:44",
+   "side": "PE",
+   "pct": -61.8,
+   "line": 22477.34,
+   "kind": "Crossed below",
+   "rupees": -1079.0,
+   "cancelled": null
+  },
+  {
+   "signal": "10:40",
+   "fired": null,
+   "sold": null,
+   "side": "CE",
+   "pct": -61.8,
+   "line": 22477.34,
+   "kind": "Crossed above",
+   "rupees": null,
+   "cancelled": "10:50"
+  },
+  {
+   "signal": "10:50",
+   "fired": "10:55",
+   "sold": "11:14",
+   "side": "PE",
+   "pct": -61.8,
+   "line": 22477.34,
+   "kind": "Crossed below",
+   "rupees": -848.25,
+   "cancelled": null
+  },
+  {
+   "signal": "11:10",
+   "fired": "11:16",
+   "sold": "11:30",
+   "side": "CE",
+   "pct": -61.8,
+   "line": 22477.34,
+   "kind": "Crossed above",
+   "rupees": -1163.5,
+   "cancelled": null
+  },
+  {
+   "signal": "11:25",
+   "fired": "11:30",
+   "sold": "12:14",
+   "side": "PE",
+   "pct": -61.8,
+   "line": 22477.34,
+   "kind": "Crossed below",
+   "rupees": -253.5,
+   "cancelled": null
+  },
+  {
+   "signal": "12:05",
+   "fired": null,
+   "sold": null,
+   "side": "PE",
+   "pct": -78.6,
+   "line": 22420.16,
+   "kind": "Crossed below",
+   "rupees": null,
+   "cancelled": "12:10"
+  },
+  {
+   "signal": "12:10",
+   "fired": "12:19",
+   "sold": "12:30",
+   "side": "CE",
+   "pct": -78.6,
+   "line": 22420.16,
+   "kind": "Crossed above",
+   "rupees": -1014.0,
+   "cancelled": null
+  },
+  {
+   "signal": "12:25",
+   "fired": "12:40",
+   "sold": "12:59",
+   "side": "PE",
+   "pct": -78.6,
+   "line": 22420.16,
+   "kind": "Crossed below",
+   "rupees": -471.25,
+   "cancelled": null
+  },
+  {
+   "signal": "12:55",
+   "fired": "13:00",
+   "sold": "13:09",
+   "side": "CE",
+   "pct": -78.6,
+   "line": 22420.16,
+   "kind": "Crossed above",
+   "rupees": -676.0,
+   "cancelled": null
+  },
+  {
+   "signal": "13:05",
+   "fired": "13:15",
+   "sold": "13:34",
+   "side": "PE",
+   "pct": -78.6,
+   "line": 22420.16,
+   "kind": "Crossed below",
+   "rupees": -1007.5,
+   "cancelled": null
+  },
+  {
+   "signal": "13:30",
+   "fired": "13:37",
+   "sold": "13:54",
+   "side": "CE",
+   "pct": -78.6,
+   "line": 22420.16,
+   "kind": "Crossed above",
+   "rupees": 4738.5,
+   "cancelled": null
+  },
+  {
+   "signal": "13:35",
+   "fired": "13:40",
+   "sold": "13:54",
+   "side": "CE",
+   "pct": -61.8,
+   "line": 22477.34,
+   "kind": "Crossed above",
+   "rupees": 302.25,
+   "cancelled": null
+  },
+  {
+   "signal": "13:40",
+   "fired": "13:45",
+   "sold": "13:54",
+   "side": "CE",
+   "pct": -38.2,
+   "line": 22557.65,
+   "kind": "Crossed above",
+   "rupees": -2694.25,
+   "cancelled": null
+  },
+  {
+   "signal": "13:50",
+   "fired": null,
+   "sold": null,
+   "side": "PE",
+   "pct": -50.0,
+   "line": 22517.49,
+   "kind": "Crossed below",
+   "rupees": null,
+   "cancelled": "13:55"
+  },
+  {
+   "signal": "13:55",
+   "fired": "14:01",
+   "sold": "14:05",
+   "side": "CE",
+   "pct": -50.0,
+   "line": 22517.49,
+   "kind": "Crossed above",
+   "rupees": -159.25,
+   "cancelled": null
+  },
+  {
+   "signal": "14:00",
+   "fired": "14:05",
+   "sold": "14:05",
+   "side": "CE",
+   "pct": -38.2,
+   "line": 22557.65,
+   "kind": "Crossed above",
+   "rupees": -1423.5,
+   "cancelled": null
+  },
+  {
+   "signal": "14:05",
+   "fired": "14:11",
+   "sold": "14:15",
+   "side": "PE",
+   "pct": -38.2,
+   "line": 22557.65,
+   "kind": "Crossed below",
+   "rupees": -536.25,
+   "cancelled": null
+  },
+  {
+   "signal": "14:15",
+   "fired": null,
+   "sold": null,
+   "side": "CE",
+   "pct": -38.2,
+   "line": 22557.65,
+   "kind": "Crossed above",
+   "rupees": null,
+   "cancelled": "14:20"
+  },
+  {
+   "signal": "14:20",
+   "fired": "14:25",
+   "sold": "14:30",
+   "side": "PE",
+   "pct": -38.2,
+   "line": 22557.65,
+   "kind": "Crossed below",
+   "rupees": -952.25,
+   "cancelled": null
+  },
+  {
+   "signal": "14:30",
+   "fired": null,
+   "sold": null,
+   "side": "CE",
+   "pct": -38.2,
+   "line": 22557.65,
+   "kind": "Crossed above",
+   "rupees": null,
+   "cancelled": "14:35"
+  },
+  {
+   "signal": "14:35",
+   "fired": "14:40",
+   "sold": "15:25",
+   "side": "PE",
+   "pct": -50.0,
+   "line": 22517.49,
+   "kind": "Crossed below",
+   "rupees": -2398.5,
+   "cancelled": null
+  }
+ ],
+ "configs": {
+  "LC": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 2.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "skip",
+   "worn_mode": "log",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": true
+  },
+  "LC_V2": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 1.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": false,
+   "chase_window_atr": 2.5,
+   "stack_cap": null,
+   "stack_mode": "skip",
+   "worn_mode": "off",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": false
+  },
+  "LC_ZONE_ONLY": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 2.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": false,
+   "chase_window_atr": 2.5,
+   "stack_cap": null,
+   "stack_mode": "skip",
+   "worn_mode": "off",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": false
+  },
+  "LC_STRICT": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 2.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "breakout",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "skip",
+   "worn_mode": "skip",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": true
+  },
+  "WORN_SKIP": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 2.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "skip",
+   "worn_mode": "skip",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": true
+  },
+  "BOX_1_5": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 1.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "skip",
+   "worn_mode": "log",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": true
+  },
+  "BOX_2_0": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 2.0,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "skip",
+   "worn_mode": "log",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": true
+  },
+  "BOX_3_0": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 3.0,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "skip",
+   "worn_mode": "log",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": true
+  },
+  "CHASE_WINDOW_ONLY": {
+   "opening_until": "09:45",
+   "opening": "allow",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 999,
+   "atr_seed": 30.0,
+   "zone_rule": false,
+   "zone_n": 6,
+   "zone_height_atr": 1.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": null,
+   "stack_mode": "skip",
+   "worn_mode": "off",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": false
+  },
+  "STACK_ONLY": {
+   "opening_until": "09:45",
+   "opening": "allow",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 999,
+   "atr_seed": 30.0,
+   "zone_rule": false,
+   "zone_n": 6,
+   "zone_height_atr": 1.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": false,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "skip",
+   "worn_mode": "off",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": false
+  },
+  "STACK_LOG": {
+   "opening_until": "09:45",
+   "opening": "orb",
+   "or_candles": 3,
+   "orb_buffer_atr": 0.25,
+   "chase_atr": 2.5,
+   "atr_seed": 30.0,
+   "zone_rule": true,
+   "zone_n": 6,
+   "zone_height_atr": 2.5,
+   "zone_er_max": 0.3,
+   "zone_buffer_atr": 0.25,
+   "zone_mode": "edges",
+   "chase_window": true,
+   "chase_window_atr": 2.5,
+   "stack_cap": 3,
+   "stack_mode": "log",
+   "worn_mode": "log",
+   "worn_failures": 2,
+   "worn_minutes": 120,
+   "advice": true
+  }
+ },
+ "verdicts": {
+  "LC": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 2 earlier failures on -61.8% in the last 120 minutes)",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (58% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (strict zone): inside a sideways zone and the call does not break out of it",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (87% up), trigger still inside it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not body, not beyond last3)",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (65% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (70% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "LC_total": {
+   "kept": 10,
+   "rupees": 7104.5,
+   "winners": 4
+  },
+  "LC_V2": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "selling in the bottom third of a sideways zone (13% up), trigger still inside it",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (85% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "LC_V2_total": {
+   "kept": 18,
+   "rupees": -1602.25,
+   "winners": 4
+  },
+  "LC_ZONE_ONLY": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (58% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (87% up), trigger still inside it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not body, not beyond last3)",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (65% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (70% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "LC_ZONE_ONLY_total": {
+   "kept": 13,
+   "rupees": 2515.5,
+   "winners": 4
+  },
+  "LC_STRICT": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "worn",
+    "why": "worn line: 2 earlier failures on -61.8% in the last 120 minutes",
+    "advice": "",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22424.6 to 22518.9, 2.2 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22424.6 to 22518.9, 2.3 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22424.6 to 22518.9, 2.8 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22370.3 to 22431.1, 2.0 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22370.3 to 22431.1, 2.0 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22499.3 to 22592.6, 2.3 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22499.3 to 22592.6, 2.4 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22499.3 to 22592.6, 2.5 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "inside a sideways zone (22499.3 to 22592.6, 2.6 x ATR tall): the call does not break out of it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "LC_STRICT_total": {
+   "kept": 8,
+   "rupees": 8966.75,
+   "winners": 4
+  },
+  "WORN_SKIP": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "worn",
+    "why": "worn line: 2 earlier failures on -61.8% in the last 120 minutes",
+    "advice": "",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (58% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (strict zone): inside a sideways zone and the call does not break out of it",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (87% up), trigger still inside it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not body, not beyond last3)",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (65% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (70% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "WORN_SKIP_total": {
+   "kept": 9,
+   "rupees": 7952.75,
+   "winners": 4
+  },
+  "BOX_1_5": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 2 earlier failures on -61.8% in the last 120 minutes)",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 3 earlier failures on -61.8% in the last 120 minutes)",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 3 earlier failures on -61.8% in the last 120 minutes)",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "selling in the bottom third of a sideways zone (13% up), trigger still inside it",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 3 earlier failures on -78.6% in the last 120 minutes)",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 4 earlier failures on -78.6% in the last 120 minutes)",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 5 earlier failures on -78.6% in the last 120 minutes)",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 2 earlier failures on -38.2% in the last 120 minutes)",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 3 earlier failures on -38.2% in the last 120 minutes)",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 4 earlier failures on -38.2% in the last 120 minutes)",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (85% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "BOX_1_5_total": {
+   "kept": 15,
+   "rupees": 2986.75,
+   "winners": 4
+  },
+  "BOX_2_0": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 2 earlier failures on -61.8% in the last 120 minutes)",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (67% up), trigger still inside it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (54% up; not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (strict zone): inside a sideways zone and the call does not break out of it",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 3 earlier failures on -78.6% in the last 120 minutes)",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 4 earlier failures on -78.6% in the last 120 minutes)",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 2 earlier failures on -38.2% in the last 120 minutes)",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (84% up), trigger still inside it",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (59% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (89% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "BOX_2_0_total": {
+   "kept": 13,
+   "rupees": 4884.75,
+   "winners": 4
+  },
+  "BOX_3_0": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (76% up), trigger still inside it",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (52% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (57% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (48% up; not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "selling in the bottom third of a sideways zone (9% up), trigger still inside it",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (strict zone): inside a sideways zone and the call does not break out of it",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "selling in the bottom third of a sideways zone (7% up), trigger still inside it",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (87% up), trigger still inside it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not body, not beyond last3)",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (65% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (70% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "BOX_3_0_total": {
+   "kept": 8,
+   "rupees": 8424.0,
+   "winners": 4
+  },
+  "CHASE_WINDOW_ONLY": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "CHASE_WINDOW_ONLY_total": {
+   "kept": 21,
+   "rupees": -1404.0,
+   "winners": 6
+  },
+  "STACK_ONLY": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "stack",
+    "why": "stack cap: 3 calls in the same direction are already open",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "STACK_ONLY_total": {
+   "kept": 20,
+   "rupees": -2203.5,
+   "winners": 6
+  },
+  "STACK_LOG": [
+   {
+    "signal": "09:15",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "opening",
+    "why": "opening window: signal before 09:45, no close beyond the opening range",
+    "advice": "",
+    "failures": 0,
+    "rupees": 71.5
+   },
+   {
+    "signal": "09:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": -1186.25
+   },
+   {
+    "signal": "09:45",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 5473.0
+   },
+   {
+    "signal": "10:00",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 1774.5
+   },
+   {
+    "signal": "10:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": 221.0
+   },
+   {
+    "signal": "10:10",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (stack cap: 3 calls in the same direction are already open)",
+    "failures": 0,
+    "rupees": -815.75
+   },
+   {
+    "signal": "10:30",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (stack cap: 3 calls in the same direction are already open)",
+    "failures": 0,
+    "rupees": -1079.0
+   },
+   {
+    "signal": "10:40",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": null
+   },
+   {
+    "signal": "10:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (worn line: 2 earlier failures on -61.8% in the last 120 minutes)",
+    "failures": 2,
+    "rupees": -848.25
+   },
+   {
+    "signal": "11:10",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (58% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -1163.5
+   },
+   {
+    "signal": "11:25",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": -253.5
+   },
+   {
+    "signal": "12:05",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "12:10",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "WOULD SKIP (strict zone): inside a sideways zone and the call does not break out of it",
+    "failures": 1,
+    "rupees": -1014.0
+   },
+   {
+    "signal": "12:25",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -471.25
+   },
+   {
+    "signal": "12:55",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (87% up), trigger still inside it",
+    "advice": "",
+    "failures": 3,
+    "rupees": -676.0
+   },
+   {
+    "signal": "13:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -1007.5
+   },
+   {
+    "signal": "13:30",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "breakout from a sideways zone",
+    "advice": "",
+    "failures": 5,
+    "rupees": 4738.5
+   },
+   {
+    "signal": "13:35",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 3.5 x ATR",
+    "advice": "",
+    "failures": 0,
+    "rupees": 302.25
+   },
+   {
+    "signal": "13:40",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: the candle before was a violent CE candle (3.0 x ATR)",
+    "advice": "",
+    "failures": 0,
+    "rupees": -2694.25
+   },
+   {
+    "signal": "13:50",
+    "side": "PE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 0,
+    "rupees": null
+   },
+   {
+    "signal": "13:55",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -159.25
+   },
+   {
+    "signal": "14:00",
+    "side": "CE",
+    "verdict": "TAKE",
+    "rule": "",
+    "why": "no check objects",
+    "advice": "",
+    "failures": 1,
+    "rupees": -1423.5
+   },
+   {
+    "signal": "14:05",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (47% up; not body, not beyond last3)",
+    "advice": "",
+    "failures": 2,
+    "rupees": -536.25
+   },
+   {
+    "signal": "14:15",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (65% up; not body, not close near end, not beyond last3)",
+    "advice": "",
+    "failures": 3,
+    "rupees": null
+   },
+   {
+    "signal": "14:20",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "weak call from the middle of a sideways zone (46% up; not beyond last3)",
+    "advice": "",
+    "failures": 4,
+    "rupees": -952.25
+   },
+   {
+    "signal": "14:30",
+    "side": "CE",
+    "verdict": "SKIP",
+    "rule": "zone",
+    "why": "buying in the top third of a sideways zone (70% up), trigger still inside it",
+    "advice": "",
+    "failures": 5,
+    "rupees": null
+   },
+   {
+    "signal": "14:35",
+    "side": "PE",
+    "verdict": "SKIP",
+    "rule": "chase",
+    "why": "chase: signal candle range 2.5 x ATR",
+    "advice": "",
+    "failures": 2,
+    "rupees": -2398.5
+   }
+  ],
+  "STACK_LOG_total": {
+   "kept": 12,
+   "rupees": 5209.75,
+   "winners": 4
+  }
+ },
+ "zones": {
+  "v2": [
+   {
+    "found": "12:15",
+    "end": "12:40",
+    "low": 22409.6,
+    "high": 22457.1,
+    "height_atr": 1.4,
+    "er": 0.178
+   },
+   {
+    "found": "14:30",
+    "end": "14:30",
+    "low": 22519.6,
+    "high": 22572.3,
+    "height_atr": 1.45,
+    "er": 0.055
+   },
+   {
+    "found": "15:15",
+    "end": "15:20",
+    "low": 22474.1,
+    "high": 22523.6,
+    "height_atr": 1.36,
+    "er": 0.289
+   }
+  ],
+  "v3": [
+   {
+    "found": "11:05",
+    "end": "12:20",
+    "low": 22424.6,
+    "high": 22518.9,
+    "height_atr": 2.12,
+    "er": 0.07
+   },
+   {
+    "found": "12:30",
+    "end": "12:40",
+    "low": 22409.6,
+    "high": 22461.1,
+    "height_atr": 1.55,
+    "er": 0.031
+   },
+   {
+    "found": "12:55",
+    "end": "13:30",
+    "low": 22370.3,
+    "high": 22431.1,
+    "height_atr": 2.02,
+    "er": 0.127
+   },
+   {
+    "found": "14:05",
+    "end": "14:30",
+    "low": 22499.3,
+    "high": 22592.6,
+    "height_atr": 2.28,
+    "er": 0.142
+   },
+   {
+    "found": "15:05",
+    "end": "15:20",
+    "low": 22453.0,
+    "high": 22520.4,
+    "height_atr": 1.83,
+    "er": 0.047
+   }
+  ]
+ }
+}

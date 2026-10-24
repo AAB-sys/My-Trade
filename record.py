@@ -72,7 +72,10 @@ CALL_FIELDS = ("date", "index", "time_frame", "levels", "signal_mode", "first_se
                "candles_say", "exit_said_at_ist", "candles_why",  # the candle verdict (rules.js readOf / rule.read_of), 7 October: off the table, in the CSV
                "carry_deep", "beyond_level", "beyond_reached",  # the carry read (idea P5's question, rule.carry_of), 7 October evening
                "exit_at_ist", "parallel", "reason",  # 21 October: the early exit's minute (19 October), the parallel mark (18 October), the page's Reason column
-               "gate", "gate_reason", "gate_check", "gate_advice", "paper")  # the Call Gate's verdict on the signal, TAKE or SKIP, why, the check that decided, the parallel advice; "yes" on a call followed on paper (version 2, 23 October)
+               "gate", "gate_reason", "gate_check", "gate_advice", "paper",
+               "lc", "lc_reason", "lc_check", "lc_advice", "lc_open_same",  # the Loss Cutter (24 October): its verdict, why, the check that decided, its advice, the calls open the same way when the order was placed
+               "premium_low", "premium_low_at_ist", "stop15_at_ist", "stop15_premium",
+               "lock", "lock_at_ist", "lock_points", "lock_peak", "lock_floor", "lock_premium", "lock_from", "lock_also")  # the Profit Lock (24 October): its setting and mode, the candle it said exit on, the points, best and floor then, the premium at that moment, the compared settings; the Call Gate's verdict on the signal, TAKE or SKIP, why, the check that decided, the parallel advice; "yes" on a call followed on paper (version 2, 23 October)
 live_calls: dict = {}  # date -> {key: row}
 _calls_lock = threading.Lock()
 _calls_version = 0
@@ -87,6 +90,20 @@ def _stamp(epoch) -> str:
         return datetime.fromtimestamp(float(epoch), dhan.IST).strftime("%Y-%m-%d %H:%M")
     except (TypeError, ValueError, OverflowError):
         return ""
+
+
+def _lock_also(also) -> str:
+    """The Profit Lock's compared settings for the CSV: "STEADY 10:15 +0.0 at 112.40 · RUNNER 10:20 +3.1"."""
+    if not isinstance(also, dict):
+        return ""
+    out = []
+    for n, a in sorted(also.items()):
+        try:
+            prem = f" at {float(a['premium']):.2f}" if a.get("premium") is not None else ""
+            out.append(f"{str(n)[:10]} {_stamp(a['at'])[11:]} {float(a['points']):+.1f}{prem}")
+        except (KeyError, TypeError, ValueError, AttributeError):
+            continue
+    return " · ".join(out)[:160]
 
 
 def _num(value):
@@ -131,7 +148,14 @@ def record_calls(index: str, interval: str, levels: str, signal: str, session: s
                         "exit_at_ist": _stamp(c.get("exit_at")) if c.get("exit_at") else "", "parallel": "yes" if c.get("parallel") else "",
                         "reason": str(c.get("reason") or "")[:120] or row.get("reason", ""),  # the page's Reason column; the watcher's rows carry none, so they never blank it
                         "gate": str(c.get("gate") or "")[:5], "gate_reason": str(c.get("gate_reason") or "")[:140],  # the Call Gate (version 2, 23 October)
-                        "gate_check": str(c.get("gate_check") or "")[:10], "gate_advice": str(c.get("gate_advice") or "")[:100], "paper": "yes" if c.get("paper") else ""})
+                        "gate_check": str(c.get("gate_check") or "")[:10], "gate_advice": str(c.get("gate_advice") or "")[:100], "paper": "yes" if c.get("paper") else "",
+                        "lc": str(c.get("lc") or "")[:5], "lc_reason": str(c.get("lc_reason") or "")[:160], "lc_check": str(c.get("lc_check") or "")[:12],  # the Loss Cutter (24 October)
+                        "lc_advice": str(c.get("lc_advice") or "")[:240], "lc_open_same": "" if c.get("lc_open_same") is None else str(int(c["lc_open_same"])),
+                        "premium_low": _num(c.get("premium_low")), "premium_low_at_ist": str(c.get("premium_low_at") or "")[11:16],  # the premium path: the lowest premium and when,
+                        "stop15_at_ist": str(c.get("stop15_at") or "")[11:16], "stop15_premium": _num(c.get("stop15_premium")),  # and the 15% premium stop (log only)
+                        "lock": str(c.get("lock") or "")[:20], "lock_at_ist": _stamp(c["lock_at"])[11:] if c.get("lock_at") else "",  # the Profit Lock (24 October)
+                        "lock_points": _num(c.get("lock_points")), "lock_peak": _num(c.get("lock_peak")), "lock_floor": _num(c.get("lock_floor")),
+                        "lock_premium": _num(c.get("lock_premium")), "lock_from": str(c.get("lock_from") or "")[:8], "lock_also": _lock_also(c.get("lock_also"))})
             day[key] = row
             if before is None or tuple(row.get(k) for k in HURRY) != before:
                 changed = True

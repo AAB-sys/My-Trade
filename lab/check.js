@@ -738,3 +738,295 @@ console.log("rules unit checks passed");
   assert(!sc.ok && sc.failed.join() === "beyond last3" && !R.trendContinuation(bars, k14, "PE", atr[k14], 0, g).ok, "5.1 example, the 14:00 PE: " + JSON.stringify(sc));
   console.log("Call Gate version 2 (revised) checks passed (A-1 to A-12 on the engine's own calls, the parallel advice, the zone tracker, day health, the opening range, the chase, the mirror)");
 }
+
+// ---- The Loss Cutter and the Sideways Zone version 3 (the owner's Loss_Cutter.docx and Sideways_Zone_v3.docx, 24 October). The
+// documents' tests on their own data: the 23 October candles read from the owner's screenshot and the real call table from the owner's
+// Excel (lab/loss-cutter-23oct.json: the reference code's verdicts for every setting the documents use, dumped by its run_loss_cutter).
+// The engine's own functions (zoneStep, lcVerdict, wornFailures, stackStep) are run over the same signals in the reference's order and
+// must give the same verdict, the same deciding rule and the same advice for every signal, and the documents' totals
+{
+  const F = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "loss-cutter-23oct.json"), "utf8"));
+  const day0 = Date.UTC(2026, 9, 23) / 1000 - IST, at = (t) => day0 + Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60;
+  const C = F.candles.map(([t, open, high, low, close]) => ({ time: at(t), open, high, low, close }));
+  const kOf = (t) => { let k = -1; C.forEach((c, i) => { if (c.time <= at(t)) k = i; }); return k; };
+  const hhmm = (sec) => new Date((sec + IST) * 1000).toISOString().slice(11, 16);
+  const KEYS = { opening_until: "openingUntil", opening: "opening", or_candles: "orCandles", orb_buffer_atr: "orbBufferAtr", chase_atr: "chaseAtr",
+                 zone_rule: "zoneRule", zone_n: "zoneN", zone_height_atr: "zoneHeightAtr", zone_er_max: "zoneErMax", zone_buffer_atr: "bufferAtr", zone_mode: "zoneMode",
+                 chase_window: "chaseWindow", chase_window_atr: "chaseWindowAtr", stack_cap: "stackCap", stack_mode: "stackMode", worn_mode: "wornMode",
+                 worn_failures: "wornFailures", worn_minutes: "wornMinutes", advice: "advice" };
+  const cfgOf = (name) => { const c = { ...R.LC }; for (const [k, v] of Object.entries(F.configs[name])) if (KEYS[k]) c[KEYS[k]] = k === "opening_until" ? at(v) - day0 : v; return c; };
+  const signals = () => F.table.map(r => ({ signalTime: at(r.signal), side: r.side, level: r.line, k: kOf(r.signal), line: (r.pct > 0 ? "+" : "") + r.pct.toFixed(1) + "%",
+    ...(r.cancelled ? { cancelTime: at(r.cancelled) } : {}), ...(r.fired ? { fired: r.fired, sold: r.sold, exit: 1, exitTime: C[kOf(r.sold)].time, points: r.rupees } : { exit: null }) }));
+  const run = (g) => {  // the reference's run_loss_cutter, on the engine's functions
+    const atr = R.gateAtr(C, g.atrPeriod, F.atrSeed, F.prevClose), zone = { box: null, broke: null, found: [], ended: [] }, sig = signals();
+    for (let k = 0; k < C.length; k++) {
+      R.zoneStep(zone, C, k, atr[k], 0, g);
+      for (const s of sig.filter(s => s.k === k)) {
+        s.failures = R.wornFailures(sig, s, g);
+        const v = R.lcVerdict(C, k, s.side, atr[k], zone, s.failures, 0, g, s.line);
+        s.lc = v.lc; s.lcWhy = v.why; s.lcCheck = v.check; s.lcAdvice = v.advice;
+      }
+    }
+    const fired = sig.filter(s => s.fired && s.lc === "TAKE").sort((a, b) => kOf(a.fired) - kOf(b.fired) || a.k - b.k), taken = [];
+    for (const o of fired) { R.stackStep(o, taken.filter(e => kOf(e.sold) >= kOf(o.fired)), g); if (o.lc === "TAKE") taken.push(o); }
+    return { sig, zone, taken };
+  };
+  const rule = (c) => c === "chasewindow" ? "chase" : c || "";
+  for (const name of Object.keys(F.configs)) {
+    const g = cfgOf(name), { sig, taken } = run(g), ref = F.verdicts[name], tot = F.verdicts[name + "_total"];
+    sig.forEach((s, j) => {
+      const r = ref[j], mine = `${hhmm(s.signalTime)} ${s.side} ${s.lc} ${rule(s.lcCheck)} [${s.lcAdvice}]`, theirs = `${r.signal} ${r.side} ${r.verdict} ${r.rule} [${r.advice}]`;
+      const adviceSame = ["strict zone", "worn line", "stack cap"].every(w => s.lcAdvice.includes(w) === r.advice.includes(w));
+      assert(hhmm(s.signalTime) === r.signal && s.side === r.side && s.lc === r.verdict && rule(s.lcCheck) === r.rule && adviceSame && s.failures === r.failures,
+             `${name}: the engine says ${mine}, the reference ${theirs} (failures ${s.failures} / ${r.failures})`);
+      if (s.lc === "SKIP" && /^(zone|opening)$/.test(s.lcCheck)) assert(s.lcWhy.replace(/\.0(?=[ %x])/g, "") === r.why.replace(/\.0(?=[ %x])/g, ""), `${name} ${r.signal}: reason "${s.lcWhy}" against "${r.why}"`);
+    });
+    const rupees = Math.round(taken.reduce((a, o) => a + o.points, 0) * 100) / 100;
+    assert(taken.length === tot.kept && rupees === tot.rupees && taken.filter(o => o.points > 0).length === tot.winners, `${name}: ${taken.length} calls ${rupees}, the reference ${tot.kept} ${tot.rupees}`);
+  }
+  // ZV-8, ZV-9, ZV-10: the zones of version 2 and version 3 on that day, found and ended, and the first box of version 3
+  for (const [name, ver] of [["LC_V2", "v2"], ["LC", "v3"]]) {
+    const { zone } = run(cfgOf(name)), mine = zone.found.map((f, k) => `${hhmm(f)}-${zone.ended[k] != null ? hhmm(zone.ended[k]) : "open"}`).join(" ");
+    const theirs = F.zones[ver].map(z => `${z.found}-${z.end || "open"}`).join(" ");
+    assert(mine === theirs, `zones ${ver}: ${mine} against ${theirs}`);
+  }
+  const doc = (name) => F.verdicts[name + "_total"];
+  assert(doc("LC").kept === 10 && doc("LC").rupees === 7104.5 && doc("LC_V2").kept === 18 && doc("LC_V2").rupees === -1602.25 && doc("BOX_1_5").rupees === 2986.75
+         && doc("BOX_2_0").rupees === 4884.75 && doc("BOX_3_0").rupees === 8424 && doc("WORN_SKIP").rupees === 7952.75 && doc("LC_STRICT").rupees === 8966.75, "the documents' table 4.1");
+  { const { sig } = run(cfgOf("LC_ZONE_ONLY")), zs = sig.filter(s => s.fired && s.lcCheck === "zone");  // ZV-11, ZV-12
+    assert(zs.map(s => hhmm(s.signalTime)).join() === "11:10,11:25,12:55,13:05,14:05,14:20" && zs.reduce((a, s) => a + s.points, 0) === -4589, "ZV-11");
+    const w = sig.find(s => hhmm(s.signalTime) === "13:30"); assert(w.lc === "TAKE" && w.lcWhy === "breakout from a sideways zone", "ZV-12"); }
+  { const { sig } = run(cfgOf("STACK_LOG")), st = sig.filter(s => /stack cap/.test(s.lcAdvice)).map(s => hhmm(s.signalTime));  // LC-14 on the real day
+    assert(st.join() === "10:10,10:30" && sig.every(s => s.lcCheck !== "stack"), "stack cap in log mode: " + st); }
+  // the documents' unit tests on hand-made candles (ATR 30), from 11:00
+  const mk5 = (rows, start = "11:00") => rows.map(([open, high, low, close], i) => ({ time: at(start) + i * 300, open, high, low, close }));
+  const boxRows = (lo, hi, n = 6) => { const h = (hi - lo) / 2; return Array.from({ length: n }, (_, i) => i % 2 === 0 ? [lo + 0.3 * h, lo + h, lo, lo + 0.4 * h] : [hi - 0.3 * h, hi, hi - h, hi - 0.4 * h]); };
+  const zoneAfter = (bars, g) => { const z = { box: null, broke: null, found: [], ended: [] }; bars.forEach((_, k) => R.zoneStep(z, bars, k, 30, 0, g)); return z; };
+  const V2 = cfgOf("LC_V2"), LC = cfgOf("LC"), STRICT = cfgOf("LC_STRICT"), box72 = boxRows(100, 172), C1 = mk5([...box72, [140, 150, 130, 140]]);
+  const z3 = zoneAfter(C1, LC);
+  assert(z3.box && z3.box.lo === 100 && z3.box.hi === 172 && z3.found[0] === C1[6].time && !zoneAfter(C1, V2).box, "ZV-1");
+  assert(!zoneAfter(mk5([...boxRows(100, 180), [140, 150, 130, 140]]), LC).box, "ZV-2");
+  assert(!zoneAfter(mk5(Array.from({ length: 7 }, (_, i) => [100 + 12 * i, 120 + 12 * i, 96 + 12 * i, 116 + 12 * i])), LC).box, "ZV-3");
+  const v4 = R.lcVerdict(mk5([...box72, [160, 170, 150, 165]]), 6, "CE", 30, z3, 0, 0, LC, "x");
+  assert(v4.lc === "SKIP" && v4.check === "zone" && /top third/.test(v4.why), "ZV-4 " + v4.why);
+  assert(R.lcVerdict(mk5([...box72, [160, 176, 150, 170]]), 6, "CE", 30, z3, 0, 0, LC, "x").why === "breakout from a sideways zone", "ZV-5");
+  const bounce = mk5([...box72, [110, 125, 105, 120]]), ve = R.lcVerdict(bounce, 6, "CE", 30, z3, 0, 0, LC, "x"), vs = R.lcVerdict(bounce, 6, "CE", 30, z3, 0, 0, STRICT, "x");
+  assert(ve.lc === "TAKE" && ve.advice.startsWith("WOULD SKIP (strict zone)") && vs.lc === "SKIP" && vs.check === "zone", "ZV-6");
+  const C7 = mk5([...box72, [140, 150, 130, 140], [170, 180, 168, 179.4], [179, 185, 178, 180.5]]), z7 = { box: null, broke: null, found: [], ended: [] };
+  for (let k = 0; k < 8; k++) R.zoneStep(z7, C7, k, 30, 0, LC);
+  const still = !!z7.box; R.zoneStep(z7, C7, 8, 30, 0, LC);
+  assert(still && !z7.box && z7.broke === "up" && z7.ended[0] === C7[7].time, "ZV-7");
+  const base = [[100, 110, 95, 105], [100, 110, 95, 105], [100, 110, 95, 105]], sigc = [185, 200, 180, 195], lc1 = (before, g = LC) => R.lcVerdict(mk5([...base, before, sigc]), 4, "CE", 30, { box: null }, 0, 0, g, "x");
+  assert(lc1([105, 190, 100, 185]).check === "chasewindow" && lc1([185, 190, 100, 105]).lc === "TAKE" && lc1([105, 185, 110, 180]).lc === "TAKE" && lc1([105, 190, 100, 185], { ...LC, chaseWindow: false }).lc === "TAKE", "LC-1");
+  const stk = (n, g = LC) => { const t = { side: "PE", lc: "TAKE" }; R.stackStep(t, Array.from({ length: n }, () => ({ side: "PE", lc: "TAKE" })), g); return t; };
+  assert(stk(2).lc === "TAKE" && stk(2).lcOpenSame === 2 && stk(3).lc === "SKIP" && stk(3).lcCheck === "stack" && stk(5, { ...LC, stackCap: null }).lc === "TAKE"
+         && stk(3, { ...LC, stackMode: "log" }).lcAdvice.startsWith("WOULD SKIP (stack cap"), "LC-2, LC-14");
+  const kk = kOf("12:00"), cur = { signalTime: at("12:00"), level: 22500, side: "PE" }, W = { ...LC, wornMode: "skip" };
+  const e = (t, extra) => ({ signalTime: at(t), level: 22500, ...extra });
+  const cancelled = e("11:30", { cancelTime: at("11:40") }), lost = e("11:40", { exit: 1, exitTime: C[kk - 2].time, points: -12 }), won = e("11:35", { exit: 1, exitTime: C[kk - 2].time, points: 30 });
+  const early = e("09:30", { exit: 1, exitTime: at("09:45"), points: -20 }), old = e("09:55", { cancelTime: at("10:00") }), openc = e("11:50", { exit: null }), other = { signalTime: at("11:45"), level: 22400, cancelTime: at("11:50") };
+  assert(R.wornFailures([cur, cancelled, lost], cur, W) === 2 && R.wornFailures([cur, cancelled, won], cur, W) === 1 && R.wornFailures([cur, cancelled, lost, early, old, openc, other], cur, W) === 2, "LC-4");
+  const j = (g, n) => R.lcVerdict(C, kk, "PE", 30, { box: null }, n, 0, g, "-61.8%");
+  assert(j(W, 2).check === "worn" && j(LC, 2).lc === "TAKE" && j(LC, 2).advice.startsWith("WOULD SKIP (worn line") && j(W, 1).lc === "TAKE", "LC-5");
+  console.log(`Loss Cutter checks passed (the reference's verdicts on its 23 October data for ${Object.keys(F.configs).length} settings, signal by signal; the zones of versions 2 and 3; the documents' table 4.1; ZV-1 to ZV-7, ZV-11, ZV-12, LC-1, LC-2, LC-4, LC-5, LC-14)`);
+}
+
+// The Loss Cutter inside the engine (paperTrades), on the engine's own calls of 22 October (the Call Gate's appendix day) and of the
+// 23 October candles of the documents, and on both days mirrored through the previous close
+{
+  const fs = require("fs"), path = require("path"), hhmm = (t) => new Date((t + IST) * 1000).toISOString().slice(11, 16);
+  const A = JSON.parse(fs.readFileSync(path.join(__dirname, "call-gate-appendix-a.json"), "utf8")), d22 = Math.floor((1792381500 + IST) / 86400) * 86400 - IST;
+  const F = JSON.parse(fs.readFileSync(path.join(__dirname, "loss-cutter-23oct.json"), "utf8")), d23 = Date.UTC(2026, 9, 23) / 1000 - IST;
+  const days = [
+    { name: "22 Oct", prev: 22811.35, bars: A.map(r => ({ time: d22 + r[0] * 3600 + r[1] * 60, open: r[2], high: r[3], low: r[4], close: r[5] })) },
+    { name: "23 Oct", prev: F.prevClose, bars: F.candles.map(([t, open, high, low, close]) => ({ time: d23 + Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60, open, high, low, close })) }];
+  days.push(...days.map(d => ({ name: d.name + " mirrored", prev: d.prev, mirror: true, bars: d.bars.map(b => ({ time: b.time, open: R.round2(2 * d.prev - b.open), high: R.round2(2 * d.prev - b.low), low: R.round2(2 * d.prev - b.high), close: R.round2(2 * d.prev - b.close) })) })));
+  const run = (d, lossCutter, gate = R.GATE, bars = d.bars) => R.replayDay({ bars, move: "close", previous: { close: d.prev }, seconds: 300, signal: "both", gate, atrSeed: 30, lossCutter });
+  const all = (r) => r.trades.concat(r.cancelled).sort((a, b) => a.signalTime - b.signalTime || (a.side < b.side ? -1 : 1));
+  for (const d of days) {
+    // ZV-14 on the engine: with the version 2 settings the Loss Cutter's verdict is the Call Gate's for every signal, fired or cancelled
+    const v2 = run(d, R.LC_V2), diff = all(v2).filter(t => t.lc !== t.gate || (t.lc === "SKIP" && (t.lcCheck !== t.gateCheck || t.lcWhy !== t.gateWhy)));  // a TAKE inside a zone: the Call Gate names the zone, the Loss Cutter (as the reference) no check
+    assert(all(v2).length > 15 && !diff.length, `${d.name}: LC_V2 differs from the Call Gate on ${diff.map(t => hhmm(t.signalTime) + t.side + " " + t.lc + "/" + t.gate).join(", ")}`);
+    // the stack cap, judged as each order is placed: lcOpenSame counts the calls the same way the Loss Cutter took that are still open then
+    const r = run(d, R.LC);
+    for (const t of r.trades.filter(t => t.lcOpenSame != null)) {
+      const before = r.trades.slice(0, r.trades.indexOf(t)).filter(o => o.side === t.side && o.lc === "TAKE" && !(o.exitTime < t.entryTime));
+      assert(before.length === t.lcOpenSame, `${d.name} ${hhmm(t.signalTime)} ${t.side}: lcOpenSame ${t.lcOpenSame}, open taken calls ${before.length}`);
+      assert((t.lcCheck === "stack") === (t.lcOpenSame >= 3), `${d.name} ${hhmm(t.signalTime)}: the stack cap at ${t.lcOpenSame} open`);
+    }
+    assert(r.trades.every(t => t.lc && (t.lc === "SKIP" ? !!t.lcCheck : t.lcCheck === null)) && r.cancelled.every(t => t.lc && t.lcOpenSame === undefined), d.name + ": every signal carries a verdict, a cancelled one no stack count");
+    assert(r.trades.every(t => !t.paper), d.name + ": shadow mode places every order");
+    // LC-12, no look-ahead: the day cut short gives the same verdicts to the signals born before the cut
+    for (const cut of [30, 45, 60]) {
+      const part = run(d, R.LC, R.GATE, d.bars.slice(0, cut)), born = d.bars[cut - 1].time;
+      const key = (t) => `${t.signalTime}${t.side}`, full = Object.fromEntries(all(r).filter(t => t.signalTime < born).map(t => [key(t), `${t.lc} ${t.lcCheck} ${t.lcAdvice}`]));
+      const mine = Object.fromEntries(all(part).filter(t => t.signalTime < born).map(t => [key(t), `${t.lc} ${t.lcCheck} ${t.lcAdvice}`]));
+      assert(JSON.stringify(full) === JSON.stringify(mine), `${d.name} cut at ${hhmm(born)}: ${JSON.stringify(full)} against ${JSON.stringify(mine)}`);
+    }
+    // LIVE, one check at a time (the documents' phase 2: the chase window and the stack cap first): only those hold an order, on paper
+    const live = run(d, { ...R.LC, mode: "LIVE" });
+    assert(live.trades.filter(t => t.paper).every(t => t.lc === "SKIP" && ["chasewindow", "stack"].includes(t.lcCheck)) &&
+           live.trades.filter(t => t.lc === "SKIP" && ["chasewindow", "stack"].includes(t.lcCheck)).every(t => t.paper), d.name + ": LIVE, only the live checks hold an order");
+    d.result = r;
+  }
+  // LC-13, mirror: the same verdicts, checks and advice with CE and PE swapped (the reasons with their words mirrored)
+  const norm = (s) => (s || "").replace(/\d+% up/g, "").replace(/[+-](\d+\.\d%)/g, "$1").replace(/\b(top|bottom|above|below|high|low|buying|selling|breakout|breakdown|CE|PE)\b/g, (w) => ({ top: "X", bottom: "X", above: "Y", below: "Y", high: "Z", low: "Z", buying: "W", selling: "W", breakout: "V", breakdown: "V", CE: "U", PE: "U" })[w]);
+  for (const k of [0, 1]) {
+    const a = all(days[k].result), b = all(days[k + 2].result), sw = { CE: "PE", PE: "CE" };
+    const one = (t, side) => `${hhmm(t.signalTime)} ${side} ${t.lc} ${t.lcCheck} ${norm(t.lcWhy)} ${norm(t.lcAdvice)} ${t.lcOpenSame}`;
+    { const x = a.map(t => one(t, sw[t.side])).sort(), y = b.map(t => one(t, t.side)).sort(); assert(JSON.stringify(x) === JSON.stringify(y), `${days[k].name}: the mirrored day verdicts differ: ${x.filter(v => !y.includes(v)).join(" ; ")} AGAINST ${y.filter(v => !x.includes(v)).join(" ; ")}`); }
+  }
+  // the stack cap's own counting: a call the Loss Cutter skipped is not counted, nor one the other way; a call born at the same moment is no earlier failure
+  const t1 = { side: "PE", lc: "TAKE" }; R.stackStep(t1, [{ side: "PE", lc: "TAKE" }, { side: "PE", lc: "TAKE" }, { side: "PE", lc: "SKIP" }, { side: "CE", lc: "TAKE" }], R.LC);
+  assert(t1.lc === "TAKE" && t1.lcOpenSame === 2, "the stack cap counts only the calls the Loss Cutter took, the same way");
+  const now0 = d23 + 12 * 3600;
+  assert(R.wornFailures([{ signalTime: now0, level: 1, cancelTime: now0 }], { signalTime: now0, level: 1 }, R.LC) === 0, "a signal born at the same moment is no earlier failure");
+  // the daily line
+  const line = R.lcSummary(days[1].result, "2026-10-23");
+  assert(line.startsWith("LOSS CUTTER DAY 2026-10-23 · calls ") && / · zones: \d\d:\d\d-/.test(line), "the daily line: " + line);
+  const r23 = days[1].result, take = r23.trades.filter(t => t.lc === "TAKE");
+  // ZV-9 inside the engine: its own Loss Cutter zone on the documents' 23 October candles is version 3's, five zones, found and ended as the documents say
+  const zones3 = r23.lcZonesFound.map((f, k) => `${hhmm(f)}-${hhmm(r23.lcZonesEnded[k])}`).join(" · ");
+  assert(zones3 === "11:05-12:20 · 12:30-12:40 · 12:55-13:30 · 14:05-14:30 · 15:05-15:20" && r23.zonesFound.map(hhmm).join() === "12:15,14:30,15:15", "the engine's zones on 23 October: " + zones3 + " / Call Gate " + r23.zonesFound.map(hhmm).join());
+  assert(take.length === 12 && R.round2(take.reduce((a, t) => a + t.points, 0)) === 50.35 && r23.trades.filter(t => t.lcCheck === "zone").length === 6, "the engine's own 23 October replay with the Loss Cutter: " + take.length);
+  console.log(`Loss Cutter in the engine checks passed (LC_V2 = Call Gate on every signal of both days and their mirrors; the stack count; no look-ahead at three cuts; LIVE one check at a time; the mirror). The engine's own 23 October replay: ${r23.trades.length} calls, Loss Cutter TAKE ${take.length}, ${R.round2(r23.trades.reduce((a, t) => a + t.points, 0))} -> ${R.round2(take.reduce((a, t) => a + t.points, 0))} points`);
+  console.log(line);
+}
+
+// The Profit Lock (the owner's "Profit Lock Exit Rule" document, 24 October), its section 9 tests on the engine's own functions
+// (lockStep, lockFloor, LOCK_PRESETS). lab/profit-lock-reference.json holds the reference code's results on its own data: the
+// replayed calls of 23 October (candle colour first), of 22 October (colour first, and the older replay), lock_day's rows and
+// totals for every setting its tests use, and the hand-made calls of PL-13 to PL-17 (made by the reference's apply_lock)
+{
+  const P = JSON.parse(require("fs").readFileSync(require("path").join(__dirname, "profit-lock-reference.json"), "utf8"));
+  const near = (a, b, e = 1e-9) => Math.abs(a - b) <= e;
+  const step = (side, entry, cfg, candles) => { const st = { peak: 0, peakTime: null }; let r = null; for (const [high, low, close] of candles) r = R.lockStep(st, side, entry, { time: 0, high, low, close }, cfg); return { st, r }; };
+  const MAX = R.LOCK_PRESETS.MAX, STEADY = R.LOCK_PRESETS.STEADY, RUNNER = R.LOCK_PRESETS.RUNNER, OFF = R.LOCK_PRESETS.OFF;
+  // the engine's settings are the reference's presets, and LOCK is MAX in shadow mode, NIFTY 50 only
+  for (const n of ["MAX", "STEADY", "RUNNER", "OFF"]) for (const k of ["armPts", "keep", "minTrailPts", "floorPts", "slipPts"]) assert(R.LOCK_PRESETS[n][k] === P.presets[n][k], `the ${n} setting's ${k}`);
+  assert(R.LOCK.mode === "SHADOW" && R.LOCK.name === "MAX" && ["armPts", "keep", "minTrailPts", "floorPts", "slipPts"].every(k => R.LOCK[k] === MAX[k]) && R.LOCK.indices.join() === "NIFTY 50", "LOCK is MAX in shadow mode, NIFTY 50");
+  // PL-1 to PL-12, the rule on hand-made candles
+  let x = step("CE", 100, MAX, [[119, 90, 95]]); assert(x.r === null && R.lockFloor(x.st.peak, MAX) === null, "PL-1: peak +19 never arms");
+  x = step("CE", 100, MAX, [[120, 110, 118]]); assert(x.st.peak === 20 && near(R.lockFloor(20, MAX), 12), "PL-2: peak +20 arms, floor +12");
+  assert(near(R.lockFloor(100, MAX), 80) && near(R.lockFloor(100, STEADY), 70) && near(R.lockFloor(30, RUNNER), 14), "PL-3 to PL-5: the floors at +100 (MAX, STEADY) and +30 (RUNNER)");
+  x = step("CE", 100, MAX, [[130, 120, 128], [129, 90, 123]]); assert(x.r === null, "PL-6: a wick to -10 closing at +23, above the floor +22, does nothing");
+  x = step("CE", 100, MAX, [[130, 120, 128], [129, 90, 123], [125, 118, 122]]); assert(x.r && x.r.price === 122 && near(x.r.floor, 22), "PL-7: a close at the floor closes the call at that close");
+  { const st = { peak: 0, peakTime: null }, fl = [];
+    for (const [h, l, c] of [[130, 120, 128], [125, 118, 124], [150, 124, 149]]) { R.lockStep(st, "CE", 100, { time: 0, high: h, low: l, close: c }, MAX); fl.push(R.lockFloor(st.peak, MAX)); }
+    assert(fl[0] === fl[1] && fl[2] > fl[1] && st.peak === 50, "PL-8: the floor never goes down; it rises only with a new best"); }
+  x = step("PE", 100, MAX, [[95, 70, 72], [80, 70, 78]]); assert(x.st.peak === 30 && x.r && x.r.price === 78 && near(x.r.points, 22), "PL-9: the PE mirror, the peak on the candle's low");
+  const slip = { ...MAX, slipPts: 2 };
+  assert(near(step("CE", 100, slip, [[130, 120, 128], [125, 118, 122]]).r.price, 120) && near(step("PE", 100, slip, [[95, 70, 72], [80, 70, 78]]).r.price, 80), "PL-10: slippage 2, CE 2 lower, PE 2 higher");
+  x = step("CE", 100, OFF, [[300, 100, 120], [120, 50, 60]]); assert(x.r === null && R.lockFloor(x.st.peak, OFF) === null, "PL-11: OFF never arms and never exits");
+  assert(near(R.lockFloor(25, { ...MAX, floorPts: 15, minTrailPts: 30 }), 15), "PL-12: floorPts keeps the floor from going under it");
+  // the reference's apply_lock on the engine's lockStep: asked from the candle the call fired on up to the one its existing exit is on
+  const applyLock = (C, call, cfg) => {
+    const st = { peak: 0, peakTime: null }, from = C.findIndex(c => c.time === call.fired); let hit = null, k = from;
+    for (; k < call.xk; k++) { hit = R.lockStep(st, call.side, call.entry, C[k], cfg); if (hit) break; }
+    const sign = call.side === "CE" ? 1 : -1, exit = hit ? hit.price : call.exit;
+    return { exit, exit_time: hit ? C[k].time : call.exit_time, locked: !!hit, peak: st.peak, pts: sign * (exit - call.entry) };
+  };
+  const toC = (rows) => rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close }));
+  // PL-13 to PL-17, the lock next to the existing exits (the reference's own results)
+  const HC = toC(P.hand.candles);
+  for (const [id, call] of Object.entries(P.hand.calls)) {
+    const mine = applyLock(HC, call, id === "PL-17" ? OFF : MAX), ref = call.result;
+    assert(mine.locked === ref.locked && mine.exit_time === ref.exit_time && near(mine.exit, ref.exit) && near(mine.pts, ref.pts, 0.05 + 1e-9), `${id}: ${JSON.stringify(mine)} against the reference ${JSON.stringify(ref)}`);
+  }
+  // PL-20 to PL-37: every call of the three replays, every setting, call by call against the reference's rows, and the document's totals
+  const total = {};
+  for (const [day, D] of Object.entries(P.days)) {
+    const C = toC(D.candles);
+    total[day] = {};
+    for (const [name, res] of Object.entries(D.results)) {
+      const cfg = P.configs[name], rows = D.calls.map(call => applyLock(C, call, cfg));
+      rows.forEach((m, i) => { const [exit, exitTime, locked, peak, pts] = res.rows[i];
+        assert(m.locked === locked && m.exit_time === exitTime && near(m.exit, exit) && near(m.peak, peak, 0.05 + 1e-9) && near(m.pts, pts, 0.05 + 1e-9),
+               `${day} ${name} ${D.calls[i].signal} ${D.calls[i].side}: ${JSON.stringify(m)} against the reference ${JSON.stringify(res.rows[i])}`); });
+      const sum = rows.reduce((a, m) => a + Math.round(m.pts * 10) / 10, 0);  // as the reference adds them: each call's points to one decimal
+      assert(near(sum, res.pts, 0.1), `${day} ${name}: ${sum} against the reference ${res.pts}`);
+      assert(rows.filter(m => m.locked).length === res.locked, `${day} ${name}: calls closed by the lock`);
+      total[day][name] = sum;
+      // PL-26: the lock only ever exits earlier; PL-34: a call it did not close ends as in the replay
+      rows.forEach((m, i) => assert(m.locked ? m.exit_time < D.calls[i].exit_time || C.findIndex(c => c.time === m.exit_time) < D.calls[i].xk : m.exit === D.calls[i].exit, `${day} ${name}: the lock exits earlier or not at all`));
+    }
+  }
+  const T = (day, n) => Math.round(total[day][n] * 10) / 10, both = (n) => Math.round((total["23 Oct"][n] + total["22 Oct"][n]) * 10) / 10;
+  assert(P.days["23 Oct"].calls.length === 8 && T("23 Oct", "OFF") === 115.5, "PL-20: 8 calls on 23 October, +115.5 without the lock");
+  assert(T("23 Oct", "MAX") === 245.4 && T("23 Oct", "STEADY") === 258.7 && T("23 Oct", "RUNNER") === 228.8, "PL-22: 23 October, MAX +245.4, STEADY +258.7, RUNNER +228.8");
+  { const C = toC(P.days["23 Oct"].candles), by = (s) => P.days["23 Oct"].calls.find(c => c.signal + " " + c.side === s), r = (s) => applyLock(C, by(s), MAX);
+    const a = r("10:10 PE"), b = r("10:30 PE"), c = r("11:10 CE"), w = r("09:45 PE");
+    assert(near(a.pts, 0, 0.05) && a.exit_time === "10:15" && near(b.pts, 3.4, 0.05) && b.exit_time === "10:35" && near(c.pts, 15.5, 0.05) && c.exit_time === "11:15", "PL-23: the three yellow calls");
+    assert(near(a.peak, 33.3, 0.05) && near(b.peak, 68.9, 0.05) && near(c.peak, 30, 0.05), "PL-24: their best moments +33.3, +68.9, +30.0");
+    assert(near(by("09:45 PE").pts, 153.2, 0.05) && w.pts >= 139 && near(applyLock(C, by("09:45 PE"), STEADY).pts, 153.2, 0.05), "PL-25: the runner of the day, 09:45 PE");
+    const nomin = applyLock(C, by("09:45 PE"), P.configs.NO_MINIMUM);
+    assert(nomin.exit_time === "09:50" && near(nomin.pts, 18.9, 0.05), "PL-36: with no minimum pullback the 09:45 PE runner is closed at 09:50 for +18.9"); }
+  assert(T("22 Oct", "OFF") === -210.9 && P.days["22 Oct"].calls.length === 21 && T("22 Oct", "MAX") === 106.3 && T("22 Oct", "STEADY") === 61.1 && T("22 Oct", "RUNNER") === 51.5, "PL-30, PL-31: 22 October");
+  assert(T("22 Oct older replay", "OFF") === -205.9 && T("22 Oct older replay", "MAX") === 37.6 && T("22 Oct older replay", "STEADY") === -7.6, "PL-32: the older replay");
+  assert(both("OFF") === -95.4 && both("MAX") === 351.7 && both("STEADY") === 319.8, "PL-33: both real days, no lock -95.4, MAX +351.7, STEADY +319.8");
+  const neigh = Object.keys(P.configs).filter(n => n.startsWith("N_")).map(both);
+  assert(neigh.length === 18 && neigh.every(v => v > both("OFF") + 300) && Math.min(...neigh) === 233.7 && Math.max(...neigh) === 351.7, "PL-35: the 18 neighbours, 233.7 to 351.7");
+  assert(both("NO_MINIMUM") === 183.1, "PL-36: both days with no minimum pullback +183.1");
+  assert(both("SLIP2_MAX") === 313.7 && both("SLIP2_STEADY") === 283.8 && both("SLIP2_RUNNER") === 244.3, "PL-37: 2 points of slippage, both days");
+  // PL-38: the lock never reads a candle's open (no guess about the path inside a candle); PL-39: it never changes a call
+  { const D = P.days["23 Oct"], C = toC(D.candles), noOpen = C.map(c => ({ ...c, open: NaN })), before = JSON.stringify(D.calls);
+    D.calls.forEach(call => { const a = applyLock(C, call, MAX), b = applyLock(noOpen, call, MAX); assert(JSON.stringify(a) === JSON.stringify(b), "PL-38: " + call.signal); });
+    assert(JSON.stringify(D.calls) === before, "PL-39: the calls are not changed"); }
+  console.log(`Profit Lock checks passed (PL-1 to PL-17, and PL-20 to PL-39 on the reference's own calls of 22 and 23 October: ${Object.keys(P.configs).length} settings, call by call; 23 Oct MAX ${T("23 Oct", "MAX")} STEADY ${T("23 Oct", "STEADY")} RUNNER ${T("23 Oct", "RUNNER")}; both days MAX ${both("MAX")})`);
+}
+
+// The Profit Lock inside the engine (paperTrades), on the engine's own calls of 22 October (the Call Gate's appendix day) and of the
+// 23 October candles of the documents, and on both days mirrored through the previous close
+{
+  const fs = require("fs"), path = require("path"), hhmm = (t) => new Date((t + IST) * 1000).toISOString().slice(11, 16);
+  const A = JSON.parse(fs.readFileSync(path.join(__dirname, "call-gate-appendix-a.json"), "utf8")), d22 = Math.floor((1792381500 + IST) / 86400) * 86400 - IST;
+  const F = JSON.parse(fs.readFileSync(path.join(__dirname, "loss-cutter-23oct.json"), "utf8")), d23 = Date.UTC(2026, 9, 23) / 1000 - IST;
+  const days = [
+    { name: "22 Oct", prev: 22811.35, bars: A.map(r => ({ time: d22 + r[0] * 3600 + r[1] * 60, open: r[2], high: r[3], low: r[4], close: r[5] })) },
+    { name: "23 Oct", prev: F.prevClose, bars: F.candles.map(([t, open, high, low, close]) => ({ time: d23 + Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60, open, high, low, close })) }];
+  days.push(...days.map(d => ({ name: d.name + " mirrored", prev: d.prev, bars: d.bars.map(b => ({ time: b.time, open: R.round2(2 * d.prev - b.open), high: R.round2(2 * d.prev - b.low), low: R.round2(2 * d.prev - b.high), close: R.round2(2 * d.prev - b.close) })) })));
+  const run = (d, profitLock, bars = d.bars, now = Number.POSITIVE_INFINITY) => R.paperTrades({ bars, levelsAt: R.closeLevelsAt(bars, d.prev), now, seconds: 300, dayCandles: false, signal: "both", holdBreaks: true,
+    trail: R.TRAIL, prevClose: d.prev, gate: R.GATE, atrSeed: 30, lossCutter: R.LC, profitLock });
+  const plain = (t) => { const { lock, lockAlso, ...rest } = t; return rest; };
+  const exitOf = (t) => `${hhmm(t.signalTime)} ${t.side} ${t.entry} ${t.entryTime} ${t.exit} ${t.exitTime} ${t.how} ${t.points}`;
+  for (const d of days) {
+    const sh = run(d, R.LOCK), none = run(d, null), last = d.bars[d.bars.length - 1].time;
+    // shadow mode closes nothing: the calls, their exits and every other field are those of no lock at all
+    assert(JSON.stringify(sh.trades.map(plain)) === JSON.stringify(none.trades) && JSON.stringify(sh.cancelled) === JSON.stringify(none.cancelled), d.name + ": shadow mode changes nothing");
+    // the lock is asked from the candle the call fired on, never on the candle its existing exit is on, nor on the day's last candle
+    for (const t of sh.trades) {
+      if (!t.lock) { assert(t.exitTime === t.entryTime, `${d.name} ${hhmm(t.signalTime)}: a call the lock was never asked about ends on its firing candle`); continue; }
+      assert(t.lock.at == null || (t.lock.at >= t.entryTime && t.lock.at < t.exitTime && t.lock.at !== last), `${d.name} ${hhmm(t.signalTime)}: the lock's candle ${hhmm(t.lock.at)}, exit ${hhmm(t.exitTime)}`);
+      assert(t.lock.at == null || (t.lock.peak >= R.LOCK.armPts && t.lock.points <= t.lock.floor + 1e-9 && t.lock.price === bar(d, t.lock.at).close), `${d.name} ${hhmm(t.signalTime)}: the lock's exit at the close, at or under the floor`);
+      for (const n of R.LOCK.compare) assert(t.lockAlso[n] == null || (t.lockAlso[n].at >= t.entryTime && t.lockAlso[n].at < t.exitTime), `${d.name}: ${n} in shadow`);
+    }
+    // mode LIVE: every call ends where the shadow lock said exit (at that candle's close, "lock"), the others exactly as they did
+    const lv = run(d, { ...R.LOCK, mode: "LIVE" }, d.bars), want = sh.trades.map(t => t.lock && t.lock.at != null ? exitOf({ ...t, exit: t.lock.price, exitTime: t.lock.at, how: "lock", points: t.lock.points }) : exitOf(t));
+    assert(JSON.stringify(lv.trades.map(exitOf)) === JSON.stringify(want), `${d.name}: LIVE\n${lv.trades.map(exitOf).join("\n")}\n--\n${want.join("\n")}`);
+    // no look-ahead: the day cut short (the candle at the cut forming, as live) gives the same lock to every call it had already closed or was holding
+    for (const cut of [24, 40, 56]) {
+      const part = run(d, R.LOCK, d.bars.slice(0, cut + 1), d.bars[cut].time + 120), done = d.bars[cut].time;
+      for (const t of part.trades.filter(t => t.lock)) {
+        const full = sh.trades.find(f => f.signalTime === t.signalTime && f.side === t.side);
+        const was = full.lock.at != null && full.lock.at < done ? `${full.lock.at} ${full.lock.points}` : "none yet", now = t.lock.at != null ? `${t.lock.at} ${t.lock.points}` : "none yet";
+        assert(was === now, `${d.name} cut at ${hhmm(done)} ${hhmm(t.signalTime)} ${t.side}: ${now} against ${was}`);
+      }
+    }
+    // the day's last candle is the day end's, an existing exit: a day that ends on a candle the lock said exit on gives every call open then its day end
+    const at = sh.trades.find(t => t.lock && t.lock.at != null).lock.at, short = d.bars.filter(b => b.time <= at), end = run(d, R.LOCK, short);
+    const open = end.trades.filter(t => t.how === "day end");
+    assert(open.length && open.every(t => !t.lock || t.lock.at == null) && end.trades.every(t => !t.lock || t.lock.at !== at), `${d.name} ended at ${hhmm(at)}: the lock is not asked on the day's last candle`);
+    d.result = sh;
+  }
+  function bar(d, time) { return d.bars.find(b => b.time === time); }
+  // the mirror: the same locks with CE and PE swapped
+  for (const k of [0, 1]) {
+    const one = (t, side) => `${hhmm(t.signalTime)} ${side} ${t.lock ? `${t.lock.at} ${t.lock.points} ${t.lock.peak}` : "-"} ${JSON.stringify(t.lockAlso || null)}`, sw = { CE: "PE", PE: "CE" };
+    const a = days[k].result.trades.map(t => one(t, sw[t.side])).sort(), b = days[k + 2].result.trades.map(t => one(t, t.side)).sort();
+    assert(JSON.stringify(a) === JSON.stringify(b), `${days[k].name}: the mirrored day's locks differ: ${a.filter(v => !b.includes(v)).join(" ; ")} AGAINST ${b.filter(v => !a.includes(v)).join(" ; ")}`);
+  }
+  const r23 = days[1].result, line = R.lockSummary(r23, "2026-10-23", R.LOCK);
+  assert(line.startsWith("PROFIT LOCK DAY 2026-10-23 · MAX SHADOW · calls ") && line.includes(" · STEADY ") && line.includes(" · RUNNER "), "the daily line: " + line);
+  console.log(`Profit Lock in the engine checks passed (shadow changes nothing; asked from the firing candle, never on an exit candle or the day's last; LIVE ends each call where the shadow said; no look-ahead at three cuts; the mirror)`);
+  console.log(line);
+}

@@ -40,6 +40,7 @@ UNDERLYING = {"NIFTY 50": "NIFTY", "NIFTY BANK": "BANKNIFTY", "SENSEX": "SENSEX"
 OPTION_EXCHANGE = {"NIFTY": "NSE", "BANKNIFTY": "NSE", "SENSEX": "BSE"}  # and on which exchange those options are listed
 SCRIP_MASTER_URL = os.environ.get("DHAN_SCRIP_MASTER_URL", "https://images.dhan.co/api-data/api-scrip-master.csv")     # Dhan's security ids of the indices with options
 IST = timezone(timedelta(hours=5, minutes=30))
+PREMIUM_STOP = float(os.environ.get("PREMIUM_STOP", "0.15"))  # the Loss Cutter's premium stop (24 October): LOG ONLY, a fall of 15% of the premium paid is noted on the record (stop15), nothing is sold
 SELL_SHARE = float(os.environ.get("SELL_SHARE", "0.65"))  # the owner's rule (6 October): sell once the premium has fallen by 35% of what was paid, i.e. is at or below this share of it
 RECORDS_FILE = Path(os.environ.get("CALL_RECORDS_FILE", Path(__file__).resolve().parent / "paper_calls.json"))
 
@@ -1004,7 +1005,8 @@ def register_call(name: str, key: str, side: str, index_at_entry: float, entry_t
     now = datetime.now(IST).isoformat(timespec="seconds")
     record = {"key": key, "index": name, "side": side, "expiry": expiry, "strike": strike, "index_at_entry": float(index_at_entry),
               "premium_paid": premium, "paid_at": now, "premium_now": premium, "now_at": now, "sell_below": round(premium * SELL_SHARE, 2),
-              "sold": None, "ended": None, "security_id": None}  # the id is filled in by fill_ids, so the premium is recorded at once
+              "sold": None, "ended": None, "security_id": None,  # the id is filled in by fill_ids, so the premium is recorded at once
+              "premium_low": premium, "premium_low_at": now, "stop15": None}  # the premium path (the Loss Cutter, 24 October): the lowest premium so far, the 15% stop (log only)
     if sale is not None or (entry_time is not None and time.time() - entry_time >= LATE_SECONDS):
         if not late_prices(name, record, entry_time, sale) and sale is not None:
             raise DhanError("other", f"Dhan gave no one-minute candles of {int(strike)} {side} {expiry} from {_hhmm(entry_time)}")
@@ -1063,6 +1065,20 @@ def late_prices(name: str, rec: dict, entry_time: int | None, sale: dict | None)
     paid = first["open"]
     rec.update(premium_paid=paid, sell_below=round(paid * SELL_SHARE, 2), security_id=sid, late={"paid": stamp(first["time"]), "sold": None})
     until = sale["at"] if sale else time.time()
+    rec.update(premium_low=None, premium_low_at=None, stop15=None)  # the premium path from the minutes too, minute by minute (the Loss Cutter, 24 October)
+    level = paid * (1.0 - PREMIUM_STOP)
+    for b in bars:
+        if not first["time"] <= b["time"] <= until:
+            continue
+        at = stamp(b["time"])
+        sold_here = b["low"] <= rec["sell_below"]  # the Sell mark sells in this minute (below): the price after the sale does not count
+        low = min(b["open"], rec["sell_below"]) if sold_here else b["low"]
+        if rec.get("stop15") is None and b["low"] <= level:
+            rec["stop15"] = {"premium": round(min(b["open"], level), 2), "at": at, "share": PREMIUM_STOP}  # log only
+        if rec.get("premium_low") is None or low < rec["premium_low"]:
+            rec["premium_low"], rec["premium_low_at"] = low, at
+        if sold_here:
+            break
     for b in bars:  # the Sell mark, in the minutes nobody saw
         if first["time"] <= b["time"] <= until and b["low"] <= rec["sell_below"]:
             rec["sold"] = {"premium": min(b["open"], rec["sell_below"]), "at": stamp(b["time"])}
@@ -1109,6 +1125,73 @@ def reprice_late(name: str, key: str, entry_time: int, sale: dict | None) -> dic
     return dict(fresh)
 
 
+def _note_low(rec: dict, premium: float, at: str) -> None:
+    """The premium path the Loss Cutter's documents ask for (24 October): the lowest premium of the call and when it came
+    (premium_low, premium_low_at), and the first moment it was 15% or more below the premium paid (stop15: the premium stop,
+    LOG ONLY: nothing is sold by it; the 35% Sell mark is the rule that sells)."""
+    if rec.get("premium_low") is None or premium < rec["premium_low"]:
+        rec["premium_low"], rec["premium_low_at"] = premium, at
+    if rec.get("stop15") is None and rec.get("premium_paid") and premium <= rec["premium_paid"] * (1.0 - PREMIUM_STOP):
+        rec["stop15"] = {"premium": premium, "at": at, "share": PREMIUM_STOP}
+
+
+LOCK_FRESH = 30  # the Profit Lock's premium from the feed: a quote at most this many seconds after the lock's moment; later, from the option's minutes
+
+
+def note_lock(name: str, key: str, moments: dict) -> dict | None:
+    """The option's premium at the Profit Lock's moments (the owner's "Profit Lock Exit Rule" document, 24 October: "for shadow mode,
+    what the lock would have sold at (premium at that time)"). moments: {setting: the close of the candle the lock said exit on, epoch},
+    for the settings that have one. Each is noted once, in the record's "lock": {setting: {"at", "premium", "from"}}: "live", the first
+    quote of the feed at or after that moment (within LOCK_FRESH seconds); "minutes", the open of the option's one-minute candle that
+    begins then (the server did not see that moment: asleep, or a restart); "sold", the 35% Sell mark sold the call before it (the existing
+    exit came first: no premium); "none", the option had no trade in the five minutes from then. Shadow mode: nothing is sold. Returns the record as the page shows it, or None when nothing changed;
+    raises DhanError when the minutes are needed and Dhan refuses them."""
+    stamp = lambda epoch: datetime.fromtimestamp(epoch, IST).isoformat(timespec="seconds")
+    with _records_lock:
+        rec = _records.get(key)
+        if not rec:
+            return None
+        todo = {n: at for n, at in moments.items() if at is not None and n not in (rec.get("lock") or {})}
+        if not todo:
+            return None
+        got, slow = {}, {}
+        for n, at in todo.items():
+            sold = rec.get("sold")
+            if sold and datetime.fromisoformat(sold["at"]).timestamp() <= at:
+                got[n] = {"at": stamp(at), "premium": None, "from": "sold"}
+                continue
+            seen = datetime.fromisoformat(rec["now_at"]).timestamp() if rec.get("now_at") else None
+            if seen is not None and at <= seen <= at + LOCK_FRESH:
+                got[n] = {"at": rec["now_at"], "premium": rec["premium_now"], "from": "live"}
+            elif time.time() >= at + LOCK_FRESH:  # the feed gave no quote in time (asleep, a restart, a quiet option): that minute is over, from its candle
+                slow[n] = at
+        expiry, strike, side, sid = rec["expiry"], rec["strike"], rec["side"], rec.get("security_id")
+    if slow:
+        sid = sid or option_security_id(name, expiry, strike, side)
+        bars = option_minutes(name, sid) if sid else []
+        for n, at in slow.items():
+            b = next((b for b in bars if at <= b["time"] < at + 300), None)  # a minute with no trade has no candle: the next one with a trade
+            if b is not None:
+                got[n] = {"at": stamp(b["time"]), "premium": b["open"], "from": "minutes"}
+            elif time.time() >= at + 900:  # no trade in the option for five minutes from then, and ten more gone: not known, asked no more
+                got[n] = {"at": stamp(at), "premium": None, "from": "none"}
+    if not got:
+        return None
+    with _records_lock:
+        rec = _records.get(key)
+        if not rec:
+            return None
+        rec["lock"] = {**(rec.get("lock") or {}), **{n: v for n, v in got.items() if n not in (rec.get("lock") or {})}}
+        _save_records()
+    _changed()
+    return dict(rec)
+
+
+def premium_stop_hit(paid: float, now: float, stop: float = PREMIUM_STOP) -> bool:
+    """The documents' premium stop: hit at exactly `stop` below what was paid (loss_cutter_reference.premium_stop_hit)."""
+    return now <= paid * (1.0 - stop)
+
+
 def _settle_sold(rec: dict) -> bool:
     """A record with its Sell mark is a sold call (the owner, 9 October: "if it is sold at 67 then ... it should stop
     there"): it ends at the mark, its premium stays at the price it was sold at, and nothing follows it any more.
@@ -1140,6 +1223,7 @@ def note_premium(key: str, premium: float, when: str | None = None) -> dict | No
             _changed()
             return dict(rec)
         rec["premium_now"], rec["now_at"] = premium, when or datetime.now(IST).isoformat(timespec="seconds")
+        _note_low(rec, premium, rec["now_at"])  # the premium path (the Loss Cutter's 15% stop, log only)
         if rec["sold"] is None and premium <= rec["sell_below"]:
             rec["sold"] = {"premium": premium, "at": rec["now_at"]}
             _settle_sold(rec)

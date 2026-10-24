@@ -778,7 +778,9 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
                                key == "5m" and today_so_far and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                previous["close"] if previous else None,  # the first candle judged from the previous close; ideas 13, 8 and 5 removed (18 October)
-                               minutes, rule.GATE, atr_seed)  # the Call Gate (version 2, 23 October), with the ATR carried in from the days before
+                               minutes, rule.GATE, atr_seed,  # the Call Gate (version 2, 23 October), with the ATR carried in from the days before
+                               loss_cutter=rule.LC if name in rule.LC["indices"] else None,  # the Loss Cutter (24 October), NIFTY 50 only
+                               profit_lock=rule.LOCK if name in rule.LOCK["indices"] else None)  # the Profit Lock (24 October), NIFTY 50 only, shadow mode
     trades, result = trades["trades"], trades
     gate_daily_line(name, levels_mode, result, bars, today)
     rows = []
@@ -816,6 +818,14 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
             rec = dhan.end_call(call_key, t["how"]) or rec
         elif t["how"] == "open" and rec and rec["ended"] and rec["ended"].get("how") not in ("day end", "sold"):
             rec = dhan.reopen_call(call_key) or rec  # still open by the rule: its premium is followed again (8 October)
+        moments = lock_moments(t, seconds)
+        if rec and moments and time.monotonic() >= watch_retry.get(call_key + " lock", 0):
+            try:  # the option's premium at the Profit Lock's moments (shadow mode: what it would have sold at)
+                rec = dhan.note_lock(name, call_key, moments) or rec
+            except Exception as exc:
+                watch_retry[call_key + " lock"] = time.monotonic() + 120  # Dhan refused the option's minutes: again in two minutes
+                log.warning("watch: %s %s lock: %s", name, call_key, exc)
+        lock_log(name, levels_mode, call_key, t, rec, seconds)
         if rec and (rec.get("ended") or {}).get("how") == "sold" and t.get("entry") is not None:
             t = sold_trade(t, rec, bars, seconds)  # sold at the Sell mark: the call ends there, whatever the index rule says (9 October)
         rows.append({"signal_time": t["signalTime"], "level": t["level"], "ratio": t["ratio"], "kind": t["kind"], "side": t["side"],
@@ -828,7 +838,8 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "premium_now": rec["premium_now"] if rec else None, "sell_below": rec["sell_below"] if rec else None,
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None,
                      "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": "",  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
-                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": False})  # the Call Gate's verdict on the signal, the check that decided, the parallel advice (version 2)
+                     "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": False,
+                     **lc_fields(t, rec), **lock_fields(t, rec)})  # the Call Gate's verdict on the signal, the check that decided, the parallel advice (version 2); the Loss Cutter; the Profit Lock
     if rows:
         record.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)  # the day's calls CSV (the daily save, back on 21 October)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
@@ -855,7 +866,71 @@ def paper_row(t: dict) -> dict:
             "entry_time": t.get("entryTime"), "entry": t.get("entry"), "target": t["target"], "exit_time": t.get("exitTime"), "exit": t.get("exit"),
             "points": t.get("points"), "how": t["how"], "candles_say": "", "exit_said_at": None, "candles_why": "", "carry_deep": "", "beyond_level": None, "beyond_reached": "",
             "contract": "", "premium_paid": None, "premium_now": None, "sell_below": None, "sold_at": None, "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")),
-            "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": True}
+            "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": True,
+            **lc_fields(t, None), **lock_fields(t, None)}
+
+
+def lc_fields(t: dict, rec: dict | None) -> dict:
+    """The Loss Cutter's fields of a call for the day's calls CSV (24 October): its verdict, why, the check that decided, its advice,
+    the calls open the same way when the order was placed; and from the option's record the premium path (the lowest premium,
+    when, and the 15% premium stop, log only)."""
+    if not t.get("lc"):  # an index the Loss Cutter does not run on (NIFTY 50 only, the owner, 24 October): the columns stay empty
+        return {"lc": "", "lc_reason": "", "lc_check": "", "lc_advice": "", "lc_open_same": None, "premium_low": None, "premium_low_at": None, "stop15_at": None, "stop15_premium": None}
+    stop = (rec or {}).get("stop15") or {}
+    return {"lc": t.get("lc") or "", "lc_reason": t.get("lcWhy") or "", "lc_check": t.get("lcCheck") or "", "lc_advice": t.get("lcAdvice") or "",
+            "lc_open_same": t.get("lcOpenSame"), "premium_low": (rec or {}).get("premium_low"), "premium_low_at": (rec or {}).get("premium_low_at"),
+            "stop15_at": stop.get("at"), "stop15_premium": stop.get("premium")}
+
+
+def lock_moments(t: dict, seconds: int) -> dict:
+    """The Profit Lock's moments of a call (24 October): {setting: the close of the candle it said exit on}, the main setting's and
+    the compared ones' (shadow), for the option's premium then (dhan.note_lock)."""
+    out = {}
+    if (t.get("lock") or {}).get("at") is not None:
+        out[rule.LOCK["name"]] = t["lock"]["at"] + seconds
+    for n, a in (t.get("lockAlso") or {}).items():
+        if a:
+            out[n] = a["at"] + seconds
+    return out
+
+
+def lock_fields(t: dict, rec: dict | None) -> dict:
+    """The Profit Lock's fields of a call for the day's calls CSV (24 October): the candle it said exit on, the index points then, the best
+    profit and the floor, and from the option's record the premium at that moment (and where it came from); the compared settings the
+    same way (lock_also). Empty where the lock does not run (NIFTY 50 only) or was never asked (the call ended on its firing candle)."""
+    lk, mine = t.get("lock"), (rec or {}).get("lock") or {}
+    if not lk:
+        return {"lock": "", "lock_at": None, "lock_points": None, "lock_peak": None, "lock_floor": None, "lock_premium": None, "lock_from": "", "lock_also": {}}
+    main = mine.get(rule.LOCK["name"]) or {}
+    also = {n: {"at": a["at"], "points": a["points"], "premium": (mine.get(n) or {}).get("premium")} for n, a in (t.get("lockAlso") or {}).items() if a}
+    return {"lock": f"{rule.LOCK['name']} {rule.LOCK['mode']}", "lock_at": lk.get("at"), "lock_points": lk.get("points"), "lock_peak": lk.get("peak"), "lock_floor": lk.get("floor"),
+            "lock_premium": main.get("premium"), "lock_from": main.get("from") or "", "lock_also": also}
+
+
+lock_logged: set = set()  # (call key, "armed" or "exit") whose Profit Lock line is in the log
+
+
+def lock_log(name: str, levels_mode: str, call_key: str, t: dict, rec: dict | None, seconds: int) -> None:
+    """The Profit Lock's log lines of the document's section 7, once per call: ARMED when the best profit first reaches the arming
+    points, then SHADOW (would exit; the real exit follows) or EXIT (mode LIVE) with the premium at that moment once it is known."""
+    lk = t.get("lock")
+    if not lk:
+        return
+    call = f"{rule._ist_hm(t['signalTime'])} {t['side']}"
+    if lk.get("floor") is not None and (call_key, "armed") not in lock_logged:
+        lock_logged.add((call_key, "armed"))
+        log.info("%s %s: PROFIT LOCK ARMED  call=%s peak=%+.1f floor=%+.1f", name, levels_mode, call, lk["peak"], lk["floor"])
+    if lk.get("at") is None or (call_key, "exit") in lock_logged:
+        return
+    noted = ((rec or {}).get("lock") or {}).get(rule.LOCK["name"])
+    if rec and not noted and time.time() < lk["at"] + seconds + 600:
+        return  # the premium at that moment is still to come (dhan.note_lock): the line waits for it, ten minutes at most
+    lock_logged.add((call_key, "exit"))
+    prem = "the Sell mark sold it before" if noted and noted["from"] == "sold" else f"{noted['premium']:.2f} ({noted['from']})" if noted and noted.get("premium") is not None else "not known"
+    word = "EXIT  " if rule.LOCK["mode"] == "LIVE" else "SHADOW"
+    log.info("%s %s: PROFIT LOCK %s call=%s %s candle=%s profit=%+.1f peak=%+.1f floor=%+.1f sell_premium=%s (index close %.2f)%s", name, levels_mode, word, call,
+             "closed" if word.startswith("EXIT") else "would_exit", rule._ist_hm(lk["at"]), lk["points"], lk["peak"], lk["floor"], prem, lk["price"],
+             "" if word.startswith("EXIT") else " (shadow mode: no order sent; the real exit follows)")
 
 
 gate_daily_logged: set = set()  # (index, levels mode, date) whose daily summary line is in the log
@@ -871,6 +946,10 @@ def gate_daily_line(name: str, levels_mode: str, result: dict, bars: list, today
         return  # the day's last candle (15:25) has not closed yet
     gate_daily_logged.add(key)
     log.info("%s %s: %s", name, levels_mode, rule.gate_summary(result, today.isoformat()))
+    if name in rule.LC["indices"]:
+        log.info("%s %s: %s", name, levels_mode, rule.lc_summary(result, today.isoformat()))  # the Loss Cutter's daily line (24 October), the documents' scoreboard for the day
+    if name in rule.LOCK["indices"]:
+        log.info("%s %s: %s", name, levels_mode, rule.lock_summary(result, today.isoformat(), rule.LOCK))  # the Profit Lock's daily line (24 October), the shadow report's day
 
 
 def sold_trade(t: dict, rec: dict, bars: list, seconds: int) -> dict:

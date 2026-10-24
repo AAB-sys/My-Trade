@@ -157,6 +157,9 @@
   #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
   #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
   #paper td.why { text-align: left; color: var(--ink-2); }  /* "Reason" (19 October): what stood in brackets under the status */
+  #paper.no-lc th:nth-child(12), #paper.no-lc td:nth-child(12), #paper.no-lc th:nth-child(13), #paper.no-lc td:nth-child(13) { display: none; }  /* the Loss Cutter's columns: NIFTY 50 only (24 October) */
+  #paper.no-pl th:nth-child(14), #paper.no-pl td:nth-child(14) { display: none; }  /* the Profit Lock's column: NIFTY 50 only (24 October) */
+  #paper td.lock b { font-weight: 600; } #paper td.lock b.said { color: var(--watch); } #paper td.lock small { display: block; color: var(--muted); }
   #paper td.gate { font-weight: 600; } #paper td.gate.take, #paper tr.ended td.gate.take { color: var(--up); } #paper td.gate.skip, #paper tr.ended td.gate.skip { color: var(--down); }  /* the Call Gate's verdict (22 October night) */
   #paper tr.gated td, #paper tr.paper td { color: var(--muted); }  /* a signal cancelled before firing; a call followed on paper (the Call Gate live) */
   #paper td.pl small { display: block; color: var(--muted); font-weight: 400; }  /* "Total Profit/Loss" (19 October): one lot, or per unit */
@@ -382,7 +385,7 @@
     <div id="feed-note" hidden></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th><th>Profit Lock</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -875,8 +878,11 @@
                                given: longCandles() || state.view === "1w" || !["today", "prev"].includes(state.period) ? null : givenCalls(),
                                newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                prevClose: judgedToday() ? null : prevCloseOf(),  // the first candle judged from the previous close (18 October; not on today's range, which has no lines before it); ideas 13, 8 and 5 left the rule that day
-                               minutes: longCandles() ? null : sessionMinutes() });  // the session's one-minute candles: the owner's early exit of a held break (19 October)
+                               minutes: longCandles() ? null : sessionMinutes(),  // the session's one-minute candles: the owner's early exit of a held break (19 October)
+                               lossCutter: lcHere() ? Rules.LC : null,  // the Loss Cutter on NIFTY 50 only (the owner, 24 October: "built it for nifty 50 only")
+                               profitLock: plHere() && !longCandles() ? Rules.LOCK : null });  // the Profit Lock (24 October), NIFTY 50 only as the Loss Cutter, shadow mode
   }
+  const lcHere = () => Rules.LC.indices.includes(name), plHere = () => Rules.LOCK.indices.includes(name);
   // The Call Gate's ATR seed: Wilder's ATR over the candles of the sessions loaded before the one shown (the page loads the last five
   // days), as the server's watcher carries it in from the days before; null when fewer than 14 candles came before
   const gateSeed = () => { const key = currentSession(); return key && key !== "all" ? Rules.atrSeedOf(state.candles.filter(b => sessionOf(b) < key), Rules.GATE.atrPeriod) : null; };
@@ -935,6 +941,8 @@
     lastPaper = { trades, levels };
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
     table.hidden = !trades.length;
+    table.classList.toggle("no-lc", !lcHere());  // the Loss Cutter's two columns only where it runs (NIFTY 50)
+    table.classList.toggle("no-pl", !plHere() || longCandles());  // and the Profit Lock's
     const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
     table.classList.toggle("no-options", !withOptions);
     if (!withOptions && STRIKE_STEP[name] && state.dhan && state.dhan.configured)  // SENSEX, 8 October: say why there is no premium column
@@ -982,7 +990,11 @@
       signal_time: t.signalTime, level: t.level, ratio: t.ratio, kind: t.kind, side: t.side, entry_time: t.entryTime ?? null, entry: t.entry ?? null,
       target: t.target, exit_time: t.exitTime ?? null, exit: t.exit ?? null, points: t.points ?? null, how: t.how,
       exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
-      gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", gate_advice: t.gateAdvice || "", paper: !!t.paper,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
+      gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", gate_advice: t.gateAdvice || "", paper: !!t.paper,
+      lc: t.lc || "", lc_reason: t.lcWhy || "", lc_check: t.lcCheck || "", lc_advice: t.lcAdvice || "", lc_open_same: t.lcOpenSame ?? null,  // the Loss Cutter (24 October)
+      premium_low: t.lc && r ? r.premium_low ?? null : null, premium_low_at: t.lc && r ? r.premium_low_at ?? null : null,  // the premium path, where the Loss Cutter runs
+      stop15_at: t.lc && r && r.stop15 ? r.stop15.at : null, stop15_premium: t.lc && r && r.stop15 ? r.stop15.premium : null,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
+      ...lockFields(t, r),  // the Profit Lock (24 October)
       candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });
@@ -1004,7 +1016,7 @@
     return `<td class="when">${callTime(t.signalTime)}${t.entryTime != null ? `<small>fired ${firedWhen(t)}</small>` : ""}</td>`
       + `<td class="call">Buy ${t.side}${t.paper ? " · paper, no order" : strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t);
+      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t) + lcCells(t, r) + lockCell(t, r);
   }
   // The Call Gate (the owner's document, 22 October night; Rules.GATE): "Gate" TAKE or SKIP, and why. In mode SHADOW a SKIP changes
   // nothing ("shadow: order placed anyway"); in mode LIVE a SKIP signal gives no order and keeps its row (gatedCells)
@@ -1012,9 +1024,55 @@
   // paper, t.paper), every other SKIP "shadow: order placed anyway"; a signal cancelled before firing keeps a quiet row with its verdict
   const gateCells = (t) => !t.gate ? `<td class="gate"></td><td class="why"></td>`
     : `<td class="gate ${t.gate === "SKIP" ? "skip" : "take"}">${t.gate}</td><td class="why">${t.gateWhy || ""}${t.gate === "SKIP" ? (t.paper ? " · live: no order" : " · shadow: order placed anyway") : ""}${t.gateAdvice ? ` · advice: ${t.gateAdvice}` : ""}</td>`;  // the advice on a parallel call (revised version 2): a note, never a block
+  // The Loss Cutter (the owner's Loss_Cutter.docx and Sideways_Zone_v3.docx, 24 October; Rules.LC): its verdict beside the Call Gate's,
+  // why, the advice-only checks (worn line, strict zone, the stack cap in log mode), the calls open the same way when the order was
+  // placed, and from the option's record the premium path: the lowest premium so far and the 15% premium stop (log only, it sells nothing)
+  const lcLive = (check) => Rules.LC.mode === "LIVE" && Rules.LC.liveChecks.includes(check);
+  function lcCells(t, r) {
+    if (!t.lc) return `<td class="gate"></td><td class="why"></td>`;
+    const notes = [];
+    if (t.lc === "SKIP") notes.push(t.paper && lcLive(t.lcCheck) ? "live: no order" : "shadow: order placed anyway");
+    if (t.lcAdvice) notes.push(`advice: ${t.lcAdvice}`);
+    if (t.lcOpenSame != null) notes.push(`${t.lcOpenSame} open the same way when placed`);
+    if (r && r.premium_low != null && r.premium_paid) notes.push(`lowest premium ${fmt.format(r.premium_low)} (${Math.round((r.premium_low / r.premium_paid - 1) * 100)}%)${r.premium_low_at ? " at " + r.premium_low_at.slice(11, 16) : ""}`);
+    if (r && r.stop15) notes.push(`premium stop 15% (log only): would have sold at ${r.stop15.at.slice(11, 16)} at ${fmt.format(r.stop15.premium)}`);
+    return `<td class="gate ${t.lc === "SKIP" ? "skip" : "take"}">${t.lc}</td><td class="why">${t.lcWhy || ""}${notes.length ? " · " + notes.join(" · ") : ""}</td>`;
+  }
+  // The Profit Lock (the owner's "Profit Lock Exit Rule" document, 24 October; Rules.LOCK, MAX in shadow mode): an extra exit, asked at
+  // every candle close after the call's own exits. The cell says where it stands: not armed yet (best profit under +20 index points),
+  // armed with its floor, or the candle it would have closed the call on, at what index points (best and floor then) and, from the
+  // server's record of the option, the premium at that moment in rupees for one lot beside the call's own result; the 35% Sell mark may
+  // have sold the call before it. Under it, the compared settings (STEADY, RUNNER), in shadow, for the shadow days' report
+  const pts1 = (x) => `${x > 0 ? "+" : x < 0 ? "−" : ""}${Math.abs(x).toFixed(1)}`, rupee = (x) => `₹ ${x > 0 ? "+" : x < 0 ? "−" : ""}${fmt.format(Math.abs(x))}`;
+  function lockCell(t, r) {
+    const lk = t.lock;
+    if (!lk) return `<td class="why lock">${plHere() && !longCandles() && t.entry != null && t.exit != null && t.exitTime === t.entryTime ? "not asked: the call ended on the candle it fired on" : ""}</td>`;
+    const live = Rules.LOCK.mode === "LIVE", parts = [], mine = r && r.lock ? r.lock : {}, lot = lotOf();
+    const rupeesAt = (prem) => r && r.premium_paid != null && prem != null ? Math.round((lot ? (prem - r.premium_paid) * lot : prem - r.premium_paid) * 100) / 100 : null;
+    if (lk.at != null) {
+      const said = mine[Rules.LOCK.name], rs = said ? rupeesAt(said.premium) : null;
+      parts.push(`<b class="said">${live ? "Closed by the lock" : "Would exit"}</b> at the ${callTime(lk.at)} candle's close, ${fmt.format(lk.price)}: ${pts1(lk.points)} points (best ${pts1(lk.peak)}, floor ${pts1(lk.floor)})`);
+      if (said && said.from === "sold") parts.push("the 35% Sell mark sold the call before it");
+      else if (said && said.from === "none") parts.push("premium then: the option had no trade");
+      else if (rs != null) parts.push(`premium then ${fmt.format(said.premium)}: ${rupee(rs)}${lot ? "" : " per unit"}`);
+      else if (r) parts.push("premium then: not noted yet");
+      if (!live) parts.push(t.exit != null ? `shadow: the call's own exit followed, ${pts1(t.points)} points` : "shadow: no order, the call goes on");
+    } else if (lk.floor != null) parts.push(`<b>Armed</b>: best ${pts1(lk.peak)} points, floor ${pts1(lk.floor)}${t.exit != null ? " · the call's own exit came first" : ""}`);
+    else parts.push(`Not armed: best ${pts1(lk.peak)} points (arms at ${pts1(Rules.LOCK.armPts)})`);
+    const also = Object.entries(t.lockAlso || {}).map(([n, a]) => a ? `${n} ${callTime(a.at)} ${pts1(a.points)}${mine[n] && rupeesAt(mine[n].premium) != null ? ` (${rupee(rupeesAt(mine[n].premium))})` : ""}` : `${n} no exit`);
+    return `<td class="why lock">${parts.join(" · ")}${also.length ? `<small>${also.join(" · ")}</small>` : ""}</td>`;
+  }
+  // The Profit Lock's fields for the day's calls CSV, as the server's watcher writes them (main.py lock_fields)
+  function lockFields(t, r) {
+    const lk = t.lock, mine = r && r.lock ? r.lock : {};
+    if (!lk) return { lock: "", lock_at: null, lock_points: null, lock_peak: null, lock_floor: null, lock_premium: null, lock_from: "", lock_also: {} };
+    const main = mine[Rules.LOCK.name] || {}, also = {};
+    for (const [n, a] of Object.entries(t.lockAlso || {})) if (a) also[n] = { at: a.at, points: a.points, premium: mine[n] ? mine[n].premium ?? null : null };
+    return { lock: `${Rules.LOCK.name} ${Rules.LOCK.mode}`, lock_at: lk.at, lock_points: lk.points, lock_peak: lk.peak, lock_floor: lk.floor, lock_premium: main.premium ?? null, lock_from: main.from || "", lock_also: also };
+  }
   const cancelledCells = (t) => `<td class="when">${callTime(t.signalTime)}</td><td class="call">Buy ${t.side}</td><td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
     + `<td class="entry">never fired</td><td>—</td><td class="opt">—</td><td class="opt">—</td><td class="cand">Cancelled</td><td class="why">${callTime(t.cancelTime)} candle closed back across ${pctOf(t)}</td>`
-    + gateCells({ ...t, paper: false }).replace(" · shadow: order placed anyway", "");
+    + gateCells({ ...t, paper: false }).replace(" · shadow: order placed anyway", "") + lcCells({ ...t, paper: false }, null).replace(" · shadow: order placed anyway", "") + `<td class="why lock"></td>`;
   // The owner's words (12 October): "On the line" for a held signal; a crossed one says which way, "Crossed above" (Buy CE) or
   // "Crossed below" (Buy PE) the Fibonacci level
   const signalWord = (t) => t.kind === "held" ? "On the line" : t.side === "CE" ? "Crossed above" : "Crossed below";
@@ -1073,7 +1131,8 @@
       : t.how === "back" ? `${closed} ${way} ${line}` : t.how === "retouch" ? `price came back to ${fmt.format(t.c1Open)}, ${way} ${pctOf(t)}`
       : t.how === "trail" ? `${closed} ${way} ${stopName(t)}`
       : t.how === "early" ? `3 minutes ${way} ${fmt.format(t.earlyFrom)}, the close before, and crossed ${way} ${lineLabel(t.earlyLine)}`  // the owner's early exit (19 October)
-      : t.how === "candle" ? `${closed} back across ${line}` : t.how;
+      : t.how === "candle" ? `${closed} back across ${line}`
+      : t.how === "lock" && t.lock ? `profit lock: ${closed} the call gave back to ${pts1(t.lock.points)} points from a best of ${pts1(t.lock.peak)}` : t.how;  // the Profit Lock live (24 October)
   }
   // The target's line: a target follows the lines ("today so far" levels move with each new high or low), so it is looked up
   // on the lines as they stood at the candle that sold the call; null when no line sits at that price
