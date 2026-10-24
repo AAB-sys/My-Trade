@@ -680,7 +680,9 @@ The rule, in the order it is applied:
 9. **The Loss Cutter** (the owner's `Loss_Cutter.docx` and `Sideways_Zone_v3.docx`
    with their reference code, 24 October: "develope loss cutter and sideways zone
    v3 rule and implement it on paper calls page very carefully"; `Rules.LC`,
-   `rule.LC`). Entry checks built on the Call Gate version 2 and judged **beside**
+   `rule.LC`). **NIFTY 50 only** (the owner, 24 October: "built it for nifty 50
+   only"; `LC.indices`): NIFTY BANK and SENSEX keep the Call Gate alone, without the
+   two columns. Entry checks built on the Call Gate version 2 and judged **beside**
    it on every signal: the table keeps the Call Gate's two columns and adds
    **Loss Cutter** (TAKE or SKIP) and **Loss Cutter reason**. It changes nothing in
    the lines, the signals, the firing, the entry or the exits. **Shadow mode**, as
@@ -747,8 +749,7 @@ The rule, in the order it is applied:
    +1,378.35 (after 8 points a call, the documents' cost: −764.20, −493.20,
    +266.35); NIFTY BANK every call 288 calls +2,405.70, the Call Gate 228 calls
    +2,410.50, the Loss Cutter 142 calls +215.00: there the wider zone skipped 79
-   calls the Call Gate's zone did not, worth +2,334.15. So on NIFTY BANK the
-   version 3 zone is not to go live without the shadow log saying otherwise.
+   calls the Call Gate's zone did not, worth +2,334.15. Hence NIFTY 50 only.
 
 As in layer 2, a candle is judged against the previous closed candle, and the
 first candle of a day against the last candle of the day before. Points are

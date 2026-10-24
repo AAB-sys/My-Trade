@@ -425,7 +425,8 @@
   // phase 2 goes live one check at a time, the chase window and the stack cap first. LC_V2 gives the Call Gate version 2's verdict
   // for every signal (the documents' test ZV-14); LC_STRICT switches the two advice-only checks on as blocks
   const LC = { ...GATE, mode: "SHADOW", liveChecks: ["chasewindow", "stack"], zoneHeightAtr: 2.5, zoneMode: "edges", chaseWindow: true, chaseWindowAtr: 2.5,
-               stackCap: 3, stackMode: "skip", wornMode: "log", wornFailures: 2, wornMinutes: 120, advice: true, premiumStop: 0.15 };
+               stackCap: 3, stackMode: "skip", wornMode: "log", wornFailures: 2, wornMinutes: 120, advice: true, premiumStop: 0.15,
+               indices: ["NIFTY 50"] };  // the indices it runs on (the owner, 24 October: "built it for nifty 50 only"; the documents are about NIFTY 50)
   const LC_V2 = { ...LC, zoneHeightAtr: 1.5, chaseWindow: false, stackCap: null, wornMode: "off", advice: false };
   const LC_STRICT = { ...LC, zoneMode: "breakout", wornMode: "skip" };
   const LC_ZONE_ONLY = { ...LC, chaseWindow: false, stackCap: null, wornMode: "off", advice: false };

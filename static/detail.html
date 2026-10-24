@@ -157,6 +157,7 @@
   #paper td.cand.carry, #paper tr.ended td.cand.carry { color: var(--up); }
   #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
   #paper td.why { text-align: left; color: var(--ink-2); }  /* "Reason" (19 October): what stood in brackets under the status */
+  #paper.no-lc th:nth-child(12), #paper.no-lc td:nth-child(12), #paper.no-lc th:nth-child(13), #paper.no-lc td:nth-child(13) { display: none; }  /* the Loss Cutter's columns: NIFTY 50 only (24 October) */
   #paper td.gate { font-weight: 600; } #paper td.gate.take, #paper tr.ended td.gate.take { color: var(--up); } #paper td.gate.skip, #paper tr.ended td.gate.skip { color: var(--down); }  /* the Call Gate's verdict (22 October night) */
   #paper tr.gated td, #paper tr.paper td { color: var(--muted); }  /* a signal cancelled before firing; a call followed on paper (the Call Gate live) */
   #paper td.pl small { display: block; color: var(--muted); font-weight: 400; }  /* "Total Profit/Loss" (19 October): one lot, or per unit */
@@ -875,8 +876,10 @@
                                given: longCandles() || state.view === "1w" || !["today", "prev"].includes(state.period) ? null : givenCalls(),
                                newHighLow: state.interval === "5m" && judgedToday() && !!Rules.NEW_HIGH_LOW[name],  // idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                prevClose: judgedToday() ? null : prevCloseOf(),  // the first candle judged from the previous close (18 October; not on today's range, which has no lines before it); ideas 13, 8 and 5 left the rule that day
-                               minutes: longCandles() ? null : sessionMinutes() });  // the session's one-minute candles: the owner's early exit of a held break (19 October)
+                               minutes: longCandles() ? null : sessionMinutes(),  // the session's one-minute candles: the owner's early exit of a held break (19 October)
+                               lossCutter: lcHere() ? Rules.LC : null });  // the Loss Cutter on NIFTY 50 only (the owner, 24 October: "built it for nifty 50 only")
   }
+  const lcHere = () => Rules.LC.indices.includes(name);
   // The Call Gate's ATR seed: Wilder's ATR over the candles of the sessions loaded before the one shown (the page loads the last five
   // days), as the server's watcher carries it in from the days before; null when fewer than 14 candles came before
   const gateSeed = () => { const key = currentSession(); return key && key !== "all" ? Rules.atrSeedOf(state.candles.filter(b => sessionOf(b) < key), Rules.GATE.atrPeriod) : null; };
@@ -935,6 +938,7 @@
     lastPaper = { trades, levels };
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
     table.hidden = !trades.length;
+    table.classList.toggle("no-lc", !lcHere());  // the Loss Cutter's two columns only where it runs (NIFTY 50)
     const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
     table.classList.toggle("no-options", !withOptions);
     if (!withOptions && STRIKE_STEP[name] && state.dhan && state.dhan.configured)  // SENSEX, 8 October: say why there is no premium column
@@ -984,7 +988,8 @@
       exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
       gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", gate_advice: t.gateAdvice || "", paper: !!t.paper,
       lc: t.lc || "", lc_reason: t.lcWhy || "", lc_check: t.lcCheck || "", lc_advice: t.lcAdvice || "", lc_open_same: t.lcOpenSame ?? null,  // the Loss Cutter (24 October)
-      premium_low: r ? r.premium_low ?? null : null, premium_low_at: r ? r.premium_low_at ?? null : null, stop15_at: r && r.stop15 ? r.stop15.at : null, stop15_premium: r && r.stop15 ? r.stop15.premium : null,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
+      premium_low: t.lc && r ? r.premium_low ?? null : null, premium_low_at: t.lc && r ? r.premium_low_at ?? null : null,  // the premium path, where the Loss Cutter runs
+      stop15_at: t.lc && r && r.stop15 ? r.stop15.at : null, stop15_premium: t.lc && r && r.stop15 ? r.stop15.premium : null,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
       candles_say: cr ? cr.say : "", exit_said_at: cr ? cr.exitAt : null, candles_why: cr ? cr.why : "",
       contract: r ? `${Math.round(r.strike)} ${r.side} ${r.expiry}` : "", premium_paid: r ? r.premium_paid : null, premium_now: r ? r.premium_now : null,
       sell_below: r ? r.sell_below : null, sold_at: r && r.sold ? r.sold.premium : null }; });

@@ -778,7 +778,8 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
     trades = rule.paper_trades(bars, levels_at, now, seconds, False, WATCH_SIGNAL, None, targets_at, True, rule.TRAIL, given,  # the owner's exit rule for breaks (8 October night), with Rule 2 (9 October)
                                key == "5m" and today_so_far and rule.NEW_HIGH_LOW.get(name, False),  # idea 24, a call past the day's high or low: NIFTY 50, today so far (13 October)
                                previous["close"] if previous else None,  # the first candle judged from the previous close; ideas 13, 8 and 5 removed (18 October)
-                               minutes, rule.GATE, atr_seed)  # the Call Gate (version 2, 23 October), with the ATR carried in from the days before
+                               minutes, rule.GATE, atr_seed,  # the Call Gate (version 2, 23 October), with the ATR carried in from the days before
+                               loss_cutter=rule.LC if name in rule.LC["indices"] else None)  # the Loss Cutter (24 October), NIFTY 50 only
     trades, result = trades["trades"], trades
     gate_daily_line(name, levels_mode, result, bars, today)
     rows = []
@@ -864,6 +865,8 @@ def lc_fields(t: dict, rec: dict | None) -> dict:
     """The Loss Cutter's fields of a call for the day's calls CSV (24 October): its verdict, why, the check that decided, its advice,
     the calls open the same way when the order was placed; and from the option's record the premium path (the lowest premium,
     when, and the 15% premium stop, log only)."""
+    if not t.get("lc"):  # an index the Loss Cutter does not run on (NIFTY 50 only, the owner, 24 October): the columns stay empty
+        return {"lc": "", "lc_reason": "", "lc_check": "", "lc_advice": "", "lc_open_same": None, "premium_low": None, "premium_low_at": None, "stop15_at": None, "stop15_premium": None}
     stop = (rec or {}).get("stop15") or {}
     return {"lc": t.get("lc") or "", "lc_reason": t.get("lcWhy") or "", "lc_check": t.get("lcCheck") or "", "lc_advice": t.get("lcAdvice") or "",
             "lc_open_same": t.get("lcOpenSame"), "premium_low": (rec or {}).get("premium_low"), "premium_low_at": (rec or {}).get("premium_low_at"),
@@ -883,7 +886,8 @@ def gate_daily_line(name: str, levels_mode: str, result: dict, bars: list, today
         return  # the day's last candle (15:25) has not closed yet
     gate_daily_logged.add(key)
     log.info("%s %s: %s", name, levels_mode, rule.gate_summary(result, today.isoformat()))
-    log.info("%s %s: %s", name, levels_mode, rule.lc_summary(result, today.isoformat()))  # the Loss Cutter's daily line (24 October), the documents' scoreboard for the day
+    if name in rule.LC["indices"]:
+        log.info("%s %s: %s", name, levels_mode, rule.lc_summary(result, today.isoformat()))  # the Loss Cutter's daily line (24 October), the documents' scoreboard for the day
 
 
 def sold_trade(t: dict, rec: dict, bars: list, seconds: int) -> dict:

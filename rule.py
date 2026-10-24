@@ -506,7 +506,8 @@ def gate_summary(res: dict, date: str) -> str:
 # advice) or only a breakout ("breakout"); 4. the worn line, advice only by default; 5. the stack cap, when the call fires. Mode SHADOW
 # first; LIVE holds the order (paper) for a SKIP from a check in liveChecks. LC_V2 gives the Call Gate version 2's verdicts
 LC = {**GATE, "mode": "SHADOW", "liveChecks": ["chasewindow", "stack"], "zoneHeightAtr": 2.5, "zoneMode": "edges", "chaseWindow": True, "chaseWindowAtr": 2.5,
-      "stackCap": 3, "stackMode": "skip", "wornMode": "log", "wornFailures": 2, "wornMinutes": 120, "advice": True, "premiumStop": 0.15}
+      "stackCap": 3, "stackMode": "skip", "wornMode": "log", "wornFailures": 2, "wornMinutes": 120, "advice": True, "premiumStop": 0.15,
+      "indices": ["NIFTY 50"]}  # the indices it runs on (the owner, 24 October: "built it for nifty 50 only")
 LC_V2 = {**LC, "zoneHeightAtr": 1.5, "chaseWindow": False, "stackCap": None, "wornMode": "off", "advice": False}
 LC_STRICT = {**LC, "zoneMode": "breakout", "wornMode": "skip"}
 LC_ZONE_ONLY = {**LC, "chaseWindow": False, "stackCap": None, "wornMode": "off", "advice": False}
