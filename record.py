@@ -205,9 +205,11 @@ def day_figures(bars: list) -> dict:
 
 def build_day(day: date, complete: bool) -> dict | None:
     """The day's record from Dhan's candles (the last days are asked for in one request each, and cached briefly)
-    None when Dhan has no candle for that day (a holiday, or not traded yet)."""
+    None when Dhan has no candle for that day (a holiday, or not traded yet). Every index on Dhan: NIFTY 50, NIFTY BANK
+    and, since 24 October, SENSEX (the owner: "save SENSEX candles in the daily save too"; until then the loop ran over the
+    two indices the options began with, and 23 October's SENSEX table could not be replayed from the save)."""
     indices, missing, from_ticks = {}, {}, []
-    for name in dhan.INDEX_IDS:
+    for name in dhan.QUOTE_IDS:
         try:
             all_minutes = dhan.intraday(name, 1)
         except dhan.DhanError as exc:  # one index failing does not lose the other's day; the page says what is missing
