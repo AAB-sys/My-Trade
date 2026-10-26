@@ -38,8 +38,10 @@
 
   // ---- The double top (Buy PE) and double bottom (Buy CE) rule, with Rule 1 (break-and-hold) after the
   // entry: the owner's "Trading Rules Specification" of 21 October (document 02, double top with candle stick pattern). All on
-  // closed 5-minute index candles. The settings are the document's section 9.9 and 6.6 defaults
-  const DT = { swingN: 3, minGap: 5, maxGap: 40, maxWait: 20, eqAtr: 0.5, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
+  // closed 5-minute index candles. The settings are the document's section 9.9 and 6.6 defaults, but for the swing size: 2 candles on each
+  // side of a top or bottom (the owner, 26 October: "prepare the PR with swing size 2"; the documents: 3). It sets the double and triple
+  // tops and bottoms only: the wedges, the rectangle and the triangles keep their own 3 (WEDGE, RECT, TRI)
+  const DT = { swingN: 2, minGap: 5, maxGap: 40, maxWait: 20, eqAtr: 0.5, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
                buffer: "ATR", atrMult: 0.25, fixedPoints: 0, entryFrom: "09:30", entryTo: "14:45", eod: "15:30",
                maxLossesInRow: 2, maxTradesPerDay: null, maxLossPerDay: null, skipExpiryDay: true,
                trailAtr: 0.5 };  // the trailing stop after the entry (22 October, the owner: "build the 1 ATR trail", then "tighten it to half an ATR"): half an ATR behind the best close
