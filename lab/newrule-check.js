@@ -219,7 +219,15 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   const live = N.runDay({ bars: d26.slice(0, 60), prevBars: d23, atrSeed: N.atrSeries(d23).slice(-1)[0], rules: ["double bottom"], closedCount: 59, dayEnd: false });
   const open1315 = live.dbLog.rows.find(r => r.version === "V2" && N.istHM(r.signalTime) === "13:15");
   assert(live.trades.length === 1 && live.trades[0].how !== "day end" && open1315 && open1315.order === "taken" && open1315.how === live.trades[0].how, "a day still going: " + JSON.stringify([live.trades[0].how, open1315 && open1315.how]));
-  console.log("New Rule Chart: the double bottom's shadow log (26 October: the 09:50 W version 3's alone, 13:15 both and taken, the late one both)");
+  // NIFTY 50 only (the owner, 27 October: "for nifty 50 only"): NIFTY BANK and SENSEX keep the page's old rule (DB_OLD: the first version,
+  // the swing size 2) and get no log; NIFTY 50 runs version 2 and the log, as runDay without an index
+  assert(N.DB.indices.join() === "NIFTY 50" && N.DB.other === N.DB_OLD && N.DB_OLD.swingN === 2 && N.DB_OLD.ceTrigger === "close" && N.DB_OLD.eqAtr === 0.5, "the indices and the old rule");
+  const opts = { bars: d26, prevBars: d23, atrSeed: N.atrSeries(d23).slice(-1)[0], rules: ["double bottom"] };
+  const n50 = N.runDay({ ...opts, index: "NIFTY 50" }), bank = N.runDay({ ...opts, index: "NIFTY BANK" }), sensex = N.runDay({ ...opts, index: "SENSEX" });
+  const old = N.runDay({ ...opts, cfg: { ...N.DT, db: N.DB_OLD }, dbShadow: false });
+  assert(JSON.stringify(n50) === JSON.stringify(run26), "NIFTY 50 = the documents' run");
+  assert(bank.dbLog === null && sensex.dbLog === null && JSON.stringify(bank.trades) === JSON.stringify(old.trades) && JSON.stringify(sensex.trades) === JSON.stringify(old.trades), "NIFTY BANK and SENSEX: the old rule, no log");
+  console.log("New Rule Chart: the double bottom's shadow log (26 October: the 09:50 W version 3's alone, 13:15 both and taken, the late one both); NIFTY 50 only");
 }
 // ---- The triple top (the owner's "Triple Top Chart Pattern" document): Appendix A (the breakdown, Buy PE) and B (the failure, Buy CE)
 {

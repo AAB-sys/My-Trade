@@ -96,14 +96,19 @@
   //   DB_V2  version 2 (24 October, the Buy PE trigger 26 October): 3 candles on each side, 5 to 40 apart; the bottoms within 0.60 ATR,
   //          the triggers on the high and the low
   //   DB_V1  the first version (21 October): within 0.5 ATR, the triggers on the close by the buffer (the lab's document cases)
-  // The owner, 27 October ("V2 table, V3 shadow"): the Calls with Signals table runs version 2 (DB.table) and version 3 runs in shadow
-  // (DB.shadow): its signals are logged beside version 2's (runDay's dbLog), each followed on paper, no call. The switch to version 3
-  // is one line, table: DB_V3; going back, table: DB_V2
+  //   DB_OLD the page's rule before 27 October: the first version with the swing size 2 of 26 October
+  // The owner, 27 October ("V2 table, V3 shadow"; "for nifty 50 only"): on NIFTY 50 (DB.indices) the Calls with Signals table runs
+  // version 2 (DB.table) and version 3 runs in shadow (DB.shadow): its signals are logged beside version 2's (runDay's dbLog), each
+  // followed on paper, no call. NIFTY BANK and SENSEX keep the page's rule as it was (DB.other), with no log: on the saved days
+  // version 2 did better than it on NIFTY 50 and worse on NIFTY BANK. The switch to version 3 is one line, table: DB_V3; going back,
+  // table: DB_V2; another index in, its name in indices
   const DB_V3 = { name: "V3", swingN: 2, minGap: 3, maxGap: 40, maxWait: 20, eqAtr: 0.60, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
                   buffer: "ATR", atrMult: 0.25, fixedPoints: 0, ceTrigger: "high", highBufferAtr: 0.10, peTrigger: "low", lowBufferAtr: 0.10 };
   const DB_V2 = { ...DB_V3, name: "V2", swingN: 3, minGap: 5 };
   const DB_V1 = { ...DB_V2, name: "V1", eqAtr: 0.5, ceTrigger: "close", peTrigger: "close" };
-  const DB = { table: DB_V2, shadow: DB_V3 };
+  const DB_OLD = { ...DB_V1, name: "old", swingN: 2 };
+  const DB = { table: DB_V2, shadow: DB_V3, indices: ["NIFTY 50"], other: DB_OLD };
+  const dbOn = (index) => index == null || DB.indices.includes(index);  // no index given (the lab's cases): the documents' own run
   // How far candle j went past the neckline (up) or the support (down), as the trigger measures it, and the trigger's size
   const dbReach = (b, neck, cfg) => (cfg.ceTrigger === "high" ? b.high : b.close) - neck;
   const dbDrop = (b, lower, cfg) => lower - (cfg.peTrigger === "low" ? b.low : b.close);
@@ -610,7 +615,8 @@
                   "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg.db || DB.table), detectDoubleBottom(bars, k, "PE", atr, cfg.db || DB.table)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
                   "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)] };
-  function runDay({ bars, cfg = DT, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
+  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
+    if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
@@ -647,7 +653,7 @@
       open = newTrade(sig, bars);
       trades.push(open);
     }
-    return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db || DB.table, shadow: DB.shadow }) };
+    return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, DB_V1, DB_V2, DB_V3, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
