@@ -298,12 +298,18 @@
     return atr;
   }
   const efficiency = (closes) => { let moves = 0; for (let j = 1; j < closes.length; j++) moves += Math.abs(closes[j] - closes[j - 1]); return moves ? Math.abs(closes[closes.length - 1] - closes[0]) / moves : 0; };
+  // zoneMemory (the Loss Cutter since 26 October; the Call Gate has none): a zone that broke at most zoneMemory candles ago comes back,
+  // the same box, on the first candle that closes inside it again: the break failed (26 October, 10:35: one candle closed below the box,
+  // the next ones back inside it, and the calls of 10:40 were judged as if there were no zone)
   function zoneStep(zone, closed, i, atr, dayFirst, g) {  // one closed candle, before any signal on it is judged (the filter's ZoneTracker.update)
     const bar = closed[i];
     zone.broke = null;
     if (zone.box && atr != null) {
       const buf = g.bufferAtr * atr;
-      if (bar.close > zone.box.hi + buf || bar.close < zone.box.lo - buf) { zone.broke = bar.close > zone.box.hi ? "up" : "down"; zone.box = null; if (zone.ended && i > 0) zone.ended.push(closed[i - 1].time); }
+      if (bar.close > zone.box.hi + buf || bar.close < zone.box.lo - buf) { zone.broke = bar.close > zone.box.hi ? "up" : "down"; zone.last = { box: zone.box, at: i }; zone.box = null; if (zone.ended && i > 0) zone.ended.push(closed[i - 1].time); }
+    }
+    if (!zone.box && !zone.broke && g.zoneMemory && zone.last && i - zone.last.at <= g.zoneMemory && bar.close >= zone.last.box.lo && bar.close <= zone.last.box.hi) {
+      zone.box = zone.last.box; zone.last = null; zone.found.push(bar.time); return;  // the failed break: the zone is back
     }
     if (zone.box || zone.broke || atr == null || i - dayFirst < g.zoneN) return;
     const s = i - g.zoneN + 1;
@@ -424,12 +430,18 @@
   // check named in liveChecks holds the order: the call is followed on paper (paper: true), as the Call Gate does. The documents'
   // phase 2 goes live one check at a time, the chase window and the stack cap first. LC_V2 gives the Call Gate version 2's verdict
   // for every signal (the documents' test ZV-14); LC_STRICT switches the two advice-only checks on as blocks
-  const LC = { ...GATE, mode: "SHADOW", liveChecks: ["chasewindow", "stack"], zoneHeightAtr: 2.5, zoneMode: "edges", chaseWindow: true, chaseWindowAtr: 2.5,
-               stackCap: 3, stackMode: "skip", wornMode: "log", wornFailures: 2, wornMinutes: 120, advice: true, premiumStop: 0.15,
-               indices: ["NIFTY 50"] };  // the indices it runs on (the owner, 24 October: "built it for nifty 50 only"; the documents are about NIFTY 50)
-  const LC_V2 = { ...LC, zoneHeightAtr: 1.5, chaseWindow: false, stackCap: null, wornMode: "off", advice: false };
-  const LC_STRICT = { ...LC, zoneMode: "breakout", wornMode: "skip" };
-  const LC_ZONE_ONLY = { ...LC, chaseWindow: false, stackCap: null, wornMode: "off", advice: false };
+  // LC_DOC: the documents' Loss Cutter as built on 24 October (their tests run on it). LC, the page's and the server's since 26 October
+  // (the owner: "it really needs a better deep down look to improve the rule"; "yes, prepare the PR"), three changes from a study of
+  // every check on the 17 saved days and 26 October (LOGIC.md): the opening window ends at 9:40 (openingUntil; the documents: 9:45),
+  // the strict zone (zoneMode "breakout": inside a sideways zone only a breakout passes), and the zone memory (zoneMemory 6 candles: a
+  // zone that broke comes back when the price closes inside it again within half an hour)
+  const LC_DOC = { ...GATE, mode: "SHADOW", liveChecks: ["chasewindow", "stack"], zoneHeightAtr: 2.5, zoneMode: "edges", chaseWindow: true, chaseWindowAtr: 2.5,
+                   stackCap: 3, stackMode: "skip", wornMode: "log", wornFailures: 2, wornMinutes: 120, advice: true, premiumStop: 0.15, zoneMemory: 0,
+                   indices: ["NIFTY 50"] };  // the indices it runs on (the owner, 24 October: "built it for nifty 50 only"; the documents are about NIFTY 50)
+  const LC = { ...LC_DOC, openingUntil: 9 * 3600 + 40 * 60, zoneMode: "breakout", zoneMemory: 6 };
+  const LC_V2 = { ...LC_DOC, zoneHeightAtr: 1.5, chaseWindow: false, stackCap: null, wornMode: "off", advice: false };
+  const LC_STRICT = { ...LC_DOC, zoneMode: "breakout", wornMode: "skip" };
+  const LC_ZONE_ONLY = { ...LC_DOC, chaseWindow: false, stackCap: null, wornMode: "off", advice: false };
   // the call leaves the box: its trigger (the signal candle's high for a CE, low for a PE) or its close is beyond the box its way
   const breaksOut = (bar, side, box) => side === "CE" ? bar.high > box.hi || bar.close > box.hi : bar.low < box.lo || bar.close < box.lo;
   function violentBefore(closed, i, side, atr, dayFirst, g) {  // the chase window: the candle before, more than chaseWindowAtr x ATR tall, the same way
@@ -777,7 +789,7 @@
     for (let i = first; i < closed.length; i++) {
       const bar = closed[i], prevBar = i > 0 ? closed[i - 1] : null, before = prevBar ? prevBar.close : prevClose;  // the close before this candle
       if (prevBar && newDay(bar, prevBar)) {  // a new day: yesterday's calls ended with yesterday, and its waiting signals are gone
-        open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = []; armed = []; dayFirst = i; zone.box = null; zone.broke = null; lcZone.box = null; lcZone.broke = null;
+        open.forEach(t => end(t, prevBar.close, prevBar, "day end")); open = []; armed = []; dayFirst = i; zone.box = null; zone.broke = null; zone.last = null; lcZone.box = null; lcZone.broke = null; lcZone.last = null;
       }
       fire(bar);  // the signals of earlier candles, fired by this candle's prices before its close is judged
       const levels = levelsAt(i), lines = linesAt(i), linesBefore = linesAt(Math.max(0, i - 1));
@@ -1006,6 +1018,6 @@
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, NEW_HIGH_LOW, pastEdgeAt,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary,
-                 LC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary,
+                 LC, LC_DOC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary,
                  LOCK, LOCK_PRESETS, lockFloor, lockStep, lockSummary };
 })(typeof window !== "undefined" ? window : globalThis);

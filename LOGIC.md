@@ -750,6 +750,33 @@ The rule, in the order it is applied:
    +266.35); NIFTY BANK every call 288 calls +2,405.70, the Call Gate 228 calls
    +2,410.50, the Loss Cutter 142 calls +215.00: there the wider zone skipped 79
    calls the Call Gate's zone did not, worth +2,334.15. Hence NIFTY 50 only.
+   **Improved on 26 October** (the owner, on that morning's calls: the 9:40 Buy CE, the day's best,
+   was skipped by the opening window, and the calls of 10:40 to 11:10 sat in a sideways range but
+   were taken: "it really needs a better deep down look to improve the rule"; "yes, prepare the
+   PR"). A study of every check on NIFTY 50 over the 17 saved days and 26 October, both kinds of
+   lines, counting 8 index points a call as the documents' cost: the chase (skipped calls −135 /
+   −104 points) and the stack cap (−105 / −99) skip losers; the opening window (+232 / +52) and the
+   sideways zone (+853 / +251) skipped more winning points than losing ones. Three changes, the
+   page's and the server's `LC` since then (`LC_DOC` keeps the documents' Loss Cutter, which their
+   tests run on):
+   1. **the opening window ends at 9:40** (`openingUntil`; the documents: 9:45): signals on the
+      candles of 9:15 to 9:35 are judged as before, from 9:40 on they are free;
+   2. **the strict zone** (`zoneMode: "breakout"`): inside a sideways zone only a call breaking out
+      of it passes (its trigger or close beyond the box its way); every other call is SKIP ("inside
+      a sideways zone ...: the call does not break out of it");
+   3. **the zone memory** (`zoneMemory: 6`): a zone that broke comes back, the same box, when a
+      candle closes inside it again within 6 candles (half an hour). On 26 October one candle
+      (10:35) closed below the box of 10:25, the next ones back inside it, and the 10:40 calls had
+      been judged as if there were no zone; now the zone is back at 10:40.
+   After the cost, TAKE calls only: NIFTY 50 on today's lines −73 → **+503** points (213 → 193
+   calls), on the previous close's lines +304 → **+743** (144 → 134); NIFTY BANK, not used to choose
+   (its cost 19 points a call): −3,608 → −3,127 and −2,399 → −1,229. More days better than worse on
+   each (9 to 7 on NIFTY 50). Tried and not taken: the opening window to 9:35, the zone memory alone
+   (3 or 6 candles), the strict zone alone, no zone check, a breakout needing 0.1 or 0.25 ATR past the
+   box, the Call Gate's box at 2.0 or 2.5 ATR. On 26 October: 9:40 CE TAKE, 10:45 CE SKIP, 10:50 PE
+   and 11:10 PE TAKE (their price went below the zone's floor: a breakdown by the rule), 11:15 CE
+   SKIP. About 20 settings tried on the same 18 days: the best of many looks better than it will be;
+   shadow mode, the Friday report compares it on real days. The Call Gate is not changed.
 10. **The Profit Lock** (the owner's `Profit_Lock.docx`, "Profit Lock Exit Rule",
    with `profit_lock_reference.py` and `profit_lock_stress_test.py`, 24 October:
    "check the attached document and use it wherever it is required and take the

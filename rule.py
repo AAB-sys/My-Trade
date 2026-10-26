@@ -343,16 +343,23 @@ def efficiency(closes: list) -> float:
 
 def zone_step(zone: dict, closed: list, i: int, atr, day_first: int, g: dict) -> None:
     """One closed candle, before any signal on it is judged: the active zone ends on a close outside it by the buffer; else, from the day's
-    7th candle on, a zone is looked for over the last zoneN candles."""
+    7th candle on, a zone is looked for over the last zoneN candles. zoneMemory (the Loss Cutter since 26 October): a zone that broke at
+    most zoneMemory candles ago comes back, the same box, on the first candle that closes inside it again (see static/rules.js)."""
     bar = closed[i]
     zone["broke"] = None
     if zone["box"] and atr is not None:
         buf = g["bufferAtr"] * atr
         if bar["close"] > zone["box"]["hi"] + buf or bar["close"] < zone["box"]["lo"] - buf:
             zone["broke"] = "up" if bar["close"] > zone["box"]["hi"] else "down"
+            zone["last"] = {"box": zone["box"], "at": i}
             zone["box"] = None
             if "ended" in zone and i > 0:
                 zone["ended"].append(closed[i - 1]["time"])  # the last candle inside the zone (the Loss Cutter's daily line)
+    last = zone.get("last")
+    if not zone["box"] and not zone["broke"] and g.get("zoneMemory") and last and i - last["at"] <= g["zoneMemory"] and last["box"]["lo"] <= bar["close"] <= last["box"]["hi"]:
+        zone["box"], zone["last"] = last["box"], None  # the failed break: the zone is back
+        zone["found"].append(bar["time"])
+        return
     if zone["box"] or zone["broke"] or atr is None or i - day_first < g["zoneN"]:
         return
     s = i - g["zoneN"] + 1
@@ -505,12 +512,15 @@ def gate_summary(res: dict, date: str) -> str:
 # 3. the sideways zone version 3, its own tracker with the box up to 2.5 x ATR, the version 2 judgement inside ("edges"; strict-zone
 # advice) or only a breakout ("breakout"); 4. the worn line, advice only by default; 5. the stack cap, when the call fires. Mode SHADOW
 # first; LIVE holds the order (paper) for a SKIP from a check in liveChecks. LC_V2 gives the Call Gate version 2's verdicts
-LC = {**GATE, "mode": "SHADOW", "liveChecks": ["chasewindow", "stack"], "zoneHeightAtr": 2.5, "zoneMode": "edges", "chaseWindow": True, "chaseWindowAtr": 2.5,
-      "stackCap": 3, "stackMode": "skip", "wornMode": "log", "wornFailures": 2, "wornMinutes": 120, "advice": True, "premiumStop": 0.15,
-      "indices": ["NIFTY 50"]}  # the indices it runs on (the owner, 24 October: "built it for nifty 50 only")
-LC_V2 = {**LC, "zoneHeightAtr": 1.5, "chaseWindow": False, "stackCap": None, "wornMode": "off", "advice": False}
-LC_STRICT = {**LC, "zoneMode": "breakout", "wornMode": "skip"}
-LC_ZONE_ONLY = {**LC, "chaseWindow": False, "stackCap": None, "wornMode": "off", "advice": False}
+# LC_DOC: the documents' Loss Cutter as built on 24 October; LC, the page's and the server's since 26 October: the opening window to 9:40,
+# the strict zone, the zone memory of 6 candles (see static/rules.js LC)
+LC_DOC = {**GATE, "mode": "SHADOW", "liveChecks": ["chasewindow", "stack"], "zoneHeightAtr": 2.5, "zoneMode": "edges", "chaseWindow": True, "chaseWindowAtr": 2.5,
+          "stackCap": 3, "stackMode": "skip", "wornMode": "log", "wornFailures": 2, "wornMinutes": 120, "advice": True, "premiumStop": 0.15, "zoneMemory": 0,
+          "indices": ["NIFTY 50"]}  # the indices it runs on (the owner, 24 October: "built it for nifty 50 only")
+LC = {**LC_DOC, "openingUntil": 9 * 3600 + 40 * 60, "zoneMode": "breakout", "zoneMemory": 6}
+LC_V2 = {**LC_DOC, "zoneHeightAtr": 1.5, "chaseWindow": False, "stackCap": None, "wornMode": "off", "advice": False}
+LC_STRICT = {**LC_DOC, "zoneMode": "breakout", "wornMode": "skip"}
+LC_ZONE_ONLY = {**LC_DOC, "chaseWindow": False, "stackCap": None, "wornMode": "off", "advice": False}
 
 
 def breaks_out(bar: dict, side: str, box: dict) -> bool:
@@ -965,8 +975,8 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             for t in open_:
                 end(t, prev_bar["close"], prev_bar, "day end")
             open_, armed = [], []
-            day_first, zone["box"], zone["broke"] = i, None, None
-            lc_zone["box"], lc_zone["broke"] = None, None
+            day_first, zone["box"], zone["broke"], zone["last"] = i, None, None, None
+            lc_zone["box"], lc_zone["broke"], lc_zone["last"] = None, None, None
         fire(bar)  # the signals of earlier candles, fired by this candle's prices before its close is judged
         levels, lines, lines_before = levels_at(i), lines_at(i), lines_at(max(0, i - 1))
         for t in open_:

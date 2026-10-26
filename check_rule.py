@@ -170,7 +170,8 @@ def main() -> int:
                         LCV2 = {"zoneHeightAtr": 1.5, "chaseWindow": False, "stackCap": None, "wornMode": "off", "advice": False}  # the Loss Cutter (24 October): shadow and live, strict, the stack cap logged, version 2 as settings, every check live, none
                         for lc, seed, tag in (({"mode": "LIVE"}, 41.5, "lc live"), ({"zoneMode": "breakout", "wornMode": "skip"}, 41.5, "lc strict"), ({"stackMode": "log"}, None, "lc stack log"),
                                               (LCV2, 41.5, "lc v2"), ({"mode": "LIVE", "liveChecks": ["opening", "chase", "chasewindow", "zone", "worn", "stack"], "wornMode": "skip", "stackCap": 2}, 41.5, "lc all live"),
-                                              ({"zoneHeightAtr": 3.0, "wornFailures": 1, "chaseWindowAtr": 2.0}, None, "lc wide"), (None, 41.5, "no lc")):
+                                              ({"zoneHeightAtr": 3.0, "wornFailures": 1, "chaseWindowAtr": 2.0}, None, "lc wide"), (None, 41.5, "no lc"),
+                                              ({"zoneMode": "edges", "zoneMemory": 3, "openingUntil": 9 * 3600 + 45 * 60}, 41.5, "lc edges memory 3"), ({"zoneMemory": 0}, None, "lc no memory")):  # the improved Loss Cutter (26 October) and its parts
                             jobs.append({"mode": "replay", "bars": bars, "move": move, "previous": prev, "seconds": seconds, "signal": signal, "minutes": mins, "lc": lc, "atrSeed": seed, "what": f"{d['date']} {name} {key} {move} {signal} {tag}"})
                         RUNNER = {**rule.LOCK_PRESETS["RUNNER"], "name": "RUNNER", "compare": ["MAX", "STEADY"]}  # the Profit Lock (24 October): live, another setting live, slippage and a floor, off, none, and live beside the Call Gate and the Loss Cutter live
                         for pl, extra_job, tag in (({"mode": "LIVE"}, {}, "lock live"), ({**RUNNER, "mode": "LIVE"}, {"atrSeed": 41.5}, "lock live runner"),

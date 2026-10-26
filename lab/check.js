@@ -754,7 +754,7 @@ console.log("rules unit checks passed");
                  zone_rule: "zoneRule", zone_n: "zoneN", zone_height_atr: "zoneHeightAtr", zone_er_max: "zoneErMax", zone_buffer_atr: "bufferAtr", zone_mode: "zoneMode",
                  chase_window: "chaseWindow", chase_window_atr: "chaseWindowAtr", stack_cap: "stackCap", stack_mode: "stackMode", worn_mode: "wornMode",
                  worn_failures: "wornFailures", worn_minutes: "wornMinutes", advice: "advice" };
-  const cfgOf = (name) => { const c = { ...R.LC }; for (const [k, v] of Object.entries(F.configs[name])) if (KEYS[k]) c[KEYS[k]] = k === "opening_until" ? at(v) - day0 : v; return c; };
+  const cfgOf = (name) => { const c = { ...R.LC_DOC }; for (const [k, v] of Object.entries(F.configs[name])) if (KEYS[k]) c[KEYS[k]] = k === "opening_until" ? at(v) - day0 : v; return c; };
   const signals = () => F.table.map(r => ({ signalTime: at(r.signal), side: r.side, level: r.line, k: kOf(r.signal), line: (r.pct > 0 ? "+" : "") + r.pct.toFixed(1) + "%",
     ...(r.cancelled ? { cancelTime: at(r.cancelled) } : {}), ...(r.fired ? { fired: r.fired, sold: r.sold, exit: 1, exitTime: C[kOf(r.sold)].time, points: r.rupees } : { exit: null }) }));
   const run = (g) => {  // the reference's run_loss_cutter, on the engine's functions
@@ -870,7 +870,7 @@ console.log("rules unit checks passed");
     d.result = r;
   }
   // LC-13, mirror: the same verdicts, checks and advice with CE and PE swapped (the reasons with their words mirrored)
-  const norm = (s) => (s || "").replace(/\d+% up/g, "").replace(/[+-](\d+\.\d%)/g, "$1").replace(/\b(top|bottom|above|below|high|low|buying|selling|breakout|breakdown|CE|PE)\b/g, (w) => ({ top: "X", bottom: "X", above: "Y", below: "Y", high: "Z", low: "Z", buying: "W", selling: "W", breakout: "V", breakdown: "V", CE: "U", PE: "U" })[w]);
+  const norm = (s) => (s || "").replace(/\(\d[\d.]* to \d[\d.]*, /g, "(").replace(/\d+% up/g, "").replace(/[+-](\d+\.\d%)/g, "$1").replace(/\b(top|bottom|above|below|high|low|buying|selling|breakout|breakdown|CE|PE)\b/g, (w) => ({ top: "X", bottom: "X", above: "Y", below: "Y", high: "Z", low: "Z", buying: "W", selling: "W", breakout: "V", breakdown: "V", CE: "U", PE: "U" })[w]);
   for (const k of [0, 1]) {
     const a = all(days[k].result), b = all(days[k + 2].result), sw = { CE: "PE", PE: "CE" };
     const one = (t, side) => `${hhmm(t.signalTime)} ${side} ${t.lc} ${t.lcCheck} ${norm(t.lcWhy)} ${norm(t.lcAdvice)} ${t.lcOpenSame}`;
@@ -884,7 +884,7 @@ console.log("rules unit checks passed");
   // the daily line
   const line = R.lcSummary(days[1].result, "2026-10-23");
   assert(line.startsWith("LOSS CUTTER DAY 2026-10-23 · calls ") && / · zones: \d\d:\d\d-/.test(line), "the daily line: " + line);
-  const r23 = days[1].result, take = r23.trades.filter(t => t.lc === "TAKE");
+  const r23 = run(days[1], R.LC_DOC), take = r23.trades.filter(t => t.lc === "TAKE");  // the documents' Loss Cutter (LC_DOC)
   // ZV-9 inside the engine: its own Loss Cutter zone on the documents' 23 October candles is version 3's, five zones, found and ended as the documents say
   const zones3 = r23.lcZonesFound.map((f, k) => `${hhmm(f)}-${hhmm(r23.lcZonesEnded[k])}`).join(" · ");
   assert(zones3 === "11:05-12:20 · 12:30-12:40 · 12:55-13:30 · 14:05-14:30 · 15:05-15:20" && r23.zonesFound.map(hhmm).join() === "12:15,14:30,15:15", "the engine's zones on 23 October: " + zones3 + " / Call Gate " + r23.zonesFound.map(hhmm).join());
@@ -1029,4 +1029,42 @@ console.log("rules unit checks passed");
   assert(line.startsWith("PROFIT LOCK DAY 2026-10-23 · MAX SHADOW · calls ") && line.includes(" · STEADY ") && line.includes(" · RUNNER "), "the daily line: " + line);
   console.log(`Profit Lock in the engine checks passed (shadow changes nothing; asked from the firing candle, never on an exit candle or the day's last; LIVE ends each call where the shadow said; no look-ahead at three cuts; the mirror)`);
   console.log(line);
+}
+
+// ---- The improved Loss Cutter (26 October, the owner: "it really needs a better deep down look to improve the rule"; "yes, prepare the
+// PR"): the opening window to 9:40, the strict zone, the zone memory of 6 candles. LC_DOC keeps the documents' Loss Cutter, which their
+// tests above run on
+{
+  const fs = require("fs"), path = require("path"), hhmm = (t) => new Date((t + IST) * 1000).toISOString().slice(11, 16);
+  assert(R.LC.openingUntil === 9 * 3600 + 40 * 60 && R.LC.zoneMode === "breakout" && R.LC.zoneMemory === 6 && R.LC.indices.join() === "NIFTY 50", "the improved Loss Cutter's settings");
+  assert(R.LC_DOC.openingUntil === 9 * 3600 + 45 * 60 && R.LC_DOC.zoneMode === "edges" && R.LC_DOC.zoneMemory === 0 && !R.GATE.zoneMemory, "the documents' Loss Cutter and the Call Gate keep theirs");
+  // the zone memory, on hand-made candles (ATR 10, buffer 2.5): a quiet box 100 to 108 is found; a close at 96 breaks it; a close back at 101
+  // brings it back within 6 candles (not without the memory, not after 6 candles)
+  const t0z = Date.UTC(2026, 9, 26) / 1000 - IST + 10 * 3600, mkc = (rows) => rows.map(([o, h, l, c], i) => ({ time: t0z + i * 300, open: o, high: h, low: l, close: c }));
+  const quiet = [[104, 106, 102, 104], [104, 107, 101, 105], [105, 108, 100, 103], [103, 106, 101, 104], [104, 107, 102, 105], [105, 106, 100, 104], [104, 107, 101, 104]];
+  const walk = (rows, g) => { const z = { box: null, broke: null, found: [], ended: [] }, out = []; const c = mkc(rows); c.forEach((_, i) => { R.zoneStep(z, c, i, 10, 0, g); out.push(z.box ? `${z.box.lo}-${z.box.hi}` : "-"); }); return out; };
+  const back = walk(quiet.concat([[103, 104, 95, 96], [96, 102, 95, 101], [101, 104, 99, 102]]), R.LC);
+  assert(back[6] === "100-108" && back[7] === "-" && back[8] === "100-108" && back[9] === "100-108", "zone memory: found, broken at 96, back at 101: " + back.join(" "));
+  const noMem = walk(quiet.concat([[103, 104, 95, 96], [96, 102, 95, 101]]), R.LC_DOC);
+  assert(noMem[7] === "-" && noMem[8] !== "100-108", "without the memory the broken zone does not come back (a new one may be found): " + noMem.join(" "));
+  const late = walk(quiet.concat([[103, 104, 95, 96], [96, 97, 90, 92], [92, 93, 88, 90], [90, 91, 86, 88], [88, 89, 85, 87], [87, 88, 84, 86], [86, 87, 83, 85], [85, 102, 84, 101]]), R.LC);
+  assert(late[14] === "-", "the memory lasts 6 candles: a close back inside on the 7th brings nothing back: " + late.join(" "));
+  // the strict zone: inside a zone only a breakout passes
+  const box = { lo: 100, hi: 108 }, inZone = mkc(quiet.concat([[103, 106, 102, 105]])), out = mkc(quiet.concat([[105, 112, 104, 111]]));
+  const vIn = R.lcVerdict(inZone, 7, "CE", 10, { box }, 0, 0, R.LC, "+23.6%"), vOut = R.lcVerdict(out, 7, "CE", 10, { box }, 0, 0, R.LC, "+23.6%");
+  assert(vIn.lc === "SKIP" && vIn.check === "zone" && /does not break out/.test(vIn.why) && vOut.lc === "TAKE" && vOut.why === "breakout from a sideways zone", "the strict zone: " + JSON.stringify([vIn, vOut]));
+  // 26 October, NIFTY 50, Today so far (the owner's page), the candles to 11:15: the 9:40 Buy CE (the day's best, +176 points) passes the
+  // opening window now; the sideways zone of 10:25 broke at 10:35 and is back at 10:40 (the memory), so the 10:45 Buy CE, inside it and
+  // not breaking out, is skipped by the strict zone (the documents' Loss Cutter found a new zone only at 10:45)
+  const F = JSON.parse(fs.readFileSync(path.join(__dirname, "loss-cutter-26oct.json"), "utf8")), d0 = Date.UTC(2026, 9, 26) / 1000 - IST;
+  const bars = F.candles.map(([t, open, high, low, close]) => ({ time: d0 + Number(t.slice(0, 2)) * 3600 + Number(t.slice(3, 5)) * 60, open, high, low, close }));
+  const day = (lc) => R.paperTrades({ bars, levelsAt: R.todayLevelsAt(bars), targetsAt: R.todayLinesAt(bars), now: bars[bars.length - 1].time + 300, seconds: 300, dayCandles: false, signal: "both",
+    holdBreaks: true, trail: R.TRAIL, atrSeed: F.atrSeed, newHighLow: true, prevClose: null, minutes: null, lossCutter: lc, profitLock: null });
+  const v = (r) => Object.fromEntries(r.trades.concat(r.cancelled).map(t => [`${hhmm(t.signalTime)} ${t.side}`, t.lc]));
+  const zones = (r) => r.lcZonesFound.map((f, k) => `${hhmm(f)}-${r.lcZonesEnded[k] != null ? hhmm(r.lcZonesEnded[k]) : "open"}`).join(" ");
+  const rNow = day(R.LC), rDoc = day(R.LC_DOC), now = v(rNow), doc = v(rDoc);
+  assert(now["09:40 CE"] === "TAKE" && doc["09:40 CE"] === "SKIP", "26 October 9:40 Buy CE: TAKE now (the window ends at 9:40), SKIP by the documents' 9:45: " + JSON.stringify([now, doc]));
+  assert(zones(rNow) === "09:45-09:45 10:25-10:30 10:40-10:55 11:05-open" && zones(rDoc) === "09:45-09:45 10:25-10:30 10:45-open", "26 October's zones: " + zones(rNow) + " / documents " + zones(rDoc));
+  assert(now["10:45 CE"] === "SKIP" && doc["10:45 CE"] === "SKIP", "26 October 10:45 Buy CE: SKIP: " + JSON.stringify(now));
+  console.log(`The improved Loss Cutter checks passed (the settings; the zone memory found, broken, back, and over after 6 candles; the strict zone; 26 October: ${Object.entries(now).map(([k, x]) => k + " " + x).join(", ")})`);
 }
