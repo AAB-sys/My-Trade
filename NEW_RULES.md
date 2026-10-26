@@ -11,7 +11,17 @@ chart of the documents is not built.
 ATR(14) with Wilder smoothing, seeded by the simple average of the first 14 true ranges, carried over from the previous day's
 candles; a candle is judged with the ATR as of the candle before it. The buffer is 0.25 x ATR (the documents' setting; NONE or a
 fixed number of points are options). A swing high is a candle whose high is at or above the highs of the 3 candles before and the
-3 after, known once the third candle after it has closed; a swing low the same with lows.
+3 after, known once the third candle after it has closed; a swing low the same with lows. The swing size of the double and triple
+tops and bottoms is 2 since 26 October (the owner: "prepare the PR with swing size 2"): their tops and bottoms need only the 2
+candles before and the 2 after, and are known once the second candle after has closed. The wedges, the rectangle and the triangles
+keep 3. The documents' own test cases still run on 3 (`DOC` in `lab/newrule-check.js`); the documents' E1 gives the same call on 2.
+Why: on 26 October morning NIFTY 50 made a quick bottom (9:25, 9:40), a rally and a top (10:05 to 10:20) that the rules did not
+call; tested on the 17 saved days (29 September to 23 October, index points before costs, the page's own exits), the swing size of 2
+alone gave NIFTY 50 29 calls, 14 won, +282.05 (with 3: 30 calls, 13 won, +238.25) and NIFTY BANK 32 calls, 15 won, +843.85 (29, 13,
++595.80), and it beat 3 in 13 of the 16 neighbouring settings tried (3 or 5 candles between the tops, equal within 0.5 or 0.75 ATR,
+a dip of 1.0 or 1.5 ATR, with or without the previous day's last candles). The changes tried first (3 candles between the tops, a
+dip of 1.0 ATR, the previous day's last candles) lost points on these days and are not made. 26 October's own shapes stay too small
+for the rules even with 2. Seventeen days only: a setting found by searching, to be watched.
 
 ## Double Top (the "Trading Rules Specification" document, built 21 October night)
 
