@@ -14,7 +14,8 @@ fixed number of points are options). A swing high is a candle whose high is at o
 3 after, known once the third candle after it has closed; a swing low the same with lows. The swing size of the double and triple
 tops and bottoms is 2 since 26 October (the owner: "prepare the PR with swing size 2"): their tops and bottoms need only the 2
 candles before and the 2 after, and are known once the second candle after has closed. The wedges, the rectangle and the triangles
-keep 3. The documents' own test cases still run on 3 (`DOC` in `lab/newrule-check.js`); the documents' E1 gives the same call on 2.
+keep 3, and the double bottom has its own settings since 27 October (below). The documents' own test cases still run on 3 (`DOC` in
+`lab/newrule-check.js`); the documents' E1 gives the same call on 2.
 Why: on 26 October morning NIFTY 50 made a quick bottom (9:25, 9:40), a rally and a top (10:05 to 10:20) that the rules did not
 call; tested on the 17 saved days (29 September to 23 October, index points before costs, the page's own exits), the swing size of 2
 alone gave NIFTY 50 29 calls, 14 won, +282.05 (with 3: 30 calls, 13 won, +238.25) and NIFTY BANK 32 calls, 15 won, +843.85 (29, 13,
@@ -31,13 +32,49 @@ the first close below the neckline by the buffer, counted from the candle that c
 not more than 2 ATR past the neckline. Buy PE at the next candle's open. (The document's double bottom mirror is in the engine but
 off: the Double Bottom document below is the rule the page runs.)
 
-## Double Bottom (the "Double Bottom Chart Pattern" document, built 21 October night)
+## Double Bottom (the "Double Bottom Chart Pattern" document: built 21 October night; version 3 of 27 October on NIFTY 50 since 27 October)
 
-Two swing lows 5 to 40 candles apart, within half an ATR, nothing below them between; the neckline the highest high between them,
-at least 1.5 ATR above the higher bottom; the support the lower bottom; a fall of 2 ATR into the first bottom. One trade per
-pattern, whichever comes first: a close above the neckline by the buffer, Buy CE (the breakout); before any breakout, a close below
-the support by the buffer, Buy PE (the failure). The first such close counted from the candle that confirms the second bottom,
-within 20 candles of it, not more than 2 ATR past the line.
+Two swing lows within 0.60 ATR, nothing below them between; the neckline the highest high between them, at least 1.5 ATR above the
+higher bottom; the support the lower bottom; a fall of 2 ATR into the first bottom; the nearest first bottom first. One trade per
+pattern, whichever triggers first, counted from the candle that confirms the second bottom and within 20 candles of it: a candle's
+HIGH above the neckline by 0.10 x ATR, Buy CE (the breakout; the close does not matter); a candle's LOW below the support by 0.10 x
+ATR, Buy PE (the failure). A candle that triggers both sides gives no signal; a close more than 2 ATR past the line is skipped (the
+chase check stays on the close). Rule 1's Exit A is checked from the entry candle on, never on the signal candle (which may have
+closed back across the line), as the engine always did. The port is line by line from the document's reference code
+(`double_bottom_reference.py`): the lab runs its CE-1 to CE-24, PE-1 to PE-18, V3-1 to V3-11 and RD-1 to RD-15 (the document's
+real candles in `lab/double-bottom-v3.json`), and the engine matched the reference signal for signal on every saved day of NIFTY 50
+and NIFTY BANK (version 1, 2 and 3 and four neighbouring settings: 378 signals) and on 3,000 random days (3,951 signals).
+
+On NIFTY 50 only, two versions run side by side (the owner, 27 October: "V2 table, V3 shadow", then "for nifty 50 only"; the
+document's implementation brief, shadow mode first). NIFTY BANK and SENSEX keep the page's rule as it was before 27 October (the
+first version, within 0.5 ATR, the triggers on the close by the buffer, the swing size 2 of 26 October: `DB_OLD`), with no log:
+
+| Setting | Version 2 (the table's calls) | Version 3 (shadow: logged, no call) |
+| --- | --- | --- |
+| A bottom: candles on each side | 3 | 2 |
+| Candles between the bottoms | 5 to 40 | 3 to 40 |
+
+Everything else is the same in both. On NIFTY 50 the first version (21 October: within 0.5 ATR, the triggers on the close by the
+buffer, the swing size 2 of 26 October) is replaced in the table by version 2. Under its Calls with Signals table, the Double Bottom shadow log
+lists every signal of both versions, a trade open or not: the tag (V2 only, V3 only, or Both: the same side and level, with the
+other version's time), the level and the ATR, the two bottoms and the candles between them, the bottoms' difference against its
+limit and the depth against its minimum, how far the high (low) went past the line in points and ATR and where the candle closed,
+for a version 3 only signal what version 2 lacked (the gap, the swing, both, or other), the order (version 2: taken, or why not;
+version 3: none, inside or outside the 9:30 to 14:45 window), and every signal followed on paper with the table's own exits (the
+entry at the next open, the exit, the best and worst point, the points). The day's summary line: the signals of each version, the
+version 3 only ones and their paper points. The log is computed from the candles, so replaying a saved day gives it again.
+
+Switching to version 3 is one line in `static/newrule.js` (`DB = { table: DB_V3, ... }`); going back, `table: DB_V2`; another index
+in, its name in `DB.indices`. The brief:
+review after at least 20 trading days of the log, NIFTY 50 and NIFTY BANK apart; about 10 version 3 only signals at least; their
+paper points after costs positive and not resting on one trade; the 26 October 09:50 trade, the reason for the change, not
+counted as the proof.
+
+On the 18 saved days (29 September to 26 October, index points before costs, the page's own exits, one trade at a time), the
+table's double bottom calls: NIFTY 50, the first version 9 calls, 5 won, +197.90; version 2 12 calls, 8 won, +238.40; version 3
+(as if it were the table) 23 calls, 11 won, +370.15. NIFTY BANK, the first version 10 calls, 5 won, +206.85; version 2 14 calls, 6
+won, -20.45; version 3 17, 6, -53.35 (all the table's calls on NIFTY BANK: +761.20 with the first version, +389.75 with version 2).
+The settings were found on NIFTY 50 days; NIFTY BANK is worse with them on these days, so it keeps the old rule.
 
 ## Triple Top (the "Triple Top Chart Pattern" document, built 21 October night)
 

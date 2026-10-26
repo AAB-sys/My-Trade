@@ -113,6 +113,121 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   const rB = N.runDay({ cfg: DOC, bars: dB, atrFixed: ATR, rules: ["double bottom"] });
   assert(rB.trades.length === 1 && rB.trades[0].side === "PE" && rB.trades[0].entry === 88.5 && rB.trades[0].entryTime === dB[24].time, "DB PE-1 entry at 88.5: " + JSON.stringify(rB.trades[0]));
   console.log("New Rule Chart: the double bottom matches its document's cases (CE-1 to CE-15, PE-1 to PE-8)");
+
+  // ---- Version 2 of the Double Bottom document (24 October; the Buy PE trigger 26 October), its own settings (DB_V2: a bottom 3
+  // candles each side, 5 to 40 apart, within 0.60 ATR; Buy CE on the high above the neckline by 0.10 x ATR = 0.15, Buy PE on the low
+  // below the support by 0.15, the chase check on the close): CE-17 to CE-24, PE-10 to PE-18, as double_bottom_reference.py runs them
+  const V2 = N.DB_V2, V1 = N.DB_V1, V3 = N.DB_V3, CLOSE = { ceTrigger: "close", peTrigger: "close" };
+  const at = (bars, side, c) => fires(bars, side, c);
+  const wick = (hi, cl) => [96.8, hi, 96.3, cl];
+  const ok = (got, want, msg) => assert(got === want, `${msg}: ${got} (want ${want})`);
+  ok(at(vary(dA, 21, wick(98.5, 97.0)), "CE", V2), "21", "DB CE-17: a wick 0.3 above the neckline on 21 signals, the close below it");
+  ok(at(vary(dA, 21, wick(98.5, 97.0)), "CE", { ...V2, ...CLOSE }), "22", "DB CE-18: the same on the close trigger");
+  ok(at(vary(dA, 21, wick(98.3, 97.0)), "CE", V2), "22", "DB CE-19: a wick only 0.1 above, less than 0.15");
+  ok(at(dA, "CE", V2), "22", "DB CE-20: the base data, the high trigger");
+  ok(at(vary(dA, 17, [90.6, 91.1, 88.35, 90.5]), "CE", V2), "22", "DB CE-21: the bottoms 0.85 apart, within 0.90");
+  ok(at(vary(dA, 17, [90.6, 91.1, 88.35, 90.5]), "CE", { ...V2, eqAtr: 0.5 }), "", "DB CE-22: the same, 0.5 ATR");
+  ok(at(vary(dA, 17, [90.6, 91.1, 88.25, 90.5]), "CE", V2), "", "DB CE-23: the bottoms 0.95 apart");
+  ok(at(vary(dA, 22, [96.8, 103.0, 96.4, 102.4]), "CE", V2), "", "DB CE-24: the close 4.2 above the neckline, the chase limit on the close");
+  ok(at(vary(dB, 22, [92.4, 92.8, 88.9, 90.0]), "PE", V2), "22", "DB PE-10: a wick 0.3 below the support on 22");
+  ok(at(vary(dB, 22, [92.4, 92.8, 88.9, 90.0]), "PE", { ...V2, peTrigger: "close" }), "23", "DB PE-11: the same on the close trigger");
+  ok(at(vary(dB, 22, [92.4, 92.8, 89.1, 90.0]), "PE", V2), "23", "DB PE-12: a wick only 0.1 below");
+  ok(at(dB, "PE", V2), "23", "DB PE-13: the base failed data, the low trigger");
+  ok(at(vary(dB, 17, [90.6, 91.1, 88.4, 90.5]), "PE", V2), "23", "DB PE-14: the bottoms 0.8 apart");
+  ok(at(vary(dB, 17, [90.6, 91.1, 88.4, 90.5]), "PE", { ...V2, eqAtr: 0.5 }), "", "DB PE-15: the same, 0.5 ATR");
+  ok(at(vary(dB, 22, [92.4, 92.8, 85.0, 85.4]), "PE", V2), "", "DB PE-16: the close 3.8 below the support");
+  const both = vary(dB, 22, [92.4, 99.0, 88.5, 94.0]);
+  ok(at(both, "PE", V2) + "|" + at(both, "CE", V2), "|", "DB PE-17: one candle triggers both sides: no signal either way, none later");
+  const first18 = vary(vary(dB, 22, [92.4, 92.8, 88.9, 90.0]), 23, [90.0, 99.5, 89.9, 99.0]);
+  ok(at(first18, "PE", V2) + "|" + at(first18, "CE", V2), "22|", "DB PE-18: the Buy PE wick uses the pattern up, no Buy CE on 23");
+  console.log("New Rule Chart: the double bottom's version 2 matches its document's cases (CE-17 to CE-24, PE-10 to PE-18)");
+
+  // ---- Version 3 (27 October): DB_V3, a bottom 2 candles each side and 3 to 40 apart, nothing else changed: V3-1 to V3-11 on the compact
+  // W of Appendix D (bottom 1 candle 12 at 88.0, bottom 2 candle 15 at 88.2, the neckline 92.0, the break on candle 18)
+  const W = mk([[110.0,110.4,108.0,108.5],[108.5,109.0,106.5,107.0],[107.0,107.5,105.0,105.5],[105.5,106.0,103.5,104.0],[104.0,104.5,102.0,102.5],[102.5,103.0,100.5,101.0],[101.0,101.5,99.0,99.5],[99.5,100.0,97.5,98.0],[98.0,98.5,96.0,96.5],[96.5,97.0,94.5,95.0],[95.0,95.5,92.5,93.0],[93.0,93.4,90.5,91.0],[91.0,91.2,88.0,88.6],[88.6,90.5,88.4,90.2],[90.2,92.0,90.0,91.6],[91.6,91.8,88.2,89.0],[89.0,90.8,88.8,90.6],[90.6,92.0,90.2,91.8],[91.8,93.0,91.5,92.9]]);
+  const WF = vary(W, 18, [91.8, 91.9, 87.5, 87.8]);
+  ok(at(W, "CE", V3), "18", "V3-1: the compact W on version 3");
+  const v31 = db(W, 18, "CE", V3); assert(v31.t1 === 12 && v31.t2 === 15 && v31.neckline === 92 && v31.support === 88 && v31.gap === 3, "V3-1 detail: " + JSON.stringify(v31));
+  ok(at(W, "CE", V2), "", "V3-2: version 2"); ok(at(W, "CE", { ...V3, minGap: 5 }), "", "V3-3: swing 2, gap 5");
+  ok(at(W, "CE", { ...V3, swingN: 3 }), "", "V3-4: gap 3, swing 3"); ok(at(W, "CE", { ...V3, minGap: 4 }), "", "V3-5: gap 4");
+  ok(at(WF, "PE", V3), "18", "V3-6: the compact W broken down, Buy PE"); ok(at(WF, "PE", V2), "", "V3-7: the same on version 2");
+  ok(at(dA, "CE", V3) + "|" + at(dB, "PE", V3), "22|23", "V3-8: the ordinary patterns of Appendix A and B unchanged");
+  ok(at(dA, "CE", { ...V3, minGap: 10 }) + "|" + at(dA, "CE", { ...V3, minGap: 11 }), "22|", "V3-9: the gap limit still checked");
+  ok(at(dA, "CE", { ...V3, minDepthAtr: 6.0 }), "", "V3-10: the depth not weakened");
+  // V3-11, and every other 5-minute setting exactly the document's section 14 (FIVE_MIN of the reference code); version 2 differs in the two only
+  const FIVE_MIN = { swingN: 2, minGap: 3, maxGap: 40, maxWait: 20, eqAtr: 0.60, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
+                     buffer: "ATR", atrMult: 0.25, fixedPoints: 0, ceTrigger: "high", highBufferAtr: 0.10, peTrigger: "low", lowBufferAtr: 0.10 };
+  Object.entries(FIVE_MIN).forEach(([key, v]) => assert(V3[key] === v && V2[key] === (key === "swingN" ? 3 : key === "minGap" ? 5 : v), `V3-11: the setting ${key}: ${V3[key]} / ${V2[key]}`));
+  assert(Object.keys(V3).filter(x => x !== "name").length === Object.keys(FIVE_MIN).length, "V3-11: no other setting");
+  // the chase check ends the search, as the reference's "return None": a nearer pattern that closed too far past its neckline (95,
+  // close 98.5, more than 3.0) hides an older one behind it (neckline 100, a wick to 100.5) on the same candle, both versions
+  const two = mk([[110,110.5,108.5,109],[109,109.3,107,107.5],[107.5,107.8,105.5,106],[106,106.3,104,104.5],[104.5,104.8,102.5,103],[103,103.3,101,101.5],[101.5,101.8,99.5,100],[100,100.3,98,98.5],[98.5,98.8,96.5,97],[97,97.3,95,95.5],[95.5,95.8,93,93.5],[93.5,93.8,91.5,92],[92,92.3,90.0,90.8],[90.8,93,90.6,92.8],[92.8,96,92.5,95.8],[95.8,100,95.5,99.5],[99.5,99.8,96,96.5],[96.5,96.8,93,93.5],[93.5,93.8,91,91.5],[91.5,91.8,90.1,90.6],[90.6,93,90.4,92.7],[92.7,95,92.4,94.5],[94.5,94.8,92.5,93],[93,93.3,91,91.4],[91.4,91.6,90.05,90.9],[90.9,92,90.6,91.8],[91.8,93,91.5,92.8],[92.8,94.5,92.6,94.2],[94.2,100.5,94,98.5]]);
+  assert(N.dbPatterns(two, 28, ATR, V2).map(q => q.b1).join() === "19,12", "two patterns at candle 28, the nearer first");
+  ok(at(two, "CE", V2) + "|" + at(two, "CE", V3), "|", "the chase check ends the search: no signal from the older pattern");
+  assert(N.DB.table === V2 && N.DB.shadow === V3, "the owner's choice of 27 October: version 2 in the table, version 3 in shadow");
+  console.log("New Rule Chart: the double bottom's version 3 matches its document's cases (V3-1 to V3-11)");
+
+  // ---- The real days of the document (RD-1 to RD-15): its NIFTY 50 candles (lab/double-bottom-v3.json; 26 October read from a chart
+  // image), the ATR carried across days as the reference does (23 October warms up on 22 October's candles, 26 October on 23 October's)
+  const REAL = require(path.join(__dirname, "double-bottom-v3.json"));
+  const realDay = (rows, warm, c) => {
+    const bars = rows.map(r => ({ time: 0, open: r[1], high: r[2], low: r[3], close: r[4] })), prev = (warm || []).map(r => ({ time: 0, open: r[1], high: r[2], low: r[3], close: r[4] }));
+    const series = N.atrSeries(prev.concat(bars)), out = [];  // the ATR as of the candle before, across both days
+    bars.forEach((_, k) => { const a = k + prev.length > 0 ? series[k + prev.length - 1] : null; if (a == null) return;
+      ["CE", "PE"].forEach(side => { const s = N.detectDoubleBottom(bars, k, side, a, c); if (s) out.push(`${rows[k][0]} ${side} ${s.L.toFixed(1)} ${a.toFixed(1)}`); }); });
+    return out.join(", ");
+  };
+  const R22 = REAL.REAL_22, R23 = REAL.REAL_23, R26 = REAL.REAL_26;
+  const rd1 = realDay(R23, R22, V2), rd7 = realDay(R22, null, V2);
+  ok(rd1, "12:40 PE 22409.6 30.9, 12:45 PE 22406.8 29.9, 13:30 CE 22444.1 28.3", "RD-1: 23 October, version 2");
+  ok(realDay(R23, R22, V1), "12:45 PE 22406.8 29.9", "RD-2: 23 October, version 1");
+  ok(realDay(R23, R22, { ...V2, eqAtr: 0.5 }), "12:40 PE 22409.6 30.9, 12:45 PE 22406.8 29.9", "RD-3: version 2, 0.5 ATR");
+  ok(realDay(R23, R22, { ...V2, ceTrigger: "close" }), "12:40 PE 22409.6 30.9, 12:45 PE 22406.8 29.9", "RD-4: version 2, the close trigger");
+  ok(realDay(R23, R22, { ...V2, highBufferAtr: 0.05 }), "11:15 CE 22518.9 42.1, 12:40 PE 22409.6 30.9, 12:45 PE 22406.8 29.9, 13:30 CE 22444.1 28.3", "RD-5: the high buffer 0.05");
+  ok(realDay(R23, R22, { ...V2, highBufferAtr: 0.15 }), "12:40 PE 22409.6 30.9, 12:45 PE 22406.8 29.9", "RD-6: the high buffer 0.15");
+  ok(rd7 + "|" + realDay(R22, null, V1), "14:30 CE 22657.2 29.6|14:30 CE 22657.2 29.6", "RD-7: 22 October, versions 2 and 1");
+  [0.55, 0.65, 0.70].forEach(q => ok(realDay(R23, R22, { ...V2, eqAtr: q }) + "|" + realDay(R22, null, { ...V2, eqAtr: q }), rd1 + "|" + rd7, `RD-8: ${q} ATR`));
+  ok(realDay(R23, R22, { ...V2, peTrigger: "close" }) + "|" + realDay(R22, null, { ...V2, peTrigger: "close" }), "12:45 PE 22409.6 29.9, 13:30 CE 22444.1 28.3|14:30 CE 22657.2 29.6", "RD-9: the Buy PE on the close");
+  ok(realDay(R23, R22, { ...V2, lowBufferAtr: 0.05 }) + "|" + realDay(R22, null, { ...V2, lowBufferAtr: 0.05 }), rd1 + "|12:15 PE 22587.4 38.8, 14:30 CE 22657.2 29.6", "RD-10: the low buffer 0.05");
+  ok(realDay(R23, R22, { ...V2, lowBufferAtr: 0.15 }) + "|" + realDay(R22, null, { ...V2, lowBufferAtr: 0.15 }), "12:45 PE 22409.6 29.9, 13:30 CE 22444.1 28.3|14:30 CE 22657.2 29.6", "RD-11: the low buffer 0.15");
+  ok(realDay(R26, R23, V3), "09:50 CE 22487.0 48.2, 13:15 CE 22636.8 33.0, 15:10 CE 22718.1 26.6", "RD-12: 26 October, version 3");
+  ok(realDay(R26, R23, V2), "13:15 CE 22636.8 33.0, 15:25 CE 22718.1 22.3", "RD-13: 26 October, version 2");
+  ok(realDay(R22, null, V3) + "|" + realDay(R23, R22, V3), rd7 + "|" + rd1, "RD-14: 22 and 23 October, version 3 = version 2");
+  ok(realDay(R26, R23, { ...V3, minDepthAtr: 0.75 }) + "|" + realDay(R22, null, { ...V3, minDepthAtr: 0.75 }),
+     "09:50 CE 22487.0 48.2, 12:00 CE 22581.2 42.4, 13:15 CE 22636.8 33.0, 15:10 CE 22718.1 26.6|13:55 CE 22642.1 35.0, 14:30 CE 22657.2 29.6, 14:35 CE 22651.7 31.1", "RD-15: version 3 with the depth 0.75 (not used)");
+  console.log("New Rule Chart: the double bottom matches its document's real days (RD-1 to RD-15)");
+
+  // ---- The shadow log (the brief, section 6) on 26 October (the document's candles, times from 09:15 IST): version 2 in the table,
+  // version 3 in shadow. The 09:50 W is version 3's alone (version 2 lacked both the gap and the swing); 13:15 is both versions'
+  // and taken; the late one is both (version 3 at 15:10, version 2 at 15:25, the day's last candle), outside the entry window
+  const base26 = Date.UTC(2026, 9, 26, 3, 45) / 1000, toBars = (rows, t0) => rows.map((r, i) => ({ time: t0 + i * 300, open: r[1], high: r[2], low: r[3], close: r[4] }));
+  const d26 = toBars(R26, base26), d23 = toBars(R23, base26 - 3 * 86400);
+  const run26 = N.runDay({ bars: d26, prevBars: d23, atrSeed: N.atrSeries(d23).slice(-1)[0], rules: ["double bottom"] });
+  const lg = run26.dbLog, row = (v, hm) => lg.rows.find(r => r.version === v && N.istHM(r.signalTime) === hm);
+  assert(lg.table === "V2" && lg.shadow === "V3", "the log's two versions");
+  const w950 = row("V3", "09:50");
+  assert(w950 && w950.tag === "V3 only" && w950.lacked === "both" && w950.side === "CE" && Math.abs(w950.L - 22487) < 0.01 && w950.gap === 3 && w950.order === "shadow, no order" && w950.inWindow && w950.entry === 22550.1,
+         "the 09:50 W, version 3 only: " + JSON.stringify(w950));
+  const t1315 = row("V2", "13:15"), s1315 = row("V3", "13:15");
+  assert(t1315 && t1315.tag === "Both" && t1315.order === "taken" && s1315 && s1315.tag === "Both" && t1315.entry === 22648.6 && t1315.points === run26.trades.find(t => N.istHM(t.signalTime) === "13:15").points,
+         "13:15, both versions, taken: " + JSON.stringify(t1315));
+  const late2 = row("V2", "15:25"), late3 = row("V3", "15:10");
+  assert(late2 && late3 && late2.tag === "Both" && N.istHM(late2.otherTime) === "15:10" && late2.order === "the day's last candle" && !late3.inWindow, "the late signal: " + JSON.stringify([late2, late3]));
+  assert(lg.summary.table === 2 && lg.summary.shadow === 3 && lg.summary.shadowOnly === 1 && lg.summary.shadowOnlyPoints === w950.points, "the day's summary: " + JSON.stringify(lg.summary));
+  assert(run26.trades.length === 1 && N.istHM(run26.trades[0].signalTime) === "13:15", "the table's trades: version 2's 13:15 only: " + JSON.stringify(run26.trades.map(t => N.istHM(t.signalTime))));
+  // a day still going (dayEnd false, the 15:25 candle not closed): the 13:15 call is open, against the last price, nothing ends at the day end
+  const live = N.runDay({ bars: d26.slice(0, 60), prevBars: d23, atrSeed: N.atrSeries(d23).slice(-1)[0], rules: ["double bottom"], closedCount: 59, dayEnd: false });
+  const open1315 = live.dbLog.rows.find(r => r.version === "V2" && N.istHM(r.signalTime) === "13:15");
+  assert(live.trades.length === 1 && live.trades[0].how !== "day end" && open1315 && open1315.order === "taken" && open1315.how === live.trades[0].how, "a day still going: " + JSON.stringify([live.trades[0].how, open1315 && open1315.how]));
+  // NIFTY 50 only (the owner, 27 October: "for nifty 50 only"): NIFTY BANK and SENSEX keep the page's old rule (DB_OLD: the first version,
+  // the swing size 2) and get no log; NIFTY 50 runs version 2 and the log, as runDay without an index
+  assert(N.DB.indices.join() === "NIFTY 50" && N.DB.other === N.DB_OLD && N.DB_OLD.swingN === 2 && N.DB_OLD.ceTrigger === "close" && N.DB_OLD.eqAtr === 0.5, "the indices and the old rule");
+  const opts = { bars: d26, prevBars: d23, atrSeed: N.atrSeries(d23).slice(-1)[0], rules: ["double bottom"] };
+  const n50 = N.runDay({ ...opts, index: "NIFTY 50" }), bank = N.runDay({ ...opts, index: "NIFTY BANK" }), sensex = N.runDay({ ...opts, index: "SENSEX" });
+  const old = N.runDay({ ...opts, cfg: { ...N.DT, db: N.DB_OLD }, dbShadow: false });
+  assert(JSON.stringify(n50) === JSON.stringify(run26), "NIFTY 50 = the documents' run");
+  assert(bank.dbLog === null && sensex.dbLog === null && JSON.stringify(bank.trades) === JSON.stringify(old.trades) && JSON.stringify(sensex.trades) === JSON.stringify(old.trades), "NIFTY BANK and SENSEX: the old rule, no log");
+  console.log("New Rule Chart: the double bottom's shadow log (26 October: the 09:50 W version 3's alone, 13:15 both and taken, the late one both); NIFTY 50 only");
 }
 // ---- The triple top (the owner's "Triple Top Chart Pattern" document): Appendix A (the breakdown, Buy PE) and B (the failure, Buy CE)
 {

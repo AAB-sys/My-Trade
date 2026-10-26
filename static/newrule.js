@@ -40,7 +40,8 @@
   // entry: the owner's "Trading Rules Specification" of 21 October (document 02, double top with candle stick pattern). All on
   // closed 5-minute index candles. The settings are the document's section 9.9 and 6.6 defaults, but for the swing size: 2 candles on each
   // side of a top or bottom (the owner, 26 October: "prepare the PR with swing size 2"; the documents: 3). It sets the double and triple
-  // tops and bottoms only: the wedges, the rectangle and the triangles keep their own 3 (WEDGE, RECT, TRI)
+  // tops and bottoms only: the wedges, the rectangle and the triangles keep their own 3 (WEDGE, RECT, TRI). The double bottom runs its own
+  // document's settings since 27 October (DB, below), the double top, the triple top and the triple bottom these
   const DT = { swingN: 2, minGap: 5, maxGap: 40, maxWait: 20, eqAtr: 0.5, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
                buffer: "ATR", atrMult: 0.25, fixedPoints: 0, entryFrom: "09:30", entryTo: "14:45", eod: "15:30",
                maxLossesInRow: 2, maxTradesPerDay: null, maxLossPerDay: null, skipExpiryDay: true,
@@ -82,48 +83,90 @@
     }
     return null;
   }
-  // ---- The double bottom (the owner's "Double Bottom Chart Pattern" document, 21 October): two lows within 0.5 ATR, 5 to 40
-  // candles apart, nothing below them between, the neckline the highest high between them at least 1.5 ATR above the higher
-  // bottom, a fall of 2 ATR into the first bottom. The pattern ends one of two ways, one trade per pattern: a close above the
-  // neckline by the buffer, Buy CE (the breakout); before any breakout, a close below the support (the lower bottom) by the
-  // buffer, Buy PE (the failure). Section 13 of the document, to the letter. The 5-minute settings; the daily chart is not built
-  function detectDoubleBottom(bars, k, side, atr, cfg = DT) {
-    const buf = bufferOf(atr, cfg);
-    if (atr == null || buf == null) return null;
-    const lows = findSwings(bars.slice(0, k + 1), -1, cfg.swingN);
-    if (!lows.length) return null;
-    const b2 = lows[lows.length - 1];
-    if (k - b2 > cfg.maxWait) return null;
+  // ---- The double bottom (the owner's "Double Bottom Chart Pattern" document, version 3 of 27 October, with its reference code
+  // double_bottom_reference.py, ported line by line; the first version was built on 21 October): two swing lows within eqAtr x ATR,
+  // minGap to 40 candles apart, nothing below them between, the neckline the highest high between them at least 1.5 ATR above the
+  // higher bottom, a fall of 2 ATR into the first bottom (checks 1 to 6, the nearest first bottom first). The pattern ends one of two
+  // ways, one trade per pattern, whichever triggers first from the candle that confirms the second bottom: Buy CE (the breakout) when a
+  // candle's HIGH goes above the neckline by 0.10 x ATR (ceTrigger "high"; "close": its close by the buffer, the first version), Buy PE
+  // (the failure) when a candle's LOW goes below the support (the lower bottom) by 0.10 x ATR (peTrigger "low"; "close": its close by
+  // the buffer). A candle that triggers both sides gives no signal; the chase check (more than 2 ATR past the line) is on the close.
+  // The settings, the document's section 14 (the 5-minute chart; the daily chart is not built):
+  //   DB_V3  version 3 (27 October): a bottom needs 2 candles on each side, the bottoms 3 to 40 candles apart
+  //   DB_V2  version 2 (24 October, the Buy PE trigger 26 October): 3 candles on each side, 5 to 40 apart; the bottoms within 0.60 ATR,
+  //          the triggers on the high and the low
+  //   DB_V1  the first version (21 October): within 0.5 ATR, the triggers on the close by the buffer (the lab's document cases)
+  //   DB_OLD the page's rule before 27 October: the first version with the swing size 2 of 26 October
+  // The owner, 27 October ("V2 table, V3 shadow"; "for nifty 50 only"): on NIFTY 50 (DB.indices) the Calls with Signals table runs
+  // version 2 (DB.table) and version 3 runs in shadow (DB.shadow): its signals are logged beside version 2's (runDay's dbLog), each
+  // followed on paper, no call. NIFTY BANK and SENSEX keep the page's rule as it was (DB.other), with no log: on the saved days
+  // version 2 did better than it on NIFTY 50 and worse on NIFTY BANK. The switch to version 3 is one line, table: DB_V3; going back,
+  // table: DB_V2; another index in, its name in indices
+  const DB_V3 = { name: "V3", swingN: 2, minGap: 3, maxGap: 40, maxWait: 20, eqAtr: 0.60, minDepthAtr: 1.5, priorMoveAtr: 2.0, priorLookback: 20, maxChaseAtr: 2.0,
+                  buffer: "ATR", atrMult: 0.25, fixedPoints: 0, ceTrigger: "high", highBufferAtr: 0.10, peTrigger: "low", lowBufferAtr: 0.10 };
+  const DB_V2 = { ...DB_V3, name: "V2", swingN: 3, minGap: 5 };
+  const DB_V1 = { ...DB_V2, name: "V1", eqAtr: 0.5, ceTrigger: "close", peTrigger: "close" };
+  const DB_OLD = { ...DB_V1, name: "old", swingN: 2 };
+  const DB = { table: DB_V2, shadow: DB_V3, indices: ["NIFTY 50"], other: DB_OLD };
+  const dbOn = (index) => index == null || DB.indices.includes(index);  // no index given (the lab's cases): the documents' own run
+  // How far candle j went past the neckline (up) or the support (down), as the trigger measures it, and the trigger's size
+  const dbReach = (b, neck, cfg) => (cfg.ceTrigger === "high" ? b.high : b.close) - neck;
+  const dbDrop = (b, lower, cfg) => lower - (cfg.peTrigger === "low" ? b.low : b.close);
+  const dbUpBuf = (atr, cfg) => cfg.ceTrigger === "high" ? cfg.highBufferAtr * atr : bufferOf(atr, cfg);
+  const dbDownBuf = (atr, cfg) => cfg.peTrigger === "low" ? cfg.lowBufferAtr * atr : bufferOf(atr, cfg);
+  // Every double bottom that passes the shared checks 1 to 6 at candle k, the nearest first bottom first (double_bottom_patterns)
+  function dbPatterns(bars, k, atr, cfg) {
+    const out = [], lows = findSwings(bars.slice(0, k + 1), -1, cfg.swingN);
+    if (!lows.length) return out;
+    const b2 = lows[lows.length - 1];                                                          // 1. Bottom 2: the latest confirmed swing low
+    if (k - b2 > cfg.maxWait) return out;
     const b1s = lows.filter(s => b2 - s >= cfg.minGap && b2 - s <= cfg.maxGap);
-    for (let i = b1s.length - 1; i >= 0; i--) {
+    for (let i = b1s.length - 1; i >= 0; i--) {                                               // 2. Bottom 1, the nearest first
       const b1 = b1s[i], low1 = bars[b1].low, low2 = bars[b2].low;
-      if (Math.abs(low1 - low2) > cfg.eqAtr * atr) continue;                                   // 3
+      if (Math.abs(low1 - low2) > cfg.eqAtr * atr) continue;                                   // 3. roughly equal
       const lower = Math.min(low1, low2), higher = Math.max(low1, low2);
-      let below = false, neck = null;
-      for (let j = b1 + 1; j < b2; j++) { if (bars[j].low < lower) below = true; if (neck == null || bars[j].high > neck) neck = bars[j].high; }
-      if (below || neck == null) continue;                                                       // 4
-      if (neck - higher < cfg.minDepthAtr * atr) continue;                                       // 5
+      let below = false, neck = -Infinity;
+      for (let j = b1 + 1; j < b2; j++) { if (bars[j].low < lower) below = true; neck = Math.max(neck, bars[j].high); }
+      if (below) continue;                                                                     // 4. nothing below the bottoms in between
+      if (neck - higher < cfg.minDepthAtr * atr) continue;                                     // 5. deep enough
       const s0 = Math.max(0, b1 - cfg.priorLookback);
       let priorHigh = -Infinity; for (let j = s0; j <= b1; j++) priorHigh = Math.max(priorHigh, bars[j].high);
-      if (priorHigh - low1 < cfg.priorMoveAtr * atr) continue;                                   // 6
-      const height = round2(neck - lower), start = b2 + cfg.swingN;
-      let brokeOut = false, brokeDown = false;
-      for (let j = start; j < k; j++) { if (bars[j].close - neck > buf) brokeOut = true; if (lower - bars[j].close > buf) brokeDown = true; }
+      if (priorHigh - low1 < cfg.priorMoveAtr * atr) continue;                                 // 6. a real fall into Bottom 1
+      out.push({ b1, b2, low1, low2, lower, higher, neck, height: neck - lower });
+    }
+    return out;
+  }
+  // detect_double_bottom_ce (side "CE", the breakout) and detect_double_bottom_pe ("PE", the failure) at candle k; atr: as of k - 1.
+  // A settings set without the trigger keys (the shared DT of the lab's first cases) reads as the first version's close triggers
+  function detectDoubleBottom(bars, k, side, atr, cfg = DB.table) {
+    if (atr == null || bufferOf(atr, cfg) == null) return null;
+    const ub = dbUpBuf(atr, cfg), dbf = dbDownBuf(atr, cfg), bar = bars[k];
+    for (const p of dbPatterns(bars, k, atr, cfg)) {
+      const start = p.b2 + cfg.swingN;                                                         // counted from Bottom 2's confirmation
       if (side === "CE") {
-        let closedBelow = false; for (let j = b1; j <= k; j++) if (bars[j].close < lower) closedBelow = true;
-        if (closedBelow || brokeOut) continue;                                                   // 7, used up
-        const dist = bars[k].close - neck;
-        if (dist <= buf) continue;
-        if (dist > cfg.maxChaseAtr * atr) return null;
-        return { side: "CE", rule: "double bottom", kind: "double bottom confirmed", t1: b1, t2: b2, t1Time: bars[b1].time, t2Time: bars[b2].time, neckline: round2(neck), support: round2(lower),
-                 L: round2(neck), height, target: round2(neck + height), signalCandle: k, signalTime: bars[k].time, buffer: round2(buf), atr: round2(atr) };
+        let closedBelow = false; for (let j = p.b1; j <= k; j++) if (bars[j].close < p.lower) closedBelow = true;
+        if (closedBelow) continue;                                                             // 7. no close below the bottoms
       }
-      if (brokeOut || brokeDown) continue;                                                       // 7, used up
-      const dist = lower - bars[k].close;
-      if (dist <= buf) continue;
-      if (dist > cfg.maxChaseAtr * atr) return null;
-      return { side: "PE", rule: "double bottom", kind: "double bottom failed", t1: b1, t2: b2, t1Time: bars[b1].time, t2Time: bars[b2].time, neckline: round2(neck), support: round2(lower),
-               L: round2(lower), height, target: round2(lower - height), signalCandle: k, signalTime: bars[k].time, buffer: round2(buf), atr: round2(atr) };
+      let usedUp = false, usedOther = false;
+      for (let j = start; j < k; j++) {
+        const up = dbReach(bars[j], p.neck, cfg) > ub, down = dbDrop(bars[j], p.lower, cfg) > dbf;
+        if (side === "CE" ? up : down) usedUp = true;                                            // already triggered earlier: first trigger only
+        if (side === "CE" ? down : up) usedOther = true;                                         // the other side already used the pattern
+      }
+      if (usedUp || usedOther) continue;
+      const reach = dbReach(bar, p.neck, cfg), drop = dbDrop(bar, p.lower, cfg);
+      if (side === "CE" ? reach <= ub : drop <= dbf) continue;                                 // this candle did not trigger
+      if (side === "CE" ? drop > dbf : reach > ub) return null;                                // both sides on one candle: no signal
+      const closeDist = side === "CE" ? bar.close - p.neck : p.lower - bar.close;
+      if (closeDist > cfg.maxChaseAtr * atr) return null;                                      // closed too far past the line: skip
+      const level = side === "CE" ? p.neck : p.lower, past = side === "CE" ? bar.high - p.neck : p.lower - bar.low, height = round2(p.height);
+      return { side, rule: "double bottom", kind: side === "CE" ? "double bottom confirmed" : "double bottom failed", t1: p.b1, t2: p.b2, t1Time: bars[p.b1].time, t2Time: bars[p.b2].time,
+               neckline: round2(p.neck), support: round2(p.lower), L: round2(level), height, target: round2(side === "CE" ? p.neck + p.height : p.lower - p.height),
+               signalCandle: k, signalTime: bar.time, buffer: round2(side === "CE" ? ub : dbf), atr: round2(atr),
+               // the shadow log's measures (the brief, section 6): the bottoms, their gap and difference against the limit, the depth
+               // against the minimum, how far the high (Buy CE) or the low (Buy PE) went past the line and where the candle closed
+               low1: round2(p.low1), low2: round2(p.low2), gap: p.b2 - p.b1, diff: round2(Math.abs(p.low1 - p.low2)), limit: round2(cfg.eqAtr * atr),
+               depth: round2(p.neck - p.higher), minDepth: round2(cfg.minDepthAtr * atr), past: round2(past), pastAtr: round2(past / atr), closeDist: round2(closeDist) };
     }
     return null;
   }
@@ -481,6 +524,82 @@
                      "ascending triangle": (st, bars, k, atr, cfg, skipped) => triangleStep(st, bars, k, ascendingAt, "CE", true, atr, cfg, skipped),
                      "descending triangle": (st, bars, k, atr, cfg, skipped) => triangleStep(st, bars, k, descendingAt, "PE", true, atr, cfg, skipped) };
   const istHM = (t) => { const s = (t + 19800) % 86400; return `${String(Math.floor(s / 3600)).padStart(2, "0")}:${String(Math.floor(s % 3600 / 60)).padStart(2, "0")}`; };
+  // ---- The double bottom's shadow log (the version 3 brief, section 6; the owner, 27 October: "V2 table, V3 shadow"). Every signal of
+  // the table's version (sets.table) and of the shadow version (sets.shadow) on every closed candle, a trade open or not, both sides.
+  // Tag: "<table> only", "<shadow> only" or "Both" (the same pattern: the same side and level, the neckline or the support; the other
+  // version's time kept). The table's signals carry their order: taken, or why not (the entry window, a trade already open, the losses
+  // in a row...); the shadow's place none, and say whether they fell in the entry window. Every signal is followed on paper to its exit
+  // with the trades' own exits (manageStep): the entry at the next candle's open, the exit, the best and the worst point on the way,
+  // the points (an open one against the last price). A shadow-only signal says what the table's version lacked: the gap between the
+  // bottoms, the swing (a bottom without the table's candles on each side), both, or other. The summary: the signals of each, the
+  // shadow-only ones and their paper points. The log is the candles' own: replaying a saved day gives it again
+  function dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, sets) {
+    const names = [sets.table.name || "table", sets.shadow.name || "shadow"], sigs = [];
+    [sets.table, sets.shadow].forEach((set, v) => {
+      for (let k = 0; k <= lastK; k++) for (const side of ["CE", "PE"]) {
+        const s = detectDoubleBottom(bars, k, side, k > 0 ? atrs[k - 1] : null, set);
+        if (s) sigs.push({ ...s, version: names[v], inTable: v === 0 });
+      }
+    });
+    const key = (s) => s.side + "|" + s.L, last = bars[bars.length - 1];
+    const isLow = (i, n) => i - n >= 0 && i + n <= lastK && bars.slice(i - n, i + n + 1).every((b, j) => j === n || bars[i].low <= b.low);
+    const rows = sigs.map(s => {
+      const twin = sigs.find(o => o.inTable !== s.inTable && key(o) === key(s)), k = s.signalCandle, d = s.side === "CE" ? 1 : -1;
+      const r = { version: s.version, tag: twin ? "Both" : `${s.version} only`, otherTime: twin ? twin.signalTime : null, side: s.side, signalTime: s.signalTime, L: s.L, atr: s.atr,
+                  t1Time: s.t1Time, low1: s.low1, t2Time: s.t2Time, low2: s.low2, gap: s.gap, diff: s.diff, limit: s.limit, depth: s.depth, minDepth: s.minDepth,
+                  past: s.past, pastAtr: s.pastAtr, closeDist: s.closeDist, target: s.target };
+      if (!s.inTable && !twin) {
+        const t = sets.table, gapFail = s.gap < t.minGap || s.gap > t.maxGap, swingFail = !isLow(s.t1, t.swingN) || !isLow(s.t2, t.swingN);
+        r.lacked = gapFail && swingFail ? "both" : gapFail ? "gap" : swingFail ? "swing" : "other";
+      }
+      const entryBar = bars[k + 1];
+      r.inWindow = !!entryBar && istHM(entryBar.time) >= cfg.entryFrom && istHM(entryBar.time) <= cfg.entryTo;
+      const taken = s.inTable ? trades.find(t => t.rule === "double bottom" && t.side === s.side && t.signalCandle === k) : null;
+      if (s.inTable) {
+        const busy = trades.some(t => t.signalCandle < k && (t.exitTime == null || t.exitTime > bars[k].time || (t.exitTime === bars[k].time && t.how === "day end")));
+        const other = trades.find(t => t.signalCandle === k && t !== taken), why = skipped.find(x => x.time === bars[k].time && !x.rule && (x.side == null || x.side === s.side));
+        r.order = taken ? "taken" : !entryBar ? (dayEnd ? "the day's last candle" : "no next candle yet") : busy ? "a trade already open" : why ? why.why : other ? `the ${other.rule} call on the same candle` : "not taken";
+      } else r.order = "shadow, no order";
+      if (!entryBar) return r;  // nothing to follow yet
+      const t = taken || newTrade(s, bars);
+      let hi = -Infinity, lo = Infinity;
+      for (let j = k + 1; j <= lastK; j++) {
+        hi = Math.max(hi, bars[j].high); lo = Math.min(lo, bars[j].low);
+        if (taken ? t.exitTime != null && bars[j].time >= t.exitTime : manageStep(t, bars[j], j, atrs[j - 1], lastK, dayEnd, cfg)) break;
+      }
+      if (k + 1 > lastK) { hi = entryBar.high; lo = entryBar.low; }  // the entry candle still forming: its range so far
+      Object.assign(r, { entry: t.entry, entryTime: t.entryTime, exit: t.exit, exitTime: t.exitTime, how: t.exit != null ? t.how : "open",
+                         best: round2(d > 0 ? hi - t.entry : t.entry - lo), worst: round2(d > 0 ? lo - t.entry : t.entry - hi),
+                         points: t.exit != null ? t.points : round2(d * (last.close - t.entry)) });
+      return r;
+    }).sort((a, b) => a.signalTime - b.signalTime || (a.version < b.version ? -1 : 1));
+    const only = rows.filter(r => r.tag === `${names[1]} only`);
+    return { table: names[0], shadow: names[1], rows,
+             summary: { table: rows.filter(r => r.version === names[0]).length, shadow: rows.filter(r => r.version === names[1]).length, shadowOnly: only.length,
+                        shadowOnlyPoints: round2(only.reduce((a, r) => a + (r.points || 0), 0)) } };
+  }
+  // One closed candle of an open trade, Rule 1 then the ATR trail (22 October): the stop starts on L; a close back across it is the
+  // reclaim (Exit A); on C2 the retouch (Exit B). Once a candle has closed in profit the stop sits trailAtr x ATR (the ATR as of the
+  // candle before) behind the best close so far (half an ATR since 22 October evening), moved only in the call's favour and never
+  // loosened; sold at the close of the first candle that closes past it. The day's last candle (dayEnd) ends it. Returns how it ended
+  // on this candle, or null (the trade goes on). runDay's trades and the double bottom's shadow log run the same step
+  function manageStep(t, bar, k, atr, lastK, dayEnd, cfg) {
+    const d = t.side === "CE" ? 1 : -1;
+    let how = null;
+    if (k === lastK && dayEnd) how = "day end";
+    else {
+      if (d * (bar.close - t.stop) < 0) how = t.stage === 1 ? "reclaim" : "trail";
+      else if (t.stage === 1 && k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";
+      if (!how && atr != null) {
+        const gain = d * (bar.close - t.entry);
+        if (gain > 0) { t.best = round2(Math.max(t.best || 0, gain)); const s = round2(bar.close - d * cfg.trailAtr * atr);  // behind this close: the best close, as the stop never moves back
+          if (d * (s - t.stop) > 0) { t.stop = s; t.stage = 2; } }
+      }
+    }
+    if (how) { t.exit = bar.close; t.exitTime = bar.time; t.how = how; t.points = round2(d * (bar.close - t.entry)); }
+    return how;
+  }
+  const newTrade = (sig, bars) => ({ ...sig, entryTime: bars[sig.signalCandle + 1].time, entry: bars[sig.signalCandle + 1].open, c1: bars[sig.signalCandle], stage: 1, stop: sig.L, best: 0, exit: null, exitTime: null, points: null, how: "open" });
   // The day replayed: the entries, Rule 1 and the ATR trail over closed candles.
   // atrSeed: the ATR to start the day with (from the previous day's candles), else the day warms up on its own 14 candles;
   // atrFixed: a test's fixed ATR. One trade at a time; both sides firing on one candle skip both; the filters of section 9.5
@@ -493,10 +612,11 @@
   // The wedge and rectangle rules keep state (the locked pattern, the patterns used up): their scanners step on every closed
   // candle, a trade open or not, so the first close outside the locked lines always uses the pattern up; a signal while a trade is open is skipped ("one trade at a time")
   const RULES = { "double top": (bars, k, atr, cfg) => [detectEntry(bars, k, "PE", atr, cfg)],
-                  "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg), detectDoubleBottom(bars, k, "PE", atr, cfg)],
+                  "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg.db || DB.table), detectDoubleBottom(bars, k, "PE", atr, cfg.db || DB.table)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
                   "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)] };
-  function runDay({ bars, cfg = DT, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
+  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
+    if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
       let a = atrSeed; bars.forEach((b, i) => { const prev = i ? bars[i - 1].close : null; const tr = prev == null ? b.high - b.low : Math.max(b.high - b.low, Math.abs(b.high - prev), Math.abs(b.low - prev)); a = atrStep(a, tr, cfg.atrPeriod || 14); atrs[i] = a; });
@@ -510,22 +630,8 @@
       const wedgeSigs = [];  // the wedge scanners step first, every candle (see above)
       for (const name of rules) if (scanners[name]) { const s = SCANNERS[name](scanners[name], bars, k, atr, scanCfg, skipped); if (s) wedgeSigs.push(s); }
       if (open) {  // the trade on this candle's close (the entry candle itself is judged too, as C2 is the candle after C1)
-        const t = open, d = t.side === "CE" ? 1 : -1;
-        let how = null;
-        if (k === lastK && dayEnd && !how) how = "day end";
-        else {  // Rule 1, then the ATR trail (22 October): the stop starts on L; a close back across it is the reclaim (Exit A); on C2 the retouch
-          // (Exit B). Once a candle has closed in profit the stop sits trailAtr x ATR (the ATR as of the candle before) behind the best close so
-          // far (half an ATR since 22 October evening), moved only in the call's favour and never loosened; sold at the close of the first candle that closes past it
-          if (d * (bar.close - t.stop) < 0) how = t.stage === 1 ? "reclaim" : "trail";
-          else if (t.stage === 1 && k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";
-          if (!how && atr != null) {
-            const gain = d * (bar.close - t.entry);
-            if (gain > 0) { t.best = round2(Math.max(t.best || 0, gain)); const s = round2(bar.close - d * cfg.trailAtr * atr);  // behind this close: the best close, as the stop never moves back
-              if (d * (s - t.stop) > 0) { t.stop = s; t.stage = 2; } }
-          }
-        }
-        if (how) { t.exit = bar.close; t.exitTime = bar.time; t.how = how; t.points = round2(d * (bar.close - t.entry)); open = null;
-          if (t.points < 0) { lossesInRow++; dayLoss += -t.points; } else lossesInRow = 0; }
+        const t = open, how = manageStep(t, bar, k, atr, lastK, dayEnd, cfg);
+        if (how) { open = null; if (t.points < 0) { lossesInRow++; dayLoss += -t.points; } else lossesInRow = 0; }
         if (open || how === "day end") { wedgeSigs.forEach(s => skipped.push({ time: bar.time, side: s.side, rule: s.rule, why: open ? "one trade at a time" : "day end" })); continue; }
       }
       if (k + 1 >= bars.length) break;  // a signal on the last candle has no next candle to enter on
@@ -544,10 +650,10 @@
       if (cfg.maxLossPerDay != null && dayLoss >= cfg.maxLossPerDay) { skipped.push({ time: bar.time, side: sig.side, why: "daily loss limit" }); continue; }
       if (lossesInRow >= cfg.maxLossesInRow) { skipped.push({ time: bar.time, side: sig.side, why: `${cfg.maxLossesInRow} losses in a row` }); continue; }
       if (cfg.skipExpiryDay && expiryDay) { skipped.push({ time: bar.time, side: sig.side, why: "expiry day" }); continue; }
-      open = { ...sig, entryTime: entryBar.time, entry: entryBar.open, c1: bar, stage: 1, stop: sig.L, best: 0, exit: null, exitTime: null, points: null, how: "open" };
+      open = newTrade(sig, bars);
       trades.push(open);
     }
-    return { trades, skipped };
+    return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -143,6 +143,18 @@
   #signals td.up { color: var(--up); } #signals td.down { color: var(--down); }
   #signals td.cand.carry { color: var(--up); font-weight: 600; } #signals td.cand.exit { color: var(--down); font-weight: 600; }
   #signals tr.ended td { color: var(--ink-2); }
+  /* the Double Bottom's shadow log under the Calls with Signals table (27 October): version 2 in the table, version 3 in shadow */
+  #dblog-box { margin-top: 16px; }
+  #dblog-box h3 { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  #dblog-sum { font-size: 13px; color: var(--ink-2); margin: 0 0 8px; }
+  #dblog { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #dblog th, #dblog td { text-align: right; padding: 5px 12px 5px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #dblog th:first-child, #dblog td:first-child { text-align: left; }
+  #dblog th { font-weight: 500; color: var(--muted); font-size: 12px; position: sticky; top: 0; background: var(--surface); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
+  #dblog td small { display: block; color: var(--muted); font-weight: 400; }
+  #dblog td.up { color: var(--up); } #dblog td.down { color: var(--down); }
+  #dblog td.tag.only { font-weight: 600; }
+  .dblog-scroll { max-height: 50vh; }
   #paper-box .scroll { overflow: visible; }
   @media (max-width: 1099px) { #paper-box .scroll { overflow: auto; max-height: 80vh; } }
   #paper td.entry.wait { color: var(--ink-2); }
@@ -405,6 +417,18 @@
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
         <tbody></tbody>
       </table>
+    </div>
+    <!-- the Double Bottom's shadow log (27 October, the owner's "Double Bottom V3 Implementation Brief", section 6, and "V2 table, V3
+         shadow"): every signal of version 2 (the table's) and of version 3 (shadow, no call), each followed on paper to its exit -->
+    <div id="dblog-box" hidden>
+      <h3>Double Bottom shadow log</h3>
+      <p id="dblog-sum"></p>
+      <div class="chain-scroll dblog-scroll">
+        <table id="dblog">
+          <thead><tr><th>Time</th><th>Version</th><th>Tag</th><th>Call</th><th>Level</th><th>Bottoms</th><th>Checks</th><th>Reach</th><th>V2 lacked</th><th>Order</th><th>Paper result</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
     <div id="signals-layout" class="layout" hidden role="dialog" aria-modal="true" aria-labelledby="indicators-title">
       <div class="layout-box">
@@ -1964,7 +1988,7 @@
     const before = state.candles.filter(b => sessionOf(b) < key);  // the previous sessions loaded, for the ATR's warm-up
     const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
     const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
-    return { ...NewRule.runDay({ bars, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd }), bars };  // the previous sessions' candles also feed the symmetrical triangles' trend window
+    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd }), bars };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -1977,6 +2001,7 @@
   }
   function clearSignals() {
     document.querySelector("#signals tbody").replaceChildren();
+    drawDbLog(null);
     if (signalMarkers && signalMarkers.series === series) setSignalMarkers([]);
     setWedgeLines([]);
   }
@@ -2033,7 +2058,38 @@
       return tr;
     });
     body.replaceChildren(...rows);
+    drawDbLog(run.dbLog);
     return lines;
+  }
+  // The Double Bottom's shadow log (NewRule.runDay's dbLog): one row per signal of either version, the same pattern (side and level)
+  // in both tagged "Both" with the other version's time under it; the order the table's version placed or why not; the shadow
+  // version's none; every signal followed on paper with the table's own exits. The summary line is the brief's daily summary
+  function drawDbLog(log) {
+    const body = document.querySelector("#dblog tbody"), sum = document.getElementById("dblog-sum");
+    document.getElementById("dblog-box").hidden = !log;  // NIFTY 50 only (the owner, 27 October: "for nifty 50 only")
+    if (!log) { body.replaceChildren(); sum.textContent = ""; return; }
+    const s = log.summary, pts = (v) => `${v > 0 ? "+" : ""}${fmt.format(v)}`, tone = (v) => v > 0 ? "up" : v < 0 ? "down" : "";
+    sum.textContent = `Version ${log.table.slice(1)} gives the calls in the table above; version ${log.shadow.slice(1)} runs in shadow (logged, no call). `
+      + `Today: ${log.table} ${s.table} signal${s.table === 1 ? "" : "s"} · ${log.shadow} ${s.shadow} · ${log.shadow} only ${s.shadowOnly}`
+      + (s.shadowOnly ? ` (paper ${pts(s.shadowOnlyPoints)} pts)` : "");
+    const how = { reclaim: "reclaim", retouch: "retouch", trail: "trailing stop", "day end": "end of day" };
+    const rows = log.rows.slice().sort((a, b) => b.signalTime - a.signalTime || (a.version < b.version ? -1 : 1)).map(r => {  // the newest first, the table's version first
+      const tr = document.createElement("tr"), line = r.side === "CE" ? "neckline" : "support", reach = r.side === "CE" ? "high" : "low";
+      const paper = r.entry == null ? "no entry yet"
+        : `in ${fmt.format(r.entry)} at ${callTime(r.entryTime)} → ${r.exit != null ? `out ${fmt.format(r.exit)} at ${callTime(r.exitTime)} (${how[r.how] || r.how})` : "open"}`;
+      tr.innerHTML = `<td>${callTime(r.signalTime)}${r.otherTime != null && r.otherTime !== r.signalTime ? `<small>${r.version === log.table ? log.shadow : log.table} at ${callTime(r.otherTime)}</small>` : ""}</td>`
+        + `<td>${r.version}</td><td class="tag ${r.tag === "Both" ? "" : "only"}">${r.tag}</td><td>Buy ${r.side}</td>`
+        + `<td>${line} ${fmt.format(r.L)}<small>ATR ${fmt.format(r.atr)}</small></td>`
+        + `<td>B1 ${callTime(r.t1Time)} · ${fmt.format(r.low1)}<small>B2 ${callTime(r.t2Time)} · ${fmt.format(r.low2)} · ${r.gap} candles apart</small></td>`
+        + `<td>bottoms ${fmt.format(r.diff)} apart, limit ${fmt.format(r.limit)}<small>depth ${fmt.format(r.depth)}, minimum ${fmt.format(r.minDepth)}</small></td>`
+        + `<td>${reach} ${fmt.format(r.past)} past (${fmt.format(r.pastAtr)} ATR)<small>close ${pts(r.closeDist)} from the line</small></td>`
+        + `<td>${r.lacked ? { gap: "the gap", swing: "the swing", both: "the gap and the swing", other: "other" }[r.lacked] : "—"}</td>`
+        + `<td>${r.order}${r.version === log.shadow ? `<small>${r.inWindow ? "inside" : "outside"} the 9:30 AM to 2:45 PM window</small>` : ""}</td>`
+        + `<td class="${r.entry == null ? "" : tone(r.points)}">${r.entry == null ? paper : `${pts(r.points)} pts`}${r.entry == null ? "" : `<small>${paper} · best ${pts(r.best)}, worst ${pts(r.worst)}</small>`}</td>`;
+      return tr;
+    });
+    if (!rows.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="11">No double bottom signal yet today from either version</td>`; rows.push(tr); }
+    body.replaceChildren(...rows);
   }
   (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
     const head = document.querySelector("#chain thead"); let from = null;
