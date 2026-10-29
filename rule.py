@@ -621,6 +621,34 @@ LOCK_PRESETS["RUNNER"] = {**LOCK_PRESETS["STEADY"], "minTrailPts": 16}
 LOCK_PRESETS["OFF"] = {**LOCK_PRESETS["MAX"], "armPts": None}
 LOCK = {"mode": "SHADOW", "name": "MAX", **LOCK_PRESETS["MAX"], "compare": ["STEADY", "RUNNER"], "indices": ["NIFTY 50"]}
 
+# The Trade Plan (static/rules.js PLAN, 29 October): on NIFTY 50, the first 3 calls that fired at or after 12:00 and before 15:00, "TAKE"
+# (call 1, 2 or 3 of 3); every other call that fired "SKIP" and why; mode SHADOW: a mark only, every call keeps its row and its order
+PLAN = {"mode": "SHADOW", "name": "afternoon 3", "indices": ["NIFTY 50"], "from": "12:00", "to": "15:00", "maxCalls": 3}
+
+
+def ist_hm(t: float) -> str:
+    s = int(t + IST_OFFSET) % 86400
+    return f"{s // 3600:02d}:{s % 3600 // 60:02d}"
+
+
+def plan_step(trades: list, p: dict = PLAN) -> int:
+    """The plan's mark on every call that fired (static/rules.js planStep): by the moment fired, the earliest first."""
+    taken = 0
+    fired = sorted((t for t in trades if t.get("entryTime") is not None and t.get("how") != "cancelled"), key=lambda t: (t["entryTime"], t["signalTime"], t["side"]))
+    for t in fired:
+        when = ist_hm(t["entryTime"])
+        if when < p["from"]:
+            t["plan"], t["planWhy"] = "SKIP", f"fired at {when}, before {p['from']}"
+        elif when >= p["to"]:
+            t["plan"], t["planWhy"] = "SKIP", f"fired at {when}, after {p['to']}"
+        elif taken >= p["maxCalls"]:
+            t["plan"], t["planWhy"] = "SKIP", f"the {p['maxCalls']} calls are taken"
+        else:
+            taken += 1
+            t["plan"], t["planWhy"] = "TAKE", f"call {taken} of {p['maxCalls']}"
+    return taken
+
+
 
 def lock_floor(peak: float, g: dict):
     """The floor in index points of profit; None while the lock is not armed (static/rules.js lockFloor)."""
@@ -668,7 +696,7 @@ TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
                  hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, new_high_low: bool = False, prev_close=None,
-                 minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC, profit_lock: dict | None = LOCK) -> dict:
+                 minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC, profit_lock: dict | None = LOCK, trade_plan: dict | None = PLAN) -> dict:
     """The paper calls (see static/rules.js paperTrades). Since 18 October a call fires when a later candle's price goes past the
     signal candle's high (CE) or low (PE) and enters there, or at the candle's open when it opened past it; any later candle may
     fire it, until a candle closes back across the signal's line; a second call the same way while another is held runs beside
@@ -1085,13 +1113,15 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 end(t, last["close"], last, "day end")
             else:
                 t["points"], t["last"] = gain(t, last["close"]), last["close"]
+    if trade_plan:
+        plan_step(trades, trade_plan)  # the Trade Plan's mark on every call that fired (29 October)
     return {"trades": trades, "closed": len(closed), "cancelled": cancelled, "zonesFound": zone["found"], "lcZonesFound": lc_zone["found"], "lcZonesEnded": lc_zone["ended"]}
 
 
 
 def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL,
                new_high_low: bool = False, minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC,
-               profit_lock: dict | None = LOCK) -> dict:
+               profit_lock: dict | None = LOCK, trade_plan: dict | None = PLAN) -> dict:
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
     setting is given (None: Rule 1 alone); idea 24 when asked for, on "today so far" lines only. The first candle is judged from
     the previous day's close (18 October)."""
@@ -1102,7 +1132,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else from_close if move == "close" else today_levels_at(bars)
     return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if own else today_lines_at(bars), True, trail, None,
-                        not own and bool(new_high_low), previous.get("close") if own and previous else None, minutes or None, gate, atr_seed, loss_cutter, profit_lock)
+                        not own and bool(new_high_low), previous.get("close") if own and previous else None, minutes or None, gate, atr_seed, loss_cutter, profit_lock, trade_plan)
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},

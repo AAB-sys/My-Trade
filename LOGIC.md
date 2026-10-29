@@ -927,6 +927,44 @@ Yahoo's delayed prices then).
 this, at what size, and with what daily limit. The score line over many days is
 the evidence for that choice.
 
+11. **The Trade Plan** (29 October, the owner: "I am expecting you to build this very
+   quickly but real thoroughly"; `static/rules.js` PLAN, planStep, planSummary;
+   `rule.py` PLAN, plan_step). The one rule of the owner's own settings that passed
+   the widest honest test: 8,404,992 combinations of this engine's settings (the
+   ideas P1 to P7, the 1-minute exit, the Profit Lock modes, the side, Loss Cutter
+   TAKE only, Gate TAKE only, the level group, the entry window, at most N calls a
+   day, stop after N losses) over the 20 saved days, each chosen on the first 10
+   days (before 15 October) and judged on the next 10 untouched, and the other way
+   round. On NIFTY 50 the winner chosen on the first half was **the first 3 calls
+   that fire at or after 12:00 and before 15:00, nothing else**: +928 points after
+   8 a call on the first half, +79 on the second (28 calls), +1,007 over all 20
+   days, 13 days up and 7 down, worst day -103; the page as it runs -990. All of
+   the top 100 rules found on the first half stayed positive on the second (their
+   average +55), so "afternoon, few calls" is not one lucky combination. Chosen the
+   other way round (on the second half), the best rule lost -416 on the first: the
+   search itself shows what a memorised rule looks like. On NIFTY BANK nothing
+   survived either way (0 of the top 100), and this rule on NIFTY BANK is -577: the
+   plan runs on NIFTY 50 only. The owner's morning calls are the loser: the 10
+   o'clock hour alone cost -722 over the 20 days.
+   - **Mode SHADOW, built:** a mark on every call that fired, `plan` TAKE (call 1,
+     2 or 3 of 3) or SKIP, `planWhy` says which (fired before 12:00, at or after
+     15:00, the 3 taken). Counted by the moment each call fired (`entryTime`), the
+     earliest first; two firing on one candle both count; a call not fired yet, or
+     a signal cancelled before firing, has no verdict. A pure pass over the day's
+     calls once they are known (the end of paperTrades), so the page and the
+     server mark the same calls (check_rule.py compares the marks). Every call
+     keeps its row and its order. The page's Paper calls table has two more
+     columns, **Trade Plan** and **Plan reason** (NIFTY 50 only), a tick **Trade
+     Plan only** above the table (on until the owner unticks it; kept in the
+     browser) that shows the plan's calls alone, and the plan's line: where the
+     day stands (waiting until 12:00; n of 3 taken, the rest allowed until 15:00;
+     done for today; the window closed at 15:00), the plan calls' points, and,
+     when every one has a premium, their rupees at 1 lot. The day's calls CSV has
+     `plan` and `plan_reason`.
+   - **Mode LIVE, not built:** would place no order for the calls the plan skips.
+     The owner's yes decides, after 10 paper days of the plan positive after
+     charges (the ULTROAN evening study keeps score from the CSV's close rows).
+
 ## Layer 4: The record and the study - built
 
 The owner's idea (6 October): keep each session's candles, and after the close

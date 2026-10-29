@@ -170,6 +170,10 @@
   #paper td.cand.exit, #paper tr.ended td.cand.exit { color: var(--down); }
   #paper td.why { text-align: left; color: var(--ink-2); }  /* "Reason" (19 October): what stood in brackets under the status */
   #paper.no-lc th:nth-child(12), #paper.no-lc td:nth-child(12), #paper.no-lc th:nth-child(13), #paper.no-lc td:nth-child(13) { display: none; }  /* the Loss Cutter's columns: NIFTY 50 only (24 October) */
+  #paper.no-plan th:nth-child(15), #paper.no-plan td:nth-child(15), #paper.no-plan th:nth-child(16), #paper.no-plan td:nth-child(16) { display: none; }  /* the Trade Plan's columns: NIFTY 50 only (29 October) */
+  #paper.plan-only tr.off-plan { display: none; }  /* the Trade Plan only view: the plan's calls alone */
+  #plan-box { margin: 6px 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  #plan-box label { cursor: pointer; } #plan-line { margin-top: 6px; font-weight: 600; } #plan-line .pts.up { color: var(--up); } #plan-line .pts.down { color: var(--down); }
   #paper.no-pl th:nth-child(14), #paper.no-pl td:nth-child(14) { display: none; }  /* the Profit Lock's column: NIFTY 50 only (24 October) */
   #paper td.lock b { font-weight: 600; } #paper td.lock b.said { color: var(--watch); } #paper td.lock small { display: block; color: var(--muted); }
   #paper td.gate { font-weight: 600; } #paper td.gate.take, #paper tr.ended td.gate.take { color: var(--up); } #paper td.gate.skip, #paper tr.ended td.gate.skip { color: var(--down); }  /* the Call Gate's verdict (22 October night) */
@@ -395,9 +399,11 @@
          line, Crossed and Both choices and the Download CSV button are gone; Both is the signal setting, without a button -->
     <div id="paper-note"></div>
     <div id="feed-note" hidden></div>
+    <!-- The Trade Plan (29 October): NIFTY 50, the first 3 calls fired between 12:00 and 15:00. The tick shows the plan's calls alone -->
+    <div id="plan-box" hidden><label><input type="checkbox" id="plan-only"> <b>Trade Plan only</b> (NIFTY 50: calls after 12:00, the first 3 of the day)</label><div id="plan-line"></div></div>
     <div class="scroll">
       <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th><th>Profit Lock</th></tr></thead>
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th><th>Profit Lock</th><th>Trade Plan</th><th>Plan reason</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -904,9 +910,10 @@
                                prevClose: judgedToday() ? null : prevCloseOf(),  // the first candle judged from the previous close (18 October; not on today's range, which has no lines before it); ideas 13, 8 and 5 left the rule that day
                                minutes: longCandles() ? null : sessionMinutes(),  // the session's one-minute candles: the owner's early exit of a held break (19 October)
                                lossCutter: lcHere() ? Rules.LC : null,  // the Loss Cutter on NIFTY 50 only (the owner, 24 October: "built it for nifty 50 only")
-                               profitLock: plHere() && !longCandles() ? Rules.LOCK : null });  // the Profit Lock (24 October), NIFTY 50 only as the Loss Cutter, shadow mode
+                               profitLock: plHere() && !longCandles() ? Rules.LOCK : null,  // the Profit Lock (24 October), NIFTY 50 only as the Loss Cutter, shadow mode
+                               tradePlan: planHere() ? Rules.PLAN : null });  // the Trade Plan (29 October), NIFTY 50 only: a mark on every call that fired
   }
-  const lcHere = () => Rules.LC.indices.includes(name), plHere = () => Rules.LOCK.indices.includes(name);
+  const lcHere = () => Rules.LC.indices.includes(name), plHere = () => Rules.LOCK.indices.includes(name), planHere = () => Rules.PLAN.indices.includes(name);
   // The Call Gate's ATR seed: Wilder's ATR over the candles of the sessions loaded before the one shown (the page loads the last five
   // days), as the server's watcher carries it in from the days before; null when fewer than 14 candles came before
   const gateSeed = () => { const key = currentSession(); return key && key !== "all" ? Rules.atrSeedOf(state.candles.filter(b => sessionOf(b) < key), Rules.GATE.atrPeriod) : null; };
@@ -967,6 +974,9 @@
     table.hidden = !trades.length;
     table.classList.toggle("no-lc", !lcHere());  // the Loss Cutter's two columns only where it runs (NIFTY 50)
     table.classList.toggle("no-pl", !plHere() || longCandles());  // and the Profit Lock's
+    table.classList.toggle("no-plan", !planHere());  // and the Trade Plan's (29 October)
+    table.classList.toggle("plan-only", planHere() && planOnly());
+    drawPlanLine(trades);
     const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
     table.classList.toggle("no-options", !withOptions);
     if (!withOptions && STRIKE_STEP[name] && state.dhan && state.dhan.configured)  // SENSEX, 8 October: say why there is no premium column
@@ -977,9 +987,9 @@
     const rows = trades.concat(cancelled || []).sort((a, b) => b.signalTime - a.signalTime);  // the signals cancelled before firing keep a row with the gate's verdict (version 2)
     table.querySelector("tbody").replaceChildren(...rows.map(t => {
       const tr = document.createElement("tr");
-      if (t.how === "cancelled") { tr.className = "gated"; tr.innerHTML = cancelledCells(t); return tr; }
+      if (t.how === "cancelled") { tr.className = "gated off-plan"; tr.innerHTML = cancelledCells(t); return tr; }
       tr.dataset.key = callKey(t);  // so a live premium finds its row
-      tr.className = (t.exit != null ? "ended" : "") + (t.paper ? " paper" : "");
+      tr.className = (t.exit != null ? "ended" : "") + (t.paper ? " paper" : "") + (t.plan !== "TAKE" ? " off-plan" : "");  // off-plan: hidden in the Trade Plan only view (a call not fired yet has no verdict, so it is hidden too)
       tr.innerHTML = rowCells(t, optionRecords[callKey(t)]);
       return tr;
     }));
@@ -1016,6 +1026,7 @@
       exit_at: t.exitAt ?? null, parallel: !!t.parallel, reason: sp ? sp.why : "",  // the Reason column as the row shows it (19 October)
       gate: t.gate || "", gate_reason: t.gateWhy || "", gate_check: t.gateCheck || "", gate_advice: t.gateAdvice || "", paper: !!t.paper,
       lc: t.lc || "", lc_reason: t.lcWhy || "", lc_check: t.lcCheck || "", lc_advice: t.lcAdvice || "", lc_open_same: t.lcOpenSame ?? null,  // the Loss Cutter (24 October)
+      plan: t.plan || "", plan_reason: t.planWhy || "",  // the Trade Plan (29 October)
       premium_low: t.lc && r ? r.premium_low ?? null : null, premium_low_at: t.lc && r ? r.premium_low_at ?? null : null,  // the premium path, where the Loss Cutter runs
       stop15_at: t.lc && r && r.stop15 ? r.stop15.at : null, stop15_premium: t.lc && r && r.stop15 ? r.stop15.premium : null,  // the Call Gate's verdict on the signal, the check that decided, the parallel advice, a paper-followed call (version 2)
       ...lockFields(t, r),  // the Profit Lock (24 October)
@@ -1040,7 +1051,7 @@
     return `<td class="when">${callTime(t.signalTime)}${t.entryTime != null ? `<small>fired ${firedWhen(t)}</small>` : ""}</td>`
       + `<td class="call">Buy ${t.side}${t.paper ? " · paper, no order" : strike != null ? ` · ${strike} ${t.side}${r ? " " + expiryLabel(r.expiry) : ""}` : ""}</td>`
       + `<td>${signalWord(t)} ${pctOf(t)} · ${fmt.format(t.level)}</td>`
-      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t) + lcCells(t, r) + lockCell(t, r);
+      + entryCell(t, strike) + targetCell(t, r) + premiumCell(t, r) + plCell(t, r) + statusCell(t, r) + reasonCell(t, r) + gateCells(t) + lcCells(t, r) + lockCell(t, r) + planCells(t);
   }
   // The Call Gate (the owner's document, 22 October night; Rules.GATE): "Gate" TAKE or SKIP, and why. In mode SHADOW a SKIP changes
   // nothing ("shadow: order placed anyway"); in mode LIVE a SKIP signal gives no order and keeps its row (gatedCells)
@@ -1051,6 +1062,24 @@
   // The Loss Cutter (the owner's Loss_Cutter.docx and Sideways_Zone_v3.docx, 24 October; Rules.LC): its verdict beside the Call Gate's,
   // why, the advice-only checks (worn line, strict zone, the stack cap in log mode), the calls open the same way when the order was
   // placed, and from the option's record the premium path: the lowest premium so far and the 15% premium stop (log only, it sells nothing)
+  // The Trade Plan (29 October; Rules.PLAN): "TAKE" on the first 3 calls fired between 12:00 and 15:00, "SKIP" on the others, and why; a
+  // call not fired yet has no verdict. The tick above the table (plan-only, kept in this browser) shows the plan's calls alone, with the
+  // plan's line: how many taken, where the day stands, their points and, when every one has a premium, their rupees at 1 lot
+  const planCells = (t) => !t.plan ? `<td class="gate"></td><td class="why"></td>` : `<td class="gate ${t.plan === "SKIP" ? "skip" : "take"}">${t.plan}</td><td class="why">${t.planWhy || ""}</td>`;
+  const planOnly = () => { try { return localStorage.getItem("planOnly") !== "off"; } catch (e) { return true; } };  // on until the owner unticks it
+  function drawPlanLine(trades) {
+    const box = document.getElementById("plan-box"), line = document.getElementById("plan-line");
+    box.hidden = !planHere() || longCandles();
+    if (box.hidden) return;
+    document.getElementById("plan-only").checked = planOnly();
+    const session = currentSession(), s = Rules.planSummary(trades, Rules.PLAN, session && isToday(session) ? serverNow() : null);
+    const take = trades.filter(t => t.plan === "TAKE"), lot = lotOf();
+    const recs = take.map(t => optionRecords[callKey(t)]), priced = take.length && recs.every(r => r && r.premium_paid != null && (r.premium_now != null || (r.sold && r.sold.premium != null)));
+    const rupees = priced ? Math.round(recs.reduce((sum, r) => sum + ((r.sold && r.sold.premium != null ? r.sold.premium : r.premium_now) - r.premium_paid) * (lot || 1), 0)) : null;
+    const tone = (x) => x > 0 ? "up" : x < 0 ? "down" : "";
+    line.innerHTML = `${s.text}${take.length ? ` Plan calls so far: <span class="pts ${tone(s.points)}">${s.points > 0 ? "+" : ""}${fmt.format(s.points)} points</span>${rupees != null ? ` · <span class="pts ${tone(rupees)}">₹ ${rupees > 0 ? "+" : rupees < 0 ? "−" : ""}${fmt.format(Math.abs(rupees))}</span> at 1 lot${lot ? ` of ${lot}` : ""}` : ""}${s.open ? ` · ${s.open} still open` : ""}` : ""}`;
+  }
+  document.getElementById("plan-only").addEventListener("change", (e) => { try { localStorage.setItem("planOnly", e.target.checked ? "on" : "off"); } catch (err) {} document.getElementById("paper").classList.toggle("plan-only", planHere() && e.target.checked); });
   const lcLive = (check) => Rules.LC.mode === "LIVE" && Rules.LC.liveChecks.includes(check);
   function lcCells(t, r) {
     if (!t.lc) return `<td class="gate"></td><td class="why"></td>`;

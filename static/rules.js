@@ -619,7 +619,7 @@
   //   profitLock the Profit Lock (LOCK above, 24 October), after every existing exit of a closed candle: in mode SHADOW its peak, floor and
   //              the candle it would have closed the call on ride on the call (lock, lockAlso) and nothing else changes; in mode LIVE
   //              the call ends there ("lock"). null: no lock
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK }) {
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK, tradePlan = PLAN }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -834,6 +834,7 @@
     } else {
       open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
     }
+    if (tradePlan) planStep(trades, tradePlan);  // the Trade Plan's mark on every call that fired (29 October)
     return { trades, closed: closed.length, cancelled, zonesFound: zone.found, lcZonesFound: lcZone.found, lcZonesEnded: lcZone.ended };
   }
 
@@ -842,14 +843,14 @@
   // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page, with Rule 2 as
   // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone. Idea 24 when
   // asked for, on "today so far" lines only. The first candle is judged from the previous day's close (18 October)
-  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK }) {
+  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK, tradePlan = PLAN }) {
     const own = move === "prev" || move === "close";  // the previous day's lines, or the previous close's (15 October): not today's range so far
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null, fromClose = move === "close" && previous ? closeLevelsAt(bars, previous.close) : null;
     if ((move === "prev" && !fixed) || (move === "close" && !fromClose)) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : move === "close" ? fromClose : todayLevelsAt(bars), targetsAt = own ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
                          trail: trail === undefined ? TRAIL : trail, newHighLow: !own && !!newHighLow, prevClose: own && previous && previous.close != null ? previous.close : null,  // not on today's range: the first candle has no lines before it
-                         minutes: minutes || null, gate, atrSeed, lossCutter, profitLock });  // the day's one-minute candles: the owner's early exit (19 October); the Call Gate and its ATR seed; the Loss Cutter; the Profit Lock
+                         minutes: minutes || null, gate, atrSeed, lossCutter, profitLock, tradePlan });  // the day's one-minute candles: the owner's early exit (19 October); the Call Gate and its ATR seed; the Loss Cutter; the Profit Lock
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -1003,9 +1004,48 @@
     return { deep, beyond, reached: reachedAt != null, reachedAt };
   }
 
+
+  // ---- The Trade Plan (the owner, 29 October night, after "the widest honest search": 8,404,992 combinations of this engine's own
+  // settings over the 20 saved days, each chosen on the first 10 days and judged on the next 10 untouched. The one simple rule that
+  // passed: on NIFTY 50, the first 3 calls that FIRE at or after 12:00 and before 15:00, nothing else: +928 points after 8 a call on
+  // the first half, +79 on the second, +1,007 in all, 13 days up and 7 down, worst day -103; the page as it runs, -990. The owner's
+  // morning calls are the loser: the 10 o'clock hour alone -722). Mode SHADOW: a mark on every call that fired, "TAKE" (call 1, 2 or
+  // 3 of 3) or "SKIP" (fired before 12:00, at or after 15:00, or the 3 taken), planWhy says which; every call keeps its row and its
+  // order, and the page's "Trade Plan only" view shows the plan's calls alone. Mode LIVE (not built; the owner's yes decides) would
+  // place no order for the others. Counted by the moment each call fired (entryTime), the earliest first; two firing on one candle
+  // both count; a call that has not fired yet, or a signal cancelled before firing, has no verdict. A pure pass over the day's calls
+  // once they are known (planStep, at the end of paperTrades), so the page and the server (rule.py plan_step) mark the same calls
+  const PLAN = { mode: "SHADOW", name: "afternoon 3", indices: ["NIFTY 50"], from: "12:00", to: "15:00", maxCalls: 3 };
+  function planStep(trades, p = PLAN) {
+    let taken = 0;
+    const fired = trades.filter(t => t.entryTime != null && t.how !== "cancelled").sort((a, b) => a.entryTime - b.entryTime || a.signalTime - b.signalTime || (a.side < b.side ? -1 : a.side > b.side ? 1 : 0));
+    for (const t of fired) {
+      const when = istHM(t.entryTime);
+      if (when < p.from) { t.plan = "SKIP"; t.planWhy = `fired at ${when}, before ${p.from}`; }
+      else if (when >= p.to) { t.plan = "SKIP"; t.planWhy = `fired at ${when}, after ${p.to}`; }
+      else if (taken >= p.maxCalls) { t.plan = "SKIP"; t.planWhy = `the ${p.maxCalls} calls are taken`; }
+      else { taken++; t.plan = "TAKE"; t.planWhy = `call ${taken} of ${p.maxCalls}`; }
+    }
+    return taken;
+  }
+  // The plan's line on the page: how many taken, their points, and where the day stands (now: the clock while the session shown is
+  // today's, else null: a finished day replayed)
+  function planSummary(trades, p = PLAN, now = null) {
+    const take = trades.filter(t => t.plan === "TAKE"), open = take.filter(t => t.exit == null);
+    const points = round2(take.reduce((s, t) => s + (t.points || 0), 0)), when = now == null ? null : istHM(now);
+    const state = take.length >= p.maxCalls ? "done" : when == null ? "replay" : when < p.from ? "waiting" : when >= p.to ? "closed" : "open";
+    const text = state === "done" ? `Done for today: ${p.maxCalls} calls taken.`
+      : state === "waiting" ? `Waiting: the plan's calls start at ${p.from}.`
+      : state === "closed" ? `The plan's window closed at ${p.to}: ${take.length} of ${p.maxCalls} calls taken.`
+      : state === "open" ? `${take.length} of ${p.maxCalls} calls taken, ${p.maxCalls - take.length} more allowed until ${p.to}.`
+      : `${take.length} of ${p.maxCalls} calls taken.`;
+    return { taken: take.length, max: p.maxCalls, open: open.length, points, state, text };
+  }
+
   root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, NEW_HIGH_LOW, pastEdgeAt,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary,
                  LC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary,
-                 LOCK, LOCK_PRESETS, lockFloor, lockStep, lockSummary };
+                 LOCK, LOCK_PRESETS, lockFloor, lockStep, lockSummary,
+                 PLAN, istHM, planStep, planSummary };
 })(typeof window !== "undefined" ? window : globalThis);
