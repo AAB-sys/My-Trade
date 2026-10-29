@@ -1715,10 +1715,18 @@
   // lives while some page does either.
   let liveWs = null;
   let parked = false;  // the page is being left (the Back button, a link): it closed its own connection, and reconnects when shown again
+  const KICK_FIRST = 10000;  // in market hours, no live price for this long: a fresh connection (29 October; 45 s until then)
+  let kickWait = KICK_FIRST;  // doubles (to 60 s at most) while fresh connections bring no price either, back to 10 s when one does
+  let wsOpenedAt = 0;
   function keepAlive() {
     if (parked) return;
     const ws = liveWs = new WebSocket(wsUrl());
-    ws.onmessage = event => { const data = JSON.parse(event.data); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); if (data.premium) applyPremium(data.premium); };
+    ws.onopen = () => { wsOpenedAt = Date.now(); };
+    ws.onmessage = event => {
+      const data = JSON.parse(event.data); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page;
+      if (data.tick) { applyTick(data.tick); if (Date.now() - wsOpenedAt > 1500) kickWait = KICK_FIRST; }  // not the one price the server sends on connecting: the stream itself
+      if (data.premium) applyPremium(data.premium);
+    };
     ws.onclose = () => {
       if (parked || ws !== liveWs) return;  // closed by the page on leaving, or already replaced: nothing to reconnect
       beat();  // says "still here" at once, and finds out if the login is over
@@ -1738,18 +1746,46 @@
     parked = false; lastSeen = lastKick = Date.now();
     keepAlive(); clearTimeout(state.timer); load();
   });
+  // A fresh connection now (29 October, the owner: "Chart for sensex is updating very slow. Not in synch qith Dhan. It should be
+  // updated per second"; the server had SENSEX's price every second all day). On a phone a connection often dies without
+  // saying so (the owner switching to Dhan's app, the screen going off), and closing it can take a minute to be confirmed,
+  // the chart moving only with the refresh every 15 s meanwhile. So the old one is dropped without waiting, a new one opened
+  // at once, and the candles fetched again at once
+  function reconnectNow() {
+    if (parked) return;
+    lastSeen = lastKick = Date.now();
+    const old = liveWs;
+    keepAlive();  // liveWs is the new connection from here: the old one's close no longer reconnects
+    if (old) { old.onmessage = null; if (old.readyState <= WebSocket.OPEN) old.close(); }
+    clearTimeout(state.timer); load();
+  }
   // Silence is a dead connection, not a quiet market: ticks come every second in market hours and a refresh
-  // every poll. After twice the poll (at least 45 s) with neither, the socket is closed, which makes it
-  // reconnect, and a refresh is forced. A connection that dies without saying so (a laptop asleep, a phone
-  // changing network) no longer leaves the page standing still.
+  // every poll. On Dhan in market hours, 10 s with no live price (a refresh does not count: the price must move)
+  // gives a fresh connection (until 29 October 45 s, checked every 15 s: up to a minute of a chart moving only
+  // every 15 s); outside them, twice the poll (at least 45 s) with neither, as before. A connection that dies
+  // without saying so (a laptop asleep, a phone changing network) no longer leaves the page standing still.
   setInterval(() => {
+    if (parked) return;
+    if (ticksExpected()) {
+      if (Date.now() - Math.max(lastTickAt, lastKick) < kickWait) return;
+      kickWait = Math.min(kickWait * 2, 60000);  // the price comes back with the new connection (a tick resets this), or the server or Dhan is quiet: try less often
+      reconnectNow();
+      return;
+    }
     const limit = Math.max(45000, state.pollMs * 2);
-    const since = ticksExpected() ? Math.max(lastTickAt, lastKick) : lastSeen;  // on Dhan in market hours a refresh does not count: the live price must move
-    if (Date.now() - since < limit) return;
+    if (Date.now() - lastSeen < limit) return;
     lastSeen = lastKick = Date.now();
     if (liveWs && liveWs.readyState === WebSocket.OPEN) liveWs.close();
     load();
-  }, 15000);
+  }, 2000);
+  // Back on the page (from Dhan's app, the screen on again) or back online: in market hours with no live price in the
+  // last 3 s, a fresh connection at once instead of waiting for the check above; otherwise the candles fetched again
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || parked) return;
+    if (ticksExpected() && (Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
+    else { clearTimeout(state.timer); load(); }
+  });
+  window.addEventListener("online", () => { kickWait = KICK_FIRST; reconnectNow(); });
 
   // The line under the price: on Dhan in market hours the price comes every second. When none has come for
   // ten seconds, say so where the owner looks, with the server's own words for the stream and the poll
