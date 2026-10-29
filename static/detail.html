@@ -8,6 +8,7 @@
 <script src="/static/vendor/lightweight-charts.js"></script>
 <script src="/static/rules.js"></script>
 <script src="/static/newrule.js"></script>
+<script src="/static/morepat.js"></script>  <!-- the 14 more patterns of the "More Chart Patterns and Rules" document, in shadow under Calls with Signals (30 October) -->
 <style>
   :root {
     color-scheme: light;
@@ -172,6 +173,17 @@
   #dblog td small { display: block; color: var(--muted); font-weight: 400; }
   #dblog td.up { color: var(--up); } #dblog td.down { color: var(--down); }
   #dblog td.tag.only { font-weight: 600; }
+  /* the 14 more patterns' shadow log (30 October), under the Double Bottom's, in its format */
+  #more-box { margin-top: 16px; }
+  #more-box h3 { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  #more-sum { font-size: 13px; color: var(--ink-2); margin: 0 0 8px; }
+  #morelog { border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  #morelog th, #morelog td { text-align: right; padding: 5px 12px 5px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #morelog th:first-child, #morelog td:first-child, #morelog td.rule, #morelog td.note { text-align: left; }
+  #morelog th { font-weight: 500; color: var(--muted); font-size: 12px; position: sticky; top: 0; background: var(--surface); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }
+  #morelog td small { display: block; color: var(--muted); font-weight: 400; }
+  #morelog td.up { color: var(--up); } #morelog td.down { color: var(--down); }
+  #morelog td.ok { font-weight: 600; }
   .dblog-scroll { max-height: 50vh; }
   #paper-box .scroll { overflow: visible; }
   @media (max-width: 1099px) { #paper-box .scroll { overflow: auto; max-height: 80vh; } }
@@ -457,6 +469,19 @@
       <div class="chain-scroll dblog-scroll">
         <table id="dblog">
           <thead><tr><th>Time</th><th>Version</th><th>Tag</th><th>Call</th><th>Level</th><th>Bottoms</th><th>Checks</th><th>Reach</th><th>V2 lacked</th><th>Order</th><th>Paper result</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- The 14 more patterns (the owner's "More Chart Patterns and Rules" document, 29 October; built 30 October: "build it carefully too on
+         the page calls with signals"): shadow mode, NIFTY 50 only. Every signal of the 14 rules on today's closed candles is logged here,
+         with its status, and followed after the fact (section 20 of the document). No call is placed, nothing else is changed -->
+    <div id="more-box" hidden>
+      <h3>14 more patterns · shadow log</h3>
+      <p id="more-sum"></p>
+      <div class="chain-scroll dblog-scroll">
+        <table id="morelog">
+          <thead><tr><th>Time</th><th>Rule</th><th>Call</th><th>Status</th><th>Level L</th><th>Close · ATR</th><th>Entry (next open)</th><th>Next hour: best · worst</th><th>At 12 candles · at close</th><th>Paper (Rule 1 + trail)</th><th>Note</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -2101,7 +2126,7 @@
     const before = state.candles.filter(b => sessionOf(b) < key);  // the previous sessions loaded, for the ATR's warm-up
     const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
     const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
-    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd }), bars };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window
+    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd }), bars, before, closed, dayEnd };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -2115,6 +2140,7 @@
   function clearSignals() {
     document.querySelector("#signals tbody").replaceChildren();
     drawDbLog(null);
+    drawMoreLog(null);
     if (signalMarkers && signalMarkers.series === series) setSignalMarkers([]);
     setWedgeLines([]);
   }
@@ -2172,6 +2198,7 @@
     });
     body.replaceChildren(...rows);
     drawDbLog(run.dbLog);
+    drawMoreLog(run);
     return lines;
   }
   // The Double Bottom's shadow log (NewRule.runDay's dbLog): one row per signal of either version, the same pattern (side and level)
@@ -2202,6 +2229,38 @@
       return tr;
     });
     if (!rows.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="11">No double bottom signal yet today from either version</td>`; rows.push(tr); }
+    body.replaceChildren(...rows);
+  }
+  // The 14 more patterns' shadow log (MorePat.dayLog; the owner's "More Chart Patterns and Rules" document, section 20), NIFTY 50 only:
+  // one row per signal of the 14 rules on today's closed candles, the newest first: the rule, the side, the status (would be traded /
+  // outside 09:30 to 14:45 / same side, another rule first / both sides, skipped), the level L, the close and the ATR used, the entry
+  // (the next candle's open), the best and worst move in the next hour, the move at 12 candles and at the day's close, the paper result
+  // with the page's own exits (Rule 1 and the trail, each signal on its own) and the note. Shadow: no call is placed, nothing is blocked.
+  // The summary: the signals, how many would be traded, each rule's count (a rule that spoke more than 5 times is flagged), the paper sum
+  const MORE_STATUS = { ok: "would be traded", "outside time": "outside 09:30 to 14:45", "same side": "same side, another rule first", "both sides": "both sides, skipped" };
+  function drawMoreLog(run) {
+    const box = document.getElementById("more-box"), body = document.querySelector("#morelog tbody"), sum = document.getElementById("more-sum");
+    const log = run && run.bars && name === "NIFTY 50" && !longCandles() && typeof MorePat !== "undefined"
+      ? MorePat.dayLog({ bars: run.bars, prevBars: run.before, closedCount: run.closed, dayEnd: run.dayEnd, manage: (t, bar, j, atr, lastK, dayEnd) => NewRule.manageStep(t, bar, j, atr, lastK, dayEnd, NewRule.DT) }) : null;
+    box.hidden = !log;
+    if (!log) { body.replaceChildren(); sum.textContent = ""; return; }
+    const s = log.summary, pts = (v) => `${v > 0 ? "+" : ""}${fmt.format(v)}`, tone = (v) => v > 0 ? "up" : v < 0 ? "down" : "", ruleName = (key) => MorePat.RULES[key].names.join(" / ");
+    const counts = Object.keys(s.byRule).map(key => `${ruleName(key)} ${s.byRule[key]}`).join(" · ");
+    sum.textContent = `Shadow only: every signal is logged, no call is placed, nothing else is changed. Today: ${s.signals} signal${s.signals === 1 ? "" : "s"}, ${s.ok} would be traded`
+      + (counts ? ` · ${counts}` : "") + (s.often.length ? ` · spoke more than 5 times: ${s.often.map(ruleName).join(", ")}` : "") + (s.ok ? ` · paper, each on its own: ${pts(s.okPoints)} pts` : "");
+    const how = { reclaim: "reclaim", retouch: "retouch", trail: "trailing stop", "day end": "end of day" };
+    const rows = log.rows.slice().reverse().map(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${callTime(r.signalTime)}</td><td class="rule">${r.rule}<small>${r.key}</small></td><td>Buy ${r.side}</td><td class="${r.status === "ok" ? "ok" : ""}">${MORE_STATUS[r.status] || r.status}</td>`
+        + `<td>${fmt.format(r.level)}${r.target != null ? `<small>target ${fmt.format(r.target)}</small>` : ""}</td><td>${fmt.format(r.close)}<small>ATR ${fmt.format(r.atr)}</small></td>`
+        + `<td>${r.entry == null ? "no next candle yet" : `${fmt.format(r.entry)}<small>at ${callTime(r.entryTime)}</small>`}</td>`
+        + `<td>${r.best == null ? "—" : `<span class="${tone(r.best)}">${pts(r.best)}</span> · <span class="${tone(r.worst)}">${pts(r.worst)}</span><small>${pts(r.bestAtr)} · ${pts(r.worstAtr)} ATR${r.hourCandles < 12 ? ` (${r.hourCandles} candle${r.hourCandles === 1 ? "" : "s"} so far)` : ""}</small>`}</td>`
+        + `<td>${r.at12 == null ? "—" : pts(r.at12)} · ${r.atClose == null ? "—" : pts(r.atClose)}</td>`
+        + `<td class="${r.paper == null ? "" : tone(r.paper)}">${r.paper == null ? "—" : `${pts(r.paper)} pts<small>${r.exit != null ? `out ${fmt.format(r.exit)} at ${callTime(r.exitTime)} (${how[r.how] || r.how})` : "open"}</small>`}</td>`
+        + `<td class="note">${r.note || ""}</td>`;
+      return tr;
+    });
+    if (!rows.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="11">No signal yet today from the 14 rules</td>`; rows.push(tr); }
     body.replaceChildren(...rows);
   }
   (() => {  // a column dragged left or right: dropped on a column, it takes that column's place

@@ -13,6 +13,8 @@ ended at the day's end, the worst call, days up and the worst day.
 the calls worked out by hand, the candle facts, and the ideas under test. A research round runs it
 before it proposes anything.
 
+`node lab/morepat_check.js` proves `static/morepat.js` (the 14 more patterns of the owner's "More Chart Patterns and Rules" document, in shadow under Calls with Signals) against the owner's reference more_patterns_reference.py: its 113 test scans, its shared tests C-1 to C-10, the 4 real days of the document and 40 random days (400 in the study copy), every field of every signal the same. `lab/morepat_fixtures.json` holds the reference's answers, made by its own tests and run_day.
+
 **Candles and their levels only** (the owner's rule, 6 and 7 October): the research, the research engine
 and every round work on the saved candles, the Fibonacci levels built from them and the calls' index
 points that follow from both. Never the option premiums: the premium columns of the calls CSV are

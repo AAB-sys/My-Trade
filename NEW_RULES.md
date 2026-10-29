@@ -168,6 +168,40 @@ with one ATR, 9 won against 8; on 22 October itself +131.80 against +102.35.
 No Fibonacci levels anywhere on this page or in its engine (the owner, 22 October: "I dont want it at all as of now"), and nothing
 of the Paper calls page: not its rule, not its lines ("completely separate and isolated").
 
+## The 14 more patterns (the "More Chart Patterns and Rules" document and more_patterns_reference.py of 29 October; built 30 October): shadow, NIFTY 50
+
+The owner's document: 14 more ways to read the 5-minute NIFTY 50 chart, each giving BUY CE or BUY PE, written once for the BUY CE side
+and run on the chart turned upside down for the BUY PE side (flip: every price becomes minus the price; the signal is turned back).
+Head and Shoulders (and Inverse), Cup and Handle (and Inverted), Rounding Bottom and Top, Flags, Pennants, Falling and Rising Channels,
+Broadening Formation, Island Reversal, Opening Range Breakout, the Gap rule (gap-and-go and gap-fill), Engulfing candles, Hammer and
+Shooting Star, Doji reversal, VWAP reclaim and loss. `static/morepat.js` is a line-for-line port of the reference: the same checks in
+the same order, the same settings (COMMON: swing_n 2, buffer 0.25 x ATR, do not chase past 2 x ATR, max_wait 15, lookback 20; each
+rule's own), the same "first break only" and "a pattern signals only once" (the key candles of the last 30 candles), the same statuses
+of `run_day`: ok (would be traded: the entry candle, the next one, opens between 09:30 and 14:45), outside time, same side (another rule
+earlier in the list gave the same side on the same candle), both sides (opposite signals on one candle: both skipped). The ATR is the
+reference's own: ATR(14), Wilder, as of the previous candle, carried over from the previous sessions loaded on the page (up to four);
+yesterday's close for the opening range and the gap rules is the previous session's last candle's close. Without volume (an index has
+none) the VWAP is the plain running average of (high + low + close) / 3, as the reference says.
+
+**Shadow mode** (the document, section 20): on NIFTY 50 only, under the Double Bottom shadow log on the Calls with Signals page, one
+row per signal of the 14 rules on today's closed candles: the time, the rule, the side, the status, the level L (and the picture's
+target when there is one), the close and the ATR used, the entry (the next candle's open), the best and worst move in the next hour
+(12 candles, from the entry, in the side's direction, points and ATR), the move at 12 candles and at the day's close, the paper result
+with this page's own exits (Rule 1 and the trail, each signal on its own: one trade at a time is not applied) and the note ("gap fill",
+"gap and go", "island of n candles"). The summary line: the signals, how many would be traded, each rule's count, a rule that spoke
+more than 5 times (flagged, as the document asks), the paper sum of the "ok" signals. **No call is placed, nothing is blocked, the
+Calls with Signals table and every other rule run exactly as before.** The log is the candles' own: replaying a saved day gives it again
+(the ULTROAN evening study keeps the daily counts; after about 30 trading days each rule is judged on its own, by the document's table:
+fewer than 10 signals, keep logging; 10 or more with the best move clearly bigger than the worst, a candidate for paper with the real
+exits; otherwise drop it or keep it as a label).
+
+**Proof** (`node lab/morepat_check.js`, fixtures made by the reference's own tests and run_day): the reference's 113 test scans, its
+shared tests C-1 to C-10, the 4 real days of the document (23 signals, the document's section 19 list exactly) and random days (40 in
+the repository's fixture; 400 with 3,873 signals across all 14 rules in the study copy), every field of every signal the same. The
+reference's own 123 self-tests pass. 3 ms a day.
+
+**Not built:** orders from these rules; the pictures drawn on the chart (the points and lines are kept in each row for that, later).
+
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,
