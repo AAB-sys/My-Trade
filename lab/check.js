@@ -1064,3 +1064,37 @@ console.log("rules unit checks passed");
   assert(r.trades.length === 0 && t4[0].plan === undefined, "with the plan off the engine marks nothing");
   console.log("Trade Plan checks passed (the window 12:00 to 15:00 at both edges, the first 3 by the moment fired, two on one candle, no verdict before firing or on a cancelled signal, the plan's line in every state, idempotent, off)");
 }
+
+// ---- The rule builder (30 October): the facts of a call and the mark
+{
+  const R = globalThis.Rules, t0 = Date.UTC(2026, 9, 29, 3, 45) / 1000;  // 29 Oct 2026 09:15 IST, a Thursday
+  const bar = (i, o, h, l, c) => ({ time: t0 + i * 300, open: o, high: h, low: l, close: c });
+  const bars = []; for (let i = 0; i < 20; i++) bars.push(bar(i, 100 + i, 101.5 + i, 99.5 + i, 101 + i));  // a steady climb, range 2 a candle
+  const atrs = R.atrPath(bars, 2);
+  assert(atrs.length === 20 && atrs.every(a => Math.abs(a - 2) < 1e-9), "atrPath: a seed of 2 through candles of range 2 stays 2");
+  assert(Math.abs(R.atrPath(bars.slice(0, 3), null)[0] - 2) < 1e-9, "atrPath without a seed starts from the first candle's range");
+  const call = (i, side, ratio, exitAt, points) => ({ signalTime: t0 + i * 300, entryTime: t0 + (i + 1) * 300, exitTime: exitAt == null ? null : t0 + exitAt * 300, points, side, ratio, how: exitAt == null ? "open" : "trail" });
+  const fired = [call(8, "CE", 0.236, 10, 5), call(12, "PE", -0.5, null, -3), call(14, "CE", 0, 16, -2)];
+  const f0 = R.callFacts(fired[0], fired, 0, bars, atrs, { prevClose: 99, atrSeed: 2, medianAtr: 3 });
+  assert(f0.hour === "10" && f0.side === "CE" && f0.line === "above the close" && f0.lineFar === "near line" && f0.candle === "green" && f0.candleSize === "normal candle", "facts: the hour, side, line, candle " + JSON.stringify(f0));
+  assert(f0.move === "rose a lot" && f0.withMove === "with the move" && f0.gap === "flat open" && f0.dayRange === "normal day so far" && f0.nth === "1st call" && f0.lastCall === "no call before", "facts: the move, gap, range, order " + JSON.stringify(f0));
+  assert(f0.atrRegime === "calm days" && f0.weekday === "Thu" && f0.place === "near the day's high" && f0.afterNoon === "before 12:00", "facts: calm, Thursday, place, morning " + JSON.stringify(f0));
+  const f1 = R.callFacts(fired[1], fired, 1, bars, atrs, { prevClose: 99, atrSeed: 4, medianAtr: 3 });
+  assert(f1.nth === "2nd call" && f1.lastCall === "last call won" && f1.atrRegime === "wild days" && f1.withMove === "against the move" && f1.lineFar === "far line", "facts: the 2nd call after a win, wild days, against the move " + JSON.stringify(f1));
+  const f2 = R.callFacts(fired[2], fired, 2, bars, atrs, { prevClose: 99, atrSeed: 2, medianAtr: 3 });
+  assert(f2.nth === "3rd call" && f2.lastCall === "last call open" && f2.line === "the close line", "facts: the last call still open when this one fired " + JSON.stringify(f2));
+  assert(R.callFacts({ ...fired[0], signalTime: 1 }, fired, 0, bars, atrs, {}) === null, "facts: a call whose candle is not in the bars gives none");
+  const b = { mode: "SHADOW", indices: ["NIFTY 50"], medianAtr: 3, rules: [{ name: "green + before 12:00", facts: [["candle", "green"], ["afterNoon", "before 12:00"]] }, { name: "far line", facts: [["lineFar", "far line"]] }] };
+  const trades = fired.map(t => ({ ...t })).concat([{ signalTime: t0 + 2 * 300, entryTime: null, how: "cancelled", side: "CE", ratio: 0 }]);
+  const kept = R.builderStep(trades, bars, { prevClose: 99, atrSeed: 2 }, b);
+  assert(kept === 3 && trades[0].builder === "KEEP" && trades[0].builderWhy === "green + before 12:00" && trades[1].builder === "KEEP" && trades[1].builderWhy === "green + before 12:00; far line" && trades[2].builder === "KEEP", "the mark: KEEP with the rules that matched " + JSON.stringify(trades.map(t => [t.builder, t.builderWhy])));
+  assert(trades[3].builder === undefined, "a cancelled signal has no mark");
+  const none = fired.map(t => ({ ...t })); R.builderStep(none, bars, { prevClose: 99, atrSeed: 2 }, { ...b, rules: [{ name: "Sunday", facts: [["weekday", "Sun"]] }] });
+  assert(none.every(t => t.builder === "SKIP" && t.builderWhy === "no rule"), "no rule matches: SKIP on every call");
+  const twice = fired.map(t => ({ ...t })); R.builderStep(twice, bars, { prevClose: 99, atrSeed: 2 }, b); const once = JSON.stringify(twice); R.builderStep(twice, bars, { prevClose: 99, atrSeed: 2 }, b);
+  assert(JSON.stringify(twice) === once, "the mark is idempotent");
+  assert(R.BUILDER.rules.length === 5 && R.BUILDER.rules.every(r => r.facts.length >= 1 && r.foundOn === "2026-10-29") && R.BUILDER.medianAtr > 0, "the five surviving rules of 29 October are in the engine");
+  const off = R.paperTrades({ bars: [], levelsAt: () => [], now: 0, seconds: 300, dayCandles: false, signal: "both", builder: null });
+  assert(off.trades.every(t => t.builder === undefined), "builder off: no mark");
+  console.log("Rule builder checks passed (the ATR path, the facts of the 1st, 2nd and 3rd call, a call after a win and after one still open, calm and wild days, the mark KEEP with its rules and SKIP, cancelled signals, idempotent, off, the five rules present)");
+}
