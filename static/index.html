@@ -89,6 +89,7 @@
   #pick-menu a:hover, #pick-menu a:focus { background: var(--border); outline: none; }
   #open-warning { flex-basis: 100%; color: var(--down); font-size: 13px; }
 
+  #featured[hidden] { display: none; }  /* the tiles, off since 30 October (the owner: "remove the background tiles") */
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -139,9 +140,10 @@
     <div id="pick-menu" role="menu" aria-label="Index" hidden></div>
   </div>
 
-  <section class="grid" id="featured" aria-label="Headline indices"></section>
-  <!-- The other indices (NIFTY IT, BSE 100 and the rest, gainers to losers) were shown under the three tiles until
-       15 October; taken off at the owner's ask ("remove all the tiles"). The server still reads their quotes. -->
+  <!-- The three tiles (NIFTY 50, NIFTY BANK, SENSEX) were the page until 30 October; taken off at the owner's ask ("remove the
+       background tiles") once the Index capsule opened the same pages. The quotes still arrive and fill them unseen, so the
+       "Live · updated" line and the live connection work as before; the other indices went the same way on 15 October. -->
+  <section class="grid" id="featured" aria-label="Headline indices" hidden></section>
 
 </main>
 
