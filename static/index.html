@@ -69,6 +69,24 @@
   }
   #logout:hover { border-color: var(--ink-2); }
   #logout[hidden] { display: none; }
+  /* The Index capsule (30 October, the owner: "in the red marked area make a capsule with header Index and give a drop down with
+     options ... Nifty 50, Nifty bank, Sensex ... when I click one of the options it will open the chart"): a pill like Log out,
+     under the title; its menu lists the three indices, each opening that index's page in a new tab, exactly as the tiles do */
+  #pick { position: relative; display: inline-block; margin: -6px 0 18px; }
+  #pick-btn {
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  }
+  #pick-btn:hover, #pick.open #pick-btn { border-color: var(--ink-2); }
+  #pick-btn .caret { font-size: 9px; transition: transform 0.15s; }
+  #pick.open #pick-btn .caret { transform: rotate(180deg); }
+  #pick-menu {
+    display: none; position: absolute; left: 0; top: calc(100% + 6px); z-index: 5; min-width: 170px; padding: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 24px rgba(11, 11, 11, 0.12);
+  }
+  #pick.open #pick-menu { display: block; }
+  #pick-menu a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  #pick-menu a:hover, #pick-menu a:focus { background: var(--border); outline: none; }
   #open-warning { flex-basis: 100%; color: var(--down); font-size: 13px; }
 
   .grid {
@@ -113,6 +131,13 @@
     <span id="missing"></span>
     <span id="open-warning" hidden>No password is set, so anyone who can reach this address can see this page. Fine on your own laptop; set DASHBOARD_PASSWORD before putting it online.</span>
   </header>
+
+  <!-- The Index capsule (30 October, the owner's ask with the area marked): "Index", a drop-down of the three indices; a choice opens
+       that index's page, the same one the tiles open, in a new tab -->
+  <div id="pick">
+    <button id="pick-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="pick-menu">Index <span class="caret" aria-hidden="true">▼</span></button>
+    <div id="pick-menu" role="menu" aria-label="Index" hidden></div>
+  </div>
 
   <section class="grid" id="featured" aria-label="Headline indices"></section>
   <!-- The other indices (NIFTY IT, BSE 100 and the rest, gainers to losers) were shown under the three tiles until
@@ -260,6 +285,23 @@
     };
     ws.onerror = () => ws.close();
   }
+
+  // The Index capsule (30 October): the menu is the three indices in the tiles' order, each a link like a tile (that index's page in a
+  // new tab, the tab's note in #t=); the links are made afresh each time the menu opens, so they carry the tab's current note
+  (() => {
+    const pick = document.getElementById("pick"), btn = document.getElementById("pick-btn"), menu = document.getElementById("pick-menu");
+    const fill = () => menu.replaceChildren(...PINNED.map(name => {
+      const a = document.createElement("a");
+      a.href = "/index/" + encodeURIComponent(name) + "#t=" + encodeURIComponent(TAB); a.target = "_blank"; a.rel = "noopener";
+      a.setAttribute("role", "menuitem"); a.textContent = name; a.title = "Open " + name + " details in a new tab";
+      return a;
+    }));
+    const show = (on) => { if (on) fill(); menu.hidden = !on; pick.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };
+    btn.addEventListener("click", () => show(!pick.classList.contains("open")));
+    menu.addEventListener("click", () => show(false));  // a choice made: the page opens in a new tab, the menu closes
+    document.addEventListener("click", (e) => { if (!pick.contains(e.target)) show(false); });  // a click elsewhere closes it
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") show(false); });
+  })();
 
   document.getElementById("logout").addEventListener("click", () => {
     fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
