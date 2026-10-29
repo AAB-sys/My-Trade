@@ -967,6 +967,35 @@ the evidence for that choice.
      The owner's yes decides, after 10 paper days of the plan positive after
      charges (the ULTROAN evening study keeps score from the CSV's close rows).
 
+12. **The rule builder** (30 October, the owner: "i want him to do rule building based on
+    the data"; then "yes" to its marks on the page). ULTROAN's evening builder
+    (scratchpad wf/build_rules.js) takes every call the page gave on the saved
+    days with the FACTS of the moment it fired, computed by the engine's own
+    `callFacts` (the same code on the page, the server and the study): the hour,
+    the side, the line (above or below the previous close; near or far), the
+    signal candle (body and size in ATR), the move of the 6 candles before and
+    whether the call goes with it, the day's gap at the open, the day's range so
+    far, the call's number that day, how the last call ended (won, lost, or still
+    open when this one fired), calm or wild days (the carried-in ATR against the
+    median of the saved days), the weekday, where the close sits in the day's
+    range, before or after 12:00. It tries every fact and every pair of facts as
+    a rule "keep only these calls" (1,457 on 29 October), scores after charges,
+    and judges honestly: chosen on the first half of the days, judged on the
+    second, and the other way round; a survivor must earn on both halves, up on
+    more days than down on both, not on one lucky day, with at least 8 calls a
+    half. Survivors go on a watch list with the day they were found; only later
+    days judge them (the forward score); a rule is proposed to the owner only
+    with 10 forward days earning, more up than down.
+   - **Mode SHADOW, built:** `Rules.BUILDER` holds the survivors (the five of
+     29 October on NIFTY 50) and the ATR median; `builderStep` marks every call
+     that fired "KEEP" (the rules that matched, in `builderWhy`) or "SKIP"; a pure
+     pass at the end of paperTrades, after the plan's, the same in rule.py
+     (check_rule.py compares the marks). The Paper calls table has two more
+     columns, **Builder** and **Builder rules** (NIFTY 50 only); the day's calls
+     CSV has `builder` and `builder_rules`. No order, nothing else changes.
+   - **Not built:** a rule acting on calls. When one is ready, it goes into the
+     Trade Plan's rule by its own pull request; the owner's merge is the yes.
+
 ## Layer 4: The record and the study - built
 
 The owner's idea (6 October): keep each session's candles, and after the close

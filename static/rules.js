@@ -619,7 +619,7 @@
   //   profitLock the Profit Lock (LOCK above, 24 October), after every existing exit of a closed candle: in mode SHADOW its peak, floor and
   //              the candle it would have closed the call on ride on the call (lock, lockAlso) and nothing else changes; in mode LIVE
   //              the call ends there ("lock"). null: no lock
-  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK, tradePlan = PLAN }) {
+  function paperTrades({ bars, levelsAt, targetsAt, now, seconds, dayCandles, signal, ideas, holdBreaks, trail, given, newHighLow, prevClose, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK, tradePlan = PLAN, builder = BUILDER }) {
     const linesAt = targetsAt || levelsAt;
     const closeAt = ideas && ideas.closeAt, noNewAfter = ideas && ideas.noNewAfter, minDepth = ideas && ideas.minDepth, exitBack = ideas && ideas.exitBack;
     const carryOn = ideas && ideas.carryOn != null ? ideas.carryOn : null;
@@ -835,6 +835,7 @@
       open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
     }
     if (tradePlan) planStep(trades, tradePlan);  // the Trade Plan's mark on every call that fired (29 October)
+    if (builder) builderStep(trades, bars, { prevClose, atrSeed }, builder);  // the rule builder's mark on every call that fired (30 October)
     return { trades, closed: closed.length, cancelled, zonesFound: zone.found, lcZonesFound: lcZone.found, lcZonesEnded: lcZone.ended };
   }
 
@@ -843,14 +844,14 @@
   // candle before it (todayLevelsAt). The owner's exit rule for breaks (holdBreaks) is on, as on the index page, with Rule 2 as
   // the index page runs it (TRAIL); the research engine may give another setting of it, or null for Rule 1 alone. Idea 24 when
   // asked for, on "today so far" lines only. The first candle is judged from the previous day's close (18 October)
-  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK, tradePlan = PLAN }) {
+  function replayDay({ bars, move, previous, seconds, signal, ideas, trail, newHighLow, minutes, gate = GATE, atrSeed = null, lossCutter = LC, profitLock = LOCK, tradePlan = PLAN, builder = BUILDER }) {
     const own = move === "prev" || move === "close";  // the previous day's lines, or the previous close's (15 October): not today's range so far
     const fixed = move === "prev" ? (previous ? levelsOf(moveOfDay(previous)) : null) : null, fromClose = move === "close" && previous ? closeLevelsAt(bars, previous.close) : null;
     if ((move === "prev" && !fixed) || (move === "close" && !fromClose)) return { trades: [], closed: 0 };
     const levelsAt = move === "prev" ? () => fixed : move === "close" ? fromClose : todayLevelsAt(bars), targetsAt = own ? null : todayLinesAt(bars);
     return paperTrades({ bars, levelsAt, targetsAt, now: Number.POSITIVE_INFINITY, seconds, dayCandles: false, signal, ideas, holdBreaks: true,
                          trail: trail === undefined ? TRAIL : trail, newHighLow: !own && !!newHighLow, prevClose: own && previous && previous.close != null ? previous.close : null,  // not on today's range: the first candle has no lines before it
-                         minutes: minutes || null, gate, atrSeed, lossCutter, profitLock, tradePlan });  // the day's one-minute candles: the owner's early exit (19 October); the Call Gate and its ATR seed; the Loss Cutter; the Profit Lock
+                         minutes: minutes || null, gate, atrSeed, lossCutter, profitLock, tradePlan, builder });  // the day's one-minute candles: the owner's early exit (19 October); the Call Gate and its ATR seed; the Loss Cutter; the Profit Lock
   }
   // The ideas under test (LOGIC.md, layer 5): proposed by Claude from the saved candles, confirmed by the owner for the study
   // page only on 6 October. The index page does not know them.
@@ -1016,6 +1017,62 @@
   // both count; a call that has not fired yet, or a signal cancelled before firing, has no verdict. A pure pass over the day's calls
   // once they are known (planStep, at the end of paperTrades), so the page and the server (rule.py plan_step) mark the same calls
   const PLAN = { mode: "SHADOW", name: "afternoon 3", indices: ["NIFTY 50"], from: "12:00", to: "15:00", maxCalls: 3 };
+  // ---- THE RULE BUILDER (the owner, 30 October: "i want him to do rule building based on the data"; then "yes" to the marks on the page).
+  // ULTROAN's evening builder (scratchpad wf/build_rules.js) reads every call the page gave on the saved days with the FACTS of the moment
+  // it fired (callFacts below, the same code), tries every fact and every pair of facts as a rule "keep only these calls", and keeps the
+  // rules that earn on both halves of the days, up on more days than down, not on one lucky day. The survivors are listed here with the
+  // day they were found; from that day on only new days judge them (the evening's forward score). Mode SHADOW: a mark on every call that
+  // fired, "KEEP" when one of the rules matches its facts (which ones, in builderWhy) or "SKIP"; no order, nothing else changes.
+  // The facts, each from the candles up to the signal candle and the calls before this one (no peeking): the hour the call fired, the
+  // side, the line (above or below the previous close, near or far: half the step or more), the signal candle (its body and size in
+  // ATR), the move of the 6 candles before (in ATR) and whether the call goes with it, the day's gap at the open, the day's range so far,
+  // the call's number that day, how the last call ended (won, lost, or still open when this one fired), calm or wild days (the ATR
+  // carried in against the median of the saved days), the weekday, where the close sits in the day's range, before or after 12:00
+  const BUILDER = { mode: "SHADOW", indices: ["NIFTY 50"], medianAtr: 20.82269926267992,  // the median of the 20 saved days' carried-in ATR (NIFTY 50, 29 October)
+    rules: [  // the survivors of the first run (20 days to 29 October, 1,457 rules tried); the evening builder keeps their forward score
+    { name: "green + after 12:00", foundOn: "2026-10-29", facts: [["candle", "green"], ["afterNoon", "after 12:00"]] },
+    { name: "above the close + calm days", foundOn: "2026-10-29", facts: [["line", "above the close"], ["atrRegime", "calm days"]] },
+    { name: "near line + fell", foundOn: "2026-10-29", facts: [["lineFar", "near line"], ["move", "fell"]] },
+    { name: "9 + above the close", foundOn: "2026-10-29", facts: [["hour", "9"], ["line", "above the close"]] },
+    { name: "Wed + after 12:00", foundOn: "2026-10-29", facts: [["weekday", "Wed"], ["afterNoon", "after 12:00"]] }
+    ] };
+  function atrPath(bars, seed, period = 14) {  // Wilder's ATR through the day's candles from the carried-in seed (null: from the first candle's range)
+    const out = []; let a = seed == null ? null : seed;
+    for (let j = 0; j < bars.length; j++) { const tr = trueRange(bars[j], j > 0 ? bars[j - 1].close : null); a = a == null ? tr : (a * (period - 1) + tr) / period; out.push(a); }
+    return out;
+  }
+  const bucketOf = (x, edges, names) => { for (let i = 0; i < edges.length; i++) if (x < edges[i]) return names[i]; return names[edges.length]; };
+  const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function callFacts(t, fired, n, bars, atrs, { prevClose = null, atrSeed = null, medianAtr = 0 }) {  // the facts of call t, the n-th of the day's fired calls
+    const k0 = bars.findIndex(b => b.time === t.signalTime); if (k0 < 0) return null;
+    const c = bars[k0], a = atrs[k0] || 1, body = (c.close - c.open) / a, range = (c.high - c.low) / a;
+    const move6 = k0 >= 6 ? (c.close - bars[k0 - 6].close) / a : 0, gap = prevClose == null ? 0 : (bars[0].open - prevClose) / a;
+    let hi = -Infinity, lo = Infinity; for (let j = 0; j <= k0; j++) { hi = Math.max(hi, bars[j].high); lo = Math.min(lo, bars[j].low); }
+    const place = (c.close - lo) / Math.max(hi - lo, 1e-9), last = n > 0 ? fired[n - 1] : null, when = istHM(t.entryTime);
+    return {
+      hour: String(Math.floor(((t.entryTime + IST_OFFSET) % 86400) / 3600)), side: t.side,
+      line: t.ratio > 0 ? "above the close" : t.ratio < 0 ? "below the close" : "the close line", lineFar: Math.abs(t.ratio) >= 0.5 ? "far line" : "near line",
+      candle: bucketOf(body, [-1, -0.3, 0.3, 1], ["big red", "red", "small", "green", "big green"]), candleSize: bucketOf(range, [0.8, 1.6], ["small candle", "normal candle", "big candle"]),
+      move: bucketOf(move6, [-2, -0.7, 0.7, 2], ["fell a lot", "fell", "flat", "rose", "rose a lot"]), withMove: (t.side === "CE") === (move6 > 0) ? "with the move" : "against the move",
+      gap: bucketOf(gap, [-1, 1], ["gap down", "flat open", "gap up"]), dayRange: bucketOf((hi - lo) / a, [3, 6], ["quiet day so far", "normal day so far", "wide day so far"]),
+      nth: n === 0 ? "1st call" : n === 1 ? "2nd call" : n === 2 ? "3rd call" : "4th or later",
+      lastCall: !last ? "no call before" : last.exitTime != null && last.exitTime <= t.entryTime ? (last.points > 0 ? "last call won" : "last call lost") : "last call open",
+      atrRegime: atrSeed != null && atrSeed >= medianAtr ? "wild days" : "calm days", weekday: WEEKDAYS[new Date((bars[0].time + IST_OFFSET) * 1000).getUTCDay()],
+      place: place > 0.7 ? "near the day's high" : place < 0.3 ? "near the day's low" : "mid-day range", afterNoon: when >= "12:00" ? "after 12:00" : "before 12:00",
+    };
+  }
+  function builderStep(trades, bars, { prevClose = null, atrSeed = null } = {}, b = BUILDER) {  // the builder's mark on every call that fired
+    const fired = trades.filter(t => t.entryTime != null && t.how !== "cancelled").sort((x, y) => x.entryTime - y.entryTime || x.signalTime - y.signalTime || (x.side < y.side ? -1 : x.side > y.side ? 1 : 0));
+    const atrs = atrPath(bars, atrSeed);
+    let kept = 0;
+    fired.forEach((t, n) => {
+      const f = callFacts(t, fired, n, bars, atrs, { prevClose, atrSeed, medianAtr: b.medianAtr });
+      if (!f) return;
+      const hit = b.rules.filter(r => r.facts.every(([k, v]) => f[k] === v));
+      if (hit.length) { kept++; t.builder = "KEEP"; t.builderWhy = hit.map(r => r.name).join("; "); } else { t.builder = "SKIP"; t.builderWhy = "no rule"; }
+    });
+    return kept;
+  }
   function planStep(trades, p = PLAN) {
     let taken = 0;
     const fired = trades.filter(t => t.entryTime != null && t.how !== "cancelled").sort((a, b) => a.entryTime - b.entryTime || a.signalTime - b.signalTime || (a.side < b.side ? -1 : a.side > b.side ? 1 : 0));
@@ -1042,7 +1099,7 @@
     return { taken: take.length, max: p.maxCalls, open: open.length, points, state, text };
   }
 
-  root.Rules = { RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
+  root.Rules = { BUILDER, atrPath, callFacts, builderStep, RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, NEW_HIGH_LOW, pastEdgeAt,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary,
                  LC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary,

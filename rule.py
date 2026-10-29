@@ -624,6 +624,83 @@ LOCK = {"mode": "SHADOW", "name": "MAX", **LOCK_PRESETS["MAX"], "compare": ["STE
 # The Trade Plan (static/rules.js PLAN, 29 October): on NIFTY 50, the first 3 calls that fired at or after 12:00 and before 15:00, "TAKE"
 # (call 1, 2 or 3 of 3); every other call that fired "SKIP" and why; mode SHADOW: a mark only, every call keeps its row and its order
 PLAN = {"mode": "SHADOW", "name": "afternoon 3", "indices": ["NIFTY 50"], "from": "12:00", "to": "15:00", "maxCalls": 3}
+# The rule builder (static/rules.js BUILDER, 30 October): the evening builder's survivors, each a list of facts a call must match; mode
+# SHADOW: a mark "KEEP" (which rules) or "SKIP" on every call that fired
+BUILDER = {"mode": "SHADOW", "indices": ["NIFTY 50"], "medianAtr": 20.82269926267992, "rules": [
+    {"name": "green + after 12:00", "foundOn": "2026-10-29", "facts": [["candle", "green"], ["afterNoon", "after 12:00"]]},
+    {"name": "above the close + calm days", "foundOn": "2026-10-29", "facts": [["line", "above the close"], ["atrRegime", "calm days"]]},
+    {"name": "near line + fell", "foundOn": "2026-10-29", "facts": [["lineFar", "near line"], ["move", "fell"]]},
+    {"name": "9 + above the close", "foundOn": "2026-10-29", "facts": [["hour", "9"], ["line", "above the close"]]},
+    {"name": "Wed + after 12:00", "foundOn": "2026-10-29", "facts": [["weekday", "Wed"], ["afterNoon", "after 12:00"]]}
+]}
+WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]  # Python's weekday(): Monday 0
+
+
+def atr_path(bars: list, seed, period: int = 14) -> list:
+    """Wilder's ATR through the day's candles from the carried-in seed (static/rules.js atrPath)."""
+    out, a = [], seed
+    for j, b in enumerate(bars):
+        tr = true_range(b, bars[j - 1]["close"] if j > 0 else None)
+        a = tr if a is None else (a * (period - 1) + tr) / period
+        out.append(a)
+    return out
+
+
+def bucket_of(x: float, edges: list, names: list) -> str:
+    for i, e in enumerate(edges):
+        if x < e:
+            return names[i]
+    return names[len(edges)]
+
+
+def call_facts(t: dict, fired: list, n: int, bars: list, atrs: list, prev_close, atr_seed, median_atr: float):
+    """The facts of call t, the n-th of the day's fired calls (static/rules.js callFacts): the candles up to the signal candle and the calls before."""
+    k0 = next((i for i, b in enumerate(bars) if b["time"] == t["signalTime"]), -1)
+    if k0 < 0:
+        return None
+    c = bars[k0]
+    a = atrs[k0] or 1
+    body = (c["close"] - c["open"]) / a
+    rng = (c["high"] - c["low"]) / a
+    move6 = (c["close"] - bars[k0 - 6]["close"]) / a if k0 >= 6 else 0
+    gap = 0 if prev_close is None else (bars[0]["open"] - prev_close) / a
+    hi = max(b["high"] for b in bars[:k0 + 1])
+    lo = min(b["low"] for b in bars[:k0 + 1])
+    place = (c["close"] - lo) / max(hi - lo, 1e-9)
+    last = fired[n - 1] if n > 0 else None
+    when = ist_hm(t["entryTime"])
+    ratio = t["ratio"]
+    import datetime
+    weekday = WEEKDAYS[datetime.datetime.utcfromtimestamp(bars[0]["time"] + IST_OFFSET).weekday()]
+    return {
+        "hour": str(int(((t["entryTime"] + IST_OFFSET) % 86400) // 3600)), "side": t["side"],
+        "line": "above the close" if ratio > 0 else "below the close" if ratio < 0 else "the close line", "lineFar": "far line" if abs(ratio) >= 0.5 else "near line",
+        "candle": bucket_of(body, [-1, -0.3, 0.3, 1], ["big red", "red", "small", "green", "big green"]), "candleSize": bucket_of(rng, [0.8, 1.6], ["small candle", "normal candle", "big candle"]),
+        "move": bucket_of(move6, [-2, -0.7, 0.7, 2], ["fell a lot", "fell", "flat", "rose", "rose a lot"]), "withMove": "with the move" if (t["side"] == "CE") == (move6 > 0) else "against the move",
+        "gap": bucket_of(gap, [-1, 1], ["gap down", "flat open", "gap up"]), "dayRange": bucket_of((hi - lo) / a, [3, 6], ["quiet day so far", "normal day so far", "wide day so far"]),
+        "nth": "1st call" if n == 0 else "2nd call" if n == 1 else "3rd call" if n == 2 else "4th or later",
+        "lastCall": "no call before" if last is None else ("last call won" if last["points"] > 0 else "last call lost") if last.get("exitTime") is not None and last["exitTime"] <= t["entryTime"] else "last call open",
+        "atrRegime": "wild days" if atr_seed is not None and atr_seed >= median_atr else "calm days", "weekday": weekday,
+        "place": "near the day's high" if place > 0.7 else "near the day's low" if place < 0.3 else "mid-day range", "afterNoon": "after 12:00" if when >= "12:00" else "before 12:00",
+    }
+
+
+def builder_step(trades: list, bars: list, prev_close, atr_seed, b: dict = BUILDER) -> int:
+    """The builder's mark on every call that fired (static/rules.js builderStep)."""
+    fired = sorted((t for t in trades if t.get("entryTime") is not None and t.get("how") != "cancelled"), key=lambda t: (t["entryTime"], t["signalTime"], t["side"]))
+    atrs = atr_path(bars, atr_seed)
+    kept = 0
+    for n, t in enumerate(fired):
+        f = call_facts(t, fired, n, bars, atrs, prev_close, atr_seed, b["medianAtr"])
+        if f is None:
+            continue
+        hit = [r for r in b["rules"] if all(f.get(k) == v for k, v in r["facts"])]
+        if hit:
+            kept += 1
+            t["builder"], t["builderWhy"] = "KEEP", "; ".join(r["name"] for r in hit)
+        else:
+            t["builder"], t["builderWhy"] = "SKIP", "no rule"
+    return kept
 
 
 def ist_hm(t: float) -> str:
@@ -696,7 +773,8 @@ TRAIL = {"lines": "all", "buffer": "none", "place": "at"}  # Rule 2 as the index
 
 def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: bool, signal: str, ideas: dict | None = None, targets_at=None,
                  hold_breaks: bool = False, trail: dict | None = None, given: dict | None = None, new_high_low: bool = False, prev_close=None,
-                 minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC, profit_lock: dict | None = LOCK, trade_plan: dict | None = PLAN) -> dict:
+                 minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC, profit_lock: dict | None = LOCK, trade_plan: dict | None = PLAN,
+                 builder: dict | None = BUILDER) -> dict:
     """The paper calls (see static/rules.js paperTrades). Since 18 October a call fires when a later candle's price goes past the
     signal candle's high (CE) or low (PE) and enters there, or at the candle's open when it opened past it; any later candle may
     fire it, until a candle closes back across the signal's line; a second call the same way while another is held runs beside
@@ -1115,13 +1193,15 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
                 t["points"], t["last"] = gain(t, last["close"]), last["close"]
     if trade_plan:
         plan_step(trades, trade_plan)  # the Trade Plan's mark on every call that fired (29 October)
+    if builder:
+        builder_step(trades, bars, prev_close, atr_seed, builder)  # the rule builder's mark on every call that fired (30 October)
     return {"trades": trades, "closed": len(closed), "cancelled": cancelled, "zonesFound": zone["found"], "lcZonesFound": lc_zone["found"], "lcZonesEnded": lc_zone["ended"]}
 
 
 
 def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas: dict | None = None, trail: dict | None = TRAIL,
                new_high_low: bool = False, minutes: list | None = None, gate: dict | None = GATE, atr_seed=None, loss_cutter: dict | None = LC,
-               profit_lock: dict | None = LOCK, trade_plan: dict | None = PLAN) -> dict:
+               profit_lock: dict | None = LOCK, trade_plan: dict | None = PLAN, builder: dict | None = BUILDER) -> dict:
     """A finished day replayed, as the Study page and the research engine do it; Rule 2 as the index page runs it unless another
     setting is given (None: Rule 1 alone); idea 24 when asked for, on "today so far" lines only. The first candle is judged from
     the previous day's close (18 October)."""
@@ -1132,7 +1212,7 @@ def replay_day(bars: list, move: str, previous, seconds: int, signal: str, ideas
         return {"trades": [], "closed": 0}
     levels_at = (lambda i: fixed) if move == "prev" else from_close if move == "close" else today_levels_at(bars)
     return paper_trades(bars, levels_at, INF, seconds, False, signal, ideas, None if own else today_lines_at(bars), True, trail, None,
-                        not own and bool(new_high_low), previous.get("close") if own and previous else None, minutes or None, gate, atr_seed, loss_cutter, profit_lock, trade_plan)
+                        not own and bool(new_high_low), previous.get("close") if own and previous else None, minutes or None, gate, atr_seed, loss_cutter, profit_lock, trade_plan, builder)
 
 
 IDEAS = {"P1": {"closeAt": 15 * 3600}, "P2": {"noNewAfter": 14 * 3600}, "P3": {"minDepth": 0.25}, "P4": {"exitBack": 0.25}, "P5": {"carryOn": 0.25},

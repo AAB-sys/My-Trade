@@ -781,7 +781,8 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                                minutes, rule.GATE, atr_seed,  # the Call Gate (version 2, 23 October), with the ATR carried in from the days before
                                loss_cutter=rule.LC if name in rule.LC["indices"] else None,  # the Loss Cutter (24 October), NIFTY 50 only
                                profit_lock=rule.LOCK if name in rule.LOCK["indices"] else None,  # the Profit Lock (24 October), NIFTY 50 only, shadow mode
-                               trade_plan=rule.PLAN if name in rule.PLAN["indices"] else None)  # the Trade Plan (29 October), NIFTY 50 only, a mark
+                               trade_plan=rule.PLAN if name in rule.PLAN["indices"] else None,  # the Trade Plan (29 October), NIFTY 50 only, a mark
+                               builder=rule.BUILDER if name in rule.BUILDER["indices"] else None)  # the rule builder (30 October), NIFTY 50 only, a mark
     trades, result = trades["trades"], trades
     gate_daily_line(name, levels_mode, result, bars, today)
     rows = []
@@ -840,7 +841,7 @@ def watch_levels(name: str, levels_mode: str, bars: list, all_candles: list, tod
                      "sold_at": rec["sold"]["premium"] if rec and rec["sold"] else None,
                      "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")), "reason": "",  # the page's Reason column is the page's wording; the watcher's rows carry the candle verdict instead
                      "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": False,
-                     **lc_fields(t, rec), **lock_fields(t, rec), **plan_fields(t)})  # the Call Gate's verdict on the signal, the check that decided, the parallel advice (version 2); the Loss Cutter; the Profit Lock
+                     **lc_fields(t, rec), **lock_fields(t, rec), **plan_fields(t), **builder_fields(t)})  # the Call Gate's verdict on the signal, the check that decided, the parallel advice (version 2); the Loss Cutter; the Profit Lock
     if rows:
         record.record_calls(name, key, levels_mode, WATCH_SIGNAL, today.isoformat(), rows)  # the day's calls CSV (the daily save, back on 21 October)
     return {"calls": len(rows), "open": sum(1 for r in rows if r["how"] == "open")}
@@ -868,12 +869,17 @@ def paper_row(t: dict) -> dict:
             "points": t.get("points"), "how": t["how"], "candles_say": "", "exit_said_at": None, "candles_why": "", "carry_deep": "", "beyond_level": None, "beyond_reached": "",
             "contract": "", "premium_paid": None, "premium_now": None, "sell_below": None, "sold_at": None, "exit_at": t.get("exitAt"), "parallel": bool(t.get("parallel")),
             "reason": "", "gate": t.get("gate") or "", "gate_reason": t.get("gateWhy") or "", "gate_check": t.get("gateCheck") or "", "gate_advice": t.get("gateAdvice") or "", "paper": True,
-            **lc_fields(t, None), **lock_fields(t, None), **plan_fields(t)}
+            **lc_fields(t, None), **lock_fields(t, None), **plan_fields(t), **builder_fields(t)}
 
 
 def plan_fields(t: dict) -> dict:
     """The Trade Plan's fields of a call for the day's calls CSV (29 October): TAKE or SKIP, and why; empty off NIFTY 50."""
     return {"plan": t.get("plan") or "", "plan_reason": t.get("planWhy") or ""}
+
+
+def builder_fields(t: dict) -> dict:
+    """The rule builder's mark (30 October): KEEP (which rules) or SKIP on every call that fired."""
+    return {"builder": t.get("builder") or "", "builder_rules": t.get("builderWhy") or ""}
 
 
 def lc_fields(t: dict, rec: dict | None) -> dict:
