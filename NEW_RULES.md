@@ -200,7 +200,14 @@ shared tests C-1 to C-10, the 4 real days of the document (23 signals, the docum
 the repository's fixture; 400 with 3,873 signals across all 14 rules in the study copy), every field of every signal the same. The
 reference's own 123 self-tests pass. 3 ms a day.
 
-**Not built:** orders from these rules; the pictures drawn on the chart (the points and lines are kept in each row for that, later).
+**Settings** (the owner, 30 October: "so you have not made any check box settings on settings button?"): the Calls with Signals
+Settings popup lists the 14 rules under their own heading, each with a tick remembered on the browser (`signalsIndicators`, keys
+`mp_<rule>`), off until ticked. A tick draws that rule's signals on the chart, as the other rules' ticks do: the signal candle's arrow
+with the rule's name, the pattern's key candles as circles with short names (LS, H, RS; L rim, B, R rim; P0, P1; T1, T2; red, green;
+hammer, doji, VWAP) and its lines from candle to candle (neckline, rim, the flag's two lines, the channel's two lines, the opening
+range, the island high), in the side's colour. The log under the table always carries every signal, ticked or not.
+
+**Not built:** orders from these rules.
 
 ## On the page
 
