@@ -90,7 +90,14 @@ the price and the candle forming now move tick by tick: the server holds one
 connection to Dhan's market feed (`wss://api-feed.dhan.co`, ticker packets for
 the indices it covers) and pushes every tick to the page over its `/ws`
 connection; whenever that stream is quiet it falls back to one price request a
-second, and its paper calls gain the option
+second. If no live price reaches the page for 10 s in market hours (on a phone
+the `/ws` connection often dies without saying so: the owner switching to
+Dhan's app, the screen going off), the page drops it and opens a fresh one at
+once, and again at 20, 40 and 60 s while none comes; coming back to the page or
+back online does the same at once when the last price is over 3 s old (29
+October: SENSEX's chart moved only with the refresh every 15 s; until then
+the page waited 45 s, then for the dead connection to confirm its close).
+Its paper calls gain the option
 behind each call (one strike in the money, nearest expiry), the premium paid at
 entry, the premium now and the red Sell mark once the premium has fallen by 35%
 (`LOGIC.md`, "Exit by premium"). The premium now moves tick by tick too: each
