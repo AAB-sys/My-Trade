@@ -168,7 +168,7 @@ with one ATR, 9 won against 8; on 22 October itself +131.80 against +102.35.
 No Fibonacci levels anywhere on this page or in its engine (the owner, 22 October: "I dont want it at all as of now"), and nothing
 of the Paper calls page: not its rule, not its lines ("completely separate and isolated").
 
-## The 14 more patterns (the "More Chart Patterns and Rules" document and more_patterns_reference.py of 29 October; built 30 October): shadow, NIFTY 50
+## The 14 more patterns (the "More Chart Patterns and Rules" document and more_patterns_reference.py of 29 October; built 30 October): NIFTY 50
 
 The owner's document: 14 more ways to read the 5-minute NIFTY 50 chart, each giving BUY CE or BUY PE, written once for the BUY CE side
 and run on the chart turned upside down for the BUY PE side (flip: every price becomes minus the price; the signal is turned back).
@@ -183,17 +183,21 @@ reference's own: ATR(14), Wilder, as of the previous candle, carried over from t
 yesterday's close for the opening range and the gap rules is the previous session's last candle's close. Without volume (an index has
 none) the VWAP is the plain running average of (high + low + close) / 3, as the reference says.
 
-**Shadow mode** (the document, section 20): on NIFTY 50 only, under the Double Bottom shadow log on the Calls with Signals page, one
-row per signal of the 14 rules on today's closed candles: the time, the rule, the side, the status, the level L (and the picture's
-target when there is one), the close and the ATR used, the entry (the next candle's open), the best and worst move in the next hour
-(12 candles, from the entry, in the side's direction, points and ATR), the move at 12 candles and at the day's close, the paper result
-with this page's own exits (Rule 1 and the trail, each signal on its own: one trade at a time is not applied) and the note ("gap fill",
-"gap and go", "island of n candles"). The summary line: the signals, how many would be traded, each rule's count, a rule that spoke
-more than 5 times (flagged, as the document asks), the paper sum of the "ok" signals. **No call is placed, nothing is blocked, the
-Calls with Signals table and every other rule run exactly as before.** The log is the candles' own: replaying a saved day gives it again
-(the ULTROAN evening study keeps the daily counts; after about 30 trading days each rule is judged on its own, by the document's table:
-fewer than 10 signals, keep logging; 10 or more with the best move clearly bigger than the worst, a candidate for paper with the real
-exits; otherwise drop it or keep it as a label).
+**On the page** (the owner, 30 October, first "build it on the page calls with signals", then "make their behaviour same like the
+earlier 11 signals"): on NIFTY 50 (NewRule.MORE.indices) the 14 rules are rules of the Calls with Signals page like the other 11.
+On every closed candle their signals join the others' in `runDay`, after them in the list (a candle two rules call the same way goes
+to the rule earlier in the list; opposite ways: nothing, as before), under the same gates (one trade at a time, the entry candle
+between 09:30 and 14:45, two losses in a row, the day's limits) and the same exits (Rule 1, then the trail). A call of theirs in
+the table says "Rule:- Bear Flag" and so on, its level L, its picture's target (or none) and the note ("gap fill", "gap and go",
+"island of n candles"). Under the Double Bottom shadow log, the **14 more patterns · signal log**: one row per signal of the 14 on
+today's closed candles, newest first: the time, the rule, the side, the order (taken, with its points; or why not: outside 09:30 to
+14:45, same side (another rule first), both sides, a trade already open, the losses in a row, the call of another rule on the same
+candle), the level L (and the target), the close and the ATR used, the entry (the next candle's open), the best and worst move in
+the next hour (12 candles, from the entry, in the side's direction, points and ATR), the move at 12 candles and at the day's close,
+the paper result of the signal on its own with the page's exits, and the note. The summary line: the signals, how many were taken
+as calls, how many fell inside the window, each rule's count (a rule that spoke more than 5 times flagged, as the document asks),
+the paper sum. The log is the candles' own: replaying a saved day gives it again (the ULTROAN evening study keeps the daily counts;
+after about 30 trading days each rule is judged on its own, by the document's table).
 
 **Proof** (`node lab/morepat_check.js`, fixtures made by the reference's own tests and run_day): the reference's 113 test scans, its
 shared tests C-1 to C-10, the 4 real days of the document (23 signals, the document's section 19 list exactly) and random days (40 in
@@ -207,7 +211,7 @@ with the rule's name, the pattern's key candles as circles with short names (LS,
 hammer, doji, VWAP) and its lines from candle to candle (neckline, rim, the flag's two lines, the channel's two lines, the opening
 range, the island high), in the side's colour. The log under the table always carries every signal, ticked or not.
 
-**Not built:** orders from these rules.
+**Not built:** nothing of the document is left out; the rules run on NIFTY 50 only, as the document covers.
 
 ## On the page
 
