@@ -63,7 +63,7 @@ BEAT_SECONDS = 15   # pages report in this often when they are in front
 OPEN_SECONDS = float(os.environ.get("DASHBOARD_OPEN_SECONDS", "600"))      # 10 minutes
 DROP_SECONDS = float(os.environ.get("DASHBOARD_DROP_SECONDS", str(4 * 3600)))  # 4 hours
 COOKIE = "my_trade_session"
-OPEN_PATHS = ("/login", "/logout", "/health", "/static/")
+OPEN_PATHS = ("/login", "/logout", "/health", "/static/", "/favicon.ico")  # /favicon.ico: the tab icon, asked by browsers that ignore the pages' link (30 October)
 
 # Dhan, the owner's broker API, is the one source of prices (19 October, the owner: "remove yahoo data or yahoo API from
 # everywhere. Because we are completely dependent on dhan"): real-time candles and quotes for the three indices (dhan.QUOTE_IDS)
@@ -1494,6 +1494,13 @@ class NoCacheStatic(StaticFiles):
         response = super().file_response(*args, **kwargs)
         response.headers["Cache-Control"] = "no-cache"
         return response
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """The tab icon for a browser that asks /favicon.ico on its own (the pages name static/icon.svg; before 30 October this
+    answer was "Login required", a 401 on every page in the browser's console, harmless but noise)."""
+    return FileResponse(STATIC / "icon.svg", media_type="image/svg+xml", headers={"Cache-Control": "no-cache"})
 
 
 app.mount("/static", NoCacheStatic(directory=STATIC), name="static")
