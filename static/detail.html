@@ -173,7 +173,7 @@
   #paper.no-plan th:nth-child(15), #paper.no-plan td:nth-child(15), #paper.no-plan th:nth-child(16), #paper.no-plan td:nth-child(16) { display: none; }  /* the Trade Plan's columns: NIFTY 50 only (29 October) */
   #paper.plan-only tr.off-plan { display: none; }  /* the Trade Plan only view: the plan's calls alone */
   #plan-box { margin: 6px 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
-  #plan-box label { cursor: pointer; } #plan-line { margin-top: 6px; font-weight: 600; } #plan-line .pts.up { color: var(--up); } #plan-line .pts.down { color: var(--down); }
+  #plan-line { margin-top: 6px; font-weight: 600; } #plan-line .pts.up { color: var(--up); } #plan-line .pts.down { color: var(--down); }
   #paper.no-pl th:nth-child(14), #paper.no-pl td:nth-child(14) { display: none; }  /* the Profit Lock's column: NIFTY 50 only (24 October) */
   #paper td.lock b { font-weight: 600; } #paper td.lock b.said { color: var(--watch); } #paper td.lock small { display: block; color: var(--muted); }
   #paper td.gate { font-weight: 600; } #paper td.gate.take, #paper tr.ended td.gate.take { color: var(--up); } #paper td.gate.skip, #paper tr.ended td.gate.skip { color: var(--down); }  /* the Call Gate's verdict (22 October night) */
@@ -195,7 +195,7 @@
   .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; cursor: pointer; }
   .pill:hover { border-color: var(--ink-2); }
   .pill.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
-  #panel-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 10px; }  /* three pills since 21 October: on a phone the third goes to a second line */
+  #panel-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 10px; }  /* four pills since 30 October: on a phone they go to two lines */
   #panels[data-panel="chain"] #paper-box, #panels[data-panel="signals"] #paper-box { display: none; }
   /* The OI chart: Dhan's option chain, its rows and columns (17 October). The header stays while the table scrolls both ways;
      the columns can be dragged into any order */
@@ -390,6 +390,8 @@
        is just a start of it"). The Fibonacci rule never writes to it -->
   <div id="panel-tabs">
     <button class="pill on" id="tab-calls" type="button">Paper calls</button>
+    <!-- 30 October, the owner: "i need a new capsule in between the marked two capsules": Trade Plan, the same table showing the plan's calls alone -->
+    <button class="pill" id="tab-plan" type="button">Trade Plan</button>
     <button class="pill" id="tab-signals" type="button">Calls with Signals</button>
     <button class="pill" id="tab-chain" type="button">Open OI chart</button>
   </div>
@@ -399,8 +401,8 @@
          line, Crossed and Both choices and the Download CSV button are gone; Both is the signal setting, without a button -->
     <div id="paper-note"></div>
     <div id="feed-note" hidden></div>
-    <!-- The Trade Plan (29 October): NIFTY 50, the first 3 calls fired between 12:00 and 15:00. The tick shows the plan's calls alone -->
-    <div id="plan-box" hidden><label><input type="checkbox" id="plan-only"> <b>Trade Plan only</b> (NIFTY 50: calls after 12:00, the first 3 of the day)</label><div id="plan-line"></div></div>
+    <!-- The Trade Plan (29 October): NIFTY 50, the first 3 calls fired between 12:00 and 15:00. Its own pill (30 October) shows the plan's calls alone -->
+    <div id="plan-box" hidden><b>Trade Plan</b> · NIFTY 50 · the first 3 calls fired after 12:00<div id="plan-line"></div></div>
     <div class="scroll">
       <table id="paper">
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th><th>Profit Lock</th><th>Trade Plan</th><th>Plan reason</th></tr></thead>
@@ -975,8 +977,7 @@
     table.classList.toggle("no-lc", !lcHere());  // the Loss Cutter's two columns only where it runs (NIFTY 50)
     table.classList.toggle("no-pl", !plHere() || longCandles());  // and the Profit Lock's
     table.classList.toggle("no-plan", !planHere());  // and the Trade Plan's (29 October)
-    table.classList.toggle("plan-only", planHere() && planOnly());
-    drawPlanLine(trades);
+    applyPlanView(trades);
     const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
     table.classList.toggle("no-options", !withOptions);
     if (!withOptions && STRIKE_STEP[name] && state.dhan && state.dhan.configured)  // SENSEX, 8 October: say why there is no premium column
@@ -1063,15 +1064,22 @@
   // why, the advice-only checks (worn line, strict zone, the stack cap in log mode), the calls open the same way when the order was
   // placed, and from the option's record the premium path: the lowest premium so far and the 15% premium stop (log only, it sells nothing)
   // The Trade Plan (29 October; Rules.PLAN): "TAKE" on the first 3 calls fired between 12:00 and 15:00, "SKIP" on the others, and why; a
-  // call not fired yet has no verdict. The tick above the table (plan-only, kept in this browser) shows the plan's calls alone, with the
-  // plan's line: how many taken, where the day stands, their points and, when every one has a premium, their rupees at 1 lot
+  // call not fired yet has no verdict. The Trade Plan pill (30 October, the owner: "a new capsule in between" Paper calls and Calls with
+  // Signals) shows the same table with the plan's calls alone, under the plan's line: how many taken, where the day stands, their points
+  // and, when every one has a premium, their rupees at 1 lot. Paper calls keeps every call, the plan's verdict in its two columns
   const planCells = (t) => !t.plan ? `<td class="gate"></td><td class="why"></td>` : `<td class="gate ${t.plan === "SKIP" ? "skip" : "take"}">${t.plan}</td><td class="why">${t.planWhy || ""}</td>`;
-  const planOnly = () => { try { return localStorage.getItem("planOnly") !== "off"; } catch (e) { return true; } };  // on until the owner unticks it
+  const planShown = () => document.getElementById("panels").dataset.panel === "plan";  // the Trade Plan pill is the one open
+  function applyPlanView(trades) {  // Trade Plan open: the plan's calls alone (none yet: no table, the line says where the day stands); Paper calls: every call
+    const table = document.getElementById("paper"), plan = planShown();
+    table.classList.toggle("plan-only", plan && planHere());
+    table.hidden = !trades.length || (plan && (!planHere() || !trades.some(t => t.plan === "TAKE")));
+    drawPlanLine(trades);
+  }
   function drawPlanLine(trades) {
     const box = document.getElementById("plan-box"), line = document.getElementById("plan-line");
-    box.hidden = !planHere() || longCandles();
+    box.hidden = !planShown() || longCandles();
     if (box.hidden) return;
-    document.getElementById("plan-only").checked = planOnly();
+    if (!planHere()) { line.textContent = `The Trade Plan runs on NIFTY 50 only. Nothing here for ${name}.`; return; }
     const session = currentSession(), s = Rules.planSummary(trades, Rules.PLAN, session && isToday(session) ? serverNow() : null);
     const take = trades.filter(t => t.plan === "TAKE"), lot = lotOf();
     const recs = take.map(t => optionRecords[callKey(t)]), priced = take.length && recs.every(r => r && r.premium_paid != null && (r.premium_now != null || (r.sold && r.sold.premium != null)));
@@ -1079,7 +1087,6 @@
     const tone = (x) => x > 0 ? "up" : x < 0 ? "down" : "";
     line.innerHTML = `${s.text}${take.length ? ` Plan calls so far: <span class="pts ${tone(s.points)}">${s.points > 0 ? "+" : ""}${fmt.format(s.points)} points</span>${rupees != null ? ` · <span class="pts ${tone(rupees)}">₹ ${rupees > 0 ? "+" : rupees < 0 ? "−" : ""}${fmt.format(Math.abs(rupees))}</span> at 1 lot${lot ? ` of ${lot}` : ""}` : ""}${s.open ? ` · ${s.open} still open` : ""}` : ""}`;
   }
-  document.getElementById("plan-only").addEventListener("change", (e) => { try { localStorage.setItem("planOnly", e.target.checked ? "on" : "off"); } catch (err) {} document.getElementById("paper").classList.toggle("plan-only", planHere() && e.target.checked); });
   const lcLive = (check) => Rules.LC.mode === "LIVE" && Rules.LC.liveChecks.includes(check);
   function lcCells(t, r) {
     if (!t.lc) return `<td class="gate"></td><td class="why"></td>`;
@@ -1976,6 +1983,7 @@
     try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
     document.getElementById("panels").dataset.panel = which;
     document.getElementById("tab-calls").classList.toggle("on", which === "calls");
+    document.getElementById("tab-plan").classList.toggle("on", which === "plan");
     document.getElementById("tab-signals").classList.toggle("on", which === "signals");
     document.getElementById("tab-chain").classList.toggle("on", which === "chain");
     document.getElementById("chain-box").hidden = which !== "chain";
@@ -1989,12 +1997,14 @@
     wasSignals = which === "signals";
     if (series) drawLevels();  // the chart: plain with Calls with Signals open, its lines back with Paper calls or the OI chart
     if (which === "chain") { drawChain(); loadChain(); }
+    if (lastPaper) applyPlanView(lastPaper.trades);  // Paper calls or Trade Plan: the same table, every call or the plan's alone
   }
   document.getElementById("tab-calls").addEventListener("click", () => showPanel("calls"));
+  document.getElementById("tab-plan").addEventListener("click", () => showPanel("plan"));
   document.getElementById("tab-signals").addEventListener("click", () => showPanel("signals"));
   document.getElementById("tab-chain").addEventListener("click", () => showPanel("chain"));
   document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; try { sessionStorage.setItem("chainExpiry", chain.expiry); } catch (err) {} chain.data = null; drawChain(); loadChain(); });
-  try { const was = sessionStorage.getItem("panel"); if (was === "chain" || was === "signals") showPanel(was); } catch (e) {}  // the panel open before the reload: open again
+  try { const was = sessionStorage.getItem("panel"); if (was === "chain" || was === "signals" || was === "plan") showPanel(was); } catch (e) {}  // the panel open before the reload: open again
   setInterval(loadChain, 5000);  // every 5 s (the owner, 21 October: "why OI chart is not getting updated every 5 seconds?"); 15 s until then
   (() => {  // Settings > Change layout (17 October, the owner: "click on setting button, it will open change layout pop up and it would have
     // check boxes of all the column headers. If i untick the check box that column will be removed from that OI chart table")

@@ -954,13 +954,15 @@ the evidence for that choice.
      calls once they are known (the end of paperTrades), so the page and the
      server mark the same calls (check_rule.py compares the marks). Every call
      keeps its row and its order. The page's Paper calls table has two more
-     columns, **Trade Plan** and **Plan reason** (NIFTY 50 only), a tick **Trade
-     Plan only** above the table (on until the owner unticks it; kept in the
-     browser) that shows the plan's calls alone, and the plan's line: where the
-     day stands (waiting until 12:00; n of 3 taken, the rest allowed until 15:00;
-     done for today; the window closed at 15:00), the plan calls' points, and,
-     when every one has a premium, their rupees at 1 lot. The day's calls CSV has
-     `plan` and `plan_reason`.
+     columns, **Trade Plan** and **Plan reason** (NIFTY 50 only). A pill **Trade
+     Plan** between Paper calls and Calls with Signals (30 October, the owner: "i
+     need a new capsule in between the marked two capsules") shows the same table
+     with the plan's calls alone, under the plan's line: where the day stands
+     (waiting until 12:00; n of 3 taken, the rest allowed until 15:00; done for
+     today; the window closed at 15:00), the plan calls' points, and, when every
+     one has a premium, their rupees at 1 lot. Before the first plan call the pill
+     shows the line alone; on another index it says the plan runs on NIFTY 50
+     only. The day's calls CSV has `plan` and `plan_reason`.
    - **Mode LIVE, not built:** would place no order for the calls the plan skips.
      The owner's yes decides, after 10 paper days of the plan positive after
      charges (the ULTROAN evening study keeps score from the CSV's close rows).
