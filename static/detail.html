@@ -85,6 +85,23 @@
     border-radius: 999px; padding: 4px 14px; cursor: pointer;
   }
   #dashboard:hover, #logout:hover { border-color: var(--ink-2); }
+  /* The Index capsule (30 October, the owner: "same i want inside the page as well ... then it should be directed to the page"): the
+     main menu's pill beside Main Menu; its menu lists the three indices, a choice goes to that index's page in this tab */
+  #pick { position: relative; display: inline-block; align-self: center; }
+  #pick-btn {
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  }
+  #pick-btn:hover, #pick.open #pick-btn { border-color: var(--ink-2); }
+  #pick-btn .caret { font-size: 9px; transition: transform 0.15s; }
+  #pick.open #pick-btn .caret { transform: rotate(180deg); }
+  #pick-menu {
+    display: none; position: absolute; left: 0; top: calc(100% + 6px); z-index: 20; min-width: 170px; padding: 6px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 24px rgba(11, 11, 11, 0.12);
+  }
+  #pick.open #pick-menu { display: block; }
+  #pick-menu a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  #pick-menu a:hover, #pick-menu a:focus { background: var(--border); outline: none; }
   #logout[hidden] { display: none; }
   #status.error { color: var(--down); }
   #mode { display: none; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: #fff; background: var(--down); border-radius: 4px; padding: 2px 8px; }
@@ -299,6 +316,11 @@
 <main>
   <div class="top">
     <a href="/" id="dashboard">Main Menu</a>
+    <!-- The Index capsule (30 October, the owner's ask): "Index", a drop-down of the three indices; a choice goes to that index's page -->
+    <div id="pick">
+      <button id="pick-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="pick-menu">Index <span class="caret" aria-hidden="true">▼</span></button>
+      <div id="pick-menu" role="menu" aria-label="Index" hidden></div>
+    </div>
     <span id="mode">SIMULATED DATA</span>
     <div class="top-right">  <!-- the Log out button, and the "Live · updated" line under it (the owner, 16 October) -->
       <button id="logout" type="button" hidden>Log out</button>
@@ -1860,6 +1882,21 @@
   setInterval(() => { if (state.minutesKey.startsWith("today|")) loadMinutes(); }, 60000);  // today's one-minute candles, once a minute (the ticks bring the newest meanwhile)
 
   // ---- controls
+  // The Index capsule (30 October): the menu is the three indices; a choice goes to that index's page in this tab (the login's tab
+  // note is in this tab's sessionStorage, so the next page is still logged in and keeps the open panel)
+  (() => {
+    const pick = document.getElementById("pick"), btn = document.getElementById("pick-btn"), menu = document.getElementById("pick-menu");
+    menu.replaceChildren(...DHAN_INDICES.map(ix => {
+      const a = document.createElement("a");
+      a.href = "/index/" + encodeURIComponent(ix); a.setAttribute("role", "menuitem"); a.textContent = ix; a.title = "Open " + ix;
+      return a;
+    }));
+    const show = (on) => { menu.hidden = !on; pick.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };
+    btn.addEventListener("click", () => show(!pick.classList.contains("open")));
+    document.addEventListener("click", (e) => { if (!pick.contains(e.target)) show(false); });  // a click elsewhere closes it
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") show(false); });
+  })();
+
   document.getElementById("logout").addEventListener("click", () => {
     fetch("/logout", { method: "POST" }).finally(() => location.href = "/login");
   });
