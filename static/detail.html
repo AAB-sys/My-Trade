@@ -25,6 +25,7 @@
     --candle-up: #0ca30c;
     --candle-down: #d03b3b;
     --line: #2a78d6;
+    --vwap: #8a3ffc;  /* the VWAP line on the Calls with Signals chart (30 October) */
     --now-line: #8cc4f5; --now-box: #d6ebfc; --now-text: #1558b0;  /* the price now: a light blue line, a light blue box, blue figures (15 October) */
     --itm: rgba(11, 11, 11, 0.045);  /* the OI chart's in-the-money cells (17 October) */
   }
@@ -45,6 +46,7 @@
       --candle-up: #0ca30c;
       --candle-down: #e66767;
       --line: #3987e5;
+      --vwap: #be95ff;
       --now-line: #8cc4f5; --now-box: #d6ebfc; --now-text: #1558b0;
     }
   }
@@ -63,6 +65,7 @@
     --candle-up: #0ca30c;
     --candle-down: #e66767;
     --line: #3987e5;
+    --vwap: #be95ff;
     --now-line: #8cc4f5; --now-box: #d6ebfc; --now-text: #1558b0;
   }
 
@@ -2148,12 +2151,23 @@
       l.setData(seg.points.map(p => ({ time: p.time + IST_OFFSET, value: p.price }))); wedgeLines.push(l); });
     wedgeLinesKey = key;
   }
+  let vwapLine = null, vwapLineKey = "";  // the VWAP itself on the Calls with Signals chart (30 October, the owner: "why VWAP stops getting calculated?"), a line series of its own
+  function setVwapLine(points) {  // points: [{ time, value }] in the chart's time, one a candle; []: the line off
+    const key = points.length ? `${points.length} ${points[0].time} ${points[points.length - 1].value}` : "";
+    if (key === vwapLineKey) return;
+    vwapLineKey = key;
+    if (!points.length) { if (vwapLine) { try { chart.removeSeries(vwapLine); } catch (e) {} } vwapLine = null; return; }
+    if (vwapLine) { try { vwapLine.setData(points); return; } catch (e) { vwapLine = null; } }
+    vwapLine = chart.addSeries(LightweightCharts.LineSeries, { color: cssVar("--vwap"), lineWidth: 2, title: "VWAP", lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null });
+    vwapLine.setData(points);
+  }
   function clearSignals() {
     document.querySelector("#signals tbody").replaceChildren();
     drawDbLog(null);
     drawMoreLog(null);
     if (signalMarkers && signalMarkers.series === series) setSignalMarkers([]);
     setWedgeLines([]);
+    setVwapLine([]);
   }
   // the lines for the chart (returned to drawLevels) and the table's rows
   function drawSignals() {
@@ -2163,7 +2177,7 @@
     const ticked = { "double top": state.signalsDT, "double bottom": state.signalsDB, "triple top": state.signalsTT, "triple bottom": state.signalsTB, "falling wedge": state.signalsFW, "rising wedge": state.signalsRW, "bullish rectangle": state.signalsBR, "bullish symmetrical triangle": state.signalsBST, "bearish symmetrical triangle": state.signalsBET, "ascending triangle": state.signalsASC, "descending triangle": state.signalsDES , ...Object.fromEntries((typeof MorePat !== "undefined" ? MorePat.ORDER : []).map(key => [key, (state.morePat || new Set()).has(key)])) };  // the 14 more patterns' ticks (30 October)
     run.trades.filter(t => ticked[t.rule]).forEach(t => {  // a rule's marks and lines only while its tick is on; the table carries every rule's calls
       const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom" || t.rule === "triple bottom", wedge = t.upperLine != null;
-      const lineName = t.more ? t.lineName : t.rule === "bullish rectangle" ? (t.side === "CE" ? "resistance" : "support") : t.rule === "ascending triangle" ? "resistance" : t.rule === "descending triangle" ? "support" : wedge ? "break level" : bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
+      const lineName = t.more ? (t.lineName === "VWAP" ? "VWAP at call" : t.lineName) : t.rule === "bullish rectangle" ? (t.side === "CE" ? "resistance" : "support") : t.rule === "ascending triangle" ? "resistance" : t.rule === "descending triangle" ? "support" : wedge ? "break level" : bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
       lines.push({ nr: true, price: t.L, name: lineName, up, solid: true });
       if (t.exit == null && t.stop != null && t.stop !== t.L) lines.push({ nr: true, price: t.stop, name: "stop", up, solid: false });
       if (t.more) {  // one of the 14 more patterns (30 October): its key candles as circles with short names, its lines from candle to candle
@@ -2186,6 +2200,11 @@
     if (more) morePictures(more, run.bars, run.trades).forEach(p => { marks.push(...p.marks); segs.push(...p.segs); });
     setSignalMarkers(marks.sort((a, b) => a.time - b.time));
     setWedgeLines(segs);
+    // the VWAP itself (30 October, the owner: "why VWAP stops getting calculated?"): the same running average the VWAP Reclaim and Loss rule
+    // reads (MorePat.vwapSeries, from the day's first candle), one point a candle through the candle forming now, while that rule's tick is
+    // on and on the index it runs on. Each VWAP call's flat line stays: it is the call's level, the VWAP at its signal candle ("VWAP at call")
+    const vwapOn = ticked.vwap && typeof MorePat !== "undefined" && NewRule.moreOn(name, null) && run.bars.length > 0;
+    setVwapLine(vwapOn ? MorePat.vwapSeries(run.bars).map((v, i) => ({ time: run.bars[i].time + IST_OFFSET, value: v })) : []);
     const body = document.querySelector("#signals tbody");
     const rows = run.trades.slice().sort((a, b) => b.signalTime - a.signalTime).map(t => {
       const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";

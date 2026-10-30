@@ -211,6 +211,12 @@ with the rule's name, the pattern's key candles as circles with short names (LS,
 hammer, doji, VWAP) and its lines from candle to candle (neckline, rim, the flag's two lines, the channel's two lines, the opening
 range, the island high), in the side's colour. The log under the table always carries every signal, ticked or not.
 
+**The VWAP line** (30 October, the owner: "Why vwap stops getting calculated?"): with the VWAP Reclaim and Loss tick on, the chart
+draws the VWAP itself, a purple line with one point a candle from the day's first candle through the candle forming now: the same
+running average the rule reads (`MorePat.vwapSeries`), so the line is exactly what the rule saw. A VWAP call's flat line stays and
+is labelled "VWAP at call": it is the call's level, the VWAP at its signal candle, which the call's exit watches; it does not move.
+The line is drawn on the index the rule runs on (NIFTY 50) and only on the Calls with Signals view; nothing in any rule changed.
+
 **Not built:** nothing of the document is left out; the rules run on NIFTY 50 only, as the document covers.
 
 ## On the page
