@@ -88,6 +88,27 @@
   #pick-menu a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
   #pick-menu a:hover, #pick-menu a:focus { background: var(--border); outline: none; }
   #open-warning { flex-basis: 100%; color: var(--down); font-size: 13px; }
+  /* The Download candles capsule (1 November, the owner: two years of NIFTY 50 candles for a replay of the Calls with Signals rules):
+     a pill beside Index; its panel asks the index, the first and last day and the candle size, and saves a CSV that Excel opens */
+  #dl { position: relative; display: inline-block; margin: -6px 0 18px 8px; }
+  #dl-btn {
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 4px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+  }
+  #dl-btn:hover, #dl.open #dl-btn { border-color: var(--ink-2); }
+  #dl-btn .caret { font-size: 9px; transition: transform 0.15s; }
+  #dl.open #dl-btn .caret { transform: rotate(180deg); }
+  #dl-panel {
+    display: none; position: absolute; left: 0; top: calc(100% + 6px); z-index: 5; width: 290px; max-width: calc(100vw - 32px); padding: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 24px rgba(11, 11, 11, 0.12);
+  }
+  #dl.open #dl-panel { display: block; }
+  #dl-panel label { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin: 0 0 8px; }
+  #dl-panel select, #dl-panel input { font: inherit; font-size: 14px; color: var(--ink); background: var(--bg, transparent); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; min-width: 0; }
+  #dl-go { font: inherit; font-size: 14px; font-weight: 600; color: #fff; background: var(--ink); border: 1px solid var(--ink); border-radius: 999px; padding: 6px 16px; cursor: pointer; margin-top: 4px; }
+  #dl-go[disabled] { opacity: 0.5; cursor: wait; }
+  #dl-status { margin: 10px 0 0; font-size: 13px; color: var(--ink-2); }
+  #dl-status.bad { color: var(--down); }
 
   #featured[hidden] { display: none; }  /* the tiles, off since 30 October (the owner: "remove the background tiles") */
   .grid {
@@ -138,6 +159,19 @@
   <div id="pick">
     <button id="pick-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="pick-menu">Index <span class="caret" aria-hidden="true">▼</span></button>
     <div id="pick-menu" role="menu" aria-label="Index" hidden></div>
+  </div>
+  <!-- The Download candles capsule (1 November): a file of an index's 5-minute candles between two days, from Dhan with the server's
+       own token, for a replay of the rules; nothing is kept on the server -->
+  <div id="dl">
+    <button id="dl-btn" type="button" aria-expanded="false" aria-controls="dl-panel">Download candles <span class="caret" aria-hidden="true">▼</span></button>
+    <div id="dl-panel" hidden>
+      <label>Index <select id="dl-index"></select></label>
+      <label>From <input id="dl-from" type="date"></label>
+      <label>To <input id="dl-to" type="date"></label>
+      <label>Candles <select id="dl-size"><option value="5">5 minutes</option><option value="1">1 minute</option><option value="15">15 minutes</option></select></label>
+      <button id="dl-go" type="button">Download</button>
+      <p id="dl-status">Six columns: Date, Time, Open, High, Low, Close. Two years is about a minute.</p>
+    </div>
   </div>
 
   <!-- The three tiles (NIFTY 50, NIFTY BANK, SENSEX) were the page until 30 October; taken off at the owner's ask ("remove the
@@ -303,6 +337,40 @@
     menu.addEventListener("click", () => show(false));  // a choice made: the page opens in a new tab, the menu closes
     document.addEventListener("click", (e) => { if (!pick.contains(e.target)) show(false); });  // a click elsewhere closes it
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") show(false); });
+  })();
+
+  // The Download candles capsule (1 November): the panel's choices go to /download/candles with this tab's note; the answer, a CSV,
+  // is saved through the browser under the server's file name. The dates start at two years back and today
+  (() => {
+    const box = document.getElementById("dl"), btn = document.getElementById("dl-btn"), panel = document.getElementById("dl-panel");
+    const index = document.getElementById("dl-index"), from = document.getElementById("dl-from"), to = document.getElementById("dl-to"), size = document.getElementById("dl-size");
+    const go = document.getElementById("dl-go"), status = document.getElementById("dl-status"), hint = status.textContent;
+    index.replaceChildren(...PINNED.map(name => { const o = document.createElement("option"); o.value = name; o.textContent = name; return o; }));
+    const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    const today = new Date(), back = new Date(today); back.setFullYear(back.getFullYear() - 2);
+    from.value = iso(back); to.value = iso(today); to.max = iso(today);
+    const say = (text, bad) => { status.textContent = text; status.classList.toggle("bad", !!bad); };
+    const show = (on) => { panel.hidden = !on; box.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };
+    btn.addEventListener("click", () => show(!box.classList.contains("open")));
+    document.addEventListener("click", (e) => { if (!box.contains(e.target)) show(false); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") show(false); });
+    go.addEventListener("click", async () => {
+      if (!from.value || !to.value) { say("Pick both days.", true); return; }
+      if (from.value > to.value) { say("From must be on or before To.", true); return; }
+      go.disabled = true; say("Asking Dhan, piece by piece. Two years takes about a minute, please wait…");
+      try {
+        const q = `index=${encodeURIComponent(index.value)}&from=${from.value}&to=${to.value}&size=${size.value}`;
+        const res = await fetch("/download/candles?" + q, withTab());
+        if (!res.ok) { let why = `HTTP ${res.status}`; try { why = (await res.json()).detail || why; } catch (e) {} say("Not downloaded: " + why, true); return; }
+        const blob = await res.blob(), m = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || ""), name = m ? m[1] : "candles.csv";
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();  // not added to the page: its click would count as a click outside the panel and close it
+        setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+        const n = res.headers.get("X-Candles");
+        say(`Saved ${name}` + (n ? ` · ${Number(n).toLocaleString("en-IN")} candles` : "") + (n === "0" ? " · Dhan had no candles for these days" : ""));
+      } catch (e) { say("Not downloaded: " + (e.message || e), true); }
+      finally { go.disabled = false; }
+    });
+    status.title = hint;
   })();
 
   document.getElementById("logout").addEventListener("click", () => {

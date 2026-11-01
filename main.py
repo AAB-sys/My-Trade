@@ -1,7 +1,7 @@
 import asyncio
 import json
 import struct
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import concurrent.futures
 import contextlib
 import hashlib
@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 import httpx
@@ -1500,6 +1500,45 @@ class NoCacheStatic(StaticFiles):
         response = super().file_response(*args, **kwargs)
         response.headers["Cache-Control"] = "no-cache"
         return response
+
+
+HISTORY_MAX_DAYS = 5 * 366  # Dhan keeps about five years of minute candles
+
+
+@app.get("/download/candles")
+async def download_candles(index: str, from_day: str = Query(alias="from"), to_day: str = Query(alias="to"), size: int = 5):
+    """A file of an index's minute candles, for a replay of the rules on the owner's own computer or here (the owner, 1 November:
+    "run all the live rules from the Calls with Signals page ... 2 years of data of Nifty 50"; the button on the Main Menu).
+    Six columns, one row a candle: Date, Time (IST, the candle's start), Open, High, Low, Close, as a CSV that Excel opens.
+    The candles come from Dhan in pieces of 90 days (dhan.history), with the token that is on the server: nothing is kept
+    on the server, nothing of the rules is touched. 5-minute candles by default; size=1 gives the 1-minute ones."""
+    key = known_index(index)
+    if not DHAN_ON or key not in dhan.QUOTE_IDS:
+        raise HTTPException(status_code=503, detail="Dhan is not set up on this server, so there are no candles to download.")
+    if size not in (1, 5, 15):
+        raise HTTPException(status_code=400, detail="size must be 1, 5 or 15 (minutes a candle).")
+    try:
+        first, last = date.fromisoformat(from_day), date.fromisoformat(to_day)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="from and to must be dates like 2024-11-01.")
+    today = dhan.today_ist()
+    if last > today:
+        last = today
+    if first > last:
+        raise HTTPException(status_code=400, detail="from must be on or before to.")
+    if (last - first).days > HISTORY_MAX_DAYS:
+        raise HTTPException(status_code=400, detail="at most five years at a time.")
+    try:
+        bars = await asyncio.to_thread(dhan.history, key, size, first, last)
+    except dhan.DhanError as exc:
+        raise HTTPException(status_code=502, detail=f"Dhan did not give the candles: {exc.message}")
+    lines = ["Date,Time,Open,High,Low,Close"]
+    for b in bars:
+        t = datetime.fromtimestamp(b["time"], dhan.IST)
+        lines.append(f"{t:%Y-%m-%d},{t:%H:%M},{b['open']:.2f},{b['high']:.2f},{b['low']:.2f},{b['close']:.2f}")
+    name = f"{key.replace(' ', '')}_{size}min_{first.isoformat()}_{last.isoformat()}.csv"
+    return Response("\n".join(lines) + "\n", media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store", "X-Candles": str(len(bars))})
 
 
 @app.get("/favicon.ico", include_in_schema=False)

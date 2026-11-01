@@ -431,6 +431,54 @@ def _intraday(name: str, minutes: int, days_back: int) -> list:
     return mine
 
 
+HISTORY_PIECE_DAYS = 90  # Dhan gives minute candles for at most about 90 days in one request
+
+
+def history(name: str, minutes: int, first: date, last: date) -> list:
+    """Minute candles of an index from the day first to the day last, both included, oldest first, inside market hours
+    (the owner, 1 November: two years of NIFTY 50 candles for a replay of the Calls with Signals rules; "Download candles"
+    on the Main Menu). Dhan answers at most about 90 days in one request, so the span is asked for in pieces, one request
+    a piece, each taking its turn in the usual pacing; the date form is the one Dhan's own document shows for the minute
+    candles ("2024-09-11 09:15:00"), with the plain dates as the fallback, and the candle size as text first, then as a
+    number, as _chart does; the form that works is kept for the next piece. A piece Dhan has no candles for (older than
+    it keeps) is simply empty. A refusal of any other kind stops the download with its reason."""
+    if name not in QUOTE_IDS:
+        raise DhanError("other", f"no Dhan id for {name}")
+    base = {"securityId": str(QUOTE_IDS[name]), "exchangeSegment": SEGMENT, "instrument": "INDEX", "oi": False}
+    forms = ["span", "plain"]
+    styles = ["text", "number"]
+    known = None
+    out, seen = [], set()
+    start = first
+    while start <= last:
+        end = min(last, start + timedelta(days=HISTORY_PIECE_DAYS - 1))
+        tries = [known] + [(f, st) for f in forms for st in styles if (f, st) != known] if known else [(f, st) for f in forms for st in styles]
+        bars, refusal = None, None
+        for form, style in tries:
+            body = {**base, "interval": str(minutes) if style == "text" else int(minutes)}
+            if form == "span":
+                body["fromDate"], body["toDate"] = f"{start.isoformat()} 09:15:00", f"{end.isoformat()} 15:30:00"
+            else:
+                body["fromDate"], body["toDate"] = start.isoformat(), (end + timedelta(days=1)).isoformat()
+            try:
+                bars = _bars(call("POST", "/charts/intraday", body))
+            except DhanError as exc:
+                if exc.kind != "other":
+                    raise
+                refusal = exc
+                continue
+            known = (form, style)
+            break
+        if bars is None:
+            raise refusal
+        for b in bars:
+            if start <= datetime.fromtimestamp(b["time"], IST).date() <= end and in_session(b) and b["time"] not in seen:
+                seen.add(b["time"]); out.append(b)
+        start = end + timedelta(days=1)
+    out.sort(key=lambda b: b["time"])
+    return out
+
+
 def intraday_problem(name: str | None = None) -> str | None:
     """What Dhan said when it refused the minute candles within the last 5 minutes (for /health and the page's note;
     for one index with name), else None."""
