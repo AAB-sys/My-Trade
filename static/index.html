@@ -354,6 +354,8 @@
     const today = new Date(), back = new Date(today); back.setFullYear(back.getFullYear() - 2);
     from.value = iso(back); to.value = iso(today); to.max = iso(today);
     const say = (text, bad) => { status.textContent = text; status.classList.toggle("bad", !!bad); };
+    let fade = null;  // the result line goes back to the hint after 10 minutes (the owner, 1 November: "after 10 minutes, remove this message. Dont need this message all the time")
+    const later = () => { clearTimeout(fade); fade = setTimeout(() => say(hint), 10 * 60 * 1000); };
     const show = (on) => { panel.hidden = !on; box.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };
     btn.addEventListener("click", () => show(!box.classList.contains("open")));
     document.addEventListener("click", (e) => { if (!box.contains(e.target)) show(false); });
@@ -365,18 +367,18 @@
       try {
         const q = `index=${encodeURIComponent(index.value)}&from=${from.value}&to=${to.value}&size=${size.value}` + (toGitHub ? "&store=github" : "");
         const res = await fetch("/download/candles?" + q, withTab());
-        if (!res.ok) { let why = `HTTP ${res.status}`; try { why = (await res.json()).detail || why; } catch (e) {} say("Not saved: " + why, true); return; }
+        if (!res.ok) { let why = `HTTP ${res.status}`; try { why = (await res.json()).detail || why; } catch (e) {} say("Not saved: " + why, true); later(); return; }
         if (toGitHub) {
           const got = await res.json(), n = Number(got.candles || 0);
           status.replaceChildren(`Saved on GitHub, branch ${got.branch}: `, Object.assign(document.createElement("a"), { href: got.url, target: "_blank", rel: "noopener", textContent: got.saved }), ` · ${n.toLocaleString("en-IN")} candles` + (n === 0 ? " · Dhan had no candles for these days" : ""));
-          status.classList.remove("bad"); return;
+          status.classList.remove("bad"); later(); return;
         }
         const blob = await res.blob(), m = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || ""), name = m ? m[1] : "candles.csv";
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();  // not added to the page: its click would count as a click outside the panel and close it
         setTimeout(() => URL.revokeObjectURL(a.href), 60000);
         const n = res.headers.get("X-Candles");
-        say(`Saved ${name}` + (n ? ` · ${Number(n).toLocaleString("en-IN")} candles` : "") + (n === "0" ? " · Dhan had no candles for these days" : ""));
-      } catch (e) { say("Not saved: " + (e.message || e), true); }
+        say(`Saved ${name}` + (n ? ` · ${Number(n).toLocaleString("en-IN")} candles` : "") + (n === "0" ? " · Dhan had no candles for these days" : "")); later();
+      } catch (e) { say("Not saved: " + (e.message || e), true); later(); }
       finally { go.disabled = gh.disabled = false; }
     };
     go.addEventListener("click", () => ask(false));
