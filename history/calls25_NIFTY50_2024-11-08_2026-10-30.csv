@@ -1,0 +1,1638 @@
+date,signal,entry,rule,group,side,index_at_entry,exit,ended_by,points,after_8
+2024-11-08,13:10,13:15,VWAP reclaim,14 new,CE,24169.35,13:30,trail,-1.45,-9.45
+2024-11-08,13:30,13:35,Bearish Engulfing,14 new,PE,24168.2,13:50,trail,8.4,0.4
+2024-11-08,14:10,14:15,double bottom,11 old,PE,24136.6,14:25,reclaim,-2.8,-10.8
+2024-11-08,14:35,14:40,Bullish Engulfing,14 new,CE,24140.8,14:50,trail,17.6,9.6
+2024-11-11,10:00,10:05,Doji reversal (down),14 new,PE,24135.55,10:20,trail,-21.5,-29.5
+2024-11-11,13:15,13:20,VWAP loss,14 new,PE,24186.9,13:55,trail,31.8,23.8
+2024-11-11,14:10,14:15,Head and Shoulders,14 new,PE,24107.45,14:20,trail,-0.1,-8.1
+2024-11-11,14:25,14:30,Falling Channel breakout,14 new,CE,24138.8,14:55,trail,29.1,21.1
+2024-11-12,09:55,10:00,VWAP reclaim,14 new,CE,24229.1,10:00,reclaim,-71.95,-79.95
+2024-11-12,11:30,11:35,falling wedge,11 old,CE,24148.05,11:35,retouch,-10.15,-18.15
+2024-11-13,09:40,09:45,Opening Range Breakout (down),14 new,PE,23755.95,09:50,trail,-16.05,-24.05
+2024-11-13,09:50,09:55,Bullish Engulfing,14 new,CE,23772.2,10:00,trail,-30.2,-38.2
+2024-11-14,09:55,10:00,VWAP reclaim,14 new,CE,23597.2,10:10,trail,19.7,11.7
+2024-11-14,10:25,10:30,VWAP loss,14 new,PE,23587.5,10:30,reclaim,-20.4,-28.4
+2024-11-14,10:35,10:40,VWAP loss,14 new,PE,23573.25,11:15,trail,65.2,57.2
+2024-11-14,11:50,11:55,falling wedge,11 old,CE,23510.45,12:15,trail,37.35,29.35
+2024-11-14,13:30,13:35,Bearish Engulfing,14 new,PE,23536.85,13:55,trail,4.8,-3.2
+2024-11-18,09:45,09:50,Bullish Engulfing,14 new,CE,23424.9,10:10,trail,25.1,17.1
+2024-11-18,11:15,11:20,falling wedge,11 old,CE,23405.2,11:30,trail,3.9,-4.1
+2024-11-18,11:40,11:45,VWAP reclaim,14 new,CE,23432.75,12:35,trail,77.65,69.65
+2024-11-18,14:05,14:10,bullish symmetrical triangle,11 old,CE,23493.1,14:20,reclaim,-31,-39
+2024-11-18,14:25,14:30,double top,11 old,PE,23443.9,14:40,trail,6.9,-1.1
+2024-11-19,12:00,12:05,rising wedge,11 old,PE,23758.45,12:05,retouch,17.7,9.7
+2024-11-19,13:20,13:25,Head and Shoulders,14 new,PE,23746.7,13:30,reclaim,-14.35,-22.35
+2024-11-19,14:00,14:05,rising wedge,11 old,PE,23741.6,14:15,trail,15.35,7.35
+2024-11-19,14:15,14:20,Bullish Engulfing,14 new,CE,23725.85,14:25,reclaim,-26.55,-34.55
+2024-11-21,09:40,09:45,Bullish Engulfing,14 new,CE,23321.35,10:10,trail,-12.6,-20.6
+2024-11-21,12:55,13:00,VWAP loss,14 new,PE,23310.75,13:10,reclaim,-30.55,-38.55
+2024-11-22,09:35,09:40,Shooting Star,14 new,PE,23436.3,10:00,reclaim,-126.65,-134.65
+2024-11-22,10:45,10:50,VWAP loss,14 new,PE,23474.2,10:50,reclaim,-41.75,-49.75
+2024-11-25,09:50,09:55,VWAP loss,14 new,PE,24267.55,10:15,trail,-20.9,-28.9
+2024-11-25,11:15,11:20,ascending triangle,11 old,CE,24344.6,11:20,reclaim,-14.4,-22.4
+2024-11-26,10:00,10:05,Bullish Engulfing,14 new,CE,24246.3,10:15,trail,-74.55,-82.55
+2024-11-26,11:00,11:05,Inverse Head and Shoulders,14 new,CE,24235.55,11:15,reclaim,-38.65,-46.65
+2024-11-27,09:45,09:50,Hammer,14 new,CE,24183.35,09:55,trail,17.9,9.9
+2024-11-27,11:00,11:05,Falling Channel breakout,14 new,CE,24207.45,11:10,trail,-12.3,-20.3
+2024-11-27,11:55,12:00,Bullish Engulfing,14 new,CE,24192.8,13:30,trail,108.25,100.25
+2024-11-27,13:30,13:35,Shooting Star,14 new,PE,24300,13:35,retouch,-24.55,-32.55
+2024-11-27,13:55,14:00,Bearish Engulfing,14 new,PE,24311.05,14:25,trail,4.85,-3.15
+2024-11-28,10:00,10:05,Opening Range Breakout (up),14 new,CE,24330.15,10:15,trail,-8.1,-16.1
+2024-11-28,12:35,12:40,double bottom,11 old,PE,24014.7,13:25,trail,11.95,3.95
+2024-11-28,14:00,14:05,double bottom,11 old,CE,24047,14:05,retouch,-6.3,-14.3
+2024-11-28,14:10,14:15,Shooting Star,14 new,PE,23962.15,14:25,trail,-11.95,-19.95
+2024-11-29,09:30,09:35,Opening Range Breakout (up),14 new,CE,24039.9,09:35,reclaim,-13.9,-21.9
+2024-11-29,10:10,10:15,VWAP loss,14 new,PE,23970.1,10:25,reclaim,-66.8,-74.8
+2024-12-02,09:30,09:35,Hammer,14 new,CE,24087.75,09:50,trail,24.15,16.15
+2024-12-02,10:15,10:20,Hammer,14 new,CE,24173.45,12:30,trail,2.4,-5.6
+2024-12-03,10:50,10:55,Doji reversal (down),14 new,PE,24402.75,11:00,reclaim,-16.65,-24.65
+2024-12-03,11:25,11:30,Doji reversal (down),14 new,PE,24425.4,11:30,retouch,-6.2,-14.2
+2024-12-04,10:10,10:15,Bearish Engulfing,14 new,PE,24542.45,10:30,trail,-3.35,-11.35
+2024-12-04,11:35,11:40,bullish symmetrical triangle,11 old,CE,24546.4,11:40,reclaim,-5.6,-13.6
+2024-12-05,09:55,10:00,Bullish Engulfing,14 new,CE,24424.35,10:15,reclaim,-40.1,-48.1
+2024-12-05,10:55,11:00,Shooting Star,14 new,PE,24331.45,12:05,reclaim,-185.3,-193.3
+2024-12-06,10:05,10:10,Opening Range Breakout (down),14 new,PE,24642.8,10:20,trail,-59.65,-67.65
+2024-12-06,10:20,10:25,Bullish Engulfing,14 new,CE,24703.3,11:10,trail,4.05,-3.95
+2024-12-06,11:45,11:50,Rising Channel breakdown,14 new,PE,24670.5,11:55,reclaim,-35.8,-43.8
+2024-12-06,11:55,12:00,VWAP reclaim,14 new,CE,24706.8,12:15,reclaim,-22.5,-30.5
+2024-12-09,09:25,09:30,Bearish Engulfing,14 new,PE,24664,10:20,trail,61.15,53.15
+2024-12-09,11:10,11:15,VWAP reclaim,14 new,CE,24635.65,11:50,trail,39.2,31.2
+2024-12-09,12:30,12:35,VWAP loss,14 new,PE,24636.2,12:45,trail,1.3,-6.7
+2024-12-09,13:10,13:15,Falling Channel breakout,14 new,CE,24650.8,13:25,trail,-14.8,-22.8
+2024-12-09,13:35,13:40,VWAP loss,14 new,PE,24632.75,14:30,trail,15.95,7.95
+2024-12-10,09:30,09:35,Bullish Engulfing,14 new,CE,24631.4,10:05,trail,22,14
+2024-12-10,11:15,11:20,Inverse Head and Shoulders,14 new,CE,24647.1,11:35,trail,-0.2,-8.2
+2024-12-10,11:35,11:40,Bearish Engulfing,14 new,PE,24647.4,12:55,trail,81.2,73.2
+2024-12-10,13:10,13:15,Bear Flag,14 new,PE,24551.5,13:20,trail,2.45,-5.55
+2024-12-10,13:30,13:35,Falling Channel breakout,14 new,CE,24556.4,13:35,reclaim,-12.05,-20.05
+2024-12-10,13:45,13:50,double top,11 old,PE,24516.45,13:50,reclaim,-9.9,-17.9
+2024-12-11,09:55,10:00,Hammer,14 new,CE,24640.3,10:55,trail,14.55,6.55
+2024-12-11,11:30,11:35,Bull Flag,14 new,CE,24674.85,11:45,trail,-1.4,-9.4
+2024-12-11,11:55,12:00,rising wedge,11 old,PE,24671.95,12:40,trail,31.2,23.2
+2024-12-11,13:45,13:50,Bullish Engulfing,14 new,CE,24661.35,14:40,reclaim,-27.1,-35.1
+2024-12-11,14:40,14:45,double bottom,11 old,PE,24635.1,14:55,trail,-1.55,-9.55
+2024-12-12,11:25,11:30,falling wedge,11 old,CE,24603.2,11:35,reclaim,-5.3,-13.3
+2024-12-12,11:45,11:50,Bear Pennant,14 new,PE,24592.95,11:50,retouch,-3.85,-11.85
+2024-12-13,11:30,11:35,VWAP reclaim,14 new,CE,24356.15,12:30,trail,182.25,174.25
+2024-12-13,12:30,12:35,Bearish Engulfing,14 new,PE,24538.35,12:45,trail,-19.85,-27.85
+2024-12-13,12:45,12:50,Bullish Engulfing,14 new,CE,24558.1,13:10,trail,82.05,74.05
+2024-12-13,14:30,14:35,rising wedge,11 old,PE,24759.5,14:55,trail,14.35,6.35
+2024-12-16,09:30,09:35,Opening Range Breakout (down),14 new,PE,24695.1,09:40,reclaim,-51.3,-59.3
+2024-12-16,09:40,09:45,Bullish Engulfing,14 new,CE,24746.7,09:55,trail,-18.55,-26.55
+2024-12-17,09:25,09:30,Bearish Engulfing,14 new,PE,24591.45,10:10,trail,71.7,63.7
+2024-12-17,10:40,10:45,Bullish Engulfing,14 new,CE,24448,10:50,trail,-1.75,-9.75
+2024-12-17,12:00,12:05,double bottom,11 old,PE,24404.45,12:05,reclaim,17.35,9.35
+2024-12-17,13:00,13:05,bearish symmetrical triangle,11 old,PE,24391.2,13:35,trail,17.3,9.3
+2024-12-18,09:40,09:45,Opening Range Breakout (up),14 new,CE,24382.75,09:50,trail,-43.15,-51.15
+2024-12-18,09:50,09:55,Bearish Engulfing,14 new,PE,24339.2,10:20,trail,67.15,59.15
+2024-12-18,10:20,10:25,Bullish Engulfing,14 new,CE,24272,10:45,trail,-1.4,-9.4
+2024-12-18,10:45,10:50,Bearish Engulfing,14 new,PE,24269.95,11:25,trail,23.55,15.55
+2024-12-18,11:55,12:00,falling wedge,11 old,CE,24235.8,12:15,reclaim,-27.5,-35.5
+2024-12-18,12:55,13:00,Hammer,14 new,CE,24191.4,13:25,trail,19.3,11.3
+2024-12-18,14:30,14:35,bearish symmetrical triangle,11 old,PE,24174,14:40,reclaim,-9.45,-17.45
+2024-12-19,10:10,10:15,VWAP loss,14 new,PE,23929.95,10:20,trail,-21.7,-29.7
+2024-12-19,11:00,11:05,Rising Channel breakdown,14 new,PE,23938.2,11:05,retouch,0,-8
+2024-12-19,12:15,12:20,Bearish Engulfing,14 new,PE,23974.65,13:00,trail,7.4,-0.6
+2024-12-19,13:15,13:20,double bottom,11 old,PE,23942.9,13:25,reclaim,-8.5,-16.5
+2024-12-19,14:00,14:05,falling wedge,11 old,CE,23965,14:05,retouch,-2.85,-10.85
+2024-12-20,09:45,09:50,Bearish Engulfing,14 new,PE,23863.05,10:10,trail,12.65,4.65
+2024-12-20,10:15,10:20,VWAP reclaim,14 new,CE,23943.75,10:20,reclaim,-62.35,-70.35
+2024-12-20,10:30,10:35,VWAP reclaim,14 new,CE,23927.75,10:55,trail,28.25,20.25
+2024-12-20,11:15,11:20,VWAP loss,14 new,PE,23908.2,11:55,reclaim,-31.3,-39.3
+2024-12-20,11:55,12:00,VWAP reclaim,14 new,CE,23939.85,12:05,reclaim,-27.05,-35.05
+2024-12-23,09:25,09:30,Bearish Engulfing,14 new,PE,23743.85,09:45,trail,-14.05,-22.05
+2024-12-23,10:10,10:15,Bearish Engulfing,14 new,PE,23771.75,10:30,trail,-1.15,-9.15
+2024-12-24,09:30,09:35,Opening Range Breakout (down),14 new,PE,23711.95,09:45,reclaim,-58.35,-66.35
+2024-12-24,09:45,09:50,VWAP reclaim,14 new,CE,23769.85,10:10,trail,35,27
+2024-12-24,12:00,12:05,double bottom,11 old,PE,23799.3,12:30,trail,11.7,3.7
+2024-12-24,13:35,13:40,bearish symmetrical triangle,11 old,PE,23781.15,13:50,trail,23.95,15.95
+2024-12-24,14:10,14:15,Bullish Engulfing,14 new,CE,23762.5,14:15,reclaim,-39.6,-47.6
+2024-12-26,09:25,09:30,Shooting Star,14 new,PE,23826.75,10:55,trail,100.2,92.2
+2024-12-26,13:30,13:35,Head and Shoulders,14 new,PE,23694.9,13:40,reclaim,-60.2,-68.2
+2024-12-26,13:50,13:55,Shooting Star,14 new,PE,23743.85,13:55,retouch,3.65,-4.35
+2024-12-27,09:45,09:50,Gap day: break up,14 new,CE,23878.5,10:25,trail,31.85,23.85
+2024-12-27,11:25,11:30,Bullish Engulfing,14 new,CE,23882.45,11:35,reclaim,-21.5,-29.5
+2024-12-27,12:50,12:55,Doji reversal (down),14 new,PE,23843.65,13:05,trail,-9.5,-17.5
+2024-12-30,09:35,09:40,Gap day: break down,14 new,PE,23725.7,09:45,trail,-25.55,-33.55
+2024-12-30,09:45,09:50,Bullish Engulfing,14 new,CE,23751.55,09:55,trail,-13.1,-21.1
+2024-12-31,09:40,09:45,Bearish Engulfing,14 new,PE,23524.3,10:15,trail,2.5,-5.5
+2024-12-31,10:20,10:25,VWAP reclaim,14 new,CE,23537.3,10:25,reclaim,-29.75,-37.75
+2024-12-31,11:15,11:20,Bearish Engulfing,14 new,PE,23588.45,11:40,trail,-24.5,-32.5
+2025-01-01,09:45,09:50,Gap day: break down,14 new,PE,23571.45,09:55,trail,-20.6,-28.6
+2025-01-01,09:55,10:00,Bullish Engulfing,14 new,CE,23591.7,11:25,trail,151.2,143.2
+2025-01-01,12:10,12:15,Falling Channel breakout,14 new,CE,23714.05,12:55,trail,19.8,11.8
+2025-01-01,12:55,13:00,Bearish Engulfing,14 new,PE,23734.15,13:25,trail,-10.4,-18.4
+2025-01-01,13:55,14:00,rising wedge,11 old,CE,23786.25,14:10,trail,2.85,-5.15
+2025-01-02,09:30,09:35,Bullish Engulfing,14 new,CE,23783.7,09:45,trail,28.8,20.8
+2025-01-02,11:55,12:00,Bullish Engulfing,14 new,CE,23937.7,12:10,trail,2.75,-5.25
+2025-01-02,12:25,12:30,triple top,11 old,CE,24014.85,13:25,trail,85,77
+2025-01-02,13:25,13:30,Bearish Engulfing,14 new,PE,24099.65,13:35,reclaim,-37.35,-45.35
+2025-01-02,14:25,14:30,Shooting Star,14 new,PE,24156.45,14:30,retouch,-18.1,-26.1
+2025-01-03,10:00,10:05,Bullish Engulfing,14 new,CE,24100.75,10:10,reclaim,-58.55,-66.55
+2025-01-03,11:15,11:20,VWAP reclaim,14 new,CE,24076,11:25,trail,37.2,29.2
+2025-01-03,12:20,12:25,double top,11 old,PE,24072.8,12:40,trail,-3.9,-11.9
+2025-01-03,12:55,13:00,bullish symmetrical triangle,11 old,CE,24082.65,13:30,trail,7.2,-0.8
+2025-01-03,13:45,13:50,bearish symmetrical triangle,11 old,PE,24073.65,14:25,trail,29.95,21.95
+2025-01-03,14:40,14:45,Bearish Engulfing,14 new,PE,24036.75,14:45,retouch,-9.05,-17.05
+2025-01-06,10:05,10:10,VWAP reclaim,14 new,CE,24023.65,10:20,trail,-48.1,-56.1
+2025-01-06,10:20,10:25,Shooting Star,14 new,PE,23974.45,11:15,trail,209.5,201.5
+2025-01-06,11:45,11:50,falling wedge,11 old,PE,23644.95,12:00,trail,-21.65,-29.65
+2025-01-06,12:10,12:15,falling wedge,11 old,CE,23719.35,13:05,trail,14.35,6.35
+2025-01-06,14:30,14:35,double bottom,11 old,PE,23595,14:45,trail,-10.1,-18.1
+2025-01-07,09:45,09:50,VWAP loss,14 new,PE,23674.55,10:10,trail,-71.35,-79.35
+2025-01-07,10:10,10:15,VWAP reclaim,14 new,CE,23749.4,10:35,trail,-24.2,-32.2
+2025-01-08,09:35,09:40,Bullish Engulfing,14 new,CE,23670.45,09:45,reclaim,-44.05,-52.05
+2025-01-08,09:50,09:55,VWAP reclaim,14 new,CE,23678.55,10:05,reclaim,-34.6,-42.6
+2025-01-09,11:30,11:35,Bear Flag,14 new,PE,23552.6,11:35,reclaim,-18.2,-26.2
+2025-01-09,11:35,11:40,falling wedge,11 old,CE,23570.45,11:40,reclaim,-16.85,-24.85
+2025-01-10,09:25,09:30,Shooting Star,14 new,PE,23518.65,09:40,trail,43.55,35.55
+2025-01-10,09:40,09:45,Bullish Engulfing,14 new,CE,23475.6,09:45,reclaim,-56.3,-64.3
+2025-01-10,10:05,10:10,Bullish Engulfing,14 new,CE,23397.65,10:25,trail,8.5,0.5
+2025-01-10,10:45,10:50,VWAP reclaim,14 new,CE,23452.8,11:20,trail,90.15,82.15
+2025-01-10,13:45,13:50,Inverse Head and Shoulders,14 new,CE,23517.05,14:00,reclaim,-16.35,-24.35
+2025-01-10,14:10,14:15,double top,11 old,PE,23440.95,14:40,trail,13.2,5.2
+2025-01-13,09:45,09:50,VWAP loss,14 new,PE,23204.65,10:00,reclaim,-56.8,-64.8
+2025-01-13,10:20,10:25,Gap day: break up,14 new,CE,23287.3,10:35,trail,23.35,15.35
+2025-01-13,11:25,11:30,double bottom,11 old,PE,23240.8,11:40,trail,5.05,-2.95
+2025-01-13,12:15,12:20,double bottom,11 old,PE,23193.95,12:20,reclaim,-21.05,-29.05
+2025-01-13,12:35,12:40,falling wedge,11 old,CE,23231.8,12:45,reclaim,-15.95,-23.95
+2025-01-14,09:25,09:30,Doji reversal (down),14 new,PE,23192.5,09:45,trail,-5.85,-13.85
+2025-01-14,09:45,09:50,Doji reversal (up),14 new,CE,23199.15,10:15,reclaim,-60.95,-68.95
+2025-01-15,09:40,09:45,Bullish Engulfing,14 new,CE,23200.7,10:05,trail,11.8,3.8
+2025-01-15,11:30,11:35,VWAP loss,14 new,PE,23213.1,11:50,reclaim,-21.35,-29.35
+2025-01-15,12:20,12:25,Head and Shoulders,14 new,PE,23202.25,12:25,reclaim,-20.65,-28.65
+2025-01-16,09:50,09:55,Gap day: break down,14 new,PE,23307.05,10:20,trail,-9.45,-17.45
+2025-01-16,12:30,12:35,Inverse Head and Shoulders,14 new,CE,23313.85,13:05,trail,-1.45,-9.45
+2025-01-17,10:40,10:45,VWAP loss,14 new,PE,23198.55,11:05,trail,70.9,62.9
+2025-01-17,12:00,12:05,VWAP reclaim,14 new,CE,23191.75,12:20,trail,48.9,40.9
+2025-01-17,13:10,13:15,Head and Shoulders,14 new,PE,23200.3,13:55,trail,8.45,0.45
+2025-01-17,14:05,14:10,Shooting Star,14 new,PE,23180.85,14:10,retouch,-17.65,-25.65
+2025-01-17,14:20,14:25,bullish symmetrical triangle,11 old,CE,23206.15,15:00,trail,1.35,-6.65
+2025-01-20,09:40,09:45,Bullish Engulfing,14 new,CE,23212.05,11:45,trail,143.75,135.75
+2025-01-20,12:30,12:35,double top,11 old,PE,23327.45,12:35,reclaim,-18.45,-26.45
+2025-01-20,12:35,12:40,Bullish Engulfing,14 new,CE,23345.25,12:55,trail,-8.8,-16.8
+2025-01-21,09:30,09:35,Gap day: break down,14 new,PE,23358.55,10:30,trail,198.45,190.45
+2025-01-21,12:15,12:20,VWAP loss,14 new,PE,23160.45,12:50,trail,-8.2,-16.2
+2025-01-21,13:25,13:30,falling wedge,11 old,CE,23265.95,13:30,reclaim,-22.1,-30.1
+2025-01-22,10:35,10:40,VWAP loss,14 new,PE,23074.25,10:40,reclaim,-32.35,-40.35
+2025-01-22,12:10,12:15,Bullish Engulfing,14 new,CE,23037.65,12:20,trail,-21.95,-29.95
+2025-01-23,12:15,12:20,double bottom,11 old,CE,23252.1,12:40,trail,2.3,-5.7
+2025-01-23,14:25,14:30,descending triangle,11 old,PE,23224.95,14:30,reclaim,-10,-18
+2025-01-24,09:25,09:30,Shooting Star,14 new,PE,23235.25,09:40,trail,5,-3
+2025-01-24,10:20,10:25,Bullish Engulfing,14 new,CE,23157.1,12:00,trail,156.35,148.35
+2025-01-24,12:25,12:30,Rising Channel breakdown,14 new,PE,23294.15,13:10,trail,77.65,69.65
+2025-01-24,14:05,14:10,Bearish Engulfing,14 new,PE,23166.65,14:30,trail,13.4,5.4
+2025-01-24,14:35,14:40,Rounding Top,14 new,PE,23105.3,14:55,trail,26.8,18.8
+2025-01-27,09:35,09:40,Gap day: break up,14 new,CE,23002,09:40,retouch,-8,-16
+2025-01-27,10:40,10:45,Bullish Engulfing,14 new,CE,22861.75,10:50,trail,-19.75,-27.75
+2025-01-28,09:45,09:50,Bullish Engulfing,14 new,CE,22908.05,09:50,reclaim,-38.35,-46.35
+2025-01-28,09:50,09:55,Gap day: break down,14 new,PE,22869.05,09:55,reclaim,-22.95,-30.95
+2025-01-29,10:05,10:10,Gap day: break up,14 new,CE,23079.7,10:35,trail,1.9,-6.1
+2025-01-29,11:10,11:15,rising wedge,11 old,PE,23084.75,11:25,trail,18.3,10.3
+2025-01-29,11:25,11:30,rising wedge,11 old,PE,23066.8,11:45,reclaim,-58.55,-66.55
+2025-01-29,12:30,12:35,rising wedge,11 old,PE,23131.9,13:20,trail,-6.3,-14.3
+2025-01-30,09:50,09:55,Opening Range Breakout (up),14 new,CE,23222,10:35,trail,63.65,55.65
+2025-01-30,11:00,11:05,VWAP loss,14 new,PE,23227.6,11:05,reclaim,-41.55,-49.55
+2025-01-30,11:30,11:35,VWAP loss,14 new,PE,23244.3,11:45,reclaim,-39.3,-47.3
+2025-01-31,09:40,09:45,Opening Range Breakout (up),14 new,CE,23348.7,09:50,trail,1.9,-6.1
+2025-01-31,10:05,10:10,Bearish Engulfing,14 new,PE,23337.95,10:30,reclaim,-71.6,-79.6
+2025-01-31,11:05,11:10,Bearish Engulfing,14 new,PE,23420.15,11:45,trail,4.6,-3.4
+2025-01-31,12:30,12:35,rising wedge,11 old,CE,23456.7,13:00,trail,10.05,2.05
+2025-01-31,13:35,13:40,Bearish Engulfing,14 new,PE,23508.5,14:30,trail,55.85,47.85
+2025-02-01,11:30,11:35,double bottom,11 old,CE,23625.25,11:35,reclaim,-39.05,-47.05
+2025-02-01,11:35,11:40,Bearish Engulfing,14 new,PE,23587.4,11:55,trail,161.6,153.6
+2025-02-01,13:10,13:15,double bottom,11 old,PE,23374.65,13:15,reclaim,19.9,11.9
+2025-02-01,13:25,13:30,double bottom,11 old,CE,23442.45,14:30,trail,35.55,27.55
+2025-02-01,14:30,14:35,VWAP loss,14 new,PE,23477.7,14:45,trail,-19.55,-27.55
+2025-02-03,09:45,09:50,Gap day: break down,14 new,PE,23227,09:50,reclaim,-14.05,-22.05
+2025-02-03,11:45,11:50,Doji reversal (up),14 new,CE,23278.4,12:15,trail,-0.3,-8.3
+2025-02-04,09:35,09:40,Gap day: break up,14 new,CE,23551.3,09:55,trail,6.65,-1.35
+2025-02-04,10:10,10:15,VWAP loss,14 new,PE,23513.25,10:40,trail,54.05,46.05
+2025-02-04,11:15,11:20,VWAP reclaim,14 new,CE,23523.1,11:40,trail,17.1,9.1
+2025-02-04,11:45,11:50,Rounding Bottom,14 new,CE,23599,11:50,reclaim,-33.85,-41.85
+2025-02-04,13:30,13:35,rising wedge,11 old,CE,23688.85,13:55,trail,-8.9,-16.9
+2025-02-05,10:00,10:05,Gap day: break down,14 new,PE,23734.55,10:25,reclaim,-39.8,-47.8
+2025-02-05,10:25,10:30,VWAP reclaim,14 new,CE,23774,10:55,reclaim,-17.15,-25.15
+2025-02-06,10:00,10:05,Bullish Engulfing,14 new,CE,23650.75,11:05,reclaim,-33.25,-41.25
+2025-02-06,11:50,11:55,Shooting Star,14 new,PE,23606.65,13:20,trail,10.4,2.4
+2025-02-07,10:55,11:00,VWAP reclaim,14 new,CE,23611.9,11:35,trail,41.1,33.1
+2025-02-07,11:50,11:55,Rising Channel breakdown,14 new,PE,23651.8,12:25,trail,58.25,50.25
+2025-02-07,13:50,13:55,Head and Shoulders,14 new,PE,23500.45,14:25,trail,33.5,25.5
+2025-02-10,10:20,10:25,Doji reversal (up),14 new,CE,23380.8,10:45,trail,-3.1,-11.1
+2025-02-10,11:55,12:00,Bear Flag,14 new,PE,23364.4,12:20,trail,7.25,-0.75
+2025-02-10,12:20,12:25,Bullish Engulfing,14 new,CE,23357.35,12:30,trail,-5.9,-13.9
+2025-02-10,13:10,13:15,falling wedge,11 old,CE,23353.3,13:15,reclaim,-17.75,-25.75
+2025-02-11,10:20,10:25,Bullish Engulfing,14 new,CE,23279.9,10:30,trail,-6.95,-14.95
+2025-02-11,11:00,11:05,falling wedge,11 old,CE,23263.6,11:25,trail,-3.8,-11.8
+2025-02-12,10:05,10:10,Bullish Engulfing,14 new,CE,22844.05,10:40,trail,22.6,14.6
+2025-02-12,10:45,10:50,VWAP reclaim,14 new,CE,22942.05,11:00,reclaim,-44.4,-52.4
+2025-02-12,11:40,11:45,ascending triangle,11 old,CE,23010.15,12:05,trail,23.1,15.1
+2025-02-12,12:30,12:35,Bull Flag,14 new,CE,23068.65,13:40,trail,31.5,23.5
+2025-02-12,13:40,13:45,Rising Channel breakdown,14 new,PE,23101.45,14:10,trail,99.2,91.2
+2025-02-13,13:10,13:15,Head and Shoulders,14 new,PE,23152.75,13:55,trail,74.85,66.85
+2025-02-14,09:35,09:40,Bullish Engulfing,14 new,CE,23059.25,10:10,trail,-16.25,-24.25
+2025-02-14,10:10,10:15,Doji reversal (down),14 new,PE,23042.75,10:15,retouch,-31.05,-39.05
+2025-02-17,10:20,10:25,VWAP reclaim,14 new,CE,22804.45,10:55,trail,73.05,65.05
+2025-02-17,11:10,11:15,VWAP loss,14 new,PE,22806.2,11:20,reclaim,-30.65,-38.65
+2025-02-17,12:15,12:20,bearish symmetrical triangle,11 old,PE,22811.6,12:40,reclaim,-35.75,-43.75
+2025-02-18,09:35,09:40,Bullish Engulfing,14 new,CE,22909.5,09:50,trail,11.55,3.55
+2025-02-18,10:35,10:40,Bullish Engulfing,14 new,CE,22837.45,11:00,trail,11,3
+2025-02-18,11:00,11:05,Bearish Engulfing,14 new,PE,22848.85,11:15,trail,16.9,8.9
+2025-02-18,11:30,11:35,falling wedge,11 old,CE,22850,11:35,retouch,-6.65,-14.65
+2025-02-18,11:35,11:40,falling wedge,11 old,CE,22842.75,11:50,trail,13.4,5.4
+2025-02-18,11:50,11:55,Bearish Engulfing,14 new,PE,22856.55,12:05,trail,2,-6
+2025-02-18,12:05,12:10,Bullish Engulfing,14 new,CE,22854.95,12:20,trail,2.2,-5.8
+2025-02-18,12:25,12:30,VWAP reclaim,14 new,CE,22877.25,12:40,trail,0.4,-7.6
+2025-02-18,12:50,12:55,VWAP loss,14 new,PE,22859.2,13:05,trail,-15.2,-23.2
+2025-02-18,13:35,13:40,double bottom,11 old,CE,22895.9,14:00,trail,2.6,-5.4
+2025-02-18,14:25,14:30,Inverse Head and Shoulders,14 new,CE,22947.35,14:30,reclaim,-16.85,-24.85
+2025-02-19,09:30,09:35,Gap day: break up,14 new,CE,22890.3,10:00,trail,83.5,75.5
+2025-02-19,10:55,11:00,VWAP loss,14 new,PE,22927.95,11:10,reclaim,-44.15,-52.15
+2025-02-19,12:20,12:25,Bearish Engulfing,14 new,PE,22993,13:10,trail,54.15,46.15
+2025-02-19,13:25,13:30,falling wedge,11 old,CE,22928.7,13:50,trail,4.6,-3.4
+2025-02-19,14:15,14:20,double bottom,11 old,PE,22886.1,14:30,trail,6.5,-1.5
+2025-02-20,09:35,09:40,Gap day: break up,14 new,CE,22891.05,09:45,reclaim,-65.85,-73.85
+2025-02-20,09:45,09:50,VWAP loss,14 new,PE,22825.45,09:55,reclaim,-57.6,-65.6
+2025-02-21,09:25,09:30,Doji reversal (down),14 new,PE,22896.4,10:20,trail,122.3,114.3
+2025-02-21,11:35,11:40,double bottom,11 old,CE,22808.4,11:45,reclaim,-15.45,-23.45
+2025-02-21,12:25,12:30,VWAP reclaim,14 new,CE,22807,12:40,trail,3.7,-4.3
+2025-02-21,12:50,12:55,rising wedge,11 old,PE,22799,13:15,trail,19.55,11.55
+2025-02-21,13:25,13:30,Head and Shoulders,14 new,PE,22751.8,13:30,reclaim,-14,-22
+2025-02-21,13:35,13:40,Inverted Cup and Handle,14 new,PE,22726.7,13:50,reclaim,-26.05,-34.05
+2025-02-24,09:35,09:40,Gap day: break down,14 new,PE,22586.25,09:45,trail,-4.1,-12.1
+2025-02-24,09:45,09:50,Bullish Engulfing,14 new,CE,22591.5,10:20,reclaim,-38.8,-46.8
+2025-02-25,10:15,10:20,VWAP loss,14 new,PE,22573.1,10:35,trail,-13.35,-21.35
+2025-02-25,10:35,10:40,Doji reversal (up),14 new,CE,22586.75,10:40,retouch,-3.95,-11.95
+2025-02-27,11:50,11:55,Doji reversal (up),14 new,CE,22532.8,12:00,reclaim,-10.95,-18.95
+2025-02-27,12:30,12:35,Inverted Cup and Handle,14 new,PE,22521.65,12:40,reclaim,-5.15,-13.15
+2025-02-28,10:45,10:50,Doji reversal (down),14 new,PE,22263.75,11:05,trail,3.8,-4.2
+2025-02-28,11:25,11:30,Bullish Engulfing,14 new,CE,22260,11:45,reclaim,-33.7,-41.7
+2025-02-28,12:30,12:35,double bottom,11 old,PE,22210.5,13:00,trail,75.05,67.05
+2025-03-03,12:00,12:05,falling wedge,11 old,CE,22025.2,12:50,trail,101.7,93.7
+2025-03-03,13:20,13:25,Shooting Star,14 new,PE,22142.9,13:45,trail,11.7,3.7
+2025-03-03,14:05,14:10,descending triangle,11 old,PE,22083.85,14:10,reclaim,-37,-45
+2025-03-04,09:50,09:55,Gap day: break up,14 new,CE,22066.85,09:55,retouch,-8.25,-16.25
+2025-03-04,10:05,10:10,Bearish Engulfing,14 new,PE,22038.35,11:00,reclaim,-56.95,-64.95
+2025-03-05,11:05,11:10,Bearish Engulfing,14 new,PE,22274.25,11:30,reclaim,-27.1,-35.1
+2025-03-05,12:30,12:35,Bull Flag,14 new,CE,22385.55,12:40,trail,-13.25,-21.25
+2025-03-06,10:15,10:20,VWAP reclaim,14 new,CE,22361.2,10:20,reclaim,-27.4,-35.4
+2025-03-06,10:25,10:30,VWAP reclaim,14 new,CE,22358.65,11:20,trail,4.95,-3.05
+2025-03-06,11:25,11:30,VWAP loss,14 new,PE,22338.85,11:35,reclaim,-29.25,-37.25
+2025-03-06,14:00,14:05,rising wedge,11 old,CE,22515.8,14:25,reclaim,-20.95,-28.95
+2025-03-07,09:50,09:55,VWAP reclaim,14 new,CE,22534.05,10:20,trail,56.35,48.35
+2025-03-07,10:40,10:45,rising wedge,11 old,PE,22591,10:45,retouch,-22.35,-30.35
+2025-03-07,11:00,11:05,Bullish Engulfing,14 new,CE,22590.4,11:25,trail,10.65,2.65
+2025-03-07,11:45,11:50,double top,11 old,PE,22549.75,12:25,trail,5.05,-2.95
+2025-03-07,13:10,13:15,bearish symmetrical triangle,11 old,PE,22539.65,13:15,reclaim,-19.45,-27.45
+2025-03-07,13:35,13:40,VWAP reclaim,14 new,CE,22570,13:40,retouch,-1.65,-9.65
+2025-03-10,10:25,10:30,VWAP loss,14 new,PE,22608.45,10:35,reclaim,-20.6,-28.6
+2025-03-10,12:00,12:05,double top,11 old,PE,22595.1,12:20,trail,6.8,-1.2
+2025-03-10,13:10,13:15,Shooting Star,14 new,PE,22601.55,13:50,trail,53.85,45.85
+2025-03-11,09:45,09:50,Gap day: break up,14 new,CE,22401.25,09:50,reclaim,-18.55,-26.55
+2025-03-11,12:15,12:20,bullish symmetrical triangle,11 old,CE,22443.2,12:45,trail,8.1,0.1
+2025-03-11,13:05,13:10,Hammer,14 new,CE,22453.3,14:25,trail,47.45,39.45
+2025-03-11,14:25,14:30,Bearish Engulfing,14 new,PE,22500.95,14:55,trail,-4.05,-12.05
+2025-03-12,09:45,09:50,Bullish Engulfing,14 new,CE,22502,10:00,reclaim,-71.9,-79.9
+2025-03-12,11:30,11:35,falling wedge,11 old,PE,22379.45,12:05,trail,18.5,10.5
+2025-03-12,12:15,12:20,Bearish Engulfing,14 new,PE,22357.05,12:25,trail,-13.7,-21.7
+2025-03-12,12:50,12:55,Bullish Engulfing,14 new,CE,22371.1,13:30,trail,54.2,46.2
+2025-03-12,14:15,14:20,Inverse Head and Shoulders,14 new,CE,22459.1,14:40,trail,-16.35,-24.35
+2025-03-13,10:50,10:55,VWAP loss,14 new,PE,22505.4,11:05,trail,2.1,-5.9
+2025-03-13,11:05,11:10,Bullish Engulfing,14 new,CE,22503.15,11:15,trail,5.5,-2.5
+2025-03-13,11:35,11:40,Rounding Top,14 new,PE,22431.5,11:55,trail,-0.9,-8.9
+2025-03-13,11:55,12:00,Bullish Engulfing,14 new,CE,22433,13:00,trail,14,6
+2025-03-13,13:30,13:35,Bullish Engulfing,14 new,CE,22441.8,13:55,trail,-8.35,-16.35
+2025-03-13,14:15,14:20,bearish symmetrical triangle,11 old,PE,22415.75,15:05,trail,17.75,9.75
+2025-03-17,10:10,10:15,VWAP loss,14 new,PE,22513.3,10:45,trail,32.05,24.05
+2025-03-17,11:25,11:30,Bull Pennant,14 new,CE,22497.5,11:45,trail,13.45,5.45
+2025-03-17,13:05,13:10,Rounding Top,14 new,PE,22451.5,13:10,reclaim,-16.1,-24.1
+2025-03-17,13:45,13:50,Bearish Engulfing,14 new,PE,22478.85,13:55,reclaim,-32.1,-40.1
+2025-03-18,09:30,09:35,Gap day: break up,14 new,CE,22678.85,09:40,trail,2.5,-5.5
+2025-03-18,10:45,10:50,Bearish Engulfing,14 new,PE,22758.65,11:30,trail,-11.45,-19.45
+2025-03-18,12:25,12:30,double top,11 old,PE,22731.15,12:50,trail,0.95,-7.05
+2025-03-18,13:50,13:55,Cup and Handle,14 new,CE,22791.9,14:10,reclaim,-17.55,-25.55
+2025-03-19,10:05,10:10,VWAP loss,14 new,PE,22844.85,10:10,reclaim,-19.25,-27.25
+2025-03-19,10:45,10:50,Bearish Engulfing,14 new,PE,22882.15,10:55,trail,-19.05,-27.05
+2025-03-20,09:35,09:40,Bearish Engulfing,14 new,PE,23046.4,10:00,trail,6.1,-1.9
+2025-03-20,10:05,10:10,Gap day: break down,14 new,PE,22986.85,10:15,reclaim,-37.3,-45.3
+2025-03-20,10:15,10:20,Doji reversal (up),14 new,CE,23023.9,10:40,trail,12.05,4.05
+2025-03-20,10:50,10:55,VWAP loss,14 new,PE,23026.45,10:55,reclaim,-13.45,-21.45
+2025-03-20,11:25,11:30,rising wedge,11 old,PE,23053.25,11:40,trail,-4.25,-12.25
+2025-03-21,09:30,09:35,Opening Range Breakout (up),14 new,CE,23226.15,09:45,trail,28.95,20.95
+2025-03-21,11:45,11:50,rising wedge,11 old,PE,23339.95,11:50,retouch,-7.8,-15.8
+2025-03-21,12:20,12:25,double bottom,11 old,CE,23377.7,12:45,trail,0.65,-7.35
+2025-03-21,13:00,13:05,Bearish Engulfing,14 new,PE,23386.2,13:20,trail,10.45,2.45
+2025-03-21,13:20,13:25,Bullish Engulfing,14 new,CE,23374.55,13:30,trail,-27.9,-35.9
+2025-03-21,13:35,13:40,Head and Shoulders,14 new,PE,23328,13:55,trail,8.8,0.8
+2025-03-21,13:55,14:00,Bullish Engulfing,14 new,CE,23318.6,14:30,trail,42.85,34.85
+2025-03-21,14:30,14:35,Bearish Engulfing,14 new,PE,23359.5,15:05,trail,0.9,-7.1
+2025-03-24,09:30,09:35,Gap day: break down,14 new,PE,23453.9,09:40,trail,-19,-27
+2025-03-24,11:45,11:50,Bullish Engulfing,14 new,CE,23609.85,12:30,trail,25.65,17.65
+2025-03-24,12:35,12:40,rising wedge,11 old,PE,23633.8,13:00,trail,1.45,-6.55
+2025-03-24,13:25,13:30,ascending triangle,11 old,CE,23661.35,13:30,retouch,-2.75,-10.75
+2025-03-24,13:55,14:00,rising wedge,11 old,CE,23670.6,14:25,trail,17.25,9.25
+2025-03-24,14:25,14:30,Bearish Engulfing,14 new,PE,23688.95,14:50,trail,8.5,0.5
+2025-03-25,10:00,10:05,Bearish Engulfing,14 new,PE,23833.7,10:15,trail,35.5,27.5
+2025-03-25,11:15,11:20,Falling Channel breakout,14 new,CE,23711.8,11:20,reclaim,-40.05,-48.05
+2025-03-25,11:30,11:35,Bullish Engulfing,14 new,CE,23683.4,11:35,reclaim,-37.7,-45.7
+2025-03-26,09:40,09:45,Gap day: break down,14 new,PE,23645.75,09:45,retouch,-7.4,-15.4
+2025-03-26,10:20,10:25,Bearish Engulfing,14 new,PE,23657.35,10:30,reclaim,-40.85,-48.85
+2025-03-27,11:40,11:45,bullish symmetrical triangle,11 old,CE,23611.5,11:50,reclaim,-6.8,-14.8
+2025-03-27,12:30,12:35,double bottom,11 old,PE,23577.3,12:35,reclaim,-15.05,-23.05
+2025-03-28,12:00,12:05,falling wedge,11 old,CE,23588.35,12:05,retouch,12.7,4.7
+2025-03-28,12:15,12:20,Bear Flag,14 new,PE,23557.9,12:35,trail,49.4,41.4
+2025-03-28,13:00,13:05,Inverted Cup and Handle,14 new,PE,23474.6,13:05,reclaim,-23.7,-31.7
+2025-03-28,13:20,13:25,falling wedge,11 old,CE,23505.15,13:40,trail,-18.6,-26.6
+2025-04-01,10:00,10:05,VWAP loss,14 new,PE,23479.1,10:15,trail,-1.05,-9.05
+2025-04-01,10:15,10:20,Bullish Engulfing,14 new,CE,23480.4,10:20,reclaim,-105.55,-113.55
+2025-04-02,11:05,11:10,Doji reversal (down),14 new,PE,23285.65,11:30,trail,6.8,-1.2
+2025-04-02,11:40,11:45,rising wedge,11 old,PE,23259.3,11:45,reclaim,-25.05,-33.05
+2025-04-02,12:50,12:55,VWAP loss,14 new,PE,23250.95,13:00,trail,-22.6,-30.6
+2025-04-03,09:45,09:50,VWAP loss,14 new,PE,23230.4,09:50,reclaim,-14.8,-22.8
+2025-04-03,10:05,10:10,Bull Pennant,14 new,CE,23265.45,10:35,trail,24,16
+2025-04-03,14:10,14:15,bearish symmetrical triangle,11 old,PE,23254.8,14:15,reclaim,-12.55,-20.55
+2025-04-03,14:15,14:20,Bullish Engulfing,14 new,CE,23267.7,14:35,reclaim,-18.95,-26.95
+2025-04-04,10:15,10:20,Bullish Engulfing,14 new,CE,22970.25,10:20,reclaim,-47.1,-55.1
+2025-04-04,11:05,11:10,VWAP reclaim,14 new,CE,23020.05,11:15,reclaim,-28.55,-36.55
+2025-04-07,11:40,11:45,Bearish Engulfing,14 new,PE,22001.3,12:35,trail,135.05,127.05
+2025-04-07,12:35,12:40,Bullish Engulfing,14 new,CE,21865.7,12:50,trail,24.15,16.15
+2025-04-07,13:20,13:25,Bullish Engulfing,14 new,CE,21875.3,14:35,trail,142.35,134.35
+2025-04-08,09:55,10:00,Gap day: break down,14 new,PE,22414.3,10:20,trail,2.95,-5.05
+2025-04-08,10:20,10:25,Doji reversal (up),14 new,CE,22410.15,10:30,trail,-32.4,-40.4
+2025-04-08,10:50,10:55,Doji reversal (up),14 new,CE,22383.4,11:10,trail,53.15,45.15
+2025-04-08,11:35,11:40,Bullish Engulfing,14 new,CE,22391.35,12:15,trail,121.05,113.05
+2025-04-08,13:00,13:05,Bearish Engulfing,14 new,PE,22636.25,13:10,trail,-30.15,-38.15
+2025-04-08,13:30,13:35,rising wedge,11 old,PE,22660.6,13:40,trail,73.4,65.4
+2025-04-08,14:30,14:35,Bearish Engulfing,14 new,PE,22601.2,14:50,trail,20.05,12.05
+2025-04-09,11:25,11:30,VWAP reclaim,14 new,CE,22409.45,11:55,trail,5.4,-2.6
+2025-04-09,12:25,12:30,rising wedge,11 old,PE,22421.35,12:30,reclaim,-19.2,-27.2
+2025-04-09,13:30,13:35,Head and Shoulders,14 new,PE,22406.7,15:05,trail,5.25,-2.75
+2025-04-11,09:25,09:30,Bearish Engulfing,14 new,PE,22762.45,09:35,reclaim,-81.95,-89.95
+2025-04-11,10:20,10:25,VWAP loss,14 new,PE,22794.3,10:40,trail,9.95,1.95
+2025-04-11,12:05,12:10,rising wedge,11 old,PE,22873.7,12:10,reclaim,-34.15,-42.15
+2025-04-11,12:45,12:50,Bull Flag,14 new,CE,22902.7,12:50,retouch,-1.4,-9.4
+2025-04-15,11:10,11:15,VWAP loss,14 new,PE,23295.65,11:25,reclaim,-15.35,-23.35
+2025-04-15,12:05,12:10,double bottom,11 old,CE,23325.55,12:50,trail,9.9,1.9
+2025-04-15,13:10,13:15,rising wedge,11 old,PE,23337.4,14:10,trail,11.35,3.35
+2025-04-16,10:15,10:20,VWAP loss,14 new,PE,23311.8,10:25,trail,9,1
+2025-04-16,11:05,11:10,Bullish Engulfing,14 new,CE,23307.9,11:25,trail,15.65,7.65
+2025-04-16,13:35,13:40,Bullish Engulfing,14 new,CE,23299.6,14:20,trail,110.6,102.6
+2025-04-17,10:05,10:10,VWAP loss,14 new,PE,23356,10:20,trail,-26.3,-34.3
+2025-04-17,10:50,10:55,Bearish Engulfing,14 new,PE,23420.4,11:05,trail,-3.2,-11.2
+2025-04-21,09:35,09:40,Gap day: break up,14 new,CE,24023.5,09:45,trail,-29.35,-37.35
+2025-04-21,12:50,12:55,rising wedge,11 old,PE,24176.9,12:55,retouch,-0.7,-8.7
+2025-04-22,13:10,13:15,Bullish Engulfing,14 new,CE,24183.8,13:35,trail,-1.45,-9.45
+2025-04-22,14:30,14:35,bearish symmetrical triangle,11 old,PE,24173.3,14:35,reclaim,-6.95,-14.95
+2025-04-23,10:05,10:10,Gap day: break down,14 new,PE,24236.95,10:15,trail,18.65,10.65
+2025-04-23,11:10,11:15,falling wedge,11 old,CE,24192.3,11:15,retouch,22.35,14.35
+2025-04-23,11:20,11:25,Bearish Engulfing,14 new,PE,24180.75,11:40,reclaim,-58.45,-66.45
+2025-04-23,11:40,11:45,Inverse Head and Shoulders,14 new,CE,24239,11:50,trail,-14.3,-22.3
+2025-04-24,09:50,09:55,Bullish Engulfing,14 new,CE,24288.1,10:30,trail,1.05,-6.95
+2025-04-24,10:30,10:35,Doji reversal (down),14 new,PE,24288.7,11:35,trail,21.25,13.25
+2025-04-24,12:40,12:45,Doji reversal (up),14 new,CE,24264.05,12:50,trail,0.9,-7.1
+2025-04-24,13:35,13:40,double bottom,11 old,PE,24243.65,13:40,reclaim,-7,-15
+2025-04-24,14:25,14:30,Bearish Engulfing,14 new,PE,24249.25,15:00,trail,5.7,-2.3
+2025-04-25,11:25,11:30,Doji reversal (up),14 new,CE,23911.95,11:45,trail,-47.6,-55.6
+2025-04-25,12:55,13:00,Cup and Handle,14 new,CE,24024.65,13:25,trail,12.1,4.1
+2025-04-28,09:30,09:35,Gap day: break up,14 new,CE,24184,09:40,trail,-7.4,-15.4
+2025-04-28,09:40,09:45,Bearish Engulfing,14 new,PE,24175.75,09:55,reclaim,-53.55,-61.55
+2025-04-29,11:05,11:10,VWAP reclaim,14 new,CE,24367.25,11:10,reclaim,-11.2,-19.2
+2025-04-29,11:20,11:25,Bear Flag,14 new,PE,24349.05,12:30,trail,19.1,11.1
+2025-04-29,12:50,12:55,VWAP reclaim,14 new,CE,24357.75,13:10,trail,-0.9,-8.9
+2025-04-29,13:40,13:45,rising wedge,11 old,PE,24352.7,13:45,reclaim,-10.75,-18.75
+2025-04-30,10:25,10:30,VWAP loss,14 new,PE,24330.85,10:40,trail,9.3,1.3
+2025-04-30,10:40,10:45,Bullish Engulfing,14 new,CE,24321.2,11:05,trail,11.45,3.45
+2025-04-30,11:15,11:20,VWAP reclaim,14 new,CE,24356.4,11:20,reclaim,-22.3,-30.3
+2025-04-30,12:30,12:35,bullish symmetrical triangle,11 old,CE,24359.65,12:55,reclaim,-19.45,-27.45
+2025-05-02,11:55,12:00,Falling Channel breakout,14 new,CE,24354.6,12:00,reclaim,-20.05,-28.05
+2025-05-02,12:05,12:10,Bear Flag,14 new,PE,24317.4,12:30,trail,56.9,48.9
+2025-05-05,09:30,09:35,Doji reversal (down),14 new,PE,24415.05,09:50,reclaim,-78.7,-86.7
+2025-05-05,09:50,09:55,Gap day: break up,14 new,CE,24491.9,10:00,trail,-11.65,-19.65
+2025-05-06,11:10,11:15,Bear Flag,14 new,PE,24388.1,11:50,trail,3.8,-4.2
+2025-05-06,13:05,13:10,Bullish Engulfing,14 new,CE,24379.45,13:20,trail,-0.15,-8.15
+2025-05-06,13:50,13:55,Inverse Head and Shoulders,14 new,CE,24399.65,14:00,trail,-8.5,-16.5
+2025-05-07,09:45,09:50,VWAP loss,14 new,PE,24357.2,09:55,trail,-1.95,-9.95
+2025-05-07,10:20,10:25,Bullish Engulfing,14 new,CE,24349.25,10:50,trail,-10.25,-18.25
+2025-05-08,10:00,10:05,VWAP reclaim,14 new,CE,24399.55,10:10,reclaim,-8,-16
+2025-05-08,11:45,11:50,rising wedge,11 old,PE,24401.7,13:25,trail,35.15,27.15
+2025-05-08,13:45,13:50,Bullish Engulfing,14 new,CE,24357.35,13:50,retouch,-17.25,-25.25
+2025-05-09,09:30,09:35,Shooting Star,14 new,PE,24044.9,09:35,retouch,-40.8,-48.8
+2025-05-09,11:25,11:30,VWAP reclaim,14 new,CE,24093,11:40,trail,-35.45,-43.45
+2025-05-12,11:20,11:25,Bull Flag,14 new,CE,24723.15,11:55,trail,-6.3,-14.3
+2025-05-12,12:20,12:25,rising wedge,11 old,PE,24703,12:30,trail,-83.3,-91.3
+2025-05-13,09:35,09:40,Hammer,14 new,CE,24834.7,10:25,reclaim,-174.15,-182.15
+2025-05-13,10:55,11:00,VWAP reclaim,14 new,CE,24759.5,11:05,trail,-7.05,-15.05
+2025-05-14,10:55,11:00,Head and Shoulders,14 new,PE,24684.65,11:55,trail,22.5,14.5
+2025-05-14,12:20,12:25,Bear Flag,14 new,PE,24669.85,13:00,trail,50.3,42.3
+2025-05-14,13:15,13:20,Bearish Engulfing,14 new,PE,24621.6,13:25,reclaim,-23.35,-31.35
+2025-05-14,14:30,14:35,double top,11 old,PE,24585.05,14:40,reclaim,-40.5,-48.5
+2025-05-15,10:30,10:35,VWAP reclaim,14 new,CE,24620.8,10:50,trail,83.85,75.85
+2025-05-15,12:05,12:10,double bottom,11 old,CE,24700.5,12:10,reclaim,-39.45,-47.45
+2025-05-15,13:00,13:05,double bottom,11 old,CE,24734.45,14:30,trail,323.8,315.8
+2025-05-16,09:25,09:30,Bullish Engulfing,14 new,CE,25033.25,09:50,reclaim,-54.1,-62.1
+2025-05-16,10:00,10:05,VWAP reclaim,14 new,CE,25021.85,10:05,reclaim,-14.8,-22.8
+2025-05-19,10:50,10:55,VWAP reclaim,14 new,CE,25035.95,11:10,trail,-8.9,-16.9
+2025-05-19,11:30,11:35,VWAP loss,14 new,PE,25010.5,11:50,trail,-9.4,-17.4
+2025-05-20,10:35,10:40,VWAP reclaim,14 new,CE,24928.85,10:50,trail,-0.9,-8.9
+2025-05-20,11:15,11:20,VWAP loss,14 new,PE,24900.9,12:00,trail,31.95,23.95
+2025-05-20,12:00,12:05,Hammer,14 new,CE,24869.1,12:10,trail,-9.9,-17.9
+2025-05-20,12:35,12:40,falling wedge,11 old,CE,24863.25,12:45,reclaim,-31.2,-39.2
+2025-05-21,09:25,09:30,Bullish Engulfing,14 new,CE,24738.2,09:55,trail,77.7,69.7
+2025-05-21,13:40,13:45,rising wedge,11 old,PE,24762.6,14:05,trail,-7.85,-15.85
+2025-05-21,14:40,14:45,Doji reversal (down),14 new,PE,24786.1,15:05,reclaim,-42.3,-50.3
+2025-05-22,09:55,10:00,VWAP reclaim,14 new,CE,24631.65,10:05,reclaim,-36.7,-44.7
+2025-05-22,10:25,10:30,VWAP loss,14 new,PE,24580.75,10:30,reclaim,-18.65,-26.65
+2025-05-23,10:15,10:20,Doji reversal (down),14 new,PE,24792.25,10:35,trail,5.3,-2.7
+2025-05-23,10:35,10:40,Bullish Engulfing,14 new,CE,24785.4,11:15,trail,82.1,74.1
+2025-05-23,11:45,11:50,double top,11 old,PE,24805.5,12:20,reclaim,-63.85,-71.85
+2025-05-23,12:40,12:45,Shooting Star,14 new,PE,24870,13:50,trail,-0.8,-8.8
+2025-05-26,10:15,10:20,VWAP loss,14 new,PE,25015.3,10:40,trail,45.9,37.9
+2025-05-26,10:40,10:45,Hammer,14 new,CE,24970.2,11:25,trail,4.3,-3.7
+2025-05-26,11:25,11:30,Shooting Star,14 new,PE,24974.35,11:45,trail,-5.15,-13.15
+2025-05-26,12:25,12:30,VWAP reclaim,14 new,CE,25006.2,12:30,reclaim,-8.15,-16.15
+2025-05-27,10:05,10:10,Doji reversal (up),14 new,CE,24781.1,10:10,retouch,-4,-12
+2025-05-27,10:40,10:45,Doji reversal (down),14 new,PE,24762.55,10:50,trail,-16.25,-24.25
+2025-05-28,09:25,09:30,Shooting Star,14 new,PE,24768.9,09:40,trail,-38.35,-46.35
+2025-05-28,09:40,09:45,Doji reversal (up),14 new,CE,24806.3,12:55,trail,-1.05,-9.05
+2025-05-29,10:00,10:05,VWAP reclaim,14 new,CE,24819.05,10:10,trail,-17.3,-25.3
+2025-05-29,10:10,10:15,Bearish Engulfing,14 new,PE,24802.45,10:50,trail,46.65,38.65
+2025-05-29,12:00,12:05,Inverse Head and Shoulders,14 new,CE,24744.05,12:10,reclaim,-12,-20
+2025-05-29,12:10,12:15,Bear Pennant,14 new,PE,24732,12:20,trail,-6.6,-14.6
+2025-05-30,12:25,12:30,falling wedge,11 old,CE,24750.5,12:30,reclaim,-9.2,-17.2
+2025-05-30,12:55,13:00,double bottom,11 old,CE,24756.05,13:00,retouch,9.3,1.3
+2025-05-30,13:25,13:30,Inverse Head and Shoulders,14 new,CE,24770.15,13:45,trail,-7.5,-15.5
+2025-05-30,13:55,14:00,Cup and Handle,14 new,CE,24788.75,14:00,reclaim,-7.45,-15.45
+2025-06-02,10:15,10:20,VWAP loss,14 new,PE,24565.85,10:20,reclaim,-12.85,-20.85
+2025-06-02,11:10,11:15,rising wedge,11 old,PE,24623.25,11:15,reclaim,-19.8,-27.8
+2025-06-03,09:35,09:40,Bullish Engulfing,14 new,CE,24673.35,10:25,trail,46.6,38.6
+2025-06-03,10:35,10:40,VWAP loss,14 new,PE,24645.25,11:25,trail,26.95,18.95
+2025-06-03,12:35,12:40,double bottom,11 old,CE,24633.55,12:40,reclaim,-5.4,-13.4
+2025-06-03,12:50,12:55,double top,11 old,PE,24527.2,13:10,trail,-14.25,-22.25
+2025-06-04,09:45,09:50,Opening Range Breakout (down),14 new,PE,24543.35,09:50,retouch,-11.05,-19.05
+2025-06-04,09:55,10:00,VWAP reclaim,14 new,CE,24575.15,10:25,trail,6.05,-1.95
+2025-06-04,10:45,10:50,Bearish Engulfing,14 new,PE,24589.4,11:20,trail,-2.25,-10.25
+2025-06-04,11:20,11:25,Doji reversal (up),14 new,CE,24592.05,11:45,trail,-5.35,-13.35
+2025-06-05,10:20,10:25,Bullish Engulfing,14 new,CE,24733.2,10:45,reclaim,-27.15,-35.15
+2025-06-05,11:20,11:25,VWAP reclaim,14 new,CE,24735.15,11:45,trail,-18.85,-26.85
+2025-06-06,09:30,09:35,Opening Range Breakout (down),14 new,PE,24708.85,09:45,trail,5.15,-2.85
+2025-06-06,10:05,10:10,Bullish Engulfing,14 new,CE,24793.7,12:00,trail,218.15,210.15
+2025-06-06,13:30,13:35,falling wedge,11 old,CE,24980.15,13:40,trail,1.6,-6.4
+2025-06-06,14:15,14:20,ascending triangle,11 old,CE,25003.6,14:30,trail,-1.15,-9.15
+2025-06-09,11:25,11:30,VWAP loss,14 new,PE,25109.3,11:30,reclaim,-8.5,-16.5
+2025-06-09,11:40,11:45,VWAP loss,14 new,PE,25112.95,12:10,trail,-3.6,-11.6
+2025-06-10,10:50,10:55,VWAP loss,14 new,PE,25113.95,11:05,trail,-12.9,-20.9
+2025-06-10,12:15,12:20,VWAP loss,14 new,PE,25129.35,12:30,trail,-0.1,-8.1
+2025-06-11,10:10,10:15,Bearish Engulfing,14 new,PE,25147.15,10:30,trail,-1.55,-9.55
+2025-06-11,11:30,11:35,rising wedge,11 old,PE,25190.4,11:50,trail,-24.5,-32.5
+2025-06-12,10:45,10:50,descending triangle,11 old,PE,25058.75,11:15,trail,-11,-19
+2025-06-12,11:15,11:20,Bullish Engulfing,14 new,CE,25067.45,11:30,trail,-11.7,-19.7
+2025-06-16,10:05,10:10,VWAP reclaim,14 new,CE,24767.95,11:10,trail,138.8,130.8
+2025-06-16,11:50,11:55,Rising Channel breakdown,14 new,PE,24901.85,12:10,trail,-15.05,-23.05
+2025-06-16,13:45,13:50,Shooting Star,14 new,PE,24941.65,14:00,trail,-7.35,-15.35
+2025-06-17,10:30,10:35,VWAP reclaim,14 new,CE,24890.05,10:45,trail,-16.7,-24.7
+2025-06-17,11:20,11:25,VWAP reclaim,14 new,CE,24884.3,11:45,trail,1.6,-6.4
+2025-06-17,11:50,11:55,bearish symmetrical triangle,11 old,PE,24871.8,12:55,trail,43.9,35.9
+2025-06-17,14:00,14:05,Inverse Head and Shoulders,14 new,CE,24850.9,14:05,retouch,12.05,4.05
+2025-06-18,10:20,10:25,VWAP loss,14 new,PE,24878,10:35,trail,4.55,-3.45
+2025-06-18,12:30,12:35,bearish symmetrical triangle,11 old,PE,24787.3,12:50,trail,11.95,3.95
+2025-06-18,13:40,13:45,Shooting Star,14 new,PE,24791.3,13:55,trail,11.7,3.7
+2025-06-18,14:20,14:25,double bottom,11 old,PE,24754.35,14:25,reclaim,-11.85,-19.85
+2025-06-19,10:30,10:35,VWAP loss,14 new,PE,24799.8,12:05,trail,-16.1,-24.1
+2025-06-19,12:05,12:10,falling wedge,11 old,CE,24816.15,12:35,reclaim,-21.1,-29.1
+2025-06-20,10:35,10:40,Bearish Engulfing,14 new,PE,25005.35,10:50,trail,-15.45,-23.45
+2025-06-20,12:35,12:40,Bullish Engulfing,14 new,CE,24985.05,13:20,trail,70,62
+2025-06-20,13:35,13:40,rising wedge,11 old,PE,25049.85,13:50,trail,-8.35,-16.35
+2025-06-20,13:50,13:55,Bull Flag,14 new,CE,25057.35,13:55,reclaim,-18.6,-26.6
+2025-06-23,09:30,09:35,Gap day: break down,14 new,PE,24864.25,09:35,reclaim,-31.35,-39.35
+2025-06-23,11:55,12:00,rising wedge,11 old,PE,24934.8,12:00,retouch,0.2,-7.8
+2025-06-23,12:55,13:00,bullish symmetrical triangle,11 old,CE,24948.85,13:40,trail,72.6,64.6
+2025-06-23,14:00,14:05,Bull Flag,14 new,CE,25045.95,14:10,reclaim,-30.85,-38.85
+2025-06-24,09:45,09:50,Gap day: break down,14 new,PE,25137.9,09:50,reclaim,-28.8,-36.8
+2025-06-24,10:55,11:00,Hammer,14 new,CE,25221.85,11:35,trail,44.85,36.85
+2025-06-24,12:05,12:10,rising wedge,11 old,CE,25305.7,12:15,reclaim,-20.9,-28.9
+2025-06-24,13:00,13:05,VWAP loss,14 new,PE,25223.95,13:05,reclaim,-15.95,-23.95
+2025-06-25,09:55,10:00,Gap day: break up,14 new,CE,25203.9,10:10,reclaim,-30,-38
+2025-06-25,10:40,10:45,Bearish Engulfing,14 new,PE,25201.15,10:50,trail,-11.45,-19.45
+2025-06-26,10:05,10:10,Doji reversal (down),14 new,PE,25396.3,10:45,trail,61.75,53.75
+2025-06-26,11:30,11:35,bullish symmetrical triangle,11 old,CE,25361.5,11:40,reclaim,-42.65,-50.65
+2025-06-26,11:45,11:50,Bullish Engulfing,14 new,CE,25346.6,12:45,trail,31.7,23.7
+2025-06-26,13:15,13:20,Inverse Head and Shoulders,14 new,CE,25433.6,13:20,reclaim,-24.95,-32.95
+2025-06-27,09:50,09:55,VWAP reclaim,14 new,CE,25567.85,09:55,reclaim,-22.5,-30.5
+2025-06-27,10:10,10:15,VWAP reclaim,14 new,CE,25568.1,10:25,trail,-11.4,-19.4
+2025-06-30,10:00,10:05,Bullish Engulfing,14 new,CE,25569,10:20,trail,-2.85,-10.85
+2025-06-30,11:30,11:35,falling wedge,11 old,CE,25560.05,12:25,trail,11.45,3.45
+2025-06-30,12:45,12:50,Bullish Engulfing,14 new,CE,25552.35,12:55,reclaim,-26,-34
+2025-06-30,12:55,13:00,double top,11 old,PE,25526.65,13:25,trail,16.05,8.05
+2025-06-30,13:55,14:00,Bullish Engulfing,14 new,CE,25499.2,15:15,trail,17.55,9.55
+2025-07-01,09:50,09:55,Bearish Engulfing,14 new,PE,25560.05,10:25,trail,14.25,6.25
+2025-07-01,10:25,10:30,Bullish Engulfing,14 new,CE,25546.25,10:40,trail,-3.35,-11.35
+2025-07-01,10:55,11:00,Bear Flag,14 new,PE,25521,11:15,reclaim,-9.1,-17.1
+2025-07-02,09:30,09:35,Gap day: break down,14 new,PE,25548.5,10:20,trail,29.65,21.65
+2025-07-02,11:20,11:25,Doji reversal (up),14 new,CE,25484.3,11:30,trail,-7.5,-15.5
+2025-07-02,13:15,13:20,double bottom,11 old,PE,25443.65,13:35,trail,28.05,20.05
+2025-07-02,14:20,14:25,Bear Flag,14 new,PE,25407.4,14:45,trail,-4.35,-12.35
+2025-07-03,11:00,11:05,Bullish Engulfing,14 new,CE,25544.25,11:25,trail,-4.6,-12.6
+2025-07-03,11:40,11:45,double top,11 old,PE,25512.6,12:20,trail,8.1,0.1
+2025-07-03,12:40,12:45,double bottom,11 old,CE,25518.55,12:45,reclaim,2.05,-5.95
+2025-07-03,13:30,13:35,Falling Channel breakout,14 new,CE,25516.65,13:45,trail,-4.15,-12.15
+2025-07-03,13:45,13:50,Doji reversal (down),14 new,PE,25511.75,15:05,trail,96.15,88.15
+2025-07-04,11:20,11:25,VWAP loss,14 new,PE,25394.45,12:05,trail,42.05,34.05
+2025-07-04,14:35,14:40,Rounding Bottom,14 new,CE,25433,14:50,trail,12.3,4.3
+2025-07-07,09:25,09:30,Bearish Engulfing,14 new,PE,25441.4,10:10,trail,5.3,-2.7
+2025-07-07,12:20,12:25,Hammer,14 new,CE,25445.85,12:45,trail,-3.75,-11.75
+2025-07-07,13:15,13:20,double bottom,11 old,CE,25456.1,13:25,reclaim,-8.25,-16.25
+2025-07-08,10:15,10:20,Doji reversal (up),14 new,CE,25459.5,10:45,reclaim,-24.45,-32.45
+2025-07-08,11:35,11:40,Shooting Star,14 new,PE,25441.4,11:50,trail,-3.05,-11.05
+2025-07-09,10:15,10:20,Opening Range Breakout (up),14 new,CE,25531.2,10:25,reclaim,-12.5,-20.5
+2025-07-09,11:10,11:15,Bull Flag,14 new,CE,25534.25,11:35,trail,1.8,-6.2
+2025-07-09,13:00,13:05,double top,11 old,PE,25491.35,13:05,reclaim,-23.7,-31.7
+2025-07-09,13:55,14:00,Bullish Engulfing,14 new,CE,25529.95,14:15,trail,-9.85,-17.85
+2025-07-10,10:20,10:25,Hammer,14 new,CE,25421.15,10:45,trail,-17.6,-25.6
+2025-07-10,11:10,11:15,Doji reversal (up),14 new,CE,25397.45,11:20,reclaim,-30.65,-38.65
+2025-07-11,09:45,09:50,Bearish Engulfing,14 new,PE,25297.45,10:50,trail,93.3,85.3
+2025-07-11,11:10,11:15,Bullish Engulfing,14 new,CE,25179.05,12:50,trail,-15.9,-23.9
+2025-07-11,14:00,14:05,Bearish Engulfing,14 new,PE,25161.15,14:10,trail,-7.25,-15.25
+2025-07-14,09:35,09:40,Bullish Engulfing,14 new,CE,25073.55,10:30,trail,13.25,5.25
+2025-07-14,10:30,10:35,VWAP loss,14 new,PE,25087.3,12:05,trail,35.6,27.6
+2025-07-14,12:20,12:25,Bearish Engulfing,14 new,PE,25044.95,12:40,trail,-10.9,-18.9
+2025-07-14,13:05,13:10,double top,11 old,PE,25021.65,13:15,reclaim,-15.25,-23.25
+2025-07-15,10:15,10:20,Bearish Engulfing,14 new,PE,25113.55,10:25,trail,-16.4,-24.4
+2025-07-15,12:25,12:30,Bull Flag,14 new,CE,25204.7,12:50,trail,5.8,-2.2
+2025-07-15,14:05,14:10,double bottom,11 old,PE,25173.55,14:10,reclaim,-11.3,-19.3
+2025-07-15,14:10,14:15,Bullish Engulfing,14 new,CE,25185,14:20,trail,-6.35,-14.35
+2025-07-16,09:30,09:35,Hammer,14 new,CE,25157.6,09:40,trail,-3.5,-11.5
+2025-07-16,10:20,10:25,Doji reversal (up),14 new,CE,25148,10:30,trail,-9,-17
+2025-07-17,12:40,12:45,Bullish Engulfing,14 new,CE,25193.75,13:05,reclaim,-25.45,-33.45
+2025-07-17,13:05,13:10,Rising Channel breakdown,14 new,PE,25168.95,13:25,trail,2.45,-5.55
+2025-07-17,13:25,13:30,Bullish Engulfing,14 new,CE,25166.7,14:00,trail,0.75,-7.25
+2025-07-17,14:10,14:15,double bottom,11 old,PE,25156.15,14:20,reclaim,4.85,-3.15
+2025-07-17,14:25,14:30,Head and Shoulders,14 new,PE,25134.15,14:30,reclaim,-6.05,-14.05
+2025-07-18,09:50,09:55,Bullish Engulfing,14 new,CE,25044.75,10:00,reclaim,-19.8,-27.8
+2025-07-18,11:00,11:05,Bullish Engulfing,14 new,CE,24953.9,11:30,trail,4.4,-3.6
+2025-07-18,11:30,11:35,Bearish Engulfing,14 new,PE,24958.15,11:45,trail,10.2,2.2
+2025-07-18,12:15,12:20,double bottom,11 old,PE,24923.65,12:20,reclaim,-9.9,-17.9
+2025-07-18,12:35,12:40,falling wedge,11 old,CE,24945.8,12:40,reclaim,-9.5,-17.5
+2025-07-21,09:35,09:40,Bullish Engulfing,14 new,CE,24909.2,10:20,trail,127.45,119.45
+2025-07-21,11:40,11:45,double top,11 old,PE,25019.25,11:50,trail,-6.05,-14.05
+2025-07-21,12:25,12:30,Bearish Engulfing,14 new,PE,25029.35,12:45,reclaim,-25.35,-33.35
+2025-07-22,09:45,09:50,Hammer,14 new,CE,25117.6,10:25,trail,-15.6,-23.6
+2025-07-22,10:45,10:50,double bottom,11 old,PE,25096.8,10:50,reclaim,4.75,-3.25
+2025-07-22,11:05,11:10,double bottom,11 old,PE,25056.1,11:20,trail,-2.55,-10.55
+2025-07-22,11:45,11:50,Falling Channel breakout,14 new,CE,25070.55,12:05,trail,4.3,-3.7
+2025-07-22,12:20,12:25,VWAP reclaim,14 new,CE,25099.55,13:05,trail,-0.25,-8.25
+2025-07-22,14:00,14:05,double bottom,11 old,CE,25098.15,14:10,reclaim,-11.7,-19.7
+2025-07-23,09:40,09:45,Gap day: break down,14 new,PE,25097.55,09:50,reclaim,-9,-17
+2025-07-23,09:50,09:55,Doji reversal (up),14 new,CE,25105.85,10:00,trail,-10.95,-18.95
+2025-07-24,10:35,10:40,Bearish Engulfing,14 new,PE,25170.55,11:45,trail,62.65,54.65
+2025-07-24,12:10,12:15,Doji reversal (up),14 new,CE,25049.6,12:50,trail,20.8,12.8
+2025-07-24,14:20,14:25,Bearish Engulfing,14 new,PE,25080.7,15:00,trail,10.9,2.9
+2025-07-25,09:25,09:30,Bullish Engulfing,14 new,CE,24991.55,10:10,reclaim,-88.25,-96.25
+2025-07-25,11:10,11:15,Bear Flag,14 new,PE,24868.9,11:15,reclaim,-9.6,-17.6
+2025-07-28,11:30,11:35,falling wedge,11 old,CE,24817.45,11:40,reclaim,-16.95,-24.95
+2025-07-28,12:15,12:20,double bottom,11 old,PE,24785.05,12:20,reclaim,-1.3,-9.3
+2025-07-29,09:50,09:55,Opening Range Breakout (up),14 new,CE,24722.9,09:55,reclaim,-25.65,-33.65
+2025-07-29,10:10,10:15,VWAP loss,14 new,PE,24665.15,10:50,trail,27.7,19.7
+2025-07-29,11:15,11:20,VWAP reclaim,14 new,CE,24688.1,11:25,trail,-4.45,-12.45
+2025-07-29,11:25,11:30,Bearish Engulfing,14 new,PE,24683.95,11:30,reclaim,-17.8,-25.8
+2025-07-30,10:15,10:20,VWAP reclaim,14 new,CE,24854.85,10:20,reclaim,-18.25,-26.25
+2025-07-30,10:50,10:55,Hammer,14 new,CE,24818.9,11:30,trail,65.5,57.5
+2025-07-30,12:05,12:10,rising wedge,11 old,PE,24862.9,12:15,trail,-7.5,-15.5
+2025-07-30,14:30,14:35,ascending triangle,11 old,CE,24886.55,14:40,reclaim,-14.2,-22.2
+2025-07-31,11:10,11:15,Doji reversal (down),14 new,PE,24746.95,11:20,reclaim,-40.75,-48.75
+2025-07-31,12:10,12:15,Bullish Engulfing,14 new,CE,24819.7,12:25,trail,6.75,-1.25
+2025-07-31,12:25,12:30,Bearish Engulfing,14 new,PE,24827.9,12:30,reclaim,-29.1,-37.1
+2025-07-31,13:40,13:45,Bearish Engulfing,14 new,PE,24921.5,14:05,trail,-19.65,-27.65
+2025-08-01,09:30,09:35,Bullish Engulfing,14 new,CE,24713.35,10:45,trail,44.3,36.3
+2025-08-01,11:05,11:10,VWAP loss,14 new,PE,24721.05,11:45,trail,54.1,46.1
+2025-08-01,12:35,12:40,Shooting Star,14 new,PE,24646.7,12:50,trail,-3.2,-11.2
+2025-08-01,14:10,14:15,Inverse Head and Shoulders,14 new,CE,24651.45,14:20,reclaim,-20.4,-28.4
+2025-08-04,09:50,09:55,Hammer,14 new,CE,24607.3,09:55,retouch,0.8,-7.2
+2025-08-04,10:45,10:50,VWAP loss,14 new,PE,24612.6,11:00,reclaim,-48.8,-56.8
+2025-08-04,11:05,11:10,double bottom,11 old,CE,24648.1,11:35,trail,4.85,-3.15
+2025-08-04,11:35,11:40,Bearish Engulfing,14 new,PE,24653.35,12:25,reclaim,-41.25,-49.25
+2025-08-04,12:25,12:30,rising wedge,11 old,CE,24694.95,12:40,trail,-2.55,-10.55
+2025-08-05,10:30,10:35,Bear Flag,14 new,PE,24613.25,10:35,reclaim,-17.2,-25.2
+2025-08-05,11:55,12:00,rising wedge,11 old,PE,24625.35,12:10,trail,-32.75,-40.75
+2025-08-06,09:35,09:40,Opening Range Breakout (down),14 new,PE,24622.85,09:50,trail,-4.1,-12.1
+2025-08-06,11:45,11:50,double bottom,11 old,CE,24580.65,12:35,trail,17.05,9.05
+2025-08-06,12:50,12:55,VWAP loss,14 new,PE,24589.45,12:55,reclaim,-18.55,-26.55
+2025-08-06,12:55,13:00,Bullish Engulfing,14 new,CE,24609,13:40,trail,6.95,-1.05
+2025-08-06,13:50,13:55,bearish symmetrical triangle,11 old,PE,24599.95,14:50,trail,20.9,12.9
+2025-08-07,11:15,11:20,Falling Channel breakout,14 new,CE,24420.95,11:40,trail,2.75,-5.25
+2025-08-07,12:20,12:25,Doji reversal (down),14 new,PE,24435.6,12:35,trail,-9.65,-17.65
+2025-08-07,13:05,13:10,double bottom,11 old,PE,24411.5,13:40,trail,26.1,18.1
+2025-08-07,14:15,14:20,Rounding Bottom,14 new,CE,24466.7,15:25,day end,159.95,151.95
+2025-08-08,09:40,09:45,Gap day: break down,14 new,PE,24500,10:20,trail,32.6,24.6
+2025-08-08,11:20,11:25,Bearish Engulfing,14 new,PE,24433.55,11:50,trail,-9,-17
+2025-08-08,11:50,11:55,Inverse Head and Shoulders,14 new,CE,24442.8,11:55,retouch,-8.95,-16.95
+2025-08-11,11:35,11:40,rising wedge,11 old,PE,24429.25,11:55,trail,5.45,-2.55
+2025-08-11,11:55,12:00,Bullish Engulfing,14 new,CE,24423.25,12:30,trail,8.3,0.3
+2025-08-11,12:40,12:45,Inverse Head and Shoulders,14 new,CE,24461.75,13:15,trail,11.45,3.45
+2025-08-11,13:50,13:55,Bearish Engulfing,14 new,PE,24505.85,13:55,reclaim,-14.8,-22.8
+2025-08-11,14:40,14:45,Bearish Engulfing,14 new,PE,24556.55,14:45,retouch,-20.5,-28.5
+2025-08-12,10:25,10:30,VWAP loss,14 new,PE,24612.7,10:35,trail,17.1,9.1
+2025-08-12,11:50,11:55,falling wedge,11 old,CE,24548.8,12:00,trail,5.3,-2.7
+2025-08-12,12:15,12:20,double bottom,11 old,CE,24599.65,12:25,trail,4.85,-3.15
+2025-08-12,13:10,13:15,rising wedge,11 old,PE,24597.25,13:50,trail,21.8,13.8
+2025-08-12,13:55,14:00,VWAP reclaim,14 new,CE,24603.7,14:00,reclaim,-42.2,-50.2
+2025-08-12,14:00,14:05,Bearish Engulfing,14 new,PE,24561.75,14:25,trail,16.85,8.85
+2025-08-12,14:30,14:35,Rounding Top,14 new,PE,24519.15,15:05,trail,31.25,23.25
+2025-08-13,10:50,10:55,Hammer,14 new,CE,24582.15,11:25,trail,-9.55,-17.55
+2025-08-13,11:25,11:30,VWAP loss,14 new,PE,24572.5,11:50,trail,-6.5,-14.5
+2025-08-14,09:55,10:00,VWAP loss,14 new,PE,24633.45,10:15,trail,-2.7,-10.7
+2025-08-14,10:20,10:25,VWAP reclaim,14 new,CE,24649.55,10:50,trail,-4.9,-12.9
+2025-08-18,09:30,09:35,Gap day: break up,14 new,CE,24989.2,09:50,trail,5.9,-2.1
+2025-08-18,10:25,10:30,VWAP loss,14 new,PE,24975.45,10:35,trail,-10.55,-18.55
+2025-08-18,10:35,10:40,Bullish Engulfing,14 new,CE,24985.85,10:50,reclaim,-27.1,-35.1
+2025-08-19,09:40,09:45,Opening Range Breakout (down),14 new,PE,24880.65,09:45,reclaim,-13.7,-21.7
+2025-08-19,11:05,11:10,ascending triangle,11 old,CE,24939.25,11:40,trail,8.3,0.3
+2025-08-19,12:55,13:00,Bull Flag,14 new,CE,24991.65,13:00,reclaim,-5.3,-13.3
+2025-08-19,14:05,14:10,VWAP loss,14 new,PE,24939.6,14:15,trail,-10.7,-18.7
+2025-08-20,09:30,09:35,Bullish Engulfing,14 new,CE,24954.85,09:50,trail,17.3,9.3
+2025-08-20,12:30,12:35,rising wedge,11 old,PE,25040.75,12:35,reclaim,-8.4,-16.4
+2025-08-20,13:05,13:10,Doji reversal (down),14 new,PE,25045.35,13:30,trail,-2.45,-10.45
+2025-08-21,09:45,09:50,VWAP reclaim,14 new,CE,25092.35,10:10,trail,22.8,14.8
+2025-08-21,11:50,11:55,Head and Shoulders,14 new,PE,25108.15,12:00,reclaim,-4.75,-12.75
+2025-08-21,12:30,12:35,Bullish Engulfing,14 new,CE,25113.65,12:50,trail,0.25,-7.75
+2025-08-21,12:50,12:55,Bearish Engulfing,14 new,PE,25114.05,13:40,trail,21.5,13.5
+2025-08-21,14:15,14:20,triple top,11 old,CE,25138.25,14:25,reclaim,-14.55,-22.55
+2025-08-21,14:35,14:40,VWAP loss,14 new,PE,25104.5,15:25,day end,27.55,19.55
+2025-08-22,10:05,10:10,Hammer,14 new,CE,24967.5,10:15,reclaim,-35.6,-43.6
+2025-08-22,10:25,10:30,Bullish Engulfing,14 new,CE,24932.3,12:05,trail,7.7,-0.3
+2025-08-22,12:25,12:30,Doji reversal (up),14 new,CE,24926,12:55,trail,-6.9,-14.9
+2025-08-22,13:10,13:15,Doji reversal (up),14 new,CE,24920.35,13:50,trail,20.7,12.7
+2025-08-25,09:35,09:40,Gap day: break up,14 new,CE,24966.6,09:45,reclaim,-11.2,-19.2
+2025-08-25,10:15,10:20,Doji reversal (up),14 new,CE,24919.25,10:25,trail,-4.55,-12.55
+2025-08-26,10:30,10:35,VWAP loss,14 new,PE,24786.25,10:55,trail,-6.9,-14.9
+2025-08-26,11:05,11:10,double bottom,11 old,CE,24796.75,11:10,reclaim,2.55,-5.45
+2025-08-26,11:50,11:55,Rising Channel breakdown,14 new,PE,24801.95,11:55,reclaim,-4.2,-12.2
+2025-08-26,12:00,12:05,rising wedge,11 old,PE,24803.55,12:05,retouch,1.55,-6.45
+2025-08-26,12:30,12:35,double bottom,11 old,PE,24787.4,12:55,trail,-8.8,-16.8
+2025-08-26,13:00,13:05,VWAP reclaim,14 new,CE,24807,13:15,trail,-11.95,-19.95
+2025-08-28,09:35,09:40,Bullish Engulfing,14 new,CE,24538.3,10:05,trail,51.2,43.2
+2025-08-28,10:05,10:10,Bearish Engulfing,14 new,PE,24589.15,10:25,trail,-2.05,-10.05
+2025-08-28,12:05,12:10,Doji reversal (up),14 new,CE,24627.45,12:15,reclaim,-20.4,-28.4
+2025-08-29,10:20,10:25,VWAP reclaim,14 new,CE,24515.9,10:55,trail,9.25,1.25
+2025-08-29,11:50,11:55,rising wedge,11 old,PE,24560.15,12:10,trail,6.9,-1.1
+2025-08-29,12:25,12:30,Head and Shoulders,14 new,PE,24526.4,12:40,trail,-12.55,-20.55
+2025-08-29,13:00,13:05,double top,11 old,PE,24513.6,13:15,trail,2.25,-5.75
+2025-08-29,14:05,14:10,Doji reversal (up),14 new,CE,24498.25,14:25,trail,-24.25,-32.25
+2025-08-29,14:25,14:30,Bearish Engulfing,14 new,PE,24475.25,14:45,trail,9.1,1.1
+2025-09-01,10:10,10:15,VWAP loss,14 new,PE,24522.75,10:15,retouch,7.65,-0.35
+2025-09-01,10:25,10:30,Bull Flag,14 new,CE,24528.9,10:30,retouch,-17,-25
+2025-09-01,10:50,10:55,Bearish Engulfing,14 new,PE,24528.55,10:55,reclaim,-16.45,-24.45
+2025-09-02,11:10,11:15,Bearish Engulfing,14 new,PE,24731.55,11:30,trail,-6.45,-14.45
+2025-09-02,12:15,12:20,Head and Shoulders,14 new,PE,24717.85,12:20,reclaim,-12.55,-20.55
+2025-09-03,10:35,10:40,VWAP loss,14 new,PE,24562.3,10:55,trail,-11.3,-19.3
+2025-09-03,11:15,11:20,VWAP reclaim,14 new,CE,24585.5,11:20,reclaim,-23.1,-31.1
+2025-09-04,11:20,11:25,Bear Flag,14 new,PE,24803.75,11:25,reclaim,-20.1,-28.1
+2025-09-04,12:00,12:05,falling wedge,11 old,CE,24823.2,12:05,reclaim,-13.1,-21.1
+2025-09-05,09:45,09:50,Bullish Engulfing,14 new,CE,24794.2,09:55,trail,-12.45,-20.45
+2025-09-05,10:00,10:05,Gap day: break down,14 new,PE,24770.85,10:20,trail,95.55,87.55
+2025-09-05,12:10,12:15,double top,11 old,PE,24651.65,12:25,trail,-5.3,-13.3
+2025-09-05,13:40,13:45,Rounding Bottom,14 new,CE,24709.7,14:05,trail,47.75,39.75
+2025-09-05,14:05,14:10,Shooting Star,14 new,PE,24757.85,14:15,trail,-1.65,-9.65
+2025-09-08,10:35,10:40,Hammer,14 new,CE,24792.7,10:50,trail,-6.75,-14.75
+2025-09-08,11:15,11:20,bullish symmetrical triangle,11 old,CE,24814.8,11:20,retouch,-13.1,-21.1
+2025-09-09,09:50,09:55,VWAP reclaim,14 new,CE,24858.8,09:55,reclaim,-11.55,-19.55
+2025-09-09,10:10,10:15,Gap day: break down,14 new,PE,24825.2,10:55,trail,-6.45,-14.45
+2025-09-10,09:40,09:45,Gap day: break up,14 new,CE,25012.85,09:45,retouch,-9.15,-17.15
+2025-09-10,11:15,11:20,VWAP loss,14 new,PE,24981.35,12:05,trail,-8.5,-16.5
+2025-09-11,09:25,09:30,Bearish Engulfing,14 new,PE,24985.2,10:15,trail,7.85,-0.15
+2025-09-11,11:30,11:35,rising wedge,11 old,PE,24974.6,11:55,trail,-1.9,-9.9
+2025-09-11,12:15,12:20,double bottom,11 old,CE,24997.55,12:20,retouch,3.9,-4.1
+2025-09-11,13:15,13:20,rising wedge,11 old,PE,24999.8,13:25,trail,-10.2,-18.2
+2025-09-11,13:25,13:30,Bullish Engulfing,14 new,CE,25009.15,13:55,trail,-0.05,-8.05
+2025-09-12,09:25,09:30,Bullish Engulfing,14 new,CE,25060,09:30,retouch,-8.05,-16.05
+2025-09-12,13:50,13:55,Bullish Engulfing,14 new,CE,25112,14:05,trail,4.7,-3.3
+2025-09-12,14:35,14:40,Head and Shoulders,14 new,PE,25109.6,15:00,trail,-1.55,-9.55
+2025-09-15,11:25,11:30,falling wedge,11 old,CE,25088.15,11:30,retouch,6.25,-1.75
+2025-09-15,11:30,11:35,double bottom,11 old,CE,25093.85,11:35,reclaim,-4.05,-12.05
+2025-09-15,11:50,11:55,Inverse Head and Shoulders,14 new,CE,25102.45,12:05,trail,-1.85,-9.85
+2025-09-16,12:20,12:25,rising wedge,11 old,CE,25192.25,13:10,trail,-5,-13
+2025-09-16,14:05,14:10,VWAP loss,14 new,PE,25161.6,14:10,reclaim,-19.2,-27.2
+2025-09-17,09:35,09:40,Opening Range Breakout (up),14 new,CE,25336.9,09:45,reclaim,-21.15,-29.15
+2025-09-17,10:20,10:25,Bullish Engulfing,14 new,CE,25326.2,10:40,trail,-13.95,-21.95
+2025-09-18,11:40,11:45,VWAP loss,14 new,PE,25415.1,11:45,retouch,0.7,-7.3
+2025-09-18,12:30,12:35,Head and Shoulders,14 new,PE,25398.7,12:50,trail,14.05,6.05
+2025-09-18,13:50,13:55,Doji reversal (down),14 new,PE,25368.35,14:10,trail,2.6,-5.4
+2025-09-18,14:10,14:15,Bullish Engulfing,14 new,CE,25364.75,14:30,reclaim,-23.45,-31.45
+2025-09-19,10:05,10:10,Hammer,14 new,CE,25317.9,10:30,trail,1.95,-6.05
+2025-09-19,11:45,11:50,double bottom,11 old,PE,25294.5,11:50,reclaim,-4.5,-12.5
+2025-09-19,12:45,12:50,falling wedge,11 old,CE,25294.3,14:15,trail,45.35,37.35
+2025-09-22,12:35,12:40,bullish symmetrical triangle,11 old,CE,25303,13:15,trail,-16,-24
+2025-09-22,13:15,13:20,VWAP loss,14 new,PE,25287.7,13:25,trail,2.4,-5.6
+2025-09-22,13:55,14:00,double top,11 old,PE,25257.15,14:05,reclaim,-12.75,-20.75
+2025-09-23,09:30,09:35,Opening Range Breakout (down),14 new,PE,25168.85,09:55,trail,28.15,20.15
+2025-09-23,11:10,11:15,double bottom,11 old,PE,25098.9,11:20,trail,-0.3,-8.3
+2025-09-23,11:20,11:25,Bullish Engulfing,14 new,CE,25099.15,11:35,trail,-12.15,-20.15
+2025-09-24,09:45,09:50,Bullish Engulfing,14 new,CE,25076.65,10:35,trail,16.75,8.75
+2025-09-24,10:40,10:45,VWAP loss,14 new,PE,25077.3,10:55,trail,0.05,-7.95
+2025-09-24,10:55,11:00,Bullish Engulfing,14 new,CE,25077,11:00,reclaim,-25.1,-33.1
+2025-09-24,11:25,11:30,falling wedge,11 old,CE,25063.8,12:00,trail,-0.4,-8.4
+2025-09-25,11:40,11:45,bearish symmetrical triangle,11 old,PE,24989.65,12:10,trail,8.15,0.15
+2025-09-25,12:55,13:00,falling wedge,11 old,CE,24983.75,13:10,trail,5.95,-2.05
+2025-09-25,13:10,13:15,Bearish Engulfing,14 new,PE,24989.75,13:35,trail,7.3,-0.7
+2025-09-25,14:10,14:15,double bottom,11 old,PE,24966.4,14:15,reclaim,0.2,-7.8
+2025-09-25,14:15,14:20,bearish symmetrical triangle,11 old,PE,24966.15,14:20,retouch,9,1
+2025-09-25,14:20,14:25,double top,11 old,PE,24957.4,14:35,trail,-4.2,-12.2
+2025-09-26,09:45,09:50,VWAP reclaim,14 new,CE,24813.9,10:00,trail,-14.8,-22.8
+2025-09-26,10:20,10:25,Bullish Engulfing,14 new,CE,24789.35,10:55,trail,-7.9,-15.9
+2025-09-29,10:50,10:55,VWAP loss,14 new,PE,24735,10:55,retouch,-9.3,-17.3
+2025-09-29,11:30,11:35,Head and Shoulders,14 new,PE,24706.45,11:50,trail,47.8,39.8
+2025-09-29,12:35,12:40,double bottom,11 old,PE,24617.7,12:50,trail,-9.6,-17.6
+2025-09-29,13:30,13:35,VWAP reclaim,14 new,CE,24714.65,13:40,trail,-25.15,-33.15
+2025-09-30,09:35,09:40,Opening Range Breakout (down),14 new,PE,24654.45,09:45,trail,-11.2,-19.2
+2025-09-30,09:45,09:50,Bullish Engulfing,14 new,CE,24666.1,10:05,trail,-21.95,-29.95
+2025-10-01,09:35,09:40,Opening Range Breakout (up),14 new,CE,24669.95,09:50,trail,3.35,-4.65
+2025-10-01,10:00,10:05,VWAP loss,14 new,PE,24639.55,10:15,reclaim,-25.1,-33.1
+2025-10-01,11:10,11:15,rising wedge,11 old,CE,24703.05,12:15,trail,83.85,75.85
+2025-10-01,14:05,14:10,bullish symmetrical triangle,11 old,CE,24808.3,14:50,trail,41.4,33.4
+2025-10-03,10:00,10:05,Bearish Engulfing,14 new,PE,24813.35,10:25,trail,0.75,-7.25
+2025-10-03,11:15,11:20,double bottom,11 old,CE,24823.3,11:20,reclaim,-6.05,-14.05
+2025-10-03,11:55,12:00,rising wedge,11 old,PE,24819.65,12:05,reclaim,-22.65,-30.65
+2025-10-06,09:45,09:50,Gap day: break up,14 new,CE,24958.6,09:50,reclaim,-16.9,-24.9
+2025-10-06,09:50,09:55,Bearish Engulfing,14 new,PE,24941.4,10:10,reclaim,-27.5,-35.5
+2025-10-07,09:40,09:45,Opening Range Breakout (up),14 new,CE,25146.5,10:05,trail,39.25,31.25
+2025-10-07,11:05,11:10,Doji reversal (up),14 new,CE,25161.2,11:15,reclaim,-20.3,-28.3
+2025-10-07,12:00,12:05,VWAP reclaim,14 new,CE,25154.4,12:15,trail,-6.3,-14.3
+2025-10-08,09:45,09:50,Doji reversal (down),14 new,PE,25155.1,10:25,trail,22.95,14.95
+2025-10-08,12:40,12:45,falling wedge,11 old,CE,25038.95,13:25,trail,53.7,45.7
+2025-10-08,14:05,14:10,VWAP loss,14 new,PE,25063.1,14:35,trail,-15.05,-23.05
+2025-10-09,10:15,10:20,Hammer,14 new,CE,25051.75,11:15,trail,84.5,76.5
+2025-10-09,11:15,11:20,Bearish Engulfing,14 new,PE,25136.3,11:35,reclaim,-29.85,-37.85
+2025-10-09,11:50,11:55,Bearish Engulfing,14 new,PE,25151.9,12:15,trail,-2.2,-10.2
+2025-10-10,10:15,10:20,Bull Flag,14 new,CE,25291.2,10:35,reclaim,-19.05,-27.05
+2025-10-10,11:05,11:10,Bearish Engulfing,14 new,PE,25288.35,11:10,reclaim,-21.6,-29.6
+2025-10-13,09:30,09:35,Gap day: break down,14 new,PE,25163.2,09:35,reclaim,-38.7,-46.7
+2025-10-13,09:35,09:40,Bullish Engulfing,14 new,CE,25201.35,09:50,trail,1.05,-6.95
+2025-10-13,10:25,10:30,VWAP reclaim,14 new,CE,25207.85,10:50,trail,-14,-22
+2025-10-13,10:50,10:55,VWAP loss,14 new,PE,25193.6,11:25,trail,11.8,3.8
+2025-10-13,11:25,11:30,Bullish Engulfing,14 new,CE,25181.85,12:00,trail,-1.15,-9.15
+2025-10-13,12:40,12:45,VWAP reclaim,14 new,CE,25205.3,12:45,reclaim,-24.25,-32.25
+2025-10-14,09:35,09:40,Gap day: break down,14 new,PE,25249.45,10:20,trail,55.25,47.25
+2025-10-14,10:50,10:55,Shooting Star,14 new,PE,25204.7,11:35,trail,56.3,48.3
+2025-10-14,12:05,12:10,Bear Flag,14 new,PE,25115.4,12:30,trail,10.7,2.7
+2025-10-14,13:20,13:25,falling wedge,11 old,CE,25096.65,13:50,trail,11.75,3.75
+2025-10-14,14:20,14:25,Inverse Head and Shoulders,14 new,CE,25148.4,14:45,trail,15.4,7.4
+2025-10-15,09:35,09:40,Bearish Engulfing,14 new,PE,25223.3,10:05,trail,-6.6,-14.6
+2025-10-15,10:10,10:15,VWAP reclaim,14 new,CE,25250.55,11:00,trail,51.15,43.15
+2025-10-15,11:00,11:05,Bearish Engulfing,14 new,PE,25302.05,11:20,trail,-1.6,-9.6
+2025-10-15,12:20,12:25,double bottom,11 old,PE,25296.45,12:25,reclaim,-10.55,-18.55
+2025-10-16,09:45,09:50,Gap day: break up,14 new,CE,25438.25,09:55,trail,-3.7,-11.7
+2025-10-16,09:55,10:00,Bearish Engulfing,14 new,PE,25434.75,10:15,trail,-2.15,-10.15
+2025-10-17,09:45,09:50,Bearish Engulfing,14 new,PE,25576.25,10:05,reclaim,-83.6,-91.6
+2025-10-17,11:55,12:00,Bullish Engulfing,14 new,CE,25754.75,12:35,trail,5.5,-2.5
+2025-10-17,12:40,12:45,rising wedge,11 old,PE,25757.65,13:20,trail,69.5,61.5
+2025-10-17,13:35,13:40,Head and Shoulders,14 new,PE,25643.05,13:40,reclaim,-20.15,-28.15
+2025-10-17,13:40,13:45,Hammer,14 new,CE,25664.55,13:45,retouch,-11.95,-19.95
+2025-10-20,10:10,10:15,VWAP reclaim,14 new,CE,25859.2,10:15,reclaim,-15.65,-23.65
+2025-10-20,11:15,11:20,VWAP loss,14 new,PE,25847.2,11:25,reclaim,-7.7,-15.7
+2025-10-23,09:30,09:35,Gap day: break up,14 new,CE,26077.2,09:50,reclaim,-13.45,-21.45
+2025-10-23,10:45,10:50,VWAP loss,14 new,PE,26053.3,11:10,trail,-4.7,-12.7
+2025-10-24,11:40,11:45,falling wedge,11 old,CE,25836.9,12:15,trail,3.35,-4.65
+2025-10-24,12:15,12:20,Doji reversal (down),14 new,PE,25840.3,12:20,reclaim,-27.9,-35.9
+2025-10-24,12:20,12:25,Inverse Head and Shoulders,14 new,CE,25867.85,12:25,reclaim,-24.3,-32.3
+2025-10-27,09:35,09:40,Gap day: break up,14 new,CE,25921.7,10:00,trail,8.25,0.25
+2025-10-27,11:50,11:55,Hammer,14 new,CE,25971.3,12:20,trail,15.7,7.7
+2025-10-27,12:35,12:40,Hammer,14 new,CE,25977.25,13:15,reclaim,-37.25,-45.25
+2025-10-27,13:15,13:20,Head and Shoulders,14 new,PE,25940.1,13:35,trail,-1.2,-9.2
+2025-10-28,09:50,09:55,VWAP loss,14 new,PE,25973.4,10:40,trail,82.25,74.25
+2025-10-28,11:15,11:20,falling wedge,11 old,CE,25862,11:55,trail,-13.35,-21.35
+2025-10-28,12:05,12:10,Bear Flag,14 new,PE,25836,12:10,reclaim,-7.65,-15.65
+2025-10-29,10:15,10:20,Doji reversal (down),14 new,PE,25988.75,10:25,reclaim,-51.65,-59.65
+2025-10-29,10:25,10:30,Opening Range Breakout (up),14 new,CE,26040.9,10:35,trail,2.85,-5.15
+2025-10-29,11:20,11:25,Bullish Engulfing,14 new,CE,26035.5,11:45,trail,3.35,-4.65
+2025-10-29,12:10,12:15,bullish symmetrical triangle,11 old,CE,26055.2,12:15,retouch,3.6,-4.4
+2025-10-29,12:25,12:30,Inverse Head and Shoulders,14 new,CE,26065.95,12:30,reclaim,-9,-17
+2025-10-29,12:40,12:45,Cup and Handle,14 new,CE,26073.05,12:50,trail,-1.35,-9.35
+2025-10-30,09:30,09:35,Gap day: break down,14 new,PE,25933.3,10:00,trail,18.7,10.7
+2025-10-30,10:15,10:20,Bearish Engulfing,14 new,PE,25929.6,11:00,trail,-1.15,-9.15
+2025-10-30,11:25,11:30,Bearish Engulfing,14 new,PE,25954.3,12:20,trail,33.3,25.3
+2025-10-30,12:45,12:50,falling wedge,11 old,CE,25920.7,12:50,retouch,-4.05,-12.05
+2025-10-30,13:15,13:20,double bottom,11 old,CE,25926,13:20,reclaim,-20.65,-28.65
+2025-10-31,10:00,10:05,VWAP loss,14 new,PE,25889.55,10:40,trail,70.8,62.8
+2025-10-31,10:40,10:45,Bullish Engulfing,14 new,CE,25818.2,10:50,trail,-12.8,-20.8
+2025-10-31,13:50,13:55,Bullish Engulfing,14 new,CE,25768.1,14:15,trail,-3.65,-11.65
+2025-11-03,10:45,10:50,Bearish Engulfing,14 new,PE,25753.55,11:05,trail,-4.75,-12.75
+2025-11-03,11:20,11:25,rising wedge,11 old,PE,25758.8,12:15,trail,40.4,32.4
+2025-11-03,12:35,12:40,Hammer,14 new,CE,25718.35,13:00,trail,25.4,17.4
+2025-11-03,13:45,13:50,Rising Channel breakdown,14 new,PE,25736.4,13:55,reclaim,-28.85,-36.85
+2025-11-03,14:00,14:05,Rounding Bottom,14 new,CE,25767.6,14:05,reclaim,-11.45,-19.45
+2025-11-04,10:20,10:25,Bullish Engulfing,14 new,CE,25701.65,10:40,trail,-8.2,-16.2
+2025-11-04,11:05,11:10,Bear Flag,14 new,PE,25686.95,11:25,trail,4.75,-3.25
+2025-11-04,11:45,11:50,Hammer,14 new,CE,25663.8,12:25,trail,6.9,-1.1
+2025-11-04,13:20,13:25,double bottom,11 old,PE,25660.7,13:25,reclaim,-10.85,-18.85
+2025-11-04,13:25,13:30,Bullish Engulfing,14 new,CE,25672,13:30,retouch,-12.45,-20.45
+2025-11-06,10:40,10:45,Bullish Engulfing,14 new,CE,25536.6,11:05,trail,22.6,14.6
+2025-11-06,11:05,11:10,Bearish Engulfing,14 new,PE,25559.85,11:45,trail,8.25,0.25
+2025-11-06,12:45,12:50,double bottom,11 old,CE,25598.7,12:55,trail,-7.6,-15.6
+2025-11-06,12:55,13:00,Bearish Engulfing,14 new,PE,25591.65,13:10,trail,8.05,0.05
+2025-11-06,13:50,13:55,Rounding Top,14 new,PE,25519.2,13:55,reclaim,-20.7,-28.7
+2025-11-07,11:10,11:15,ascending triangle,11 old,CE,25410.55,11:35,trail,37.25,29.25
+2025-11-07,13:50,13:55,Shooting Star,14 new,PE,25525.85,14:15,trail,43.7,35.7
+2025-11-10,09:55,10:00,Bearish Engulfing,14 new,PE,25568.2,10:10,trail,-7.8,-15.8
+2025-11-10,11:50,11:55,rising wedge,11 old,PE,25630.8,11:55,retouch,9.95,1.95
+2025-11-10,13:15,13:20,rising wedge,11 old,PE,25634,13:20,retouch,-0.75,-8.75
+2025-11-10,13:25,13:30,Hammer,14 new,CE,25637.65,13:40,reclaim,-30.1,-38.1
+2025-11-11,09:40,09:45,Hammer,14 new,CE,25529.45,10:10,trail,-27.5,-35.5
+2025-11-11,12:55,13:00,Rising Channel breakdown,14 new,PE,25568.15,13:10,reclaim,-20.2,-28.2
+2025-11-12,10:30,10:35,Bull Flag,14 new,CE,25857.85,10:55,trail,7.5,-0.5
+2025-11-12,11:15,11:20,rising wedge,11 old,PE,25880.7,11:30,reclaim,-17.3,-25.3
+2025-11-12,12:00,12:05,Shooting Star,14 new,PE,25891.45,12:25,trail,-6.3,-14.3
+2025-11-13,09:25,09:30,Hammer,14 new,CE,25875.8,09:50,trail,-10.85,-18.85
+2025-11-13,11:30,11:35,Bearish Engulfing,14 new,PE,25960.15,11:35,retouch,-11.55,-19.55
+2025-11-14,09:50,09:55,VWAP loss,14 new,PE,25792.25,10:05,trail,2.65,-5.35
+2025-11-14,10:45,10:50,Doji reversal (up),14 new,CE,25786,11:15,trail,35.95,27.95
+2025-11-14,12:10,12:15,VWAP reclaim,14 new,CE,25824.75,12:30,trail,-17.15,-25.15
+2025-11-14,13:00,13:05,Head and Shoulders,14 new,PE,25787.75,13:10,reclaim,-11.85,-19.85
+2025-11-17,10:45,10:50,Doji reversal (up),14 new,CE,25939.8,11:15,trail,-0.25,-8.25
+2025-11-17,11:45,11:50,falling wedge,11 old,CE,25944.15,12:00,trail,10.4,2.4
+2025-11-17,12:15,12:20,Inverse Head and Shoulders,14 new,CE,25975.6,12:20,retouch,-2.9,-10.9
+2025-11-17,12:40,12:45,Inverse Head and Shoulders,14 new,CE,25986.85,13:00,trail,0.25,-7.75
+2025-11-17,13:00,13:05,Bearish Engulfing,14 new,PE,25987.2,13:30,trail,7.5,-0.5
+2025-11-17,13:35,13:40,Hammer,14 new,CE,25984.25,14:05,trail,27.6,19.6
+2025-11-18,10:55,11:00,double bottom,11 old,CE,25922.55,11:25,trail,2.3,-5.7
+2025-11-18,11:45,11:50,rising wedge,11 old,CE,25972.85,12:05,trail,-5.15,-13.15
+2025-11-18,12:15,12:20,Rising Channel breakdown,14 new,PE,25955.1,12:25,trail,2.1,-5.9
+2025-11-18,12:45,12:50,Head and Shoulders,14 new,PE,25931.8,12:50,reclaim,-15.2,-23.2
+2025-11-18,12:50,12:55,Bullish Engulfing,14 new,CE,25946.75,13:10,trail,6.75,-1.25
+2025-11-18,13:10,13:15,Bearish Engulfing,14 new,PE,25952.95,13:15,reclaim,-14.4,-22.4
+2025-11-18,14:10,14:15,Rounding Bottom,14 new,CE,25988.45,14:15,reclaim,-14.15,-22.15
+2025-11-19,11:10,11:15,VWAP loss,14 new,PE,25927.2,11:20,reclaim,-11.2,-19.2
+2025-11-20,10:05,10:10,VWAP reclaim,14 new,CE,26099.6,10:55,trail,30.95,22.95
+2025-11-20,11:55,12:00,Doji reversal (up),14 new,CE,26143.75,13:05,trail,29.95,21.95
+2025-11-21,09:35,09:40,Shooting Star,14 new,PE,26147.95,10:55,trail,54,46
+2025-11-21,11:10,11:15,VWAP reclaim,14 new,CE,26107.2,11:15,reclaim,-7.65,-15.65
+2025-11-21,12:00,12:05,VWAP reclaim,14 new,CE,26106.65,12:30,trail,35.75,27.75
+2025-11-21,13:05,13:10,rising wedge,11 old,PE,26161.55,13:30,trail,40,32
+2025-11-21,13:40,13:45,VWAP loss,14 new,PE,26103.45,13:45,reclaim,-10.15,-18.15
+2025-11-21,14:40,14:45,Shooting Star,14 new,PE,26126.95,15:00,trail,48.45,40.45
+2025-11-24,09:40,09:45,Gap day: break down,14 new,PE,26076.2,09:45,reclaim,-19.5,-27.5
+2025-11-24,10:00,10:05,VWAP reclaim,14 new,CE,26108.65,10:15,trail,5.3,-2.7
+2025-11-24,10:15,10:20,Bearish Engulfing,14 new,PE,26114.3,10:35,reclaim,-23.15,-31.15
+2025-11-24,11:15,11:20,Rising Channel breakdown,14 new,PE,26093.95,11:25,reclaim,-28.65,-36.65
+2025-11-25,11:40,11:45,Bear Flag,14 new,PE,25952,11:45,reclaim,-10.7,-18.7
+2025-11-25,11:55,12:00,VWAP reclaim,14 new,CE,25987.5,12:15,trail,-23.05,-31.05
+2025-11-26,12:05,12:10,rising wedge,11 old,CE,26159.1,13:20,trail,14.05,6.05
+2025-11-26,14:35,14:40,Head and Shoulders,14 new,PE,26181.7,14:50,trail,-3,-11
+2025-11-27,10:10,10:15,Shooting Star,14 new,PE,26283.9,10:45,trail,-15.45,-23.45
+2025-11-27,11:05,11:10,rising wedge,11 old,PE,26301.6,12:40,trail,53.4,45.4
+2025-11-27,12:50,12:55,Bearish Engulfing,14 new,PE,26241.85,13:30,trail,73.85,65.85
+2025-11-28,09:35,09:40,Bearish Engulfing,14 new,PE,26211,10:00,reclaim,-46.15,-54.15
+2025-11-28,10:10,10:15,Bearish Engulfing,14 new,PE,26240.65,10:25,trail,4.45,-3.55
+2025-11-28,11:10,11:15,Bullish Engulfing,14 new,CE,26266.9,11:20,reclaim,-24,-32
+2025-11-28,11:40,11:45,Doji reversal (up),14 new,CE,26246.95,11:55,trail,0.15,-7.85
+2025-11-28,12:15,12:20,Head and Shoulders,14 new,PE,26227.2,12:30,trail,-10,-18
+2025-11-28,12:30,12:35,Bullish Engulfing,14 new,CE,26236.75,12:45,reclaim,-28.95,-36.95
+2025-12-01,09:55,10:00,Gap day: break down,14 new,PE,26264.45,10:00,reclaim,-15.3,-23.3
+2025-12-01,12:50,12:55,falling wedge,11 old,CE,26179.3,13:20,trail,-3.85,-11.85
+2025-12-02,09:25,09:30,Bearish Engulfing,14 new,PE,26131.25,10:20,trail,60.15,52.15
+2025-12-02,10:20,10:25,Hammer,14 new,CE,26070.15,10:40,trail,4.5,-3.5
+2025-12-02,12:40,12:45,Shooting Star,14 new,PE,26060.95,13:05,trail,9.45,1.45
+2025-12-02,13:20,13:25,Bullish Engulfing,14 new,CE,26046.05,13:25,retouch,-10.7,-18.7
+2025-12-02,14:10,14:15,Bearish Engulfing,14 new,PE,26045.6,14:25,trail,4.2,-3.8
+2025-12-02,14:35,14:40,falling wedge,11 old,PE,26014.75,14:45,trail,-3.3,-11.3
+2025-12-03,10:35,10:40,Bear Flag,14 new,PE,25913.05,10:50,trail,-7.15,-15.15
+2025-12-03,11:20,11:25,double bottom,11 old,PE,25894.7,11:25,reclaim,-14.65,-22.65
+2025-12-04,09:35,09:40,Opening Range Breakout (up),14 new,CE,26013.4,09:45,trail,2.9,-5.1
+2025-12-04,10:45,10:50,Bearish Engulfing,14 new,PE,26084.35,12:00,trail,51.7,43.7
+2025-12-04,12:25,12:30,Hammer,14 new,CE,26024.6,12:40,trail,-15.05,-23.05
+2025-12-04,12:40,12:45,Inverted Cup and Handle,14 new,PE,26010,12:55,trail,7.6,-0.4
+2025-12-04,12:55,13:00,Doji reversal (up),14 new,CE,26002.45,13:05,trail,-4.5,-12.5
+2025-12-04,14:15,14:20,Shooting Star,14 new,PE,26001.1,14:50,trail,-23.95,-31.95
+2025-12-05,09:50,09:55,Bearish Engulfing,14 new,PE,26042.15,10:00,trail,-43,-51
+2025-12-05,10:00,10:05,Bullish Engulfing,14 new,CE,26086,10:20,trail,0.45,-7.55
+2025-12-05,10:25,10:30,VWAP loss,14 new,PE,26039.75,10:35,reclaim,-22.55,-30.55
+2025-12-05,10:45,10:50,double bottom,11 old,CE,26124.55,11:45,trail,-0.4,-8.4
+2025-12-08,09:35,09:40,Opening Range Breakout (down),14 new,PE,26118.05,09:40,reclaim,-12.3,-20.3
+2025-12-08,09:40,09:45,Bullish Engulfing,14 new,CE,26129.5,09:45,reclaim,-28.35,-36.35
+2025-12-09,11:45,11:50,rising wedge,11 old,PE,25820.15,12:00,reclaim,-53.4,-61.4
+2025-12-09,12:50,12:55,Rising Channel breakdown,14 new,PE,25880.5,13:00,trail,3.65,-4.35
+2025-12-09,13:25,13:30,Falling Channel breakout,14 new,CE,25890.45,13:30,retouch,6.1,-1.9
+2025-12-09,14:20,14:25,VWAP loss,14 new,PE,25826.5,14:55,trail,-4.95,-12.95
+2025-12-10,09:30,09:35,Opening Range Breakout (up),14 new,CE,25902.6,09:45,trail,-12.1,-20.1
+2025-12-10,09:55,10:00,VWAP loss,14 new,PE,25878.25,10:00,reclaim,-24.1,-32.1
+2025-12-11,09:40,09:45,Opening Range Breakout (down),14 new,PE,25711.45,09:45,reclaim,-26.35,-34.35
+2025-12-11,09:45,09:50,Bullish Engulfing,14 new,CE,25737.1,10:55,trail,57.25,49.25
+2025-12-11,11:00,11:05,VWAP loss,14 new,PE,25765.6,11:10,reclaim,-31.85,-39.85
+2025-12-11,12:40,12:45,rising wedge,11 old,PE,25900.55,13:15,trail,36.5,28.5
+2025-12-11,14:15,14:20,Bullish Engulfing,14 new,CE,25880.25,14:35,trail,20.45,12.45
+2025-12-12,09:30,09:35,Gap day: break up,14 new,CE,26030.6,09:45,trail,-15,-23
+2025-12-12,10:30,10:35,Doji reversal (up),14 new,CE,25982.85,12:05,trail,33.25,25.25
+2025-12-12,12:35,12:40,Bearish Engulfing,14 new,PE,26023.35,12:50,trail,1.25,-6.75
+2025-12-12,13:10,13:15,Bullish Engulfing,14 new,CE,26035.2,14:10,trail,7.7,-0.3
+2025-12-12,14:10,14:15,Bearish Engulfing,14 new,PE,26043.15,14:55,trail,16.2,8.2
+2025-12-15,09:35,09:40,Bullish Engulfing,14 new,CE,25926.5,10:35,trail,29.75,21.75
+2025-12-15,13:10,13:15,rising wedge,11 old,CE,26041.95,13:15,reclaim,-10.05,-18.05
+2025-12-15,14:05,14:10,Bearish Engulfing,14 new,PE,26005.85,15:25,day end,-8.15,-16.15
+2025-12-16,09:40,09:45,Hammer,14 new,CE,25926,09:55,trail,-19.9,-27.9
+2025-12-16,11:05,11:10,Inverse Head and Shoulders,14 new,CE,25903.05,11:20,reclaim,-4.65,-12.65
+2025-12-17,11:00,11:05,falling wedge,11 old,CE,25822.3,11:20,trail,5.95,-2.05
+2025-12-17,12:00,12:05,double top,11 old,PE,25797.8,12:15,trail,-10.5,-18.5
+2025-12-17,12:50,12:55,Bearish Engulfing,14 new,PE,25789.05,13:00,trail,-5.85,-13.85
+2025-12-18,09:50,09:55,Hammer,14 new,CE,25750.9,10:35,trail,92.45,84.45
+2025-12-18,11:20,11:25,Bull Flag,14 new,CE,25852.6,12:15,trail,16.1,8.1
+2025-12-18,12:15,12:20,Bearish Engulfing,14 new,PE,25869.4,12:25,trail,-10.45,-18.45
+2025-12-18,14:00,14:05,Head and Shoulders,14 new,PE,25830.6,14:25,trail,41.05,33.05
+2025-12-19,09:30,09:35,Gap day: break up,14 new,CE,25964.1,09:45,trail,-20.25,-28.25
+2025-12-19,10:10,10:15,VWAP loss,14 new,PE,25935.45,10:20,reclaim,-14.15,-22.15
+2025-12-22,09:35,09:40,Doji reversal (down),14 new,PE,26112.65,10:00,reclaim,-26.3,-34.3
+2025-12-22,11:00,11:05,Bearish Engulfing,14 new,PE,26131.9,11:25,trail,-4.65,-12.65
+2025-12-23,10:15,10:20,Shooting Star,14 new,PE,26170.5,10:40,trail,-10.45,-18.45
+2025-12-23,10:40,10:45,Doji reversal (up),14 new,CE,26183,11:30,trail,0.1,-7.9
+2025-12-23,12:30,12:35,VWAP loss,14 new,PE,26167.1,12:35,retouch,-4.45,-12.45
+2025-12-23,12:55,13:00,Doji reversal (down),14 new,PE,26185.45,13:50,trail,-5.7,-13.7
+2025-12-24,10:45,10:50,VWAP loss,14 new,PE,26208.95,11:10,trail,-1.2,-9.2
+2025-12-24,11:20,11:25,Bull Flag,14 new,CE,26215.05,11:25,retouch,-2,-10
+2025-12-26,09:40,09:45,Gap day: break down,14 new,PE,26086.85,09:55,trail,-3.75,-11.75
+2025-12-26,09:55,10:00,Bullish Engulfing,14 new,CE,26090.15,10:20,trail,-8.6,-16.6
+2025-12-29,12:20,12:25,Bear Flag,14 new,PE,25965,12:25,reclaim,-6.15,-14.15
+2025-12-29,13:35,13:40,falling wedge,11 old,PE,25932.05,13:45,reclaim,-17.25,-25.25
+2025-12-30,11:30,11:35,Inverted Cup and Handle,14 new,PE,25897.6,11:40,trail,-10.35,-18.35
+2025-12-30,11:40,11:45,Doji reversal (up),14 new,CE,25907.95,11:50,trail,-4.1,-12.1
+2026-01-01,09:25,09:30,Bullish Engulfing,14 new,CE,26184,09:55,trail,-26.8,-34.8
+2026-01-01,09:55,10:00,Bearish Engulfing,14 new,PE,26157.45,10:25,trail,0.1,-7.9
+2026-01-01,10:25,10:30,Hammer,14 new,CE,26158.7,10:55,trail,12.25,4.25
+2026-01-01,11:50,11:55,Bullish Engulfing,14 new,CE,26147.85,12:00,trail,-6.05,-14.05
+2026-01-01,12:15,12:20,Bullish Engulfing,14 new,CE,26135.4,12:35,trail,-5.45,-13.45
+2026-01-02,10:35,10:40,Bullish Engulfing,14 new,CE,26254.65,11:05,trail,-2.65,-10.65
+2026-01-02,11:25,11:30,double bottom,11 old,CE,26273.35,11:55,trail,6.65,-1.35
+2026-01-02,11:55,12:00,Bearish Engulfing,14 new,PE,26280.7,12:20,trail,-14.65,-22.65
+2026-01-02,13:25,13:30,Bearish Engulfing,14 new,PE,26302.1,14:05,trail,-1.85,-9.85
+2026-01-05,11:20,11:25,double top,11 old,PE,26320.3,11:40,trail,-18.4,-26.4
+2026-01-05,12:15,12:20,falling wedge,11 old,CE,26336,12:55,trail,-2.6,-10.6
+2026-01-06,10:05,10:10,Doji reversal (down),14 new,PE,26244.9,11:00,trail,31.45,23.45
+2026-01-06,11:25,11:30,Bullish Engulfing,14 new,CE,26172.15,11:55,trail,2.35,-5.65
+2026-01-06,13:35,13:40,bearish symmetrical triangle,11 old,PE,26155.45,13:40,reclaim,-8.65,-16.65
+2026-01-06,14:05,14:10,double bottom,11 old,PE,26138.15,14:25,trail,-9.9,-17.9
+2026-01-07,09:55,10:00,VWAP reclaim,14 new,CE,26138.95,10:20,trail,12.55,4.55
+2026-01-07,10:20,10:25,Shooting Star,14 new,PE,26152.25,10:50,trail,-13.6,-21.6
+2026-01-07,11:20,11:25,VWAP loss,14 new,PE,26139.1,11:30,reclaim,-19.05,-27.05
+2026-01-08,11:35,11:40,Bullish Engulfing,14 new,CE,25982.4,11:45,reclaim,-23.45,-31.45
+2026-01-08,12:10,12:15,Hammer,14 new,CE,25934,12:30,trail,-16.1,-24.1
+2026-01-09,10:00,10:05,Bearish Engulfing,14 new,PE,25875.05,10:25,trail,-12.8,-20.8
+2026-01-09,10:30,10:35,Rising Channel breakdown,14 new,PE,25853.15,12:00,trail,97.1,89.1
+2026-01-09,12:50,12:55,falling wedge,11 old,CE,25691.9,13:30,trail,2.8,-5.2
+2026-01-09,13:40,13:45,Bearish Engulfing,14 new,PE,25684.9,13:55,trail,1.05,-6.95
+2026-01-12,09:30,09:35,Bullish Engulfing,14 new,CE,25569.1,09:40,trail,-11.5,-19.5
+2026-01-12,09:45,09:50,VWAP reclaim,14 new,CE,25596.25,09:55,reclaim,-38.7,-46.7
+2026-01-13,10:25,10:30,VWAP reclaim,14 new,CE,25799.3,10:35,trail,-23,-31
+2026-01-13,10:35,10:40,Shooting Star,14 new,PE,25774.05,11:05,trail,-21.55,-29.55
+2026-01-14,11:00,11:05,double bottom,11 old,CE,25733.8,11:05,retouch,-4.25,-12.25
+2026-01-14,11:25,11:30,triple bottom,11 old,CE,25770.7,11:40,reclaim,-9.55,-17.55
+2026-01-16,09:50,09:55,Opening Range Breakout (up),14 new,CE,25752.2,09:55,reclaim,-12.95,-20.95
+2026-01-16,11:30,11:35,Bull Flag,14 new,CE,25810,11:35,reclaim,-7.85,-15.85
+2026-01-19,10:55,11:00,VWAP reclaim,14 new,CE,25546.85,11:10,trail,-8.45,-16.45
+2026-01-19,11:40,11:45,VWAP reclaim,14 new,CE,25546.05,11:45,retouch,-3.6,-11.6
+2026-01-20,11:50,11:55,VWAP reclaim,14 new,CE,25489.15,11:55,reclaim,-14.75,-22.75
+2026-01-20,12:10,12:15,double bottom,11 old,PE,25439.05,12:25,reclaim,6.1,-1.9
+2026-01-20,13:20,13:25,falling wedge,11 old,CE,25421.25,13:25,retouch,-4.5,-12.5
+2026-01-20,14:25,14:30,falling wedge,11 old,CE,25390.4,14:40,reclaim,-46.25,-54.25
+2026-01-21,12:00,12:05,VWAP reclaim,14 new,CE,25115.6,12:25,trail,17.6,9.6
+2026-01-21,13:35,13:40,Bullish Engulfing,14 new,CE,25211.45,13:50,reclaim,-42.6,-50.6
+2026-01-21,14:30,14:35,Bullish Engulfing,14 new,CE,25163,15:10,trail,-8,-16
+2026-01-22,09:30,09:35,Gap day: break up,14 new,CE,25408.5,09:50,trail,-12.05,-20.05
+2026-01-22,12:05,12:10,falling wedge,11 old,CE,25229.45,12:40,trail,15.5,7.5
+2026-01-22,13:30,13:35,Bullish Engulfing,14 new,CE,25214.7,14:05,trail,-2.9,-10.9
+2026-01-22,14:05,14:10,Shooting Star,14 new,PE,25211.5,14:20,trail,13.55,5.55
+2026-01-22,14:20,14:25,Doji reversal (up),14 new,CE,25197.25,14:50,trail,82.3,74.3
+2026-01-23,10:30,10:35,VWAP reclaim,14 new,CE,25303.55,10:40,reclaim,-10.2,-18.2
+2026-01-23,12:35,12:40,falling wedge,11 old,CE,25216.55,12:45,trail,-5.8,-13.8
+2026-01-27,10:40,10:45,VWAP loss,14 new,PE,25028.85,11:00,trail,17.8,9.8
+2026-01-27,11:35,11:40,VWAP reclaim,14 new,CE,25091,11:45,trail,17.15,9.15
+2026-01-27,13:25,13:30,bullish symmetrical triangle,11 old,CE,25122.7,13:35,reclaim,-91,-99
+2026-01-27,13:35,13:40,VWAP loss,14 new,PE,25033.6,14:10,trail,-0.95,-8.95
+2026-01-28,10:35,10:40,VWAP reclaim,14 new,CE,25301.85,10:40,reclaim,-20.15,-28.15
+2026-01-28,11:40,11:45,VWAP loss,14 new,PE,25292.8,11:45,reclaim,-23.7,-31.7
+2026-01-29,09:45,09:50,Bullish Engulfing,14 new,CE,25227.45,09:50,reclaim,-46.75,-54.75
+2026-01-29,10:55,11:00,double bottom,11 old,CE,25234.6,11:30,trail,28.2,20.2
+2026-01-29,13:40,13:45,rising wedge,11 old,CE,25403.45,14:00,trail,13.45,5.45
+2026-01-30,09:45,09:50,Gap day: break up,14 new,CE,25303.65,09:55,trail,-20.25,-28.25
+2026-01-30,09:55,10:00,Bearish Engulfing,14 new,PE,25283.95,10:10,trail,-30.35,-38.35
+2026-02-01,09:50,09:55,Doji reversal (down),14 new,PE,25318.45,10:10,reclaim,-32.55,-40.55
+2026-02-01,10:10,10:15,Opening Range Breakout (up),14 new,CE,25350.9,11:00,trail,13.6,5.6
+2026-02-01,11:35,11:40,rising wedge,11 old,PE,25365.15,12:05,trail,15.5,7.5
+2026-02-01,12:35,12:40,Bullish Engulfing,14 new,CE,25009.45,13:25,trail,57.45,49.45
+2026-02-01,14:25,14:30,Bull Pennant,14 new,CE,25038.45,14:45,trail,-71.4,-79.4
+2026-02-02,09:50,09:55,Opening Range Breakout (up),14 new,CE,24936.15,09:55,reclaim,-74.25,-82.25
+2026-02-02,11:25,11:30,Bullish Engulfing,14 new,CE,24724.3,12:30,trail,153.95,145.95
+2026-02-02,13:05,13:10,Cup and Handle,14 new,CE,24960.3,13:10,reclaim,-25.1,-33.1
+2026-02-02,13:10,13:15,rising wedge,11 old,PE,24936.2,13:25,trail,40.35,32.35
+2026-02-02,13:25,13:30,Bullish Engulfing,14 new,CE,24896.25,13:30,retouch,-8.85,-16.85
+2026-02-02,13:55,14:00,Doji reversal (down),14 new,PE,24949.05,14:20,trail,-4.25,-12.25
+2026-02-03,09:45,09:50,Bullish Engulfing,14 new,CE,25775.85,10:10,reclaim,-104.85,-112.85
+2026-02-03,10:20,10:25,VWAP reclaim,14 new,CE,25782.05,10:45,trail,-18.35,-26.35
+2026-02-04,09:35,09:40,Shooting Star,14 new,PE,25729.7,09:40,retouch,-58.95,-66.95
+2026-02-04,10:40,10:45,Doji reversal (up),14 new,CE,25739,11:10,trail,-15.05,-23.05
+2026-02-05,09:30,09:35,Hammer,14 new,CE,25692.95,09:35,retouch,-15.1,-23.1
+2026-02-05,10:10,10:15,VWAP reclaim,14 new,CE,25672.5,10:25,trail,-2.95,-10.95
+2026-02-06,10:15,10:20,Bullish Engulfing,14 new,CE,25543.95,10:25,trail,-37.3,-45.3
+2026-02-06,10:55,11:00,Bullish Engulfing,14 new,CE,25522.75,12:00,trail,98.5,90.5
+2026-02-06,12:05,12:10,Shooting Star,14 new,PE,25593.45,12:55,trail,36.75,28.75
+2026-02-06,13:15,13:20,VWAP reclaim,14 new,CE,25569.15,13:30,reclaim,-6.3,-14.3
+2026-02-06,14:40,14:45,Rounding Bottom,14 new,CE,25651.8,14:45,reclaim,-15.2,-23.2
+2026-02-09,10:35,10:40,double bottom,11 old,CE,25843.4,11:30,trail,5,-3
+2026-02-09,12:25,12:30,Bearish Engulfing,14 new,PE,25850.55,12:55,trail,13.3,5.3
+2026-02-09,14:20,14:25,double bottom,11 old,CE,25860,14:30,reclaim,-7.65,-15.65
+2026-02-10,09:50,09:55,Shooting Star,14 new,PE,25932.2,09:55,retouch,-17.3,-25.3
+2026-02-10,12:45,12:50,Rounding Bottom,14 new,CE,25983.15,12:55,reclaim,-9.7,-17.7
+2026-02-11,09:35,09:40,Gap day: break down,14 new,PE,25932.4,09:50,trail,-17.7,-25.7
+2026-02-11,10:15,10:20,VWAP reclaim,14 new,CE,25954.8,10:50,trail,6.1,-1.9
+2026-02-11,11:05,11:10,VWAP loss,14 new,PE,25941.9,11:10,reclaim,-15.05,-23.05
+2026-02-11,11:55,12:00,VWAP loss,14 new,PE,25947.55,12:10,trail,-6.4,-14.4
+2026-02-12,09:45,09:50,VWAP reclaim,14 new,CE,25859,10:25,trail,8.2,0.2
+2026-02-12,11:35,11:40,Rounding Top,14 new,PE,25820.6,11:40,reclaim,-7.8,-15.8
+2026-02-12,12:15,12:20,falling wedge,11 old,CE,25838.35,13:05,trail,1,-7
+2026-02-12,13:05,13:10,Doji reversal (down),14 new,PE,25841.35,13:15,trail,-10.25,-18.25
+2026-02-12,13:30,13:35,Shooting Star,14 new,PE,25850.1,14:20,trail,16.75,8.75
+2026-02-12,14:40,14:45,double bottom,11 old,PE,25796.95,14:50,trail,21.55,13.55
+2026-02-13,09:30,09:35,Gap day: break down,14 new,PE,25549,09:40,trail,-11.85,-19.85
+2026-02-13,09:40,09:45,Bullish Engulfing,14 new,CE,25560.75,10:45,trail,-2.65,-10.65
+2026-02-16,10:20,10:25,Doji reversal (down),14 new,PE,25526.1,11:00,trail,-4.8,-12.8
+2026-02-16,11:05,11:10,Bull Flag,14 new,CE,25531.65,11:25,trail,-13.85,-21.85
+2026-02-17,12:40,12:45,rising wedge,11 old,PE,25738.25,12:45,retouch,-2.75,-10.75
+2026-02-17,13:00,13:05,double top,11 old,PE,25716.25,13:05,reclaim,-43.2,-51.2
+2026-02-18,09:45,09:50,VWAP loss,14 new,PE,25722.1,10:45,trail,40.25,32.25
+2026-02-18,10:55,11:00,VWAP reclaim,14 new,CE,25706,11:15,trail,-19.45,-27.45
+2026-02-18,11:30,11:35,Bull Flag,14 new,CE,25711.6,11:40,reclaim,-24.7,-32.7
+2026-02-19,10:00,10:05,Bullish Engulfing,14 new,CE,25785.85,10:10,reclaim,-29.4,-37.4
+2026-02-19,13:50,13:55,double bottom,11 old,PE,25581.9,14:05,trail,15.25,7.25
+2026-02-20,09:30,09:35,Bullish Engulfing,14 new,CE,25466.6,10:00,trail,29.75,21.75
+2026-02-20,11:15,11:20,Bullish Engulfing,14 new,CE,25577.65,11:50,trail,6.2,-1.8
+2026-02-20,13:10,13:15,VWAP loss,14 new,PE,25554.5,13:25,trail,-14,-22
+2026-02-23,09:50,09:55,VWAP loss,14 new,PE,25718.5,10:50,trail,46.7,38.7
+2026-02-23,11:15,11:20,Bearish Engulfing,14 new,PE,25674.95,11:35,trail,6.35,-1.65
+2026-02-23,12:20,12:25,Bearish Engulfing,14 new,PE,25655.7,12:40,trail,-29.3,-37.3
+2026-02-23,12:45,12:50,double bottom,11 old,CE,25663.9,12:50,reclaim,-8.15,-16.15
+2026-02-24,10:45,10:50,double bottom,11 old,PE,25472.05,11:00,reclaim,-12.6,-20.6
+2026-02-24,11:25,11:30,VWAP reclaim,14 new,CE,25517.1,11:30,reclaim,-10.55,-18.55
+2026-02-25,10:00,10:05,Gap day: break up,14 new,CE,25617.5,10:40,trail,2.4,-5.6
+2026-02-25,11:25,11:30,Doji reversal (up),14 new,CE,25613.3,11:40,reclaim,-25.3,-33.3
+2026-02-25,13:30,13:35,Hammer,14 new,CE,25461.3,13:35,retouch,5.1,-2.9
+2026-02-25,13:40,13:45,falling wedge,11 old,CE,25462.35,13:45,retouch,5.05,-2.95
+2026-02-25,14:15,14:20,double bottom,11 old,CE,25494.2,14:20,reclaim,-21.2,-29.2
+2026-02-25,14:20,14:25,double bottom,11 old,CE,25473.35,14:25,reclaim,-24.8,-32.8
+2026-02-26,10:25,10:30,VWAP loss,14 new,PE,25526.55,10:30,reclaim,-10.05,-18.05
+2026-02-26,11:30,11:35,Shooting Star,14 new,PE,25522.1,11:45,trail,38.75,30.75
+2026-02-26,12:00,12:05,Bullish Engulfing,14 new,CE,25469.75,12:10,trail,-10.45,-18.45
+2026-02-26,13:20,13:25,Bullish Engulfing,14 new,CE,25437.5,13:45,trail,-18.7,-26.7
+2026-02-27,11:30,11:35,double top,11 old,PE,25284.55,11:40,trail,-10.55,-18.55
+2026-02-27,12:05,12:10,Doji reversal (down),14 new,PE,25292.7,12:25,trail,-7.9,-15.9
+2026-03-02,09:50,09:55,VWAP loss,14 new,PE,24886.7,09:55,reclaim,-58.4,-66.4
+2026-03-02,10:00,10:05,VWAP loss,14 new,PE,24898.95,10:55,trail,43.8,35.8
+2026-03-02,11:25,11:30,double top,11 old,PE,24802.8,11:35,reclaim,-20.15,-28.15
+2026-03-02,11:45,11:50,falling wedge,11 old,CE,24815.9,11:50,retouch,-11.7,-19.7
+2026-03-04,11:20,11:25,rising wedge,11 old,PE,24393.45,12:00,trail,4.35,-3.65
+2026-03-04,12:05,12:10,falling wedge,11 old,CE,24394.85,12:10,retouch,-15,-23
+2026-03-04,12:45,12:50,Hammer,14 new,CE,24386.55,13:15,trail,54.9,46.9
+2026-03-04,13:30,13:35,Shooting Star,14 new,PE,24436.05,14:00,trail,-15.05,-23.05
+2026-03-04,14:05,14:10,bullish symmetrical triangle,11 old,CE,24495.55,14:20,trail,39.45,31.45
+2026-03-04,14:20,14:25,Bearish Engulfing,14 new,PE,24536.55,14:40,trail,-42.2,-50.2
+2026-03-05,09:35,09:40,Gap day: break down,14 new,PE,24533.3,09:40,reclaim,-62.9,-70.9
+2026-03-05,09:40,09:45,Bullish Engulfing,14 new,CE,24596.3,10:00,trail,26.95,18.95
+2026-03-05,10:35,10:40,VWAP reclaim,14 new,CE,24627.85,11:00,trail,20.25,12.25
+2026-03-05,11:35,11:40,VWAP loss,14 new,PE,24603.95,11:50,trail,9.35,1.35
+2026-03-05,11:50,11:55,Bullish Engulfing,14 new,CE,24594.85,11:55,retouch,-15.75,-23.75
+2026-03-05,12:20,12:25,VWAP reclaim,14 new,CE,24619.2,12:45,trail,12.25,4.25
+2026-03-05,13:50,13:55,double top,11 old,PE,24593.95,14:20,trail,3,-5
+2026-03-05,14:20,14:25,Bullish Engulfing,14 new,CE,24591.1,14:30,trail,-8.6,-16.6
+2026-03-05,14:35,14:40,VWAP reclaim,14 new,CE,24672.45,15:00,trail,118.25,110.25
+2026-03-06,10:45,10:50,double top,11 old,PE,24587.2,11:00,reclaim,-48.5,-56.5
+2026-03-06,11:45,11:50,Inverse Head and Shoulders,14 new,CE,24632.4,11:50,reclaim,-12.55,-20.55
+2026-03-09,12:45,12:50,Bearish Engulfing,14 new,PE,23855.35,12:50,reclaim,-34.15,-42.15
+2026-03-09,13:30,13:35,double bottom,11 old,CE,23911.35,13:35,reclaim,-2.3,-10.3
+2026-03-10,09:40,09:45,Bullish Engulfing,14 new,CE,24152.95,10:20,trail,16.05,8.05
+2026-03-10,11:45,11:50,rising wedge,11 old,PE,24207.45,12:45,trail,22.95,14.95
+2026-03-10,12:50,12:55,falling wedge,11 old,CE,24218.55,13:05,trail,-12.25,-20.25
+2026-03-10,13:05,13:10,Bearish Engulfing,14 new,PE,24208.05,13:30,trail,-23.75,-31.75
+2026-03-11,09:35,09:40,Gap day: break down,14 new,PE,24194.7,10:55,trail,91.75,83.75
+2026-03-11,12:20,12:25,Falling Channel breakout,14 new,CE,24016.2,12:25,retouch,-4.3,-12.3
+2026-03-11,12:30,12:35,Bear Pennant,14 new,PE,23993.25,12:40,trail,-17.7,-25.7
+2026-03-12,10:35,10:40,double bottom,11 old,CE,23714.35,10:40,reclaim,-21.65,-29.65
+2026-03-12,11:05,11:10,Bearish Engulfing,14 new,PE,23739.45,11:50,trail,26.5,18.5
+2026-03-12,12:05,12:10,Bearish Engulfing,14 new,PE,23727.8,12:10,reclaim,-21.55,-29.55
+2026-03-12,12:15,12:20,Bearish Engulfing,14 new,PE,23725.7,13:10,trail,10.45,2.45
+2026-03-12,13:25,13:30,double bottom,11 old,CE,23765.25,13:40,trail,24.65,16.65
+2026-03-12,13:40,13:45,Bearish Engulfing,14 new,PE,23789.35,14:10,trail,50.45,42.45
+2026-03-12,14:40,14:45,VWAP loss,14 new,PE,23673.15,15:00,trail,18.25,10.25
+2026-03-13,09:25,09:30,Bullish Engulfing,14 new,CE,23469.8,09:45,reclaim,-72.4,-80.4
+2026-03-13,09:45,09:50,Gap day: break down,14 new,PE,23399.65,10:25,trail,46.2,38.2
+2026-03-13,11:25,11:30,VWAP reclaim,14 new,CE,23378.85,11:50,trail,10.4,2.4
+2026-03-13,11:55,12:00,VWAP loss,14 new,PE,23363.1,12:45,trail,122.2,114.2
+2026-03-13,12:45,12:50,Hammer,14 new,CE,23241.65,12:50,retouch,-12.05,-20.05
+2026-03-13,13:25,13:30,falling wedge,11 old,CE,23191.35,13:35,reclaim,-45.7,-53.7
+2026-03-16,09:55,10:00,VWAP loss,14 new,PE,23168.8,10:35,trail,111.1,103.1
+2026-03-16,11:15,11:20,VWAP reclaim,14 new,CE,23189.05,11:35,trail,-22.35,-30.35
+2026-03-16,11:35,11:40,Bearish Engulfing,14 new,PE,23166.35,12:20,trail,-25.55,-33.55
+2026-03-17,10:00,10:05,Gap day: break up,14 new,CE,23512.75,10:25,trail,-10.9,-18.9
+2026-03-17,11:35,11:40,Bullish Engulfing,14 new,CE,23389.4,12:15,trail,-5.95,-13.95
+2026-03-18,09:55,10:00,Shooting Star,14 new,PE,23691.15,10:15,trail,-16.2,-24.2
+2026-03-18,11:45,11:50,Shooting Star,14 new,PE,23804.3,12:30,trail,23.45,15.45
+2026-03-18,13:40,13:45,Rounding Bottom,14 new,CE,23845.45,13:45,reclaim,-16,-24
+2026-03-18,13:45,13:50,Bearish Engulfing,14 new,PE,23828.15,13:50,retouch,-17.65,-25.65
+2026-03-19,10:20,10:25,Bullish Engulfing,14 new,CE,23258.45,10:45,trail,18.3,10.3
+2026-03-19,10:55,11:00,VWAP loss,14 new,PE,23260.65,11:20,trail,14.2,6.2
+2026-03-19,12:00,12:05,Bear Flag,14 new,PE,23232.65,12:10,reclaim,-32.85,-40.85
+2026-03-19,12:10,12:15,Doji reversal (up),14 new,CE,23265.5,12:20,trail,-19.55,-27.55
+2026-03-20,09:35,09:40,Bearish Engulfing,14 new,PE,23271.4,09:55,trail,12.4,4.4
+2026-03-20,11:40,11:45,rising wedge,11 old,PE,23287.4,12:10,trail,54.35,46.35
+2026-03-20,12:15,12:20,Rounding Top,14 new,PE,23187.45,12:35,trail,2.8,-5.2
+2026-03-20,12:35,12:40,Hammer,14 new,CE,23185.5,13:40,trail,46.5,38.5
+2026-03-20,13:40,13:45,Bearish Engulfing,14 new,PE,23233.7,14:00,trail,-1.65,-9.65
+2026-03-20,14:40,14:45,Rounding Top,14 new,PE,23099.4,15:00,trail,-40,-48
+2026-03-23,11:05,11:10,Doji reversal (up),14 new,CE,22560.8,12:20,reclaim,-71.25,-79.25
+2026-03-23,12:20,12:25,double top,11 old,PE,22487.55,12:25,reclaim,-24.4,-32.4
+2026-03-24,09:40,09:45,Gap day: break down,14 new,PE,22747.3,09:55,trail,-6.9,-14.9
+2026-03-24,10:40,10:45,Bullish Engulfing,14 new,CE,22667.55,10:50,trail,-0.3,-8.3
+2026-03-25,12:50,12:55,rising wedge,11 old,PE,23391,13:00,trail,-8.55,-16.55
+2026-03-25,13:00,13:05,Bullish Engulfing,14 new,CE,23400.5,13:50,trail,28.05,20.05
+2026-03-25,13:50,13:55,Bearish Engulfing,14 new,PE,23428,14:25,trail,90.75,82.75
+2026-03-27,10:00,10:05,Bullish Engulfing,14 new,CE,23024.35,10:15,reclaim,-51,-59
+2026-03-27,10:20,10:25,Bullish Engulfing,14 new,CE,23007.65,10:40,trail,-18.5,-26.5
+2026-03-30,09:30,09:35,Gap day: break up,14 new,CE,22681.55,09:55,reclaim,-66.25,-74.25
+2026-03-30,10:05,10:10,VWAP loss,14 new,PE,22600.2,11:30,trail,96.4,88.4
+2026-03-30,12:05,12:10,double bottom,11 old,CE,22557.55,12:20,trail,-26.25,-34.25
+2026-03-30,13:00,13:05,double top,11 old,PE,22490.85,13:35,trail,-2.8,-10.8
+2026-04-01,10:10,10:15,VWAP loss,14 new,PE,22867.9,11:05,trail,97.35,89.35
+2026-04-01,11:10,11:15,falling wedge,11 old,CE,22763.55,11:45,trail,-9.45,-17.45
+2026-04-01,11:55,12:00,Bullish Engulfing,14 new,CE,22774.1,12:15,trail,63.65,55.65
+2026-04-01,12:45,12:50,Bull Flag,14 new,CE,22868.45,13:15,trail,-25.45,-33.45
+2026-04-01,13:20,13:25,VWAP loss,14 new,PE,22810.55,13:45,trail,107.35,99.35
+2026-04-01,14:30,14:35,Bear Flag,14 new,PE,22708.25,15:00,trail,31.5,23.5
+2026-04-02,10:55,11:00,VWAP reclaim,14 new,CE,22242.95,11:10,reclaim,-15.3,-23.3
+2026-04-02,11:45,11:50,VWAP reclaim,14 new,CE,22242.65,12:15,trail,18.8,10.8
+2026-04-02,14:35,14:40,Bearish Engulfing,14 new,PE,22632.25,14:45,trail,16.75,8.75
+2026-04-06,10:10,10:15,VWAP reclaim,14 new,CE,22659.8,10:15,retouch,-21.2,-29.2
+2026-04-06,10:35,10:40,Inverse Head and Shoulders,14 new,CE,22661.7,10:40,retouch,-8.2,-16.2
+2026-04-07,11:15,11:20,VWAP reclaim,14 new,CE,22895,11:40,trail,26.25,18.25
+2026-04-07,11:40,11:45,Doji reversal (down),14 new,PE,22922.4,11:50,trail,-20.55,-28.55
+2026-04-07,11:55,12:00,Inverse Head and Shoulders,14 new,CE,22986.2,12:00,reclaim,-41.8,-49.8
+2026-04-08,11:55,12:00,double top,11 old,PE,23932.6,12:00,reclaim,-18.65,-26.65
+2026-04-08,12:30,12:35,VWAP loss,14 new,PE,23917.8,12:40,reclaim,-28.55,-36.55
+2026-04-09,10:00,10:05,Bullish Engulfing,14 new,CE,23815.3,10:25,trail,32.9,24.9
+2026-04-09,11:45,11:50,double bottom,11 old,CE,23886.95,12:10,trail,-5.7,-13.7
+2026-04-09,12:25,12:30,rising wedge,11 old,PE,23871.75,12:30,retouch,7.2,-0.8
+2026-04-09,13:20,13:25,double bottom,11 old,PE,23786.6,13:30,trail,-2.1,-10.1
+2026-04-09,13:30,13:35,Bullish Engulfing,14 new,CE,23789.05,13:35,retouch,-15.85,-23.85
+2026-04-10,10:10,10:15,Bullish Engulfing,14 new,CE,23994.95,10:40,trail,8.9,0.9
+2026-04-10,11:25,11:30,VWAP loss,14 new,PE,23972.15,11:30,reclaim,-32.45,-40.45
+2026-04-10,11:30,11:35,Bullish Engulfing,14 new,CE,24004.3,11:45,reclaim,-40.95,-48.95
+2026-04-15,09:40,09:45,Bullish Engulfing,14 new,CE,24207.05,10:35,trail,36.55,28.55
+2026-04-15,12:55,13:00,rising wedge,11 old,PE,24207.5,13:00,retouch,-3.3,-11.3
+2026-04-15,13:15,13:20,bullish symmetrical triangle,11 old,CE,24233.9,13:20,reclaim,-36.15,-44.15
+2026-04-16,09:30,09:35,Doji reversal (down),14 new,PE,24358.15,09:45,trail,30.25,22.25
+2026-04-16,11:20,11:25,rising wedge,11 old,PE,24298.8,12:10,trail,114,106
+2026-04-16,14:00,14:05,Doji reversal (down),14 new,PE,24145.4,14:30,reclaim,-75.8,-83.8
+2026-04-16,14:30,14:35,Inverse Head and Shoulders,14 new,CE,24221.35,15:00,trail,-18.4,-26.4
+2026-04-17,10:30,10:35,Doji reversal (down),14 new,PE,24265.4,11:10,trail,0.3,-7.7
+2026-04-17,11:30,11:35,Bull Flag,14 new,CE,24287.25,11:45,trail,-4.8,-12.8
+2026-04-17,11:45,11:50,Bearish Engulfing,14 new,PE,24283.3,11:50,reclaim,-33.15,-41.15
+2026-04-20,10:00,10:05,VWAP reclaim,14 new,CE,24356.5,11:05,trail,50.65,42.65
+2026-04-20,11:15,11:20,Doji reversal (up),14 new,CE,24426.15,12:05,trail,22.8,14.8
+2026-04-20,12:05,12:10,rising wedge,11 old,PE,24449.6,12:20,trail,3.9,-4.1
+2026-04-20,12:55,13:00,Bearish Engulfing,14 new,PE,24461.85,13:40,trail,65.5,57.5
+2026-04-20,13:55,14:00,falling wedge,11 old,CE,24395.75,14:00,retouch,-2.65,-10.65
+2026-04-21,12:05,12:10,bullish symmetrical triangle,11 old,CE,24543.25,12:25,trail,3.95,-4.05
+2026-04-21,14:20,14:25,double bottom,11 old,CE,24576.45,14:30,reclaim,-15.8,-23.8
+2026-04-22,09:40,09:45,Gap day: break down,14 new,PE,24424.8,10:30,trail,44.2,36.2
+2026-04-22,10:40,10:45,VWAP reclaim,14 new,CE,24416.25,11:05,trail,8.5,0.5
+2026-04-22,11:40,11:45,rising wedge,11 old,PE,24416.8,11:55,trail,-10.1,-18.1
+2026-04-22,13:15,13:20,VWAP loss,14 new,PE,24412.8,13:25,trail,-2.8,-10.8
+2026-04-23,10:05,10:10,Bearish Engulfing,14 new,PE,24286.65,11:00,trail,63.5,55.5
+2026-04-23,12:20,12:25,Inverse Head and Shoulders,14 new,CE,24223.95,12:25,reclaim,-43.85,-51.85
+2026-04-23,12:25,12:30,Bearish Engulfing,14 new,PE,24182.6,12:35,trail,-9.85,-17.85
+2026-04-24,10:00,10:05,Bullish Engulfing,14 new,CE,23990.4,10:15,trail,-19.1,-27.1
+2026-04-24,12:00,12:05,Doji reversal (up),14 new,CE,23905.9,12:20,trail,-8.3,-16.3
+2026-04-27,11:25,11:30,VWAP loss,14 new,PE,24031.65,11:45,trail,9.4,1.4
+2026-04-27,12:25,12:30,VWAP reclaim,14 new,CE,24057.75,14:20,trail,52.25,44.25
+2026-04-28,11:15,11:20,VWAP loss,14 new,PE,24129,11:35,trail,47,39
+2026-04-28,11:35,11:40,Doji reversal (up),14 new,CE,24082.3,11:55,trail,-26.3,-34.3
+2026-04-28,12:10,12:15,Bullish Engulfing,14 new,CE,24046.85,12:20,reclaim,-29.4,-37.4
+2026-04-29,09:40,09:45,Gap day: break up,14 new,CE,24142.65,10:35,trail,126.05,118.05
+2026-04-29,12:10,12:15,double bottom,11 old,CE,24295.1,12:55,trail,21.75,13.75
+2026-04-29,13:20,13:25,Rising Channel breakdown,14 new,PE,24311.5,14:10,trail,96.9,88.9
+2026-04-30,09:30,09:35,Bullish Engulfing,14 new,CE,23917.55,09:45,trail,3,-5
+2026-04-30,11:30,11:35,falling wedge,11 old,CE,23838.45,11:50,trail,-4,-12
+2026-04-30,12:05,12:10,VWAP reclaim,14 new,CE,23868.45,12:15,trail,13.7,5.7
+2026-04-30,13:20,13:25,Rounding Bottom,14 new,CE,23967.5,14:00,trail,70.7,62.7
+2026-04-30,14:30,14:35,Bullish Engulfing,14 new,CE,24034.25,14:45,trail,2.5,-5.5
+2026-05-04,10:25,10:30,Bullish Engulfing,14 new,CE,24197.5,10:55,trail,-10.25,-18.25
+2026-05-04,11:15,11:20,bullish symmetrical triangle,11 old,CE,24230.2,11:20,retouch,3,-5
+2026-05-04,11:50,11:55,Bearish Engulfing,14 new,PE,24224.9,12:15,trail,80.8,72.8
+2026-05-04,13:25,13:30,falling wedge,11 old,PE,24023.35,13:35,trail,-15.8,-23.8
+2026-05-04,13:35,13:40,Bullish Engulfing,14 new,CE,24038.65,13:55,trail,33.6,25.6
+2026-05-05,11:00,11:05,Bullish Engulfing,14 new,CE,23949.2,11:40,trail,-33.15,-41.15
+2026-05-05,11:40,11:45,Bear Flag,14 new,PE,23915.4,12:05,trail,-4.2,-12.2
+2026-05-06,09:40,09:45,Gap day: break down,14 new,PE,24139.85,09:50,trail,-12.25,-20.25
+2026-05-06,10:35,10:40,Bear Flag,14 new,PE,24123.7,10:40,reclaim,-19.15,-27.15
+2026-05-07,11:30,11:35,Hammer,14 new,CE,24323.55,11:40,reclaim,-35.05,-43.05
+2026-05-07,11:55,12:00,Falling Channel breakout,14 new,CE,24339.7,12:25,trail,15.45,7.45
+2026-05-07,14:15,14:20,VWAP loss,14 new,PE,24342.65,14:20,reclaim,-21.65,-29.65
+2026-05-07,14:35,14:40,Head and Shoulders,14 new,PE,24351.6,14:50,trail,3.4,-4.6
+2026-05-08,09:50,09:55,Doji reversal (up),14 new,CE,24183.35,10:45,trail,39.05,31.05
+2026-05-08,11:15,11:20,Bearish Engulfing,14 new,PE,24214.3,12:25,trail,18.2,10.2
+2026-05-08,14:30,14:35,Inverse Head and Shoulders,14 new,CE,24196.35,14:55,trail,17.3,9.3
+2026-05-11,09:35,09:40,Gap day: break down,14 new,PE,23881.35,09:45,trail,-3.65,-11.65
+2026-05-11,10:15,10:20,Bear Flag,14 new,PE,23850.85,10:50,reclaim,-39,-47
+2026-05-12,10:20,10:25,Bearish Engulfing,14 new,PE,23631.8,10:40,trail,4.25,-3.75
+2026-05-12,12:05,12:10,double bottom,11 old,PE,23559.95,12:15,trail,-12.95,-20.95
+2026-05-12,13:00,13:05,Falling Channel breakout,14 new,CE,23531.7,13:05,reclaim,-20.85,-28.85
+2026-05-13,09:50,09:55,VWAP reclaim,14 new,CE,23367.25,10:35,trail,61.85,53.85
+2026-05-13,10:55,11:00,VWAP loss,14 new,PE,23374.8,11:00,reclaim,-27.25,-35.25
+2026-05-13,12:40,12:45,double top,11 old,PE,23453.55,12:45,reclaim,-14.9,-22.9
+2026-05-14,09:40,09:45,Gap day: break down,14 new,PE,23499,10:00,trail,16.45,8.45
+2026-05-14,10:40,10:45,Bearish Engulfing,14 new,PE,23495.6,10:50,trail,22.6,14.6
+2026-05-14,12:50,12:55,Bearish Engulfing,14 new,PE,23686.15,13:00,reclaim,-52.3,-60.3
+2026-05-14,14:10,14:15,Bearish Engulfing,14 new,PE,23746.45,14:20,trail,6.25,-1.75
+2026-05-14,14:35,14:40,Bearish Engulfing,14 new,PE,23739.75,14:55,trail,29.6,21.6
+2026-05-15,11:00,11:05,VWAP loss,14 new,PE,23782,12:00,trail,27.95,19.95
+2026-05-15,12:10,12:15,Doji reversal (down),14 new,PE,23751,12:15,retouch,10.95,2.95
+2026-05-15,12:45,12:50,VWAP reclaim,14 new,CE,23783.85,13:30,trail,-22.3,-30.3
+2026-05-15,13:30,13:35,VWAP loss,14 new,PE,23761.7,13:50,trail,33,25
+2026-05-15,14:00,14:05,Rounding Top,14 new,PE,23694.4,14:05,reclaim,-19.4,-27.4
+2026-05-15,14:05,14:10,Bullish Engulfing,14 new,CE,23713.55,14:20,trail,-6.8,-14.8
+2026-05-18,10:15,10:20,VWAP reclaim,14 new,CE,23385,10:45,trail,23.65,15.65
+2026-05-18,12:55,13:00,rising wedge,11 old,CE,23637.15,13:05,trail,-26.8,-34.8
+2026-05-18,14:25,14:30,Bullish Engulfing,14 new,CE,23613.5,15:05,trail,24.2,16.2
+2026-05-19,09:30,09:35,Bearish Engulfing,14 new,PE,23684,10:00,trail,-15.25,-23.25
+2026-05-19,11:10,11:15,rising wedge,11 old,PE,23719.75,11:25,trail,-8.1,-16.1
+2026-05-20,09:30,09:35,Gap day: break up,14 new,CE,23521.65,10:00,trail,-17.75,-25.75
+2026-05-20,10:25,10:30,Bullish Engulfing,14 new,CE,23519.9,10:40,trail,12.8,4.8
+2026-05-20,11:45,11:50,rising wedge,11 old,CE,23635.3,11:55,reclaim,-27.15,-35.15
+2026-05-20,12:05,12:10,rising wedge,11 old,PE,23579.95,13:30,trail,-17.1,-25.1
+2026-05-21,10:05,10:10,VWAP loss,14 new,PE,23766.55,10:15,reclaim,-9.95,-17.95
+2026-05-21,10:55,11:00,double bottom,11 old,PE,23726.15,11:20,trail,12.55,4.55
+2026-05-21,12:05,12:10,Inverse Head and Shoulders,14 new,CE,23735.75,12:10,reclaim,-30.7,-38.7
+2026-05-21,13:05,13:10,Hammer,14 new,CE,23637.8,13:45,trail,27.35,19.35
+2026-05-21,14:05,14:10,Rising Channel breakdown,14 new,PE,23642.55,14:10,retouch,-9.6,-17.6
+2026-05-22,09:50,09:55,Opening Range Breakout (up),14 new,CE,23774.35,10:15,trail,-10.25,-18.25
+2026-05-22,11:25,11:30,VWAP loss,14 new,PE,23758.2,11:35,reclaim,-15.85,-23.85
+2026-05-25,09:30,09:35,Bearish Engulfing,14 new,PE,23961.6,10:05,trail,9.3,1.3
+2026-05-25,11:35,11:40,Bullish Engulfing,14 new,CE,23981.7,12:00,trail,-11.9,-19.9
+2026-05-25,12:05,12:10,VWAP loss,14 new,PE,23964.5,12:50,trail,11.9,3.9
+2026-05-25,13:00,13:05,VWAP reclaim,14 new,CE,23972.7,13:35,trail,7.9,-0.1
+2026-05-25,13:35,13:40,Bearish Engulfing,14 new,PE,23981.55,13:45,trail,10.2,2.2
+2026-05-25,14:25,14:30,VWAP reclaim,14 new,CE,23979,15:05,trail,47,39
+2026-05-26,11:10,11:15,rising wedge,11 old,PE,24068.85,11:35,trail,-1.1,-9.1
+2026-05-26,11:35,11:40,Hammer,14 new,CE,24070.15,12:10,reclaim,-48.05,-56.05
+2026-05-27,09:25,09:30,Bearish Engulfing,14 new,PE,23899.9,09:40,trail,-8.7,-16.7
+2026-05-27,10:00,10:05,VWAP reclaim,14 new,CE,23912.1,10:40,trail,23.85,15.85
+2026-05-27,10:50,10:55,Hammer,14 new,CE,23968,11:35,trail,-18.2,-26.2
+2026-05-27,11:35,11:40,rising wedge,11 old,PE,23950.2,12:15,trail,13.35,5.35
+2026-05-27,12:25,12:30,double bottom,11 old,PE,23906.3,12:35,reclaim,-22.9,-30.9
+2026-05-27,12:40,12:45,falling wedge,11 old,CE,23935.75,12:50,reclaim,-24,-32
+2026-05-29,10:00,10:05,VWAP reclaim,14 new,CE,23928.2,10:25,trail,-16.55,-24.55
+2026-05-29,10:25,10:30,VWAP loss,14 new,PE,23911.2,10:55,trail,8.1,0.1
+2026-05-29,11:30,11:35,Bear Flag,14 new,PE,23877.3,11:45,reclaim,-15.65,-23.65
+2026-05-29,11:50,11:55,falling wedge,11 old,CE,23908,11:55,retouch,-17.2,-25.2
+2026-06-01,10:50,10:55,VWAP reclaim,14 new,CE,23592.45,10:55,reclaim,-22.7,-30.7
+2026-06-01,11:00,11:05,VWAP reclaim,14 new,CE,23592.2,11:20,trail,-11.15,-19.15
+2026-06-02,09:50,09:55,Gap day: break up,14 new,CE,23309.85,10:05,trail,-14.4,-22.4
+2026-06-02,10:10,10:15,VWAP loss,14 new,PE,23281.4,10:15,reclaim,-27,-35
+2026-06-03,11:05,11:10,double bottom,11 old,PE,23195.9,11:15,reclaim,-24.2,-32.2
+2026-06-03,12:45,12:50,Shooting Star,14 new,PE,23301.15,13:00,trail,8.95,0.95
+2026-06-03,14:25,14:30,Bearish Engulfing,14 new,PE,23408.45,14:40,reclaim,-31.35,-39.35
+2026-06-04,10:40,10:45,Bullish Engulfing,14 new,CE,23411.05,11:00,trail,-12.65,-20.65
+2026-06-04,11:30,11:35,double bottom,11 old,PE,23401.45,11:35,reclaim,-44.25,-52.25
+2026-06-05,10:00,10:05,Bullish Engulfing,14 new,CE,23468.85,10:10,trail,-0.35,-8.35
+2026-06-05,10:10,10:15,Bearish Engulfing,14 new,PE,23467.7,10:50,trail,84.95,76.95
+2026-06-05,10:50,10:55,Hammer,14 new,CE,23382.75,11:10,trail,61.65,53.65
+2026-06-05,11:10,11:15,Bearish Engulfing,14 new,PE,23443.95,11:45,trail,10.75,2.75
+2026-06-05,12:15,12:20,double bottom,11 old,CE,23436,12:25,reclaim,1,-7
+2026-06-05,12:40,12:45,double top,11 old,PE,23374.9,13:15,trail,19.8,11.8
+2026-06-05,14:10,14:15,Bearish Engulfing,14 new,PE,23320.9,14:25,trail,-30.7,-38.7
+2026-06-05,14:35,14:40,Shooting Star,14 new,PE,23334.5,14:40,reclaim,-64.3,-72.3
+2026-06-08,09:30,09:35,Gap day: break up,14 new,CE,23184.95,09:35,reclaim,-29.35,-37.35
+2026-06-08,09:35,09:40,Bearish Engulfing,14 new,PE,23155.75,09:50,trail,-17.3,-25.3
+2026-06-09,09:45,09:50,Gap day: break down,14 new,PE,23184.75,09:50,reclaim,-28.2,-36.2
+2026-06-09,09:50,09:55,Bullish Engulfing,14 new,CE,23212.05,10:00,reclaim,-43.8,-51.8
+2026-06-10,10:10,10:15,VWAP loss,14 new,PE,23317.3,10:40,reclaim,-28.65,-36.65
+2026-06-10,10:45,10:50,Bull Pennant,14 new,CE,23352.25,11:15,trail,8.2,0.2
+2026-06-10,12:00,12:05,rising wedge,11 old,PE,23382.05,12:10,reclaim,-13.35,-21.35
+2026-06-10,12:25,12:30,Head and Shoulders,14 new,PE,23375.85,12:45,trail,14.2,6.2
+2026-06-10,13:40,13:45,VWAP loss,14 new,PE,23358.3,14:15,trail,30.5,22.5
+2026-06-10,14:35,14:40,Inverted Cup and Handle,14 new,PE,23281.65,15:25,day end,65.55,57.55
+2026-06-11,09:55,10:00,Doji reversal (down),14 new,PE,23117.6,10:05,trail,-37.4,-45.4
+2026-06-11,10:15,10:20,Gap day: break up,14 new,CE,23183.15,10:50,trail,-10.65,-18.65
+2026-06-12,09:40,09:45,Gap day: break down,14 new,PE,23370.6,10:20,trail,15.4,7.4
+2026-06-12,11:10,11:15,double bottom,11 old,CE,23379.1,11:15,reclaim,-17.65,-25.65
+2026-06-12,12:35,12:40,Head and Shoulders,14 new,PE,23343.75,12:50,trail,16.2,8.2
+2026-06-12,13:15,13:20,Falling Channel breakout,14 new,CE,23344.4,13:20,reclaim,-13.35,-21.35
+2026-06-12,13:20,13:25,Bear Flag,14 new,PE,23332.05,13:25,reclaim,-56.9,-64.9
+2026-06-15,10:25,10:30,VWAP reclaim,14 new,CE,23964.9,11:00,trail,17.2,9.2
+2026-06-15,11:40,11:45,Head and Shoulders,14 new,PE,23958.1,12:30,trail,51.8,43.8
+2026-06-15,13:15,13:20,Bearish Engulfing,14 new,PE,23899.75,13:55,trail,-5.9,-13.9
+2026-06-15,13:55,14:00,Hammer,14 new,CE,23907.75,14:45,trail,11.45,3.45
+2026-06-16,10:00,10:05,VWAP loss,14 new,PE,23905.7,10:15,trail,-22.55,-30.55
+2026-06-16,10:30,10:35,Gap day: break up,14 new,CE,23952.7,11:00,trail,-5.95,-13.95
+2026-06-17,10:00,10:05,Bearish Engulfing,14 new,PE,24047.7,10:20,reclaim,-31,-39
+2026-06-17,10:25,10:30,Bearish Engulfing,14 new,PE,24067.8,10:40,reclaim,-17.95,-25.95
+2026-06-18,09:55,10:00,Bearish Engulfing,14 new,PE,24126.85,10:05,trail,-0.1,-8.1
+2026-06-18,10:35,10:40,VWAP loss,14 new,PE,24079.95,10:55,trail,-12.6,-20.6
+2026-06-19,09:35,09:40,Bullish Engulfing,14 new,CE,23970.8,10:00,trail,2.75,-5.25
+2026-06-19,10:10,10:15,Gap day: break up,14 new,CE,24009.85,10:15,reclaim,-16.5,-24.5
+2026-06-19,10:25,10:30,VWAP loss,14 new,PE,23967.35,11:10,trail,2.85,-5.15
+2026-06-19,12:20,12:25,double bottom,11 old,CE,23963.85,12:30,reclaim,1.65,-6.35
+2026-06-19,13:00,13:05,double top,11 old,PE,23916.7,13:25,trail,-11.45,-19.45
+2026-06-19,13:45,13:50,VWAP reclaim,14 new,CE,23961.25,13:50,reclaim,-15.6,-23.6
+2026-06-22,10:05,10:10,Gap day: break up,14 new,CE,24154.7,10:30,reclaim,-16.25,-24.25
+2026-06-22,11:15,11:20,rising wedge,11 old,PE,24152,12:20,trail,26.4,18.4
+2026-06-22,12:45,12:50,falling wedge,11 old,CE,24119.2,13:00,trail,-2.55,-10.55
+2026-06-22,13:15,13:20,Doji reversal (up),14 new,CE,24123.3,14:05,trail,-4.3,-12.3
+2026-06-23,10:40,10:45,VWAP loss,14 new,PE,24106.9,11:05,trail,5.05,-2.95
+2026-06-23,11:10,11:15,VWAP reclaim,14 new,CE,24112.95,11:25,trail,0,-8
+2026-06-24,09:45,09:50,VWAP loss,14 new,PE,23818.35,10:00,reclaim,-75.65,-83.65
+2026-06-24,10:55,11:00,rising wedge,11 old,PE,23952,11:00,retouch,-11.7,-19.7
+2026-06-25,09:55,10:00,Gap day: break up,14 new,CE,24178.65,10:00,retouch,-1.3,-9.3
+2026-06-25,10:50,10:55,Bearish Engulfing,14 new,PE,24181.6,11:10,trail,-14.45,-22.45
+2026-06-29,09:30,09:35,Opening Range Breakout (down),14 new,PE,24018.7,09:35,reclaim,-41.4,-49.4
+2026-06-29,10:45,10:50,rising wedge,11 old,PE,24083.85,11:00,trail,-0.95,-8.95
+2026-06-30,10:00,10:05,VWAP reclaim,14 new,CE,23915.55,10:05,reclaim,-41.35,-49.35
+2026-06-30,10:05,10:10,Bearish Engulfing,14 new,PE,23874.05,11:10,reclaim,-64,-72
+2026-07-01,09:40,09:45,Opening Range Breakout (up),14 new,CE,23943.5,10:00,trail,24.55,16.55
+2026-07-01,10:40,10:45,VWAP loss,14 new,PE,23952.75,10:45,reclaim,-21.1,-29.1
+2026-07-01,11:20,11:25,Bearish Engulfing,14 new,PE,24007.35,11:40,trail,-4.35,-12.35
+2026-07-02,09:35,09:40,Gap day: break up,14 new,CE,24147.9,09:50,trail,-11.75,-19.75
+2026-07-02,10:00,10:05,VWAP loss,14 new,PE,24117,10:15,trail,28.1,20.1
+2026-07-02,12:00,12:05,falling wedge,11 old,CE,24102.9,12:30,trail,19.5,11.5
+2026-07-02,12:30,12:35,Bearish Engulfing,14 new,PE,24123,13:00,trail,-10.6,-18.6
+2026-07-02,13:05,13:10,Bull Flag,14 new,CE,24141.85,13:25,trail,-0.1,-8.1
+2026-07-03,11:05,11:10,VWAP loss,14 new,PE,24334.05,11:35,trail,-1.65,-9.65
+2026-07-03,11:55,12:00,double bottom,11 old,CE,24357.15,12:20,trail,3.7,-4.3
+2026-07-03,13:00,13:05,Head and Shoulders,14 new,PE,24338.45,14:05,trail,47.25,39.25
+2026-07-06,11:15,11:20,rising wedge,11 old,PE,24407.35,11:20,reclaim,-15.9,-23.9
+2026-07-06,12:55,13:00,Bullish Engulfing,14 new,CE,24439,13:15,trail,1.4,-6.6
+2026-07-06,13:15,13:20,Bearish Engulfing,14 new,PE,24440.6,13:35,trail,-11.3,-19.3
+2026-07-06,13:40,13:45,Bearish Engulfing,14 new,PE,24437.7,14:00,trail,20.55,12.55
+2026-07-06,14:05,14:10,VWAP loss,14 new,PE,24408.25,14:20,trail,-2.2,-10.2
+2026-07-06,14:20,14:25,Doji reversal (up),14 new,CE,24410.25,14:40,trail,-13.15,-21.15
+2026-07-07,12:10,12:15,rising wedge,11 old,PE,24504.7,13:25,trail,61.6,53.6
+2026-07-07,13:40,13:45,falling wedge,11 old,CE,24439,14:20,trail,9.35,1.35
+2026-07-08,09:30,09:35,Gap day: break down,14 new,PE,24221.45,09:45,trail,-27.45,-35.45
+2026-07-08,09:45,09:50,VWAP reclaim,14 new,CE,24250.5,10:10,trail,-12.3,-20.3
+2026-07-09,09:35,09:40,Opening Range Breakout (up),14 new,CE,24051,09:40,retouch,-3.8,-11.8
+2026-07-09,10:40,10:45,Bullish Engulfing,14 new,CE,24078.1,10:45,retouch,-62.5,-70.5
+2026-07-10,09:45,09:50,Gap day: break up,14 new,CE,24209.45,10:25,trail,-6.15,-14.15
+2026-07-10,12:55,13:00,Doji reversal (down),14 new,PE,24184.45,13:25,trail,7.9,-0.1
+2026-07-10,13:35,13:40,VWAP reclaim,14 new,CE,24197,14:05,reclaim,-19.6,-27.6
+2026-07-10,14:05,14:10,VWAP loss,14 new,PE,24178.75,14:15,reclaim,-10.35,-18.35
+2026-07-13,09:35,09:40,Gap day: break up,14 new,CE,24068.7,10:05,trail,40.6,32.6
+2026-07-13,11:15,11:20,Shooting Star,14 new,PE,24138.55,11:45,trail,-6.25,-14.25
+2026-07-13,11:45,11:50,Bullish Engulfing,14 new,CE,24145.1,12:55,trail,78.65,70.65
+2026-07-14,10:30,10:35,VWAP reclaim,14 new,CE,24102.45,10:35,retouch,-8.15,-16.15
+2026-07-14,12:05,12:10,Head and Shoulders,14 new,PE,24097,12:35,trail,25.1,17.1
+2026-07-14,13:35,13:40,double top,11 old,PE,24049.35,13:45,reclaim,-17.95,-25.95
+2026-07-14,14:30,14:35,Inverse Head and Shoulders,14 new,CE,24057.9,14:35,retouch,-2.4,-10.4
+2026-07-15,09:35,09:40,Shooting Star,14 new,PE,24196.75,10:10,trail,-5.55,-13.55
+2026-07-15,10:55,11:00,rising wedge,11 old,PE,24184.6,11:00,retouch,-7.7,-15.7
+2026-07-16,09:30,09:35,Gap day: break down,14 new,PE,24112,09:40,reclaim,-28.85,-36.85
+2026-07-16,10:45,10:50,double bottom,11 old,CE,24147.5,11:10,trail,10.4,2.4
+2026-07-16,12:25,12:30,VWAP reclaim,14 new,CE,24160.65,12:40,reclaim,-30.25,-38.25
+2026-07-16,12:50,12:55,double top,11 old,PE,24127.2,13:50,trail,51.95,43.95
+2026-07-16,14:20,14:25,Bearish Engulfing,14 new,PE,24091.8,14:30,trail,-3.35,-11.35
+2026-07-17,10:35,10:40,Bearish Engulfing,14 new,PE,24267.7,11:30,trail,15.1,7.1
+2026-07-17,12:45,12:50,rising wedge,11 old,CE,24294.45,12:50,reclaim,-20.55,-28.55
+2026-07-17,12:50,12:55,Bearish Engulfing,14 new,PE,24274.15,13:55,trail,24.05,16.05
+2026-07-17,13:55,14:00,Hammer,14 new,CE,24247.45,14:20,trail,50,42
+2026-07-20,11:00,11:05,Rising Channel breakdown,14 new,PE,24222.85,11:55,trail,33.35,25.35
+2026-07-20,12:25,12:30,bearish symmetrical triangle,11 old,PE,24172,12:50,trail,7.15,-0.85
+2026-07-20,12:50,12:55,Bullish Engulfing,14 new,CE,24164.85,13:40,trail,63.95,55.95
+2026-07-20,14:00,14:05,Inverse Head and Shoulders,14 new,CE,24261.85,14:10,reclaim,-10.95,-18.95
+2026-07-21,11:20,11:25,Bear Flag,14 new,PE,24177.3,11:30,reclaim,-6.85,-14.85
+2026-07-21,11:40,11:45,double bottom,11 old,PE,24162.65,11:45,reclaim,-1.8,-9.8
+2026-07-22,10:00,10:05,Doji reversal (up),14 new,CE,24027.55,10:05,retouch,23.35,15.35
+2026-07-22,10:05,10:10,VWAP reclaim,14 new,CE,24052.1,10:10,reclaim,-18.65,-26.65
+2026-07-22,11:20,11:25,Inverse Head and Shoulders,14 new,CE,24039.9,11:50,trail,-9.8,-17.8
+2026-07-23,10:50,10:55,Bearish Engulfing,14 new,PE,23967.95,11:00,reclaim,-18.75,-26.75
+2026-07-23,11:25,11:30,VWAP loss,14 new,PE,23946.9,11:30,reclaim,-6.35,-14.35
+2026-07-24,09:35,09:40,Gap day: break down,14 new,PE,23669.8,10:25,trail,47.55,39.55
+2026-07-24,11:15,11:20,VWAP reclaim,14 new,CE,23651.8,11:25,trail,3.9,-4.1
+2026-07-24,11:25,11:30,double bottom,11 old,CE,23655.7,12:10,trail,47.15,39.15
+2026-07-24,13:40,13:45,double top,11 old,PE,23747.9,13:50,reclaim,-36.15,-44.15
+2026-07-27,10:55,11:00,VWAP reclaim,14 new,CE,23935.6,11:10,reclaim,-10.85,-18.85
+2026-07-27,11:25,11:30,Rounding Bottom,14 new,CE,23963.55,11:45,reclaim,-9.35,-17.35
+2026-07-28,10:00,10:05,VWAP loss,14 new,PE,23973.25,10:10,trail,-12.35,-20.35
+2026-07-28,10:35,10:40,VWAP reclaim,14 new,CE,24007.4,11:00,trail,17.05,9.05
+2026-07-28,11:25,11:30,rising wedge,11 old,PE,24014.45,11:40,trail,-6.75,-14.75
+2026-07-28,11:50,11:55,Bearish Engulfing,14 new,PE,24014.1,12:05,trail,-7.35,-15.35
+2026-07-29,09:40,09:45,Gap day: break up,14 new,CE,24211.85,09:50,trail,-6.9,-14.9
+2026-07-29,11:30,11:35,rising wedge,11 old,PE,24229.8,11:40,trail,-2.45,-10.45
+2026-07-30,09:35,09:40,Doji reversal (down),14 new,PE,24258.7,09:45,trail,-12.85,-20.85
+2026-07-30,10:55,11:00,Doji reversal (down),14 new,PE,24256.45,11:00,retouch,-5.45,-13.45
+2026-07-31,09:30,09:35,Gap day: break down,14 new,PE,24312.05,09:40,trail,-37.25,-45.25
+2026-07-31,11:05,11:10,VWAP loss,14 new,PE,24337.1,11:10,reclaim,-20.65,-28.65
+2026-08-03,10:15,10:20,Gap day: break up,14 new,CE,24588.15,10:30,reclaim,-17.8,-25.8
+2026-08-03,11:55,12:00,Bearish Engulfing,14 new,PE,24591.55,12:05,trail,-5.45,-13.45
+2026-08-04,10:05,10:10,VWAP loss,14 new,PE,24613.95,11:00,trail,24.75,16.75
+2026-08-04,11:20,11:25,Bearish Engulfing,14 new,PE,24587.95,12:15,trail,68.2,60.2
+2026-08-04,12:15,12:20,Hammer,14 new,CE,24521.7,12:40,reclaim,-28.35,-36.35
+2026-08-04,12:55,13:00,falling wedge,11 old,CE,24493.4,13:00,retouch,0.25,-7.75
+2026-08-04,13:05,13:10,double bottom,11 old,PE,24486.65,13:20,trail,-5.15,-13.15
+2026-08-04,13:20,13:25,Doji reversal (up),14 new,CE,24492.75,13:25,reclaim,-21.55,-29.55
+2026-08-05,12:30,12:35,double bottom,11 old,PE,24544.3,13:00,trail,13.4,5.4
+2026-08-05,13:20,13:25,Bearish Engulfing,14 new,PE,24526.05,13:45,trail,-1.4,-9.4
+2026-08-05,13:45,13:50,Bullish Engulfing,14 new,CE,24529,15:25,day end,95.65,87.65
+2026-08-06,09:45,09:50,Opening Range Breakout (up),14 new,CE,24660.2,09:55,trail,-23.85,-31.85
+2026-08-06,09:55,10:00,Bearish Engulfing,14 new,PE,24637.55,10:10,trail,6.7,-1.3
+2026-08-06,10:45,10:50,VWAP loss,14 new,PE,24626.05,11:05,reclaim,-12.3,-20.3
+2026-08-06,11:30,11:35,Bearish Engulfing,14 new,PE,24660.65,11:50,trail,15.35,7.35
+2026-08-06,12:20,12:25,VWAP loss,14 new,PE,24636.1,12:30,reclaim,-9.2,-17.2
+2026-08-06,12:40,12:45,bullish symmetrical triangle,11 old,CE,24646.2,12:45,reclaim,-9.9,-17.9
+2026-08-07,10:00,10:05,Bearish Engulfing,14 new,PE,24614.95,10:45,trail,37.85,29.85
+2026-08-07,11:20,11:25,falling wedge,11 old,CE,24578.7,11:45,trail,-14.7,-22.7
+2026-08-07,12:10,12:15,double top,11 old,PE,24543.3,12:25,trail,-6.7,-14.7
+2026-08-10,10:15,10:20,VWAP reclaim,14 new,CE,24574.95,10:50,trail,13.05,5.05
+2026-08-10,11:30,11:35,Bearish Engulfing,14 new,PE,24585.85,11:45,trail,-5.4,-13.4
+2026-08-10,12:20,12:25,Shooting Star,14 new,PE,24602.8,13:15,trail,15.95,7.95
+2026-08-10,13:15,13:20,Bullish Engulfing,14 new,CE,24586.95,13:55,trail,4.9,-3.1
+2026-08-10,14:05,14:10,Bullish Engulfing,14 new,CE,24597.2,14:30,reclaim,-14.75,-22.75
+2026-08-10,14:30,14:35,bearish symmetrical triangle,11 old,PE,24582.05,14:55,trail,14.2,6.2
+2026-08-11,09:55,10:00,Bullish Engulfing,14 new,CE,24486.4,10:10,trail,-13.4,-21.4
+2026-08-11,11:00,11:05,double bottom,11 old,PE,24452,11:45,trail,-1.4,-9.4
+2026-08-12,10:40,10:45,Bear Flag,14 new,PE,24376.15,12:15,trail,98.7,90.7
+2026-08-12,14:15,14:20,Inverse Head and Shoulders,14 new,CE,24291,15:00,trail,72.7,64.7
+2026-08-13,10:55,11:00,Doji reversal (down),14 new,PE,24339.85,11:25,trail,1.05,-6.95
+2026-08-13,11:35,11:40,double bottom,11 old,CE,24360.2,12:10,trail,35.45,27.45
+2026-08-13,13:30,13:35,Head and Shoulders,14 new,PE,24353.1,13:35,reclaim,-10.35,-18.35
+2026-08-13,13:45,13:50,bullish symmetrical triangle,11 old,CE,24381.35,13:50,retouch,4,-4
+2026-08-13,14:00,14:05,Bearish Engulfing,14 new,PE,24380.05,14:20,trail,7.25,-0.75
+2026-08-14,11:40,11:45,Inverse Head and Shoulders,14 new,CE,24328,12:00,trail,-6.3,-14.3
+2026-08-14,12:05,12:10,VWAP reclaim,14 new,CE,24335.75,12:30,trail,8.75,0.75
+2026-08-14,13:30,13:35,VWAP loss,14 new,PE,24329.75,13:35,reclaim,-18.55,-26.55
+2026-08-14,13:35,13:40,Bullish Engulfing,14 new,CE,24348.7,14:10,trail,34.85,26.85
+2026-08-17,10:50,10:55,Doji reversal (up),14 new,CE,24241.65,13:45,trail,102.05,94.05
+2026-08-17,13:45,13:50,Bearish Engulfing,14 new,PE,24343.7,14:15,trail,4.55,-3.45
+2026-08-17,14:20,14:25,rising wedge,11 old,PE,24324.8,14:40,reclaim,-10.6,-18.6
+2026-08-17,14:40,14:45,Doji reversal (up),14 new,CE,24334.4,15:10,trail,5.2,-2.8
+2026-08-18,09:30,09:35,Shooting Star,14 new,PE,24233.5,09:50,trail,-1.8,-9.8
+2026-08-18,11:00,11:05,Hammer,14 new,CE,24205.5,11:15,trail,-7.75,-15.75
+2026-08-19,09:40,09:45,Hammer,14 new,CE,24085.35,09:45,retouch,8.8,0.8
+2026-08-19,10:15,10:20,Bear Pennant,14 new,PE,24074.45,10:50,trail,13.15,5.15
+2026-08-19,11:25,11:30,falling wedge,11 old,CE,24056.75,11:30,retouch,-2.5,-10.5
+2026-08-19,11:45,11:50,Inverse Head and Shoulders,14 new,CE,24068.95,12:00,trail,-9.15,-17.15
+2026-08-20,11:20,11:25,double top,11 old,PE,24197.9,11:25,retouch,-3.1,-11.1
+2026-08-20,12:35,12:40,Inverse Head and Shoulders,14 new,CE,24217,13:15,trail,24,16
+2026-08-20,14:20,14:25,Hammer,14 new,CE,24240.35,14:40,trail,-3.35,-11.35
+2026-08-21,10:05,10:10,VWAP loss,14 new,PE,24225.5,10:10,reclaim,-10.2,-18.2
+2026-08-21,11:35,11:40,rising wedge,11 old,PE,24257.3,12:20,trail,16.55,8.55
+2026-08-21,12:35,12:40,Bearish Engulfing,14 new,PE,24236.4,13:00,trail,-4.65,-12.65
+2026-08-21,13:05,13:10,double bottom,11 old,CE,24250.35,13:10,reclaim,-6.35,-14.35
+2026-08-24,10:45,10:50,Bear Flag,14 new,PE,24272.35,11:40,trail,85.2,77.2
+2026-08-24,11:40,11:45,Doji reversal (up),14 new,CE,24188.2,11:55,trail,-7,-15
+2026-08-24,12:05,12:10,falling wedge,11 old,CE,24195.3,12:35,reclaim,-15.2,-23.2
+2026-08-25,10:45,10:50,VWAP reclaim,14 new,CE,24157.6,10:55,reclaim,-14.9,-22.9
+2026-08-25,13:00,13:05,VWAP loss,14 new,PE,24145.55,13:35,trail,7.95,-0.05
+2026-08-25,13:50,13:55,VWAP reclaim,14 new,CE,24179.1,15:25,day end,155.45,147.45
+2026-08-26,09:40,09:45,Opening Range Breakout (up),14 new,CE,24371.35,10:00,reclaim,-13.35,-21.35
+2026-08-26,10:05,10:10,VWAP loss,14 new,PE,24345.8,10:30,trail,27.75,19.75
+2026-08-26,11:35,11:40,Hammer,14 new,CE,24309.3,11:50,reclaim,-24.15,-32.15
+2026-08-26,11:50,11:55,double bottom,11 old,PE,24286.1,12:10,trail,5.35,-2.65
+2026-08-26,14:10,14:15,Falling Channel breakout,14 new,CE,24272.8,15:00,trail,14.7,6.7
+2026-08-27,11:05,11:10,Hammer,14 new,CE,24167.1,11:10,retouch,-11.25,-19.25
+2026-08-27,12:10,12:15,Bullish Engulfing,14 new,CE,24154.85,13:15,trail,31.45,23.45
+2026-08-27,13:40,13:45,VWAP loss,14 new,PE,24163.65,14:10,trail,31.9,23.9
+2026-08-28,10:10,10:15,Gap day: break up,14 new,CE,24168.25,10:30,trail,-7.45,-15.45
+2026-08-28,11:05,11:10,Head and Shoulders,14 new,PE,24143.05,11:10,reclaim,-17.9,-25.9
+2026-08-31,10:00,10:05,Doji reversal (up),14 new,CE,24034.35,10:15,reclaim,-22.2,-30.2
+2026-08-31,11:50,11:55,Rounding Bottom,14 new,CE,24074.25,12:05,trail,-10,-18
+2026-09-01,09:45,09:50,Opening Range Breakout (down),14 new,PE,24021.35,10:00,reclaim,-11.6,-19.6
+2026-09-01,10:15,10:20,VWAP reclaim,14 new,CE,24052.3,11:00,trail,25.1,17.1
+2026-09-01,11:35,11:40,Shooting Star,14 new,PE,24113.4,12:00,trail,-7.9,-15.9
+2026-09-01,12:10,12:15,Bearish Engulfing,14 new,PE,24118.5,12:25,trail,8.85,0.85
+2026-09-01,13:05,13:10,VWAP loss,14 new,PE,24075.8,13:20,trail,18.9,10.9
+2026-09-01,13:45,13:50,Head and Shoulders,14 new,PE,24019.65,14:15,trail,54,46
+2026-09-02,10:35,10:40,Doji reversal (down),14 new,PE,23864.4,11:50,trail,40.05,32.05
+2026-09-02,11:50,11:55,Doji reversal (up),14 new,CE,23825.2,11:55,retouch,-12.25,-20.25
+2026-09-02,12:30,12:35,VWAP reclaim,14 new,CE,23848.85,13:05,trail,8.9,0.9
+2026-09-02,13:20,13:25,Cup and Handle,14 new,CE,23877.65,13:35,reclaim,-14.1,-22.1
+2026-09-02,13:35,13:40,Rising Channel breakdown,14 new,PE,23863.5,14:05,reclaim,-28.9,-36.9
+2026-09-03,10:10,10:15,VWAP loss,14 new,PE,23993.55,10:15,reclaim,-4.7,-12.7
+2026-09-03,10:25,10:30,VWAP loss,14 new,PE,23987.4,11:15,trail,38.5,30.5
+2026-09-03,11:40,11:45,Doji reversal (down),14 new,PE,23967.15,12:35,trail,51.95,43.95
+2026-09-03,13:20,13:25,Bear Flag,14 new,PE,23913.55,13:30,reclaim,-16.6,-24.6
+2026-09-03,13:30,13:35,Hammer,14 new,CE,23932,13:35,retouch,-21.25,-29.25
+2026-09-04,09:45,09:50,VWAP reclaim,14 new,CE,23926.25,10:05,trail,19.65,11.65
+2026-09-04,10:45,10:50,rising wedge,11 old,PE,23959.3,11:20,reclaim,-20.6,-28.6
+2026-09-04,11:40,11:45,Bearish Engulfing,14 new,PE,23981.85,13:05,trail,38.1,30.1
+2026-09-04,13:45,13:50,falling wedge,11 old,CE,23950.9,13:50,reclaim,-9.3,-17.3
+2026-09-04,14:25,14:30,double bottom,11 old,CE,23958.95,14:30,reclaim,-2.6,-10.6
+2026-09-07,12:45,12:50,descending triangle,11 old,PE,23753.85,13:05,trail,2.45,-5.55
+2026-09-07,13:35,13:40,falling wedge,11 old,CE,23761.3,13:40,retouch,0.5,-7.5
+2026-09-07,13:40,13:45,falling wedge,11 old,CE,23763.5,13:45,retouch,2.45,-5.55
+2026-09-07,14:05,14:10,Bearish Engulfing,14 new,PE,23773.4,14:20,trail,-6.8,-14.8
+2026-09-07,14:30,14:35,Bearish Engulfing,14 new,PE,23776.8,15:10,trail,17.4,9.4
+2026-09-08,10:35,10:40,VWAP loss,14 new,PE,23673,10:45,trail,-16.25,-24.25
+2026-09-08,11:50,11:55,double bottom,11 old,PE,23669.1,12:20,trail,10.25,2.25
+2026-09-08,12:40,12:45,Bearish Engulfing,14 new,PE,23660.8,13:10,trail,-0.5,-8.5
+2026-09-08,13:25,13:30,bearish symmetrical triangle,11 old,PE,23648.45,14:00,trail,3.6,-4.4
+2026-09-09,09:45,09:50,VWAP loss,14 new,PE,23498.6,10:10,trail,13.75,5.75
+2026-09-09,10:15,10:20,VWAP reclaim,14 new,CE,23518.25,10:30,trail,7.55,-0.45
+2026-09-09,11:10,11:15,rising wedge,11 old,PE,23527,11:40,trail,-1.75,-9.75
+2026-09-09,11:50,11:55,bearish symmetrical triangle,11 old,PE,23503.3,12:10,trail,15.5,7.5
+2026-09-09,12:30,12:35,double bottom,11 old,CE,23548.55,12:50,trail,0,-8
+2026-09-09,14:10,14:15,Shooting Star,14 new,PE,23546.9,15:05,trail,76.9,68.9
+2026-09-10,10:35,10:40,VWAP reclaim,14 new,CE,23436.95,10:45,trail,-12.8,-20.8
+2026-09-10,10:45,10:50,Bearish Engulfing,14 new,PE,23426.2,11:10,trail,-12.75,-20.75
+2026-09-11,10:05,10:10,Gap day: break up,14 new,CE,23285.6,10:25,trail,-10.15,-18.15
+2026-09-11,10:25,10:30,Bearish Engulfing,14 new,PE,23276.8,11:10,reclaim,-61.1,-69.1
+2026-09-15,12:45,12:50,Bullish Engulfing,14 new,CE,23326.9,12:55,trail,-18.3,-26.3
+2026-09-15,13:05,13:10,descending triangle,11 old,PE,23304.9,13:10,retouch,9.95,1.95
+2026-09-15,14:15,14:20,falling wedge,11 old,PE,23197.65,14:50,trail,19.9,11.9
+2026-09-16,09:35,09:40,Gap day: break down,14 new,PE,23150.65,09:45,trail,-1.55,-9.55
+2026-09-16,09:50,09:55,VWAP reclaim,14 new,CE,23212.4,10:00,trail,-28.5,-36.5
+2026-09-17,10:15,10:20,Bearish Engulfing,14 new,PE,23297.15,11:15,trail,50.45,42.45
+2026-09-17,11:40,11:45,VWAP reclaim,14 new,CE,23276.75,12:00,trail,23.4,15.4
+2026-09-17,12:05,12:10,Rounding Bottom,14 new,CE,23334.45,12:40,trail,12.4,4.4
+2026-09-17,13:25,13:30,VWAP loss,14 new,PE,23266,13:45,trail,-2.15,-10.15
+2026-09-17,14:35,14:40,VWAP reclaim,14 new,CE,23305.7,14:40,reclaim,-18.9,-26.9
+2026-09-18,09:35,09:40,Bullish Engulfing,14 new,CE,23317,10:20,trail,-10.3,-18.3
+2026-09-18,10:20,10:25,VWAP loss,14 new,PE,23306.4,11:45,trail,-4.2,-12.2
+2026-09-21,10:00,10:05,VWAP loss,14 new,PE,23382.5,10:40,trail,5.9,-2.1
+2026-09-21,11:15,11:20,Bearish Engulfing,14 new,PE,23390.9,11:30,reclaim,-14.15,-22.15
+2026-09-21,11:50,11:55,Cup and Handle,14 new,CE,23416.25,12:05,trail,-1,-9
+2026-09-22,10:20,10:25,VWAP loss,14 new,PE,23444.05,10:55,trail,55.5,47.5
+2026-09-22,10:55,11:00,Bullish Engulfing,14 new,CE,23389,11:00,retouch,-14.15,-22.15
+2026-09-22,12:15,12:20,falling wedge,11 old,CE,23366.85,12:25,reclaim,-8.65,-16.65
+2026-09-23,11:15,11:20,Bearish Engulfing,14 new,PE,23424.45,12:00,reclaim,-23.6,-31.6
+2026-09-23,12:10,12:15,ascending triangle,11 old,CE,23459.4,12:20,trail,-5.7,-13.7
+2026-09-24,10:50,10:55,VWAP reclaim,14 new,CE,23237.55,11:05,trail,-17,-25
+2026-09-24,11:35,11:40,rising wedge,11 old,PE,23211.75,12:00,trail,3.7,-4.3
+2026-09-24,12:20,12:25,double bottom,11 old,PE,23195.45,13:00,trail,14.25,6.25
+2026-09-24,13:00,13:05,Falling Channel breakout,14 new,CE,23181.65,13:25,trail,-34.45,-42.45
+2026-09-24,14:35,14:40,double bottom,11 old,CE,23103.1,14:40,reclaim,-10.9,-18.9
+2026-09-25,10:00,10:05,VWAP reclaim,14 new,CE,23080.65,10:25,trail,4.75,-3.25
+2026-09-25,10:30,10:35,VWAP loss,14 new,PE,23063.75,10:55,trail,-0.1,-8.1
+2026-09-25,11:15,11:20,bullish symmetrical triangle,11 old,CE,23095.2,11:20,reclaim,-9.05,-17.05
+2026-09-28,11:25,11:30,falling wedge,11 old,CE,22831.35,11:50,trail,0.75,-7.25
+2026-09-28,12:25,12:30,double bottom,11 old,CE,22854.95,12:30,reclaim,-15.9,-23.9
+2026-09-28,12:30,12:35,Bearish Engulfing,14 new,PE,22839.95,13:15,trail,8.35,0.35
+2026-09-28,13:30,13:35,Bearish Engulfing,14 new,PE,22831.1,14:40,trail,52.3,44.3
+2026-09-29,11:00,11:05,Bear Flag,14 new,PE,22599.65,11:05,reclaim,-17.35,-25.35
+2026-09-29,13:35,13:40,Rising Channel breakdown,14 new,PE,22635.5,13:45,reclaim,-20.3,-28.3
+2026-09-30,10:30,10:35,VWAP loss,14 new,PE,22714.15,11:00,trail,-9.4,-17.4
+2026-09-30,11:15,11:20,Head and Shoulders,14 new,PE,22680.75,11:25,reclaim,-19.25,-27.25
+2026-10-01,10:00,10:05,Gap day: break up,14 new,CE,22599.5,10:05,reclaim,-15.95,-23.95
+2026-10-01,10:45,10:50,VWAP loss,14 new,PE,22555.3,10:55,reclaim,-7,-15
+2026-10-05,09:30,09:35,Gap day: break up,14 new,CE,22589.2,09:55,trail,-22.3,-30.3
+2026-10-05,11:35,11:40,Bearish Engulfing,14 new,PE,22477.05,12:00,trail,27.3,19.3
+2026-10-05,12:50,12:55,Bearish Engulfing,14 new,PE,22444.65,13:35,reclaim,-62.3,-70.3
+2026-10-05,13:35,13:40,VWAP reclaim,14 new,CE,22508.75,13:45,trail,32.9,24.9
+2026-10-06,09:50,09:55,Gap day: break up,14 new,CE,22642.5,10:05,trail,-14.7,-22.7
+2026-10-06,11:45,11:50,rising wedge,11 old,CE,22699.15,11:50,reclaim,-18.55,-26.55
+2026-10-07,09:40,09:45,Bullish Engulfing,14 new,CE,22617.7,10:30,trail,40.15,32.15
+2026-10-07,10:30,10:35,Bearish Engulfing,14 new,PE,22659.25,10:40,trail,-0.3,-8.3
+2026-10-07,11:30,11:35,rising wedge,11 old,PE,22671.9,12:00,reclaim,-42.3,-50.3
+2026-10-08,10:20,10:25,Inverse Head and Shoulders,14 new,CE,22458.5,10:25,retouch,6.4,-1.6
+2026-10-08,10:25,10:30,Hammer,14 new,CE,22466.3,10:30,retouch,-14.75,-22.75
+2026-10-08,12:15,12:20,Bear Flag,14 new,PE,22327.3,12:40,trail,34,26
+2026-10-08,14:10,14:15,falling wedge,11 old,CE,22236.85,14:15,reclaim,-22.35,-30.35
+2026-10-08,14:40,14:45,Bearish Engulfing,14 new,PE,22226.35,15:10,trail,10.55,2.55
+2026-10-09,09:30,09:35,Gap day: break up,14 new,CE,22394,10:30,trail,98.25,90.25
+2026-10-09,11:55,12:00,VWAP loss,14 new,PE,22450.8,12:05,reclaim,-43.4,-51.4
+2026-10-09,12:45,12:50,bullish symmetrical triangle,11 old,CE,22490.7,13:00,trail,-4.25,-12.25
+2026-10-12,10:35,10:40,Doji reversal (up),14 new,CE,22482.5,10:40,retouch,-22.15,-30.15
+2026-10-12,11:20,11:25,Doji reversal (up),14 new,CE,22398.2,11:25,retouch,-12.1,-20.1
+2026-10-13,10:00,10:05,Doji reversal (down),14 new,PE,22562.35,10:45,trail,38.1,30.1
+2026-10-13,11:35,11:40,VWAP reclaim,14 new,CE,22527.1,11:40,reclaim,-21.3,-29.3
+2026-10-13,12:15,12:20,double bottom,11 old,CE,22531.15,13:00,trail,2.35,-5.65
+2026-10-13,13:00,13:05,rising wedge,11 old,PE,22535.45,13:05,reclaim,-8.85,-16.85
+2026-10-13,13:15,13:20,Bearish Engulfing,14 new,PE,22545.35,13:30,trail,0.7,-7.3
+2026-10-13,14:15,14:20,Rounding Bottom,14 new,CE,22599.3,14:55,trail,80.7,72.7
+2026-10-14,09:50,09:55,Bearish Engulfing,14 new,PE,22708,10:15,trail,10.75,2.75
+2026-10-14,11:00,11:05,Bearish Engulfing,14 new,PE,22716.65,11:40,trail,19.5,11.5
+2026-10-14,11:40,11:45,Hammer,14 new,CE,22697.6,12:35,trail,20.75,12.75
+2026-10-14,13:00,13:05,double top,11 old,PE,22611.9,13:20,trail,27.45,19.45
+2026-10-14,14:00,14:05,Doji reversal (down),14 new,PE,22637.35,14:25,trail,10.25,2.25
+2026-10-15,14:15,14:20,Bullish Engulfing,14 new,CE,23039.1,14:25,reclaim,-36.4,-44.4
+2026-10-16,09:40,09:45,Doji reversal (up),14 new,CE,22974.75,10:40,trail,125.8,117.8
+2026-10-16,10:55,11:00,Doji reversal (up),14 new,CE,23111.45,11:05,reclaim,-43.2,-51.2
+2026-10-16,11:25,11:30,bullish symmetrical triangle,11 old,CE,23118.5,11:30,retouch,3.2,-4.8
+2026-10-16,12:20,12:25,Bearish Engulfing,14 new,PE,23107.3,13:05,trail,-8.1,-16.1
+2026-10-16,13:25,13:30,Doji reversal (down),14 new,PE,23125.25,14:40,trail,30.25,22.25
+2026-10-19,09:55,10:00,VWAP loss,14 new,PE,23042.45,10:25,reclaim,-61.2,-69.2
+2026-10-19,10:25,10:30,VWAP reclaim,14 new,CE,23104.35,10:30,reclaim,-24.35,-32.35
+2026-10-21,09:45,09:50,VWAP loss,14 new,PE,23059.1,10:25,trail,104.2,96.2
+2026-10-21,12:50,12:55,falling wedge,11 old,CE,22749.6,12:55,retouch,22,14
+2026-10-21,13:10,13:15,double top,11 old,PE,22708.5,13:15,reclaim,-32.3,-40.3
+2026-10-21,13:40,13:45,double bottom,11 old,PE,22705.2,14:00,reclaim,-4.8,-12.8
+2026-10-22,09:40,09:45,Gap day: break up,14 new,CE,22646.8,10:00,reclaim,-57.55,-65.55
+2026-10-22,10:00,10:05,VWAP loss,14 new,PE,22589.6,10:05,reclaim,-27.8,-35.8
+2026-10-23,10:20,10:25,Bullish Engulfing,14 new,CE,22516.3,10:30,trail,-40.15,-48.15
+2026-10-23,10:40,10:45,Doji reversal (up),14 new,CE,22503.6,11:25,trail,-34.15,-42.15
+2026-10-26,09:50,09:55,Gap day: break up,14 new,CE,22551.15,10:25,trail,97.1,89.1
+2026-10-26,12:30,12:35,Inverse Head and Shoulders,14 new,CE,22628.5,12:35,reclaim,-27.1,-35.1
+2026-10-26,12:45,12:50,rising wedge,11 old,PE,22572.8,13:00,reclaim,-30.5,-38.5
+2026-10-27,10:20,10:25,VWAP loss,14 new,PE,22701.75,10:30,reclaim,-39.15,-47.15
+2026-10-27,11:15,11:20,VWAP loss,14 new,PE,22736.05,11:25,reclaim,-13.75,-21.75
+2026-10-28,10:00,10:05,VWAP loss,14 new,PE,22561.75,10:35,trail,13.3,5.3
+2026-10-28,10:55,11:00,VWAP reclaim,14 new,CE,22578.8,11:10,trail,6.55,-1.45
+2026-10-28,12:10,12:15,Bearish Engulfing,14 new,PE,22640.65,12:30,trail,-22.6,-30.6
+2026-10-28,12:35,12:40,Cup and Handle,14 new,CE,22678.5,13:00,trail,59.05,51.05
+2026-10-29,09:40,09:45,Bearish Engulfing,14 new,PE,22742,09:50,trail,-17.3,-25.3
+2026-10-29,13:50,13:55,triple top,11 old,CE,22892.75,14:05,trail,-2.75,-10.75
+2026-10-30,09:25,09:30,Bullish Engulfing,14 new,CE,22963.5,09:35,trail,10.2,2.2
+2026-10-30,10:00,10:05,VWAP loss,14 new,PE,22961.3,10:35,trail,26.35,18.35
+2026-10-30,10:50,10:55,VWAP reclaim,14 new,CE,22962.35,12:10,trail,112.75,104.75
+2026-10-30,13:25,13:30,double top,11 old,PE,23053.45,14:10,trail,28.25,20.25
