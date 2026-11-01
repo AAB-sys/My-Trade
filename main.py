@@ -1506,12 +1506,14 @@ HISTORY_MAX_DAYS = 5 * 366  # Dhan keeps about five years of minute candles
 
 
 @app.get("/download/candles")
-async def download_candles(index: str, from_day: str = Query(alias="from"), to_day: str = Query(alias="to"), size: int = 5):
+async def download_candles(index: str, from_day: str = Query(alias="from"), to_day: str = Query(alias="to"), size: int = 5, store: str = ""):
     """A file of an index's minute candles, for a replay of the rules on the owner's own computer or here (the owner, 1 November:
     "run all the live rules from the Calls with Signals page ... 2 years of data of Nifty 50"; the button on the Main Menu).
     Six columns, one row a candle: Date, Time (IST, the candle's start), Open, High, Low, Close, as a CSV that Excel opens.
     The candles come from Dhan in pieces of 90 days (dhan.history), with the token that is on the server: nothing is kept
-    on the server, nothing of the rules is touched. 5-minute candles by default; size=1 gives the 1-minute ones."""
+    on the server, nothing of the rules is touched. 5-minute candles by default; size=1 gives the 1-minute ones.
+    store=github (the owner, 1 November: "store this file on git hub for the data analysis purpose"): the same file is put on
+    the data branch instead, under history/, with the GitHub token the daily save uses; the answer says where it went."""
     key = known_index(index)
     if not DHAN_ON or key not in dhan.QUOTE_IDS:
         raise HTTPException(status_code=503, detail="Dhan is not set up on this server, so there are no candles to download.")
@@ -1537,6 +1539,15 @@ async def download_candles(index: str, from_day: str = Query(alias="from"), to_d
         t = datetime.fromtimestamp(b["time"], dhan.IST)
         lines.append(f"{t:%Y-%m-%d},{t:%H:%M},{b['open']:.2f},{b['high']:.2f},{b['low']:.2f},{b['close']:.2f}")
     name = f"{key.replace(' ', '')}_{size}min_{first.isoformat()}_{last.isoformat()}.csv"
+    if store == "github":
+        if not record.TOKEN:
+            raise HTTPException(status_code=503, detail="GitHub is not set up on this server (GITHUB_DATA_TOKEN), so the file cannot be saved there. Download it instead.")
+        rel = f"history/{name}"
+        try:
+            await asyncio.to_thread(record.push_bytes, rel, ("\n".join(lines) + "\n").encode(), f"Candles {key} {size} min, {first.isoformat()} to {last.isoformat()}")
+        except record.RecordError as exc:
+            raise HTTPException(status_code=502, detail=f"The candles came ({len(bars)}), but GitHub did not take the file: {exc}")
+        return {"saved": rel, "repo": record.REPO, "branch": record.BRANCH, "candles": len(bars), "url": f"https://github.com/{record.REPO}/blob/{record.BRANCH}/{rel}"}
     return Response("\n".join(lines) + "\n", media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store", "X-Candles": str(len(bars))})
 
