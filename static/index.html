@@ -354,8 +354,8 @@
     const today = new Date(), back = new Date(today); back.setFullYear(back.getFullYear() - 2);
     from.value = iso(back); to.value = iso(today); to.max = iso(today);
     const say = (text, bad) => { status.textContent = text; status.classList.toggle("bad", !!bad); };
-    let fade = null;  // the result line goes back to the hint after 10 minutes (the owner, 1 November: "after 10 minutes, remove this message. Dont need this message all the time")
-    const later = () => { clearTimeout(fade); fade = setTimeout(() => say(hint), 10 * 60 * 1000); };
+    let fade = null;  // the result line goes back to the hint after 5 minutes (the owner, 1 November: "after 10 minutes, remove this message. Dont need this message all the time", then "make it after 5 minutes")
+    const later = () => { clearTimeout(fade); fade = setTimeout(() => say(hint), 5 * 60 * 1000); };
     const show = (on) => { panel.hidden = !on; box.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };
     btn.addEventListener("click", () => show(!box.classList.contains("open")));
     document.addEventListener("click", (e) => { if (!box.contains(e.target)) show(false); });
