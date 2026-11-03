@@ -1308,15 +1308,32 @@
   "index_at_entry": 23690.45,
   "premium_paid": 63.55,
   "paid_at": "2026-11-03T12:10:11+05:30",
-  "premium_now": 82.05,
-  "now_at": "2026-11-03T12:14:05+05:30",
+  "premium_now": 82.35,
+  "now_at": "2026-11-03T12:15:13+05:30",
   "sell_below": 41.31,
   "sold": null,
   "ended": null,
   "security_id": 54099,
   "premium_low": 63.55,
   "premium_low_at": "2026-11-03T12:10:11+05:30",
-  "stop15": null
+  "stop15": null,
+  "lock": {
+   "MAX": {
+    "at": "2026-11-03T12:15:03+05:30",
+    "premium": 83.75,
+    "from": "live"
+   },
+   "STEADY": {
+    "at": "2026-11-03T12:15:03+05:30",
+    "premium": 83.75,
+    "from": "live"
+   },
+   "RUNNER": {
+    "at": "2026-11-03T12:15:03+05:30",
+    "premium": 83.75,
+    "from": "live"
+   }
+  }
  },
  {
   "key": "SENSEX|5m|1793687700|PE|today",
@@ -1327,8 +1344,8 @@
   "index_at_entry": 76613.75,
   "premium_paid": 550.2,
   "paid_at": "2026-11-03T12:10:27+05:30",
-  "premium_now": 568.85,
-  "now_at": "2026-11-03T12:14:05+05:30",
+  "premium_now": 570.0,
+  "now_at": "2026-11-03T12:15:13+05:30",
   "sell_below": 357.63,
   "sold": null,
   "ended": null,
