@@ -1707,8 +1707,8 @@
   "index_at_entry": 76635.97,
   "premium_paid": 394.4,
   "paid_at": "2026-11-03T13:11:55+05:30",
-  "premium_now": 464.8,
-  "now_at": "2026-11-03T13:50:21+05:30",
+  "premium_now": 445.3,
+  "now_at": "2026-11-03T13:54:29+05:30",
   "sell_below": 256.36,
   "sold": null,
   "ended": null,
@@ -1856,14 +1856,14 @@
   "index_at_entry": 55675.75,
   "premium_paid": 729.0,
   "paid_at": "2026-11-03T13:43:12+05:30",
-  "premium_now": 746.65,
-  "now_at": "2026-11-03T13:50:20+05:30",
+  "premium_now": 758.05,
+  "now_at": "2026-11-03T13:54:27+05:30",
   "sell_below": 473.85,
   "sold": null,
   "ended": null,
   "security_id": 62175,
-  "premium_low": 719.25,
-  "premium_low_at": "2026-11-03T13:41:00+05:30",
+  "premium_low": 696.0,
+  "premium_low_at": "2026-11-03T13:51:22+05:30",
   "stop15": null,
   "late": {
    "paid": "2026-11-03T13:40:00+05:30",
@@ -1879,14 +1879,14 @@
   "index_at_entry": 23729.95,
   "premium_paid": 46.1,
   "paid_at": "2026-11-03T13:47:13+05:30",
-  "premium_now": 53.0,
-  "now_at": "2026-11-03T13:50:21+05:30",
+  "premium_now": 58.55,
+  "now_at": "2026-11-03T13:54:29+05:30",
   "sell_below": 29.97,
   "sold": null,
   "ended": null,
   "security_id": 54101,
-  "premium_low": 45.65,
-  "premium_low_at": "2026-11-03T13:46:00+05:30",
+  "premium_low": 40.75,
+  "premium_low_at": "2026-11-03T13:51:19+05:30",
   "stop15": null,
   "late": {
    "paid": "2026-11-03T13:45:00+05:30",
@@ -1903,6 +1903,29 @@
     "premium": 57.55,
     "from": "live"
    }
+  }
+ },
+ {
+  "key": "NIFTY BANK|5m|1793693700|PE|close",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-11-23",
+  "strike": 55600.0,
+  "index_at_entry": 55549.0,
+  "premium_paid": 715.0,
+  "paid_at": "2026-11-03T13:54:11+05:30",
+  "premium_now": 714.15,
+  "now_at": "2026-11-03T13:54:29+05:30",
+  "sell_below": 464.75,
+  "sold": null,
+  "ended": null,
+  "security_id": 62173,
+  "premium_low": 655.5,
+  "premium_low_at": "2026-11-03T13:51:00+05:30",
+  "stop15": null,
+  "late": {
+   "paid": "2026-11-03T13:50:00+05:30",
+   "sold": null
   }
  }
 ]
