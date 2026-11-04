@@ -217,6 +217,21 @@ running average the rule reads (`MorePat.vwapSeries`), so the line is exactly wh
 is labelled "VWAP at call": it is the call's level, the VWAP at its signal candle, which the call's exit watches; it does not move.
 The line is drawn on the index the rule runs on (NIFTY 50) and only on the Calls with Signals view; nothing in any rule changed.
 
+**The 1 ATR guide** (4 November, the owner, on a VWAP reclaim call: "Why target is not given here? How can I guess where to exit?"):
+VWAP reclaim and loss, Engulfing, Hammer and Shooting Star and Doji have no pattern target in the owner's document (a pattern's target is
+its height or depth added to its line; these four have no such height), so their Call Target cell showed "—" and only the stop. Now
+the cell shows "guide" and one ATR from the call's entry, in its direction (the ATR as of the candle before the signal candle), and an
+open call draws it on the chart as a dashed line named "1 ATR guide". **It is a guide only: nothing is sold there.** The call is still
+sold by its stop, Rule 1 and then the trail, exactly as before; the engine (`newrule.js`, `morepat.js`) was not touched, so every
+entry, exit and point is the same. Why one ATR, and why not a target that sells: on the owner's two years of NIFTY 50 5-minute
+candles (the page's engine as it runs, 8 points a call), before a call's own exit price ran at least one ATR in the call's favour on
+46% of the 144 VWAP reclaim calls, 40% of the 169 VWAP loss calls, 51% of 402 Engulfing calls, 45% of 108 Hammer calls and 37% of 102
+Doji calls (about one call in two, not every call); the median run before the exit was 16 to 24 points. Selling at the guide instead
+of letting the trail run paid less per call than the call's own exit for every rule (VWAP reclaim 2.2 against 4.2 points before
+costs), because the calls that run are the ones that pay. And none of these rules makes money after costs on the two years (the VWAP
+reclaim -541 points over 144 calls after 8 a call, the VWAP loss -1,346 over 169): the guide helps to decide where to book part of a
+trade, it does not turn the rule into a profitable one.
+
 **Not built:** nothing of the document is left out; the rules run on NIFTY 50 only, as the document covers.
 
 ## On the page

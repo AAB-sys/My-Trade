@@ -2174,12 +2174,19 @@
     const run = signalsNow();
     if (!run) { clearSignals(); return []; }
     const lines = [], marks = [], segs = [];
+    // The 1 ATR guide (4 November, the owner: "why target is not given here? how can I guess where to exit?"): a call whose rule has no
+    // pattern target (VWAP reclaim and loss, Engulfing, Hammer and Shooting Star, Doji) shows one ATR from its entry, in its direction,
+    // where it showed "—". A guide only: nothing is sold there; the call is still sold by its stop (Rule 1, then the trail). The ATR is
+    // the one as of the candle before the signal candle, from the previous sessions loaded and today's candles, as the engine reads it.
+    const guideAtrs = NewRule.atrSeries((run.before || []).concat(run.bars)), guideBase = (run.before || []).length;
+    const guideOf = (t) => { if (t.target != null || t.entry == null) return null; const a = guideAtrs[guideBase + t.signalCandle - 1]; return a ? NewRule.round2(t.entry + (t.side === "CE" ? 1 : -1) * a) : null; };
     const ticked = { "double top": state.signalsDT, "double bottom": state.signalsDB, "triple top": state.signalsTT, "triple bottom": state.signalsTB, "falling wedge": state.signalsFW, "rising wedge": state.signalsRW, "bullish rectangle": state.signalsBR, "bullish symmetrical triangle": state.signalsBST, "bearish symmetrical triangle": state.signalsBET, "ascending triangle": state.signalsASC, "descending triangle": state.signalsDES , ...Object.fromEntries((typeof MorePat !== "undefined" ? MorePat.ORDER : []).map(key => [key, (state.morePat || new Set()).has(key)])) };  // the 14 more patterns' ticks (30 October)
     run.trades.filter(t => ticked[t.rule]).forEach(t => {  // a rule's marks and lines only while its tick is on; the table carries every rule's calls
       const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom" || t.rule === "triple bottom", wedge = t.upperLine != null;
       const lineName = t.more ? (t.lineName === "VWAP" ? "VWAP at call" : t.lineName) : t.rule === "bullish rectangle" ? (t.side === "CE" ? "resistance" : "support") : t.rule === "ascending triangle" ? "resistance" : t.rule === "descending triangle" ? "support" : wedge ? "break level" : bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
       lines.push({ nr: true, price: t.L, name: lineName, up, solid: true });
       if (t.exit == null && t.stop != null && t.stop !== t.L) lines.push({ nr: true, price: t.stop, name: "stop", up, solid: false });
+      if (t.exit == null && guideOf(t) != null) lines.push({ nr: true, price: guideOf(t), name: "1 ATR guide", up, solid: false });  // an open call with no pattern target: the guide, dashed like the stop
       if (t.more) {  // one of the 14 more patterns (30 October): its key candles as circles with short names, its lines from candle to candle
         (t.picPoints || []).forEach(([i, price, label]) => { const b = run.bars[i]; if (!b || i === t.signalCandle) return;
           marks.push({ time: b.time + IST_OFFSET, position: price <= (b.high + b.low) / 2 ? "belowBar" : "aboveBar", color: colour, shape: "circle", text: MORE_POINT[label] || label }); });
@@ -2211,7 +2218,8 @@
       const sideWord = t.side === "PE" ? "above" : "below", now = (run.bars && run.bars.length ? run.bars[run.bars.length - 1].close : t.entry), pts = t.exit != null ? t.points : NewRule.round2(t.side === "CE" ? now - t.entry : t.entry - now);  // an open call: against the price now (the forming candle's close)
       const status = t.exit != null ? "Take Exit" : t.stage === 2 ? "Hold" : `Buy ${t.side}`;
       const tag = t.rule === "double bottom" || t.rule === "triple bottom" ? "B" : "T", points = t.more ? "" : t.upperLine ? `H1 ${callTime(t.h1Time)} · H2 ${callTime(t.h2Time)} · L1 ${callTime(t.l1Time)} · L2 ${callTime(t.l2Time)}` : `${tag}1 ${callTime(t.t1Time)} · ${tag}2 ${callTime(t.t2Time)}` + (t.t3Time ? ` · ${tag}3 ${callTime(t.t3Time)}` : "");
-      const entryMsg = t.more ? `BUY ${t.side}: ${t.kind} · level ${fmt.format(t.L)}${t.target != null ? ` · pattern target ${fmt.format(t.target)}` : ""}${t.note ? ` · ${t.note}` : ""}`  // the 14 more patterns (30 October)
+      const guide = guideOf(t);
+      const entryMsg = t.more ? `BUY ${t.side}: ${t.kind} · level ${fmt.format(t.L)}${t.target != null ? ` · pattern target ${fmt.format(t.target)}` : guide != null ? ` · no pattern target: 1 ATR guide ${fmt.format(guide)}, the stop sells it` : ""}${t.note ? ` · ${t.note}` : ""}`  // the 14 more patterns (30 October)
         : t.rule === "bullish rectangle" ? (t.side === "CE" ? `BUY CE: bullish rectangle broke out · ${points} · resistance ${fmt.format(t.resistance)} · pattern target ${fmt.format(t.target)}` : `BUY PE: bullish rectangle failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`)  // the rectangle document's messages, section 11
         : t.rule === "ascending triangle" ? `BUY CE: ascending triangle broke out · ${points} · resistance ${fmt.format(t.resistance)} · pattern target ${fmt.format(t.target)}`  // the four triangle documents' messages (22 October)
         : t.rule === "descending triangle" ? `BUY PE: descending triangle broke down · ${points} · support ${fmt.format(t.support)} · pattern target ${fmt.format(t.target)}`
@@ -2228,7 +2236,7 @@
         + `<td class="call">Buy ${t.side}</td>`
         + `<td>Rule:- ${t.more ? t.kind : { "double top": "Double Top", "double bottom": "Double Bottom", "triple top": "Triple Top", "triple bottom": "Triple Bottom", "falling wedge": "Falling Wedge", "rising wedge": "Rising Wedge", "bullish rectangle": "Bullish Rectangle", "bullish symmetrical triangle": "Bullish Symmetrical Triangle", "bearish symmetrical triangle": "Bearish Symmetrical Triangle", "ascending triangle": "Ascending Triangle", "descending triangle": "Descending Triangle" }[t.rule] || t.rule}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
         + `<td>${fmt.format(t.entry)}</td>`
-        + `<td class="target">${t.target == null ? "—" : fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
+        + `<td class="target">${t.target == null ? (guide != null ? `guide ${fmt.format(guide)}` : "—") : fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
         + `<td class="opt">—</td><td class="opt ${pts > 0 ? "up" : pts < 0 ? "down" : ""}">${pts > 0 ? "+" : ""}${fmt.format(pts)} pts</td>`
         + `<td class="cand ${t.exit != null ? "exit" : "carry"}">${status}</td><td>${reason}</td>`;
       return tr;
