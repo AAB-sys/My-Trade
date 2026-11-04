@@ -1256,11 +1256,14 @@
   "index_at_entry": 76966.51,
   "premium_paid": 391.85,
   "paid_at": "2026-11-04T11:15:12+05:30",
-  "premium_now": 336.6,
-  "now_at": "2026-11-04T11:34:48+05:30",
+  "premium_now": 332.65,
+  "now_at": "2026-11-04T11:35:04+05:30",
   "sell_below": 254.7,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "early",
+   "at": "2026-11-04T11:35:04+05:30"
+  },
   "security_id": 1134183,
   "premium_low": 317.0,
   "premium_low_at": "2026-11-04T11:34:32+05:30",
@@ -1279,11 +1282,14 @@
   "index_at_entry": 23820.85,
   "premium_paid": 184.05,
   "paid_at": "2026-11-04T11:16:47+05:30",
-  "premium_now": 166.75,
-  "now_at": "2026-11-04T11:34:48+05:30",
+  "premium_now": 167.45,
+  "now_at": "2026-11-04T11:35:00+05:30",
   "sell_below": 119.63,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "back",
+   "at": "2026-11-04T11:35:00+05:30"
+  },
   "security_id": 39951,
   "premium_low": 159.5,
   "premium_low_at": "2026-11-04T11:34:31+05:30",
@@ -1437,15 +1443,27 @@
   "index_at_entry": 23817.9,
   "premium_paid": 208.35,
   "paid_at": "2026-11-04T11:30:04+05:30",
-  "premium_now": 225.9,
-  "now_at": "2026-11-04T11:34:48+05:30",
+  "premium_now": 221.0,
+  "now_at": "2026-11-04T11:35:25+05:30",
   "sell_below": 135.43,
   "sold": null,
   "ended": null,
   "security_id": 39954,
   "premium_low": 200.4,
   "premium_low_at": "2026-11-04T11:31:10+05:30",
-  "stop15": null
+  "stop15": null,
+  "lock": {
+   "MAX": {
+    "at": "2026-11-04T11:35:00+05:30",
+    "premium": 227.8,
+    "from": "live"
+   },
+   "STEADY": {
+    "at": "2026-11-04T11:35:00+05:30",
+    "premium": 227.8,
+    "from": "live"
+   }
+  }
  },
  {
   "key": "NIFTY BANK|5m|1793771700|PE|today",
@@ -1456,8 +1474,8 @@
   "index_at_entry": 55616.85,
   "premium_paid": 745.8,
   "paid_at": "2026-11-04T11:30:08+05:30",
-  "premium_now": 785.1,
-  "now_at": "2026-11-04T11:34:48+05:30",
+  "premium_now": 771.75,
+  "now_at": "2026-11-04T11:35:24+05:30",
   "sell_below": 484.77,
   "sold": null,
   "ended": null,
@@ -1475,8 +1493,8 @@
   "index_at_entry": 76951.79,
   "premium_paid": 422.7,
   "paid_at": "2026-11-04T11:30:10+05:30",
-  "premium_now": 484.55,
-  "now_at": "2026-11-04T11:34:48+05:30",
+  "premium_now": 463.65,
+  "now_at": "2026-11-04T11:35:25+05:30",
   "sell_below": 274.75,
   "sold": null,
   "ended": null,
