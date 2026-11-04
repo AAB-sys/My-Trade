@@ -638,8 +638,18 @@ async def stream_forever() -> None:
         if not (DHAN_ON and feed_wanted() and in_tick_hours()):
             await asyncio.sleep(2)
             continue
+        checked_token = store["dhan"].get("token") or {}
+        if checked_token.get("ok") is False and "refused" in str(checked_token.get("problem") or ""):
+            # 3 November: the token ran out at 08:57 and was renewed at 09:23. For those 26 minutes this loop knocked on Dhan's feed
+            # every 30 s with a token Dhan had refused (about 45 refused tries); when the new token came, Dhan answered every try
+            # with HTTP 429 for more than six minutes. A refused token cannot open the feed, so Dhan is not asked until the token
+            # check (every half hour, and at every start) says it is good again
+            store["dhan"]["stream"] = "Stream: off, Dhan refused the token (a fresh one goes into Render's Environment page). Prices once a second meanwhile."
+            await asyncio.sleep(30)
+            continue
         client_id, token = dhan.settings()
         url = f"{DHAN_FEED_URL}?version=2&token={token}&clientId={client_id}&authType=2"
+        cap = 30  # the longest wait between two tries
         try:
             async with websockets.connect(url, ping_interval=20, ping_timeout=20, max_size=1 << 20) as ws:
                 await feed_subscribe(ws, 15, dhan.SEGMENT, list(by_id))
@@ -685,10 +695,14 @@ async def stream_forever() -> None:
             log.warning("Dhan feed closed: %s", exc)
             wait = 60
         except Exception as exc:
+            if "HTTP 429" in str(exc):  # Dhan: too many connections, or too many tries: knocking every 30 s does not help (3 November), so 1, 2, 4, then 5 minutes
+                cap, wait = 300, max(wait, 60)
+            else:
+                wait = min(wait, cap)  # any other failure: the short waits again, whatever the 429s had grown to
             store["dhan"]["stream"] = f"Stream: off ({type(exc).__name__}: {str(exc)[:100]}). Prices once a second meanwhile, trying again in {wait} s."
             log.warning("Dhan feed failed: %s", exc)
         await asyncio.sleep(wait)
-        wait = min(wait * 2, 30)
+        wait = min(wait * 2, cap)
 
 
 TOKEN_CHECK_SECONDS = float(os.environ.get("DHAN_TOKEN_CHECK_SECONDS", "1800"))
