@@ -1520,14 +1520,24 @@
   // The line of text beside the Levels drop-down (the move, where 0% and 100% stood, how far the last price was from the
   // nearest line) stood here until 16 October: the owner took it off ("remove it, red marked")
 
-  function showLegend(bar) {
+  // The legend's time is the candle's start ("01:15 pm"). The RUNNING candle (the newest one, not closed yet) also shows the clock with
+  // seconds, "(now 01:18:42 pm)", and it runs every second (4 November, the owner: "a running candle which shows only a time, but I want
+  // it with seconds as well, which actually runs"). Any other candle, or the crosshair on one, shows its start time only, as before.
+  let legendBar = null;  // the candle the legend shows
+  function paintLegend() {
     const el = document.getElementById("legend");
+    let bar = legendBar;
     if (!bar) { el.textContent = ""; return; }
-    const when = istTime(bar.time, withDate());
+    const last = bars[bars.length - 1], now = serverNow();
+    const running = !!last && bar.time === last.time && now >= last.time && now < endOf(last);
+    if (running) bar = last;  // the newest figures of the running candle
+    const when = istTime(bar.time, withDate()) + (running ? ` (now ${clock()})` : "");
     el.textContent = state.kind === "candles"
       ? `${when}   O ${fmt.format(bar.open)}   H ${fmt.format(bar.high)}   L ${fmt.format(bar.low)}   C ${fmt.format(bar.close)}`
       : `${when}   ${fmt.format(bar.close)}`;
   }
+  function showLegend(bar) { legendBar = bar || null; paintLegend(); }
+  setInterval(() => { if (legendBar) paintLegend(); }, 1000);  // the seconds run
 
   chart.subscribeCrosshairMove(param => {
     if (!param.time) { showLegend(bars[bars.length - 1]); return; }
