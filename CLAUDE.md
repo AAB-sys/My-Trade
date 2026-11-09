@@ -172,7 +172,9 @@ their own logic. Read this before touching the code.
   close (15:42 IST) so the server saves the day, and at 16:10 reads `/health`
   (`save`, `record.summary()`: the latest complete day, the day checked without a
   session, any problem; `token`: `dhan.token_check()` every half hour, whether
-  Dhan accepts the token and until when) and fails the run when the day is not
+  Dhan accepts the token and until when, and under `plan` what Dhan's own profile
+  answer says of the Data APIs plan: its name, its end date, the client id's last
+  four digits and whether they are the settings' ones) and fails the run when the day is not
   saved and pushed, or when the token is refused or expires before the next
   trading day's close. The owner does not look after the saving (6 October);
   Claude does; the token is the one thing only the owner can renew.
