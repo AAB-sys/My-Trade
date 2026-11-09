@@ -145,6 +145,20 @@ def profile() -> dict:
     return call("GET", "/profile")
 
 
+def plan_of(who: dict, client_id: str) -> dict:
+    """What Dhan's own profile answer says about the account behind the token (9 November: the Data APIs plan was
+    active on the website, and every data request still answered "Current plan: Free Plan"). No secret: the plan and
+    its end date as Dhan wrote them (cut at 40 letters), the last four digits of the client id in Dhan's answer and in
+    our settings, and whether the two ids are the same (None when one of them is missing)."""
+    def text(key):
+        value = who.get(key)
+        return None if value in (None, "") else str(value)[:40]
+    theirs, ours = str(who.get("dhanClientId") or "").strip(), (client_id or "").strip()
+    return {"data_plan": text("dataPlan"), "data_valid_till": text("dataValidity"),
+            "dhan_client_last4": theirs[-4:] or None, "set_client_last4": ours[-4:] or None,
+            "same_client": (theirs == ours) if theirs and ours else None}
+
+
 def token_check() -> dict:
     """Whether Dhan accepts the token now, and until when it is valid, from Dhan's profile answer ("tokenValidity",
     a date and time as dd/mm/yyyy HH:MM, IST). No secret in the answer: a yes or no, a time, and a plain reason."""
@@ -165,7 +179,8 @@ def token_check() -> dict:
             break
         except ValueError:
             continue
-    return {"ok": True, "valid_till": valid_till or (raw or None), "checked_at": now, "problem": None}
+    return {"ok": True, "valid_till": valid_till or (raw or None), "checked_at": now, "problem": None,
+            "plan": plan_of(who, settings()[0])}
 
 
 def expiries(name: str) -> list[str]:
@@ -211,7 +226,10 @@ def status() -> dict:
         body = profile()
         who = body.get("data") if isinstance(body.get("data"), dict) else body  # Dhan answers /profile at the top level
         name = who.get("dhanClientName") or who.get("clientName") or ""
-        step(True, f"Token: Dhan accepted it (client {who.get('dhanClientId', client_id)}{', ' + name if name else ''})")
+        plan = plan_of(who, client_id)
+        step(True, f"Token: Dhan accepted it (client {who.get('dhanClientId', client_id)}{', ' + name if name else ''}). "
+                   f"Dhan's record of the Data APIs plan: {plan['data_plan'] or 'not given'}, until {plan['data_valid_till'] or 'not given'}"
+                   + ("" if plan["same_client"] is not False else ". WARNING: the client id in the settings is not the one Dhan gave for this token"))
     except DhanError as exc:
         step(False, "Token: Dhan refused it. Generate a new access token on the Dhan website and paste it into .env and the host's environment."
              if exc.kind == "token" else f"Token: could not check it. {exc.message}")
