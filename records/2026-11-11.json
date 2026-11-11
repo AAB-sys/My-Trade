@@ -891,8 +891,8 @@
   "index_at_entry": 25374.85,
   "premium_paid": 253.3,
   "paid_at": "2026-11-11T10:47:25+05:30",
-  "premium_now": 258.25,
-  "now_at": "2026-11-11T12:05:15+05:30",
+  "premium_now": 260.85,
+  "now_at": "2026-11-11T12:05:51+05:30",
   "sell_below": 164.65,
   "sold": null,
   "ended": null,
@@ -1371,6 +1371,25 @@
   "security_id": 822068,
   "premium_low": 461.55,
   "premium_low_at": "2026-11-11T12:04:03+05:30",
+  "stop15": null
+ },
+ {
+  "key": "SENSEX|5m|1794378600|PE|close",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-11-12",
+  "strike": 82400.0,
+  "index_at_entry": 82363.48,
+  "premium_paid": 408.6,
+  "paid_at": "2026-11-11T12:05:38+05:30",
+  "premium_now": 408.85,
+  "now_at": "2026-11-11T12:05:51+05:30",
+  "sell_below": 265.59,
+  "sold": null,
+  "ended": null,
+  "security_id": 822036,
+  "premium_low": 402.2,
+  "premium_low_at": "2026-11-11T12:05:47+05:30",
   "stop15": null
  }
 ]
