@@ -1897,14 +1897,17 @@
   "index_at_entry": 25299.45,
   "premium_paid": 267.0,
   "paid_at": "2026-11-11T12:49:21+05:30",
-  "premium_now": 259.6,
-  "now_at": "2026-11-11T13:08:49+05:30",
+  "premium_now": 256.25,
+  "now_at": "2026-11-11T13:09:00+05:30",
   "sell_below": 173.55,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "early",
+   "at": "2026-11-11T13:09:00+05:30"
+  },
   "security_id": 45396,
-  "premium_low": 256.4,
-  "premium_low_at": "2026-11-11T13:08:27+05:30",
+  "premium_low": 255.35,
+  "premium_low_at": "2026-11-11T13:08:57+05:30",
   "stop15": null,
   "late": {
    "paid": "2026-11-11T12:45:00+05:30",
