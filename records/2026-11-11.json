@@ -891,8 +891,8 @@
   "index_at_entry": 25374.85,
   "premium_paid": 253.3,
   "paid_at": "2026-11-11T10:47:25+05:30",
-  "premium_now": 257.35,
-  "now_at": "2026-11-11T11:55:29+05:30",
+  "premium_now": 265.3,
+  "now_at": "2026-11-11T12:00:08+05:30",
   "sell_below": 164.65,
   "sold": null,
   "ended": null,
@@ -1294,14 +1294,17 @@
   "index_at_entry": 82348.98,
   "premium_paid": 418.55,
   "paid_at": "2026-11-11T11:55:14+05:30",
-  "premium_now": 427.1,
-  "now_at": "2026-11-11T11:55:29+05:30",
+  "premium_now": 390.0,
+  "now_at": "2026-11-11T11:59:55+05:30",
   "sell_below": 272.06,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "retouch",
+   "at": "2026-11-11T11:59:55+05:30"
+  },
   "security_id": 822036,
-  "premium_low": 418.55,
-  "premium_low_at": "2026-11-11T11:55:14+05:30",
+  "premium_low": 385.0,
+  "premium_low_at": "2026-11-11T11:59:50+05:30",
   "stop15": null
  },
  {
@@ -1313,14 +1316,17 @@
   "index_at_entry": 82348.98,
   "premium_paid": 418.55,
   "paid_at": "2026-11-11T11:55:14+05:30",
-  "premium_now": 427.1,
-  "now_at": "2026-11-11T11:55:29+05:30",
+  "premium_now": 390.0,
+  "now_at": "2026-11-11T11:59:55+05:30",
   "sell_below": 272.06,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "retouch",
+   "at": "2026-11-11T11:59:55+05:30"
+  },
   "security_id": 822036,
-  "premium_low": 418.55,
-  "premium_low_at": "2026-11-11T11:55:14+05:30",
+  "premium_low": 385.0,
+  "premium_low_at": "2026-11-11T11:59:50+05:30",
   "stop15": null
  },
  {
@@ -1332,14 +1338,17 @@
   "index_at_entry": 25377.9,
   "premium_paid": 228.9,
   "paid_at": "2026-11-11T11:55:20+05:30",
-  "premium_now": 229.85,
-  "now_at": "2026-11-11T11:55:28+05:30",
+  "premium_now": 220.15,
+  "now_at": "2026-11-11T12:00:00+05:30",
   "sell_below": 148.78,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "back",
+   "at": "2026-11-11T12:00:01+05:30"
+  },
   "security_id": 45407,
-  "premium_low": 228.75,
-  "premium_low_at": "2026-11-11T11:55:21+05:30",
+  "premium_low": 218.5,
+  "premium_low_at": "2026-11-11T11:59:50+05:30",
   "stop15": null
  }
 ]
