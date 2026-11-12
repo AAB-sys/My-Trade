@@ -69,6 +69,14 @@
   #legend .v.up { color: var(--up); } #legend .v.down { color: var(--down); }
   #legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   #legend i.line { height: 2px; vertical-align: 3px; border-radius: 0; }
+  /* the figures of the indicators (13 November, the owner, with the words on the chart marked: "when i scroll the chart up and
+     down it goes into the chart ... remove it"): one line above the chart, never over the candles; on a narrow screen it slides sideways */
+  #info { display: flex; gap: 0 14px; align-items: baseline; padding: 4px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow-x: auto; flex: none; min-height: 27px; scrollbar-width: none; }
+  #info::-webkit-scrollbar { display: none; }
+  #info .k { color: var(--muted); } #info .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  #info i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  #info i.line { height: 2px; vertical-align: 3px; border-radius: 0; }
+  #info .cut { width: 1px; align-self: stretch; background: var(--border); flex: none; }
   #note { margin: 0; padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); flex: none; }
   #note.warn { color: var(--ink-2); }
   @media (max-width: 600px) {
@@ -101,6 +109,7 @@
     <label><input type="checkbox" id="show-volume" checked> Volume</label>
     <label><input type="checkbox" id="show-rsi" checked> RSI</label>
   </div>
+  <div id="info" aria-live="off"></div>
   <div id="main">
     <div id="draw" role="toolbar" aria-label="Drawing tools">
       <button type="button" data-tool="" aria-pressed="true" title="Pointer: move the chart, tap a drawing to pick it" aria-label="Pointer"><svg viewBox="0 0 20 20"><path d="M5 3l10 7-4.5 1 2.5 5-2 1-2.5-5L5 15z"/></svg></button>
@@ -175,7 +184,7 @@
   const volume = chart.addSeries(LC.HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
   volume.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
   // a narrow screen: the words top left take more lines, so the candles start lower
-  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: { top: innerWidth <= 600 ? 0.24 : 0.14, bottom: 0.22 } });
+  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: { top: innerWidth <= 600 ? 0.13 : 0.08, bottom: 0.22 } });
   roomOnTop(); addEventListener("resize", roomOnTop);
 
   function paint() {
@@ -511,23 +520,25 @@
 
   // ---------------------------------------------------------------- the words on the chart
   function drawLegend() {
-    const days = shown(); if (!days.length) { $("legend").textContent = ""; return; }
+    const days = shown(); if (!days.length) { $("legend").textContent = ""; $("info").textContent = ""; return; }
     const bars = days.flat(), at = state.hover && bars.find(b => b.time === state.hover.time) || bars[bars.length - 1];
     const i = state.bars.indexOf(at), before = i > 0 ? state.bars[i - 1].close : at.open, ch = at.close - before, tone = at.close >= at.open ? "up" : "down";
     const day = state.profiles.find(s => s.bars.includes(at)) || state.profiles[state.profiles.length - 1], p = day && day.profile;
     const v = state.volumes.get(at.time);
     const f = (label, x) => `<span><span class="k">${label}</span> <span class="v ${tone}">${num(x)}</span></span>`;
     let html = `<div class="row"><span class="sym">${state.name}</span><span class="k">${state.interval} · ${dayOf(at.time)} ${hhmm(at.time)}</span>${f("O", at.open)}${f("H", at.high)}${f("L", at.low)}${f("C", at.close)}<span class="v ${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : "−"}${num(Math.abs(ch))} (${(ch / before * 100 >= 0 ? "+" : "−") + Math.abs(ch / before * 100).toFixed(2)}%)</span></div>`;
-    if (state.rsi && state.rsi.has(at.time)) html += `<div class="row"><span><i class="line" style="background:var(--rsi)"></i><span class="k">RSI ${RSI_LENGTH}</span> <span class="v">${state.rsi.get(at.time).toFixed(2)}</span></span></div>`;
-    if (!state.timeOnly) html += `<div class="row"><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></div>`;
+    let info = "";  // the indicators' figures: in the line above the chart, not on it
+    if (state.rsi && state.rsi.has(at.time)) info += `<span><i class="line" style="background:var(--rsi)"></i><span class="k">RSI ${RSI_LENGTH}</span> <span class="v">${state.rsi.get(at.time).toFixed(2)}</span></span><span class="cut"></span>`;
+    if (!state.timeOnly) info += `<span><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></span><span class="cut"></span>`;
     if (p && p.total > 0) {
       const what = state.timeOnly ? "time" : "volume";
-      html += `<div class="row"><span><i class="line" style="background:var(--poc)"></i><span class="k">Busiest price</span> <span class="v">${num(p.poc)}</span></span><span><span class="k">70% of the ${what} between</span> <span class="v">${num(p.val)} – ${num(p.vah)}</span></span>${state.timeOnly ? "" : `<span><span class="k">Day's volume</span> <span class="v">${short(p.total)}</span></span>`}</div>`;
+      info += `<span><i class="line" style="background:var(--poc)"></i><span class="k">Busiest price</span> <span class="v">${num(p.poc)}</span></span><span><span class="k">70% of the ${what} between</span> <span class="v">${num(p.val)} – ${num(p.vah)}</span></span>${state.timeOnly ? "" : `<span><span class="k">Day's volume</span> <span class="v">${short(p.total)}</span></span>`}<span class="cut"></span>`;
       if (state.hover && state.hover.price != null) {
         const r = p.rows[Math.floor((state.hover.price - p.rows[0].price) / p.step)];
-        if (r && r.total > 0) html += `<div class="row"><span class="k">At ${num(r.price)} – ${num(r.price + p.step)}</span> <span class="v">${state.timeOnly ? (r.total / p.total * 100).toFixed(1) + "% of the day's time" : short(r.total) + " (" + (r.total / p.total * 100).toFixed(1) + "% of the day)"}</span><span><i style="background:var(--vp-up)"></i><span class="k">rising candles</span> <span class="v">${Math.round(r.up / r.total * 100)}%</span></span><span><i style="background:var(--vp-down)"></i><span class="k">falling</span> <span class="v">${Math.round(r.down / r.total * 100)}%</span></span></div>`;
+        if (r && r.total > 0) info += `<span class="cut"></span><span><span class="k">At ${num(r.price)} – ${num(r.price + p.step)}</span> <span class="v">${state.timeOnly ? (r.total / p.total * 100).toFixed(1) + "% of the day's time" : short(r.total) + " (" + (r.total / p.total * 100).toFixed(1) + "% of the day)"}</span></span><span><i style="background:var(--vp-up)"></i><span class="k">rising candles</span> <span class="v">${Math.round(r.up / r.total * 100)}%</span></span><span><i style="background:var(--vp-down)"></i><span class="k">falling</span> <span class="v">${Math.round(r.down / r.total * 100)}%</span></span><span class="cut"></span>`;
       }
     }
+    $("info").innerHTML = info.replace(/<span class="cut"><\/span>$/, "");
     $("legend").innerHTML = html;
   }
   function drawNote() {
