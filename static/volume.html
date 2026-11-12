@@ -98,7 +98,6 @@
     <button type="button" data-days="1" aria-pressed="true">1D</button>
     <button type="button" data-days="5" aria-pressed="false">5D</button>
     <span class="sep"></span>
-    <label><input type="checkbox" id="show-profile" checked> Profile</label>
     <label><input type="checkbox" id="show-volume" checked> Volume</label>
     <label><input type="checkbox" id="show-rsi" checked> RSI</label>
   </div>
@@ -129,7 +128,7 @@
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
   const params = new URLSearchParams(location.search);
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
-  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if (saved.days === 5) state.days = 5; if (saved.name) state.name = saved.name; } } catch (e) {}
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if (saved.days === 5) state.days = 5; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
   if (![...$("index").options].some(o => o.value === state.name)) state.name = "NIFTY 50";
@@ -208,7 +207,7 @@
   candles.attachPrimitive(profile);
 
   function drawProfiles(scope) {
-    if (!$("show-profile").checked || !state.profiles.length) return;
+    if (!state.profiles.length) return;  // the profile is always drawn: the page is for it (the owner, 12 November: "volume profile should always be there")
     const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, paneW = scope.mediaSize.width;
     const ts = chart.timeScale(), spacing = ts.options().barSpacing, full = BARS_A_DAY[state.interval] * spacing;
     const cUp = css("--vp-up"), cDown = css("--vp-down"), cPoc = css("--poc"), cVa = css("--va");
@@ -548,7 +547,7 @@
   });
 
   // ---------------------------------------------------------------- the tool row
-  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked })); } catch (e) {} };
   function press() {
     document.querySelectorAll("#tools button[data-interval]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.interval === state.interval)));
     document.querySelectorAll("#tools button[data-days]").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.days) === state.days)));
@@ -559,9 +558,9 @@
     if (b.dataset.days && Number(b.dataset.days) !== state.days) { state.days = Number(b.dataset.days); press(); save(); shownKey = state.name + state.interval + state.days; setAll(true); }
   });
   $("index").addEventListener("change", () => { state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
-  $("show-profile").addEventListener("change", () => profile.requestUpdate && profile.requestUpdate());
-  $("show-volume").addEventListener("change", setVolume);
-  $("show-rsi").addEventListener("change", () => { setRsi(); drawLegend(); });
+  // every indicator but the profile has its switch, and the page remembers how each was left
+  $("show-volume").addEventListener("change", () => { setVolume(); save(); });
+  $("show-rsi").addEventListener("change", () => { setRsi(); drawLegend(); save(); });
   loadDrawings();
   press();
 
