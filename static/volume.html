@@ -243,9 +243,14 @@
       const p = s.profile; if (!p || !(p.total > 0)) return;
       const x0c = ts.timeToCoordinate(s.bars[0].time + IST); if (x0c == null) return;
       const x0 = x0c - spacing / 2, lastDay = k === state.profiles.length - 1, right = state.days === 1;
-      if (!right && (x0 > paneW || x0 + full < 0)) return;
-      const width = right ? paneW * 0.24 : Math.max(40, Math.min(full * 0.42, paneW * 0.4));
-      const rect = (from, len, yTop, h) => { const a = right ? paneW - from - len : x0 + from; ctx.fillRect(Math.round(a * hr), Math.round(yTop * vr), Math.max(0, Math.round(len * hr)), Math.max(1, Math.round(h * vr))); };
+      // One day: the profile stands at the end of the day's own room on the time line (where the whole view ends), not at the
+      // screen's edge, and it is as wide as a fixed share of that room: so it moves left and right with the candles and
+      // grows and shrinks with them (the owner, 13 November: "whenever i move up n down, left or right, or make it small or
+      // bigger every price action moves in the same direction and volume profile also in the same direction")
+      const day = BARS_A_DAY[state.interval], edge = x0c + day * 1.36 * spacing;
+      if (right ? (x0 > paneW || edge < 0) : (x0 > paneW || x0 + full < 0)) return;
+      const width = right ? (day * 1.36 + 1.5) * spacing * 0.24 : full * 0.42;
+      const rect = (from, len, yTop, h) => { const a = right ? edge - from - len : x0 + from; ctx.fillRect(Math.round(a * hr), Math.round(yTop * vr), Math.max(0, Math.round(len * hr)), Math.max(1, Math.round(h * vr))); };
       const most = Math.max(...p.rows.map(r => r.total));
       p.rows.forEach((r, i) => {
         if (!(r.total > 0)) return;
@@ -261,7 +266,7 @@
       const line = (price, color, dash, w) => {
         const y = candles.priceToCoordinate(price); if (y == null) return;
         ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, Math.round(w * vr)); ctx.setLineDash(dash.map(d => d * hr));
-        ctx.beginPath(); const yy = Math.round(y * vr) + 0.5; ctx.moveTo(Math.round(Math.max(0, x0) * hr), yy); ctx.lineTo(Math.round((lastDay ? paneW : x0 + full) * hr), yy); ctx.stroke(); ctx.restore();
+        ctx.beginPath(); const yy = Math.round(y * vr) + 0.5; ctx.moveTo(Math.round(Math.max(0, x0) * hr), yy); ctx.lineTo(Math.round((right ? edge : x0 + full) * hr), yy); ctx.stroke(); ctx.restore();
       };
       line(p.poc, cPoc, [], 1.5);
       line(p.vah, cVa, [4, 4], 1); line(p.val, cVa, [4, 4], 1);
