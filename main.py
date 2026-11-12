@@ -166,7 +166,7 @@ logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "
 revoked: set[str] = set()  # tokens logged out on this server: never revived from the cookie
 ws_pages: dict[WebSocket, tuple[str, str]] = {}  # socket -> (token, page id)
 PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
-PAGE_EXACT = ()  # no other page paths: the Study page went on 15 October (the owner: "remove this study tab and everything under it")
+PAGE_EXACT = ("/volume-profile",)  # no other page paths: the Study page went on 15 October (the owner: "remove this study tab and everything under it")
 
 
 # ---------------------------------------------------------------- login
@@ -1316,6 +1316,34 @@ def dashboard():
 def index_page(name: str):
     known_index(name)
     return FileResponse(STATIC / "detail.html", headers=NO_CACHE)
+
+
+@app.get("/volume-profile")
+def volume_profile_page():
+    """The Volume Profile page (the owner, 12 November): a page of its own, its chart and its profile in static/volume.html."""
+    return FileResponse(STATIC / "volume.html", headers=NO_CACHE)
+
+
+VOLUME_MINUTES = {"1m": 1, "5m": 5, "15m": 15}  # the candle sizes of the Volume Profile page
+
+
+@app.get("/indices/{name}/volume")
+async def index_volume(name: str, interval_key: str = Query("5m", alias="interval")):
+    """The volume behind the Volume Profile page: the index's nearest futures contract's volume per candle (an index has
+    none of its own). When Dhan gives none, the reason is said and the list is empty: the page then counts time at each
+    price instead, and says so."""
+    key = known_index(name)
+    if interval_key not in VOLUME_MINUTES:
+        raise HTTPException(status_code=400, detail=f"interval must be one of: {', '.join(VOLUME_MINUTES)}")
+    out = {"name": key, "interval": interval_key, "contract": None, "bars": [], "problem": None}
+    if not (DHAN_ON and key in dhan.OPTION_SEGMENTS):
+        return {**out, "problem": store["dhan"]["status"]}
+    try:
+        got = await asyncio.to_thread(dhan.future_volume, key, VOLUME_MINUTES[interval_key])
+    except Exception as exc:
+        log.warning("futures volume failed for %s: %s", key, exc)
+        return {**out, "problem": dhan_reason(exc)}
+    return {**out, **got}
 
 
 @app.get("/indices")

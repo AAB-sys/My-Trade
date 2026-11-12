@@ -208,6 +208,14 @@ their own logic. Read this before touching the code.
   candles; the score line, the CSV download and the no-call notes left the page on 16 October, the owner's ask; nothing drawn on the chart), computed in the page from the
   summary and the bars. Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
+- `static/volume.html`, `static/volprofile.js` - the Volume Profile page (12 November, the owner: "build a new page with header
+  name as volume profile"), at `/volume-profile`, opened from the dashboard's Volume Profile capsule. A page of its own: it draws the
+  index's candles (`/indices/{name}/detail`), the volume along the bottom and, per day, how much was traded at each price (the rows,
+  the busiest price, the 70% area). An index has no volume, so the weights are the volume of its nearest futures contract
+  (`dhan.future_volume`, `/indices/{name}/volume`, asked of Dhan only while the page is open); without it the rows count time and the
+  page says so. It decides nothing and gives no call; Paper calls and Calls with Signals do not read it, nor it them. The open
+  choices (about 40 rows a day, the 70% share) are marked "(owner to decide)" in `volprofile.js`. `lab/check_volprofile.js` checks
+  the arithmetic. PRs for it are named "Volume_Profile_".
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
   interface, unused since the CSV button went on 16 October; `target=_blank` links kept in the same view so the login's tab

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Volume Profile · My-Trade</title>
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<script src="/static/vendor/lightweight-charts.js"></script>
+<script src="/static/volprofile.js"></script>
+<!-- The Volume Profile page (12 November, the owner: "build a new page with header name as volume profile ... the chart format
+     which dhan uses for pc and mobile"). A page of its own: it reads the index's candles and the futures' volume, draws them,
+     and decides nothing. Paper calls and Calls with Signals are not read here and do not read this page. The chart is drawn
+     with the free chart library the other pages use, laid out the way a broker's trading chart is: a tool row on top, the
+     prices on the right, the figures of the candle under the pointer top left, the volume along the bottom. -->
+<style>
+  :root {
+    color-scheme: light;
+    --page: #ffffff; --surface: #ffffff; --border: #e0e3eb; --grid: #f0f3fa;
+    --ink: #131722; --ink-2: #434651; --muted: #787b86;
+    --up: #089981; --down: #f23645; --accent: #2962ff; --hover: #f0f3fa;
+    --vp-up: #5b9cf6; --vp-down: #f5b83d; --poc: #e0245e; --va: #787b86;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: #131722; --surface: #131722; --border: #2a2e39; --grid: #1e222d;
+      --ink: #d1d4dc; --ink-2: #b2b5be; --muted: #787b86;
+      --up: #089981; --down: #f23645; --accent: #5b9cf6; --hover: #2a2e39;
+      --vp-up: #3d7fd9; --vp-down: #c9912a; --poc: #ff5c8a; --va: #9598a1;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--page); color: var(--ink); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); border-bottom: 1px solid var(--border); flex: none; }
+  header a { color: var(--ink-2); text-decoration: none; font-size: 13px; padding: 4px 8px; border-radius: 6px; }
+  header a:hover { background: var(--hover); }
+  header h1 { font-size: 16px; font-weight: 600; margin: 0; flex: 1; }
+  #status { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  #status.error { color: var(--down); }
+  #tools { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-bottom: 1px solid var(--border); overflow-x: auto; flex: none; scrollbar-width: none; }
+  #tools::-webkit-scrollbar { display: none; }
+  #tools select, #tools button { font: inherit; font-size: 14px; color: var(--ink); background: transparent; border: 0; border-radius: 6px; padding: 8px 10px; cursor: pointer; white-space: nowrap; min-height: 36px; }
+  #tools select { font-weight: 600; padding-right: 4px; }
+  #tools button:hover, #tools select:hover { background: var(--hover); }
+  #tools button[aria-pressed="true"] { color: var(--accent); font-weight: 600; }
+  #tools .sep { width: 1px; align-self: stretch; margin: 6px 4px; background: var(--border); flex: none; }
+  #tools label { display: flex; align-items: center; gap: 6px; font-size: 14px; padding: 8px 10px; white-space: nowrap; cursor: pointer; border-radius: 6px; min-height: 36px; }
+  #tools label:hover { background: var(--hover); }
+  #wrap { position: relative; flex: 1; min-height: 0; }
+  #chart { position: absolute; inset: 0; }
+  #legend { position: absolute; left: 8px; top: 6px; right: 70px; z-index: 3; pointer-events: none; font-size: 12px; line-height: 1.55; color: var(--ink-2); }
+  #legend .row { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
+  #legend .sym { font-size: 14px; font-weight: 600; color: var(--ink); }
+  #legend .k { color: var(--muted); }
+  #legend .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  #legend .v.up { color: var(--up); } #legend .v.down { color: var(--down); }
+  #legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  #legend i.line { height: 2px; vertical-align: 3px; border-radius: 0; }
+  #note { margin: 0; padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); flex: none; }
+  #note.warn { color: var(--ink-2); }
+  @media (max-width: 600px) {
+    header h1 { font-size: 15px; }
+    #legend { font-size: 11px; right: 58px; }
+    #legend .sym { font-size: 13px; }
+    #status { display: none; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a id="back" href="/">‹ My-Trade</a>
+    <h1>Volume Profile</h1>
+    <span id="status">Loading…</span>
+  </header>
+  <div id="tools" role="toolbar" aria-label="Chart settings">
+    <select id="index" aria-label="Index"><option>NIFTY 50</option><option>NIFTY BANK</option><option>SENSEX</option></select>
+    <span class="sep"></span>
+    <button type="button" data-interval="1m" aria-pressed="false">1m</button>
+    <button type="button" data-interval="5m" aria-pressed="true">5m</button>
+    <button type="button" data-interval="15m" aria-pressed="false">15m</button>
+    <span class="sep"></span>
+    <button type="button" data-days="1" aria-pressed="true">1D</button>
+    <button type="button" data-days="5" aria-pressed="false">5D</button>
+    <span class="sep"></span>
+    <label><input type="checkbox" id="show-profile" checked> Profile</label>
+    <label><input type="checkbox" id="show-volume" checked> Volume</label>
+  </div>
+  <div id="wrap">
+    <div id="legend" aria-live="off"></div>
+    <div id="chart"></div>
+  </div>
+  <p id="note"></p>
+
+<script>
+(function () {
+  "use strict";
+  const IST = 19800;  // the chart library draws times as UTC: every time is moved by the IST offset on its way in
+  const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
+  const params = new URLSearchParams(location.search);
+  const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if (saved.days === 5) state.days = 5; if (saved.name) state.name = saved.name; } } catch (e) {}
+  if (params.get("index")) state.name = params.get("index").toUpperCase();
+  const $ = (id) => document.getElementById(id);
+  if (![...$("index").options].some(o => o.value === state.name)) state.name = "NIFTY 50";
+  $("index").value = state.name;
+
+  // The login's "tab" note and this page's id, as the other pages keep them
+  let TAB = "";
+  try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
+  const handed = new URLSearchParams(location.hash.slice(1)).get("t");
+  if (handed) { TAB = handed; try { sessionStorage.setItem("tab", TAB); } catch (e) {} history.replaceState(null, "", location.pathname + location.search); }
+  $("back").href = "/#t=" + encodeURIComponent(TAB);
+  let PAGE = "";
+  const withTab = () => ({ headers: { "X-Tab": TAB, "X-Page": PAGE } });
+  let loadedCommit = null;
+  function newDeploy(commit) {
+    if (!commit) return false;
+    if (loadedCommit === null) { loadedCommit = commit; return false; }
+    if (commit === loadedCommit) return false;
+    let last = 0; try { last = parseInt(sessionStorage.getItem("reloaded-at") || "0", 10); } catch (e) {}
+    if (Date.now() - last < 60000) return false;
+    try { sessionStorage.setItem("reloaded-at", String(Date.now())); } catch (e) {}
+    location.reload();
+    return true;
+  }
+
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16 & 255}, ${n >> 8 & 255}, ${n & 255}, ${a})`; };
+  const num = (x, d = 2) => x == null ? "—" : Number(x).toLocaleString("en-IN", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const short = (v) => v == null ? "—" : v >= 1e7 ? (v / 1e6).toFixed(1) + "M" : v >= 1e6 ? (v / 1e6).toFixed(2) + "M" : v >= 1e3 ? (v / 1e3).toFixed(v >= 1e5 ? 0 : 1) + "K" : String(Math.round(v));
+  const hhmm = (t) => new Date((t + IST) * 1000).toISOString().slice(11, 16);
+  const dayOf = (t) => new Date((t + IST) * 1000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+  // ---------------------------------------------------------------- the chart
+  const LC = LightweightCharts;
+  const chart = LC.createChart($("chart"), {
+    autoSize: true,
+    layout: { attributionLogo: false, fontSize: 12, fontFamily: getComputedStyle(document.body).fontFamily },
+    rightPriceScale: { scaleMargins: { top: 0.12, bottom: 0.22 } },
+    timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 9, minBarSpacing: 1 },
+    crosshair: { mode: LC.CrosshairMode.Normal },
+    localization: { priceFormatter: (p) => num(p), timeFormatter: (t) => { const d = new Date(t * 1000); return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }) + "  " + d.toISOString().slice(11, 16); } },
+  });
+  const candles = chart.addSeries(LC.CandlestickSeries, { priceLineVisible: true, lastValueVisible: true });
+  const volume = chart.addSeries(LC.HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
+  volume.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
+  // a narrow screen: the words top left take more lines, so the candles start lower
+  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: { top: innerWidth <= 600 ? 0.24 : 0.14, bottom: 0.22 } });
+  roomOnTop(); addEventListener("resize", roomOnTop);
+
+  function paint() {
+    const up = css("--up"), down = css("--down");
+    chart.applyOptions({
+      layout: { background: { color: css("--surface") }, textColor: css("--ink-2") },
+      grid: { vertLines: { color: css("--grid") }, horzLines: { color: css("--grid") } },
+      rightPriceScale: { borderColor: css("--border") }, timeScale: { borderColor: css("--border") },
+      crosshair: { vertLine: { color: css("--muted"), labelBackgroundColor: css("--ink-2") }, horzLine: { color: css("--muted"), labelBackgroundColor: css("--ink-2") } },
+    });
+    candles.applyOptions({ upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: up, wickDownColor: down });
+    setVolume();
+    profile.requestUpdate && profile.requestUpdate();
+  }
+
+  // ---------------------------------------------------------------- the profile, drawn behind the candles
+  // With one day shown, the day's profile stands at the right edge and grows to the left, in the room kept free beside the
+  // candles; with five days, each day's profile starts at its first candle and grows to the right. The longer a row, the
+  // more was traded (or, without volume, the more time was spent) at that price. Blue: in rising candles; amber: in falling ones. The rows
+  // of the value area are drawn strong, the others faint. A line marks the busiest price of each day.
+  const profile = {
+    attached(p) { this.requestUpdate = p.requestUpdate; },
+    detached() { this.requestUpdate = null; },
+    updateAllViews() {},
+    paneViews() { return [this.view]; },
+    view: { zOrder: () => "bottom", renderer: () => ({ draw: (target) => target.useBitmapCoordinateSpace(drawProfiles) }) },
+  };
+  candles.attachPrimitive(profile);
+
+  function drawProfiles(scope) {
+    if (!$("show-profile").checked || !state.profiles.length) return;
+    const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, paneW = scope.mediaSize.width;
+    const ts = chart.timeScale(), spacing = ts.options().barSpacing, full = BARS_A_DAY[state.interval] * spacing;
+    const cUp = css("--vp-up"), cDown = css("--vp-down"), cPoc = css("--poc"), cVa = css("--va");
+    state.profiles.forEach((s, k) => {
+      const p = s.profile; if (!p || !(p.total > 0)) return;
+      const x0c = ts.timeToCoordinate(s.bars[0].time + IST); if (x0c == null) return;
+      const x0 = x0c - spacing / 2, lastDay = k === state.profiles.length - 1, right = state.days === 1;
+      if (!right && (x0 > paneW || x0 + full < 0)) return;
+      const width = right ? paneW * 0.24 : Math.max(40, Math.min(full * 0.42, paneW * 0.4));
+      const rect = (from, len, yTop, h) => { const a = right ? paneW - from - len : x0 + from; ctx.fillRect(Math.round(a * hr), Math.round(yTop * vr), Math.max(0, Math.round(len * hr)), Math.max(1, Math.round(h * vr))); };
+      const most = Math.max(...p.rows.map(r => r.total));
+      p.rows.forEach((r, i) => {
+        if (!(r.total > 0)) return;
+        const yTop = candles.priceToCoordinate(r.price + p.step), yBot = candles.priceToCoordinate(r.price);
+        if (yTop == null || yBot == null) return;
+        const h = Math.max(1, (yBot - yTop) - (yBot - yTop > 3 ? 1 : 0)), len = r.total / most * width, inside = i >= p.vaFrom && i <= p.vaTo;
+        const upLen = len * (r.up / r.total);
+        ctx.globalAlpha = inside ? (right ? 0.7 : 0.45) : (right ? 0.3 : 0.18);
+        ctx.fillStyle = cUp; rect(0, upLen, yTop, h);
+        ctx.fillStyle = cDown; rect(upLen, len - upLen, yTop, h);
+      });
+      ctx.globalAlpha = 1;
+      const line = (price, color, dash, w) => {
+        const y = candles.priceToCoordinate(price); if (y == null) return;
+        ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, Math.round(w * vr)); ctx.setLineDash(dash.map(d => d * hr));
+        ctx.beginPath(); const yy = Math.round(y * vr) + 0.5; ctx.moveTo(Math.round(Math.max(0, x0) * hr), yy); ctx.lineTo(Math.round((lastDay ? paneW : x0 + full) * hr), yy); ctx.stroke(); ctx.restore();
+      };
+      line(p.poc, cPoc, [], 1.5);
+      line(p.vah, cVa, [4, 4], 1); line(p.val, cVa, [4, 4], 1);
+    });
+  }
+
+  // ---------------------------------------------------------------- the data
+  const key = (b) => b.time;
+  function shown() {  // the candles of the days shown: the last day, or the last five
+    const days = VolProfile.sessions(state.bars);
+    return days.slice(-state.days);
+  }
+  function rebuild() {
+    const days = shown(), bars = days.flat();
+    const have = bars.some(b => state.volumes.get(b.time) > 0);
+    state.timeOnly = !have;
+    state.profiles = days.map(d => ({ bars: d, profile: VolProfile.build(d, have ? state.volumes : null) }));
+    profile.requestUpdate && profile.requestUpdate();
+    drawLegend(); drawNote();
+  }
+  function setVolume() {
+    const up = alpha(css("--up"), 0.45), down = alpha(css("--down"), 0.45);
+    const bars = $("show-volume").checked && !state.timeOnly ? shown().flat() : [];
+    volume.setData(bars.filter(b => state.volumes.get(b.time) > 0).map(b => ({ time: b.time + IST, value: state.volumes.get(b.time), color: b.close >= b.open ? up : down })));
+  }
+  function setAll(fit) {
+    const bars = shown().flat();
+    candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
+    rebuild(); setVolume();
+    if (fit) fitDays();
+  }
+
+  // one day: the whole session from 9:15 to 15:30 in view, with room on the right for the profile; five days: all of them
+  function fitDays() {
+    const n = shown().flat().length; if (!n) return;
+    if (state.days === 1) { const day = BARS_A_DAY[state.interval]; chart.timeScale().setVisibleLogicalRange({ from: -1.5, to: day * 1.36 }); }
+    else chart.timeScale().setVisibleLogicalRange({ from: -1.5, to: n + 3 });
+  }
+  let loadSeq = 0, shownKey = "";
+  async function load() {
+    const seq = ++loadSeq, name = state.name, interval = state.interval, status = $("status");
+    try {
+      const get = (url) => fetch(url, withTab());
+      const [d, v] = await Promise.all([get(`/indices/${encodeURIComponent(name)}/detail?range=5d&interval=${interval}`), get(`/indices/${encodeURIComponent(name)}/volume?interval=${interval}`)]);
+      if (d.status === 401 || v.status === 401) { location.href = "/login"; return; }
+      if (seq !== loadSeq) return;  // an older request finishing late
+      if (!d.ok) { let why = "HTTP " + d.status; try { why = (await d.json()).detail || why; } catch (e) {} throw new Error(why); }
+      const detail = await d.json(), vol = v.ok ? await v.json() : { bars: [], problem: "HTTP " + v.status };
+      state.summary = detail.summary; state.bars = detail.candles || [];
+      state.volumes = new Map((vol.bars || []).map(([t, x]) => [t, x])); state.contract = vol.contract; state.problem = vol.problem;
+      const k = name + interval + state.days;
+      setAll(k !== shownKey); shownKey = k;
+      status.className = ""; status.textContent = (detail.summary && detail.summary.open ? "Live · " : "Market closed · ") + "updated " + new Date().toLocaleTimeString("en-GB");
+    } catch (e) {
+      if (seq !== loadSeq) return;
+      status.className = "error"; status.textContent = "Couldn't load (" + e.message + "). Retrying…";
+      $("note").className = "warn"; if (!state.bars.length) $("note").textContent = String(e.message);
+    }
+  }
+
+  // a live price: the candle forming now follows it at once; the profile is counted again at most once a second
+  let recount = 0;
+  function applyTick(tick) {
+    if (tick.name !== state.name || !tick.bars) return;
+    const b = tick.bars[state.interval]; if (!b || !state.bars.length) return;
+    const last = state.bars[state.bars.length - 1];
+    if (b.time < last.time) return;
+    if (b.time === last.time) Object.assign(last, { high: Math.max(last.high, b.high), low: Math.min(last.low, b.low), close: b.close }); else state.bars.push({ ...b });
+    const now = state.bars[state.bars.length - 1];
+    candles.update({ time: now.time + IST, open: now.open, high: now.high, low: now.low, close: now.close });
+    if (Date.now() - recount > 1000) { recount = Date.now(); rebuild(); }
+  }
+
+  // ---------------------------------------------------------------- the words on the chart
+  function drawLegend() {
+    const days = shown(); if (!days.length) { $("legend").textContent = ""; return; }
+    const bars = days.flat(), at = state.hover && bars.find(b => b.time === state.hover.time) || bars[bars.length - 1];
+    const i = state.bars.indexOf(at), before = i > 0 ? state.bars[i - 1].close : at.open, ch = at.close - before, tone = at.close >= at.open ? "up" : "down";
+    const day = state.profiles.find(s => s.bars.includes(at)) || state.profiles[state.profiles.length - 1], p = day && day.profile;
+    const v = state.volumes.get(at.time);
+    const f = (label, x) => `<span><span class="k">${label}</span> <span class="v ${tone}">${num(x)}</span></span>`;
+    let html = `<div class="row"><span class="sym">${state.name}</span><span class="k">${state.interval} · ${dayOf(at.time)} ${hhmm(at.time)}</span>${f("O", at.open)}${f("H", at.high)}${f("L", at.low)}${f("C", at.close)}<span class="v ${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : "−"}${num(Math.abs(ch))} (${(ch / before * 100 >= 0 ? "+" : "−") + Math.abs(ch / before * 100).toFixed(2)}%)</span></div>`;
+    if (!state.timeOnly) html += `<div class="row"><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></div>`;
+    if (p && p.total > 0) {
+      const what = state.timeOnly ? "time" : "volume";
+      html += `<div class="row"><span><i class="line" style="background:var(--poc)"></i><span class="k">Busiest price</span> <span class="v">${num(p.poc)}</span></span><span><span class="k">70% of the ${what} between</span> <span class="v">${num(p.val)} – ${num(p.vah)}</span></span>${state.timeOnly ? "" : `<span><span class="k">Day's volume</span> <span class="v">${short(p.total)}</span></span>`}</div>`;
+      if (state.hover && state.hover.price != null) {
+        const r = p.rows[Math.floor(state.hover.price / p.step) - Math.floor(p.rows[0].price / p.step)];
+        if (r && r.total > 0) html += `<div class="row"><span class="k">At ${num(r.price, p.step < 1 ? 1 : 0)} – ${num(r.price + p.step, p.step < 1 ? 1 : 0)}</span> <span class="v">${state.timeOnly ? (r.total / p.total * 100).toFixed(1) + "% of the day's time" : short(r.total) + " (" + (r.total / p.total * 100).toFixed(1) + "% of the day)"}</span><span><i style="background:var(--vp-up)"></i><span class="k">rising candles</span> <span class="v">${Math.round(r.up / r.total * 100)}%</span></span><span><i style="background:var(--vp-down)"></i><span class="k">falling</span> <span class="v">${Math.round(r.down / r.total * 100)}%</span></span></div>`;
+      }
+    }
+    $("legend").innerHTML = html;
+  }
+  function drawNote() {
+    const note = $("note");
+    if (!state.bars.length) { note.className = "warn"; note.textContent = "No candles yet."; return; }
+    if (state.timeOnly) { note.className = "warn"; note.textContent = "No volume from Dhan right now" + (state.problem ? " (" + state.problem + ")" : "") + ". The rows show how much TIME the price spent at each level, not how much was traded."; return; }
+    note.className = "";
+    note.textContent = `An index has no volume of its own: the rows use the volume of ${state.contract ? state.contract.name + " (expiry " + state.contract.expiry + ")" : "the index's futures"}, from Dhan. Blue: traded in rising candles. Amber: in falling ones. Not a call.`;
+  }
+
+  chart.subscribeCrosshairMove((param) => {
+    const had = state.hover;
+    if (!param || param.time == null || !param.point) state.hover = null;
+    else state.hover = { time: param.time - IST, price: candles.coordinateToPrice(param.point.y) };
+    if (had || state.hover) drawLegend();
+  });
+
+  // ---------------------------------------------------------------- the tool row
+  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days })); } catch (e) {} };
+  function press() {
+    document.querySelectorAll("#tools button[data-interval]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.interval === state.interval)));
+    document.querySelectorAll("#tools button[data-days]").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.days) === state.days)));
+  }
+  $("tools").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.interval && b.dataset.interval !== state.interval) { state.interval = b.dataset.interval; state.bars = []; press(); save(); load(); }
+    if (b.dataset.days && Number(b.dataset.days) !== state.days) { state.days = Number(b.dataset.days); press(); save(); shownKey = state.name + state.interval + state.days; setAll(true); }
+  });
+  $("index").addEventListener("change", () => { state.name = $("index").value; state.bars = []; save(); load(); reconnect(); });
+  $("show-profile").addEventListener("change", () => profile.requestUpdate && profile.requestUpdate());
+  $("show-volume").addEventListener("change", setVolume);
+  press();
+
+  // ---------------------------------------------------------------- staying connected, as the other pages do
+  async function beat() {
+    try {
+      const r = await fetch("/alive", { method: "POST", ...withTab() });
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (r.ok) { const data = await r.json(); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; }
+    } catch (e) {}
+  }
+  let liveWs = null, parked = false;
+  const wsUrl = () => (location.protocol === "https:" ? "wss" : "ws") + "://" + location.host + "/ws?tab=" + encodeURIComponent(TAB) + "&page=" + encodeURIComponent(PAGE) + "&live=" + encodeURIComponent(state.name);
+  function keepAlive() {
+    if (parked) return;
+    const ws = liveWs = new WebSocket(wsUrl());
+    ws.onmessage = (event) => { const data = JSON.parse(event.data); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); };
+    ws.onclose = () => { if (parked || ws !== liveWs) return; beat(); setTimeout(keepAlive, 3000); };
+    ws.onerror = () => ws.close();
+  }
+  function reconnect() { const old = liveWs; liveWs = null; if (old && old.readyState <= WebSocket.OPEN) old.close(); keepAlive(); }
+  beat().then(() => { load(); keepAlive(); });
+  setInterval(beat, 15000);
+  setInterval(() => { if (!document.hidden) load(); }, 20000);  // the closed candles and the futures' volume, every 20 s
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
+  window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);
+  paint();
+})();
+</script>
+</body>
+</html>

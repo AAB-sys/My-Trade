@@ -698,6 +698,21 @@ def _bse_underlying(*texts: str) -> str | None:
 _list_report: dict = {}  # what the instrument list gave, for /health (9 October): ids per underlying, SENSEX's expiries, how its BSE rows are written
 
 
+_FUT_NAME = re.compile(r"^(BANKNIFTY|NIFTY|SENSEX(?!50))(?=$|[^A-Z]|\d)")  # NIFTY-Nov2026-FUT, BANKNIFTY NOV FUT, SENSEX26NOVFUT; not FINNIFTY, NIFTYNXT50, SENSEX50
+
+
+def _future_underlying(*texts: str) -> str | None:
+    """Which of the three indices a futures row of the instrument list belongs to, from its names, or None."""
+    for text in texts:
+        t = (text or "").strip().upper()
+        if t in ("NIFTY", "BANKNIFTY", "SENSEX"):
+            return t
+        m = _FUT_NAME.match(t)
+        if m and not t.startswith(("NIFTYNXT", "NIFTYIT", "NIFTYMID")):
+            return m.group(1)
+    return None
+
+
 def list_report() -> dict:
     with _option_ids_lock:
         return dict(_list_report)
@@ -708,6 +723,7 @@ def _read_option_ids() -> dict:
     Dhan's instrument list (a large CSV; only the option rows of NIFTY and BANKNIFTY on the NSE, and of SENSEX on
     the BSE, are kept)."""
     found, columns, lots = {}, None, {}  # lots: {underlying: (soonest expiry, market lot)} (17 October, the OI chart)
+    futures = {}  # {underlying: [(expiry iso, security id, the list's name of the contract)]} (12 November, the Volume Profile page)
     report = {"bse_option_rows": 0, "bse_names": {}, "sensex_rows": [], "no_expiry": 0}
     wanted = set(UNDERLYING.values())
     index_rows = set(LIST_NAMES.values())
@@ -734,6 +750,15 @@ def _read_option_ids() -> dict:
                     if label in index_rows and label not in seen_index:
                         try:
                             seen_index[label] = int(float(sid))
+                        except ValueError:
+                            pass
+                    continue
+                if instrument.strip().upper() == "FUTIDX":  # the index futures (12 November, the Volume Profile page: an index has no volume, its futures have)
+                    under = _future_underlying(symbol, trading, custom)
+                    when = _parse_expiry(expiry)
+                    if under in wanted and when and when >= today and (not exchange or exchange.strip().upper() == OPTION_EXCHANGE[under]):
+                        try:
+                            futures.setdefault(under, []).append((when, int(float(sid)), (custom.strip() or trading.strip())[:40]))
                         except ValueError:
                             pass
                     continue
@@ -774,8 +799,11 @@ def _read_option_ids() -> dict:
         counts[underlying] = counts.get(underlying, 0) + 1
     report.update(read_at=datetime.now(IST).isoformat(timespec="seconds"), option_ids=counts, lots={u: l for u, (w, l) in lots.items()},
                   sensex_expiries=sorted({when for (u, when, _, _) in found if u == "SENSEX"})[:4],
-                  bse_names=dict(sorted(report["bse_names"].items(), key=lambda kv: -kv[1])[:6]))
+                  bse_names=dict(sorted(report["bse_names"].items(), key=lambda kv: -kv[1])[:6]),
+                  futures={u: [f"{label} ({when})" for when, _, label in sorted(rows)[:2]] for u, rows in futures.items()})
     with _option_ids_lock:
+        _futures.clear()
+        _futures.update({u: sorted(rows) for u, rows in futures.items()})
         _index_ids_seen.update(seen_index)
         _list_report.clear()
         _list_report.update(report)
@@ -788,6 +816,7 @@ def _read_option_ids() -> dict:
 
 _index_ids_seen: dict = {}  # the instrument list's ids of the index rows, by the list's name (NIFTY, BANKNIFTY, SENSEX), once read
 _lots: dict = {}  # the market lot of each underlying's options, from the instrument list once read (17 October, the OI chart)
+_futures: dict = {}  # the index futures still to expire, by underlying, soonest first: [(expiry iso, security id, name)] (12 November)
 
 
 def lot_size(name: str) -> int | None:
@@ -844,6 +873,59 @@ def option_ids() -> dict:
 def option_security_id(name: str, expiry: str, strike: float, side: str) -> int | None:
     """The security id of one option contract, or None if the instrument list does not know it."""
     return option_ids().get((UNDERLYING[name], expiry, round(float(strike), 2), side))
+
+
+# ---------------------------------------------------------------- the futures' volume (the Volume Profile page, 12 November)
+
+def future_of(name: str) -> dict | None:
+    """The index's futures contract that expires soonest, from Dhan's instrument list once read: {"id", "expiry", "name"}."""
+    option_ids()  # starts the list's read when it is missing; raises while it is still being read
+    with _option_ids_lock:
+        rows = list(_futures.get(UNDERLYING[name]) or [])
+    today = today_ist().isoformat()
+    rows = [r for r in rows if r[0] >= today]
+    return {"expiry": rows[0][0], "id": rows[0][1], "name": rows[0][2]} if rows else None
+
+
+def _volumes(body: dict) -> list:
+    """[[candle start (epoch seconds), volume], ...] of a chart answer, inside market hours, oldest first."""
+    cols = body.get("data") if isinstance(body.get("data"), dict) and "timestamp" in body["data"] else body
+    try:
+        times, volumes = cols["timestamp"], cols["volume"]
+    except (KeyError, TypeError) as exc:
+        raise DhanError("other", f"unexpected chart answer from Dhan: {str(body)[:160]}") from exc
+    out = [[int(t), int(float(v))] for t, v in zip(times, volumes) if t is not None and v is not None and in_session({"time": int(t)})]
+    out.sort()
+    return out
+
+
+def future_volume(name: str, minutes: int, days_back: int = 8) -> dict:
+    """The volume traded in the index's nearest futures contract, per candle of `minutes`, for the last days: an index
+    is a calculated number with no volume of its own, so the Volume Profile page weighs the index's candles with these.
+    {"contract": {"name", "expiry"}, "bars": [[time, volume], ...]}. Asked of Dhan at most every 20 s, only while that
+    page is open. The dates go in the forms the index's own minute candles use (see _chart)."""
+    def make():
+        contract = future_of(name)
+        if not contract:
+            raise DhanError("other", f"Dhan's instrument list shows no {UNDERLYING[name]} futures contract")
+        day = today_ist()
+        start = (day - timedelta(days=days_back)).isoformat()
+        now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+        base = {"securityId": str(contract["id"]), "exchangeSegment": OPTION_SEGMENTS[name], "instrument": "FUTIDX", "oi": False}
+        forms = [(start, (day + timedelta(days=1)).isoformat(), str(minutes)), (start, day.isoformat(), str(minutes)),
+                 (f"{start} 09:15:00", now, str(minutes)), (start, (day + timedelta(days=1)).isoformat(), minutes), (f"{start} 09:15:00", now, minutes)]
+        last = None
+        for from_date, to_date, interval in forms:
+            try:
+                bars = _volumes(call("POST", "/charts/intraday", {**base, "interval": interval, "fromDate": from_date, "toDate": to_date}))
+            except DhanError as exc:
+                if exc.kind != "other":
+                    raise
+                last = exc
+                continue
+            return {"contract": {"name": contract["name"], "expiry": contract["expiry"]}, "bars": bars}
+        raise last
+    return cached(("future volume", name, minutes, days_back), 20, make)
 
 
 # ---------------------------------------------------------------- the option chain
