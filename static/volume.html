@@ -58,6 +58,8 @@
   #draw .sep { height: 1px; margin: 4px 6px; background: var(--border); }
   #wrap { position: relative; flex: 1; min-width: 0; min-height: 0; }
   #wrap.drawing #chart { cursor: crosshair; }
+  #wrap.moving #chart { cursor: grabbing; }
+  #chart { touch-action: none; }
   #chart { position: absolute; inset: 0; }
   #legend { position: absolute; left: 8px; top: 6px; right: 70px; z-index: 3; pointer-events: none; font-size: 12px; line-height: 1.55; color: var(--ink-2); }
   #legend .row { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: baseline; }
@@ -107,6 +109,8 @@
       <button type="button" data-tool="hline" aria-pressed="false" title="Horizontal line: tap a price" aria-label="Horizontal line"><svg viewBox="0 0 20 20"><path d="M2 10h16"/><circle cx="10" cy="10" r="1.6"/></svg></button>
       <button type="button" data-tool="vline" aria-pressed="false" title="Vertical line: tap a time" aria-label="Vertical line"><svg viewBox="0 0 20 20"><path d="M10 2v16"/><circle cx="10" cy="10" r="1.6"/></svg></button>
       <button type="button" data-tool="box" aria-pressed="false" title="Box: tap two corners" aria-label="Box"><svg viewBox="0 0 20 20"><rect x="3.5" y="5.5" width="13" height="9" rx="1"/></svg></button>
+      <button type="button" data-tool="fib" aria-pressed="false" title="Fibonacci levels: tap the start and the end of a move" aria-label="Fibonacci levels"><svg viewBox="0 0 20 20"><path d="M3 4h14M3 8h14M3 11h14M3 16h14"/></svg></button>
+      <button type="button" data-tool="text" aria-pressed="false" title="Note: tap a place and type" aria-label="Note"><svg viewBox="0 0 20 20"><path d="M5 5h10M10 5v11"/></svg></button>
       <span class="sep"></span>
       <button type="button" id="draw-delete" disabled title="Delete the picked drawing" aria-label="Delete the picked drawing"><svg viewBox="0 0 20 20"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg></button>
       <button type="button" id="draw-clear" disabled title="Remove all drawings of this index" aria-label="Remove all drawings"><svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
@@ -266,13 +270,17 @@
   }
 
   // ---------------------------------------------------------------- the drawing tools
-  // Four tools: a trend line (two taps), a horizontal line (one tap), a vertical line (one tap), a box (two taps). With the
-  // pointer, a tap on a drawing picks it, and the bin deletes it. A drawing is kept by its time and price, per index, in this
+  // Six tools: a trend line (two taps), a horizontal line (one tap), a vertical line (one tap), a box (two taps), Fibonacci
+  // levels (two taps: the start and the end of a move; 0 is at the end, 1 at the start) and a note (one tap, then the words).
+  // With the pointer, a tap on a drawing picks it, the bin deletes it, and a drawing is dragged to a new place: by its body the
+  // whole drawing moves, by one of its round ends only that end (the owner, 12 November: "Fib, dragging all I want"). A drawing is kept by its time and price, per index, in this
   // browser only (nothing goes to the server), so it stays where it was drawn on every candle size. Escape drops a tool.
   const SECONDS = { "1m": 60, "5m": 300, "15m": 900 };
-  const draw = { tool: "", first: null, hover: null, picked: -1, items: [] };
+  const draw = { tool: "", first: null, hover: null, picked: -1, items: [], drag: null };
+  const KINDS = ["line", "hline", "vline", "box", "fib", "text"];
+  const FIB = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
   const drawKey = () => "volumeProfileDrawings:" + state.name;
-  function loadDrawings() { draw.items = []; draw.picked = -1; draw.first = null; try { const saved = JSON.parse(localStorage.getItem(drawKey()) || "[]"); if (Array.isArray(saved)) draw.items = saved.filter(d => d && ["line", "hline", "vline", "box"].includes(d.kind)); } catch (e) {} drawButtons(); redraw(); }
+  function loadDrawings() { draw.items = []; draw.picked = -1; draw.first = null; try { const saved = JSON.parse(localStorage.getItem(drawKey()) || "[]"); if (Array.isArray(saved)) draw.items = saved.filter(d => d && KINDS.includes(d.kind)); } catch (e) {} drawButtons(); redraw(); }
   function saveDrawings() { try { localStorage.setItem(drawKey(), JSON.stringify(draw.items)); } catch (e) {} drawButtons(); }
   const redraw = () => drawings.requestUpdate && drawings.requestUpdate();
   function drawButtons() {
@@ -300,8 +308,9 @@
   function shape(d, paneW, paneH) {
     if (d.kind === "hline") { const y = yOf(d.price); return y == null ? null : { kind: "line", x1: 0, y1: y, x2: paneW, y2: y }; }
     if (d.kind === "vline") { const x = xOf(d.time); return x == null ? null : { kind: "line", x1: x, y1: 0, x2: x, y2: paneH }; }
+    if (d.kind === "text") { const x = xOf(d.a.time), y = yOf(d.a.price); return x == null || y == null ? null : { kind: "box", x1: x, y1: y - 9, x2: x + (d.w || 40), y2: y + 9 }; }
     const x1 = xOf(d.a.time), y1 = yOf(d.a.price), x2 = xOf(d.b.time), y2 = yOf(d.b.price);
-    return [x1, y1, x2, y2].some(v => v == null) ? null : { kind: d.kind, x1, y1, x2, y2 };
+    return [x1, y1, x2, y2].some(v => v == null) ? null : { kind: d.kind === "line" ? "line" : "box", real: d.kind, x1, y1, x2, y2 };
   }
   function near(sh, x, y, reach = 9) {
     const seg = (x1, y1, x2, y2) => { const dx = x2 - x1, dy = y2 - y1, len = dx * dx + dy * dy, t = len ? Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / len)) : 0; return Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy)); };
@@ -325,11 +334,24 @@
     const one = (d, picked, ghost) => {
       const sh = shape(d, w, h); if (!sh) return;
       ctx.save(); ctx.globalAlpha = ghost ? 0.6 : 1; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = Math.max(1, Math.round((picked ? 2.5 : 1.5) * vr)); if (ghost) ctx.setLineDash([5 * hr, 4 * hr]);
-      if (sh.kind === "box") {
+      if (d.kind === "text") {
+        ctx.font = `${Math.round(13 * vr)}px ${getComputedStyle(document.body).fontFamily}`; ctx.textBaseline = "middle"; ctx.fillStyle = css("--ink");
+        d.w = ctx.measureText(d.text).width / hr; ctx.fillText(d.text, sh.x1 * hr, (sh.y1 + 9) * vr);
+        if (picked) { ctx.strokeRect((sh.x1 - 3) * hr, sh.y1 * vr, (d.w + 6) * hr, 18 * vr); }
+      } else if (d.kind === "fib") {
+        const l = Math.min(sh.x1, sh.x2), r = Math.max(sh.x1, sh.x2);
+        ctx.font = `${Math.round(11 * vr)}px ${getComputedStyle(document.body).fontFamily}`; ctx.textBaseline = "bottom";
+        ctx.save(); ctx.globalAlpha *= 0.5; ctx.setLineDash([3 * hr, 3 * hr]); ctx.beginPath(); ctx.moveTo(sh.x1 * hr, sh.y1 * vr); ctx.lineTo(sh.x2 * hr, sh.y2 * vr); ctx.stroke(); ctx.restore();
+        for (const level of FIB) {  // 0 at the end of the move (the second tap), 1 at its start
+          const price = d.b.price + (d.a.price - d.b.price) * level, y = yOf(price); if (y == null) continue;
+          ctx.beginPath(); ctx.moveTo(l * hr, Math.round(y * vr) + 0.5); ctx.lineTo(r * hr, Math.round(y * vr) + 0.5); ctx.stroke();
+          ctx.fillStyle = css("--ink-2"); ctx.fillText(`${level}  (${num(price)})`, (l + 4) * hr, (y - 2) * vr); ctx.fillStyle = color;
+        }
+      } else if (sh.kind === "box") {
         const x = Math.min(sh.x1, sh.x2) * hr, y = Math.min(sh.y1, sh.y2) * vr, bw = Math.abs(sh.x2 - sh.x1) * hr, bh = Math.abs(sh.y2 - sh.y1) * vr;
         ctx.globalAlpha = (ghost ? 0.6 : 1) * 0.12; ctx.fillRect(x, y, bw, bh); ctx.globalAlpha = ghost ? 0.6 : 1; ctx.strokeRect(x, y, bw, bh);
       } else { ctx.beginPath(); ctx.moveTo(sh.x1 * hr, sh.y1 * vr); ctx.lineTo(sh.x2 * hr, sh.y2 * vr); ctx.stroke(); }
-      if (picked || ghost) for (const [x, y] of d.kind === "hline" ? [[w / 2, sh.y1]] : d.kind === "vline" ? [[sh.x1, h / 2]] : [[sh.x1, sh.y1], [sh.x2, sh.y2]]) { ctx.beginPath(); ctx.arc(x * hr, y * vr, 4 * hr, 0, Math.PI * 2); ctx.fillStyle = css("--surface"); ctx.fill(); ctx.setLineDash([]); ctx.stroke(); }
+      if ((picked || ghost) && d.kind !== "text") for (const [x, y] of d.kind === "hline" ? [[w / 2, sh.y1]] : d.kind === "vline" ? [[sh.x1, h / 2]] : [[sh.x1, sh.y1], [sh.x2, sh.y2]]) { ctx.beginPath(); ctx.arc(x * hr, y * vr, 4 * hr, 0, Math.PI * 2); ctx.fillStyle = css("--surface"); ctx.fill(); ctx.setLineDash([]); ctx.stroke(); }
       ctx.restore();
     };
     draw.items.forEach((d, i) => one(d, i === draw.picked, false));
@@ -338,21 +360,57 @@
   // A tap on the chart, read from the page itself: the chart library holds back a second tap that comes within half a
   // second of the first (it waits for a double tap), and the two taps of a line are often that quick. A drag that moved
   // the chart is not a tap; a tap on the price scale, the time scale or the RSI strip is not one either.
+  // The same pointer drags a drawing (with no tool chosen): going down on a drawing holds the chart still, moving carries
+  // the drawing (or the one end held), going up keeps it.
   let downAt = null;
-  $("chart").addEventListener("pointerdown", (e) => { if (e.isPrimary) downAt = { x: e.clientX, y: e.clientY, t: Date.now() }; }, true);
+  const inPane = (e) => { const r = $("chart").getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top; return x < 0 || y < 0 || x > paneSize.w || y > paneSize.h ? null : { x, y }; };
+  function grab(x, y) {  // the drawing under the pointer and the part held: "a" or "b" (one end), or "all"
+    for (let i = draw.items.length - 1; i >= 0; i--) {
+      const d = draw.items[i], sh = shape(d, paneSize.w, paneSize.h); if (!sh) continue;
+      if (d.a && d.b) { if (Math.hypot(x - sh.x1, y - sh.y1) <= 11) return { i, part: "a" }; if (Math.hypot(x - sh.x2, y - sh.y2) <= 11) return { i, part: "b" }; }
+      if (near(sh, x, y)) return { i, part: "all" };
+    }
+    return null;
+  }
+  const holdChart = (still) => chart.applyOptions({ handleScroll: !still, handleScale: !still });
+  $("chart").addEventListener("pointerdown", (e) => {
+    if (!e.isPrimary) return;
+    downAt = { x: e.clientX, y: e.clientY, t: Date.now() };
+    const at = !draw.tool && inPane(e), held = at && grab(at.x, at.y);
+    if (!held) return;
+    const place = chart.timeScale().coordinateToLogical(at.x), price = candles.coordinateToPrice(at.y);
+    draw.drag = { ...held, place, price, from: JSON.parse(JSON.stringify(draw.items[held.i])), moved: false };
+    holdChart(true);
+  }, true);
+  window.addEventListener("pointermove", (e) => {
+    const g = draw.drag; if (!g || !e.isPrimary) return;
+    if (!g.moved && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) <= 8) return;
+    const r = $("chart").getBoundingClientRect(), x = e.clientX - r.left, y = Math.max(0, Math.min(paneSize.h, e.clientY - r.top));
+    const place = chart.timeScale().coordinateToLogical(x), price = candles.coordinateToPrice(y); if (place == null || price == null) return;
+    if (!g.moved) { g.moved = true; draw.picked = g.i; $("wrap").classList.add("moving"); drawButtons(); }
+    const d = draw.items[g.i], dPlace = place - g.place, dPrice = price - g.price, round = (v) => Math.round(v * 100) / 100;
+    const shift = (pt) => ({ time: timeOf(placeOf(pt.time) + dPlace), price: round(pt.price + dPrice) });
+    if (d.kind === "hline") d.price = round(g.from.price + dPrice);
+    else if (d.kind === "vline") d.time = timeOf(placeOf(g.from.time) + dPlace);
+    else if (g.part === "all") { d.a = shift(g.from.a); if (d.b) d.b = shift(g.from.b); }
+    else d[g.part] = { time: timeOf(place), price: round(price) };
+    redraw();
+  });
+  const drop = () => { const g = draw.drag; if (!g) return false; draw.drag = null; holdChart(false); $("wrap").classList.remove("moving"); if (g.moved) saveDrawings(); return g.moved; };
   $("chart").addEventListener("pointerup", (e) => {  // a finger's tap gives no "click" on the chart, so the tap is read from the pointer going down and up
     const from = downAt; downAt = null;
+    if (drop()) return;  // a drawing was carried: not a tap
     if (!from || !e.isPrimary || Math.hypot(e.clientX - from.x, e.clientY - from.y) > 8 || Date.now() - from.t > 700) return;
-    const r = $("chart").getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-    if (x < 0 || y < 0 || x > paneSize.w || y > paneSize.h) return;
-    tapped(pointAt({ point: { x, y } }));
+    const at = inPane(e); if (at) tapped(pointAt({ point: at }));
   }, true);
-  $("chart").addEventListener("pointercancel", () => { downAt = null; }, true);
+  window.addEventListener("pointerup", () => { drop(); });
+  window.addEventListener("pointercancel", () => { downAt = null; drop(); });
   function tapped(at) {
     if (!at) return;
     const p = { time: at.time, price: Math.round(at.price * 100) / 100 };
     if (draw.tool === "hline" || draw.tool === "vline") { draw.items.push(draw.tool === "hline" ? { kind: "hline", price: p.price } : { kind: "vline", time: p.time }); setTool(""); saveDrawings(); redraw(); return; }
-    if (draw.tool === "line" || draw.tool === "box") {
+    if (draw.tool === "text") { const text = (prompt("Note:") || "").trim().slice(0, 80); if (text) { draw.items.push({ kind: "text", a: p, text }); saveDrawings(); } setTool(""); redraw(); return; }
+    if (draw.tool === "line" || draw.tool === "box" || draw.tool === "fib") {
       if (!draw.first) { draw.first = p; draw.hover = p; redraw(); return; }
       draw.items.push({ kind: draw.tool, a: draw.first, b: p }); setTool(""); saveDrawings(); redraw(); return;
     }

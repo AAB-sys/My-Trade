@@ -216,8 +216,8 @@ their own logic. Read this before touching the code.
   page says so. It decides nothing and gives no call; Paper calls and Calls with Signals do not read it, nor it them. The count
   follows the owner's word of 12 November ("as same as dhan ... nothing different"): 24 equal rows from the day's low to its high,
   the 70% value area, from the day's 1-minute candles, the same for every index (`volprofile.js`). Also on the page (the owner, 12 November: "add drawing tools and RSI"): the RSI (14 candles,
-  Wilder's smoothing, in a strip under the chart, with the 70 and 30 lines) and four drawing tools (trend line, horizontal line,
-  vertical line, box; pick with a tap, delete with the bin), kept per index in the browser only. `lab/check_volprofile.js` checks
+  Wilder's smoothing, in a strip under the chart, with the 70 and 30 lines) and six drawing tools (trend line, horizontal line,
+  vertical line, box, Fibonacci levels, note; pick with a tap, drag to move, delete with the bin), kept per index in the browser only. `lab/check_volprofile.js` checks
   the arithmetic. PRs for it are named "Volume_Profile_".
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
