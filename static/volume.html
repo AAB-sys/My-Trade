@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Volume Profile · My-Trade</title>
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <script src="/static/vendor/lightweight-charts.js"></script>
@@ -30,7 +30,13 @@
     }
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
+  /* The page itself never moves (13 November, the owner: "i want chart background fixed, then i can move the things": the
+     whole page must not scroll or shake when the chart is moved). It is pinned to the screen, it cannot be scrolled, bounced,
+     pulled down to refresh or pinched larger, and a drag does not mark its words; only what is inside the chart moves. */
+  html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+  body { position: fixed; inset: 0; width: 100%; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-text-size-adjust: 100%; }
+  #tools, #info, #draw { touch-action: pan-x; overscroll-behavior: contain; }
+  #wrap, #chart { overscroll-behavior: none; }
   body { background: var(--page); color: var(--ink); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
   header { display: flex; align-items: center; gap: 12px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); border-bottom: 1px solid var(--border); flex: none; }
   header a { color: var(--ink-2); text-decoration: none; font-size: 13px; padding: 4px 8px; border-radius: 6px; }
@@ -638,6 +644,13 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
   window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });
+  // The page stays where it is: whatever tries to scroll it is put back at once; the wheel with Ctrl held, a pinch on a
+  // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
+  const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };
+  window.addEventListener("scroll", pinPage, true);
+  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw")) e.preventDefault(); }, { passive: false });
+  for (const kind of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(kind, (e) => e.preventDefault());
+  document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);
   paint();
 })();
