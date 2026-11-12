@@ -44,6 +44,8 @@
   #tools select { font-weight: 600; padding-right: 4px; }
   #tools button:hover, #tools select:hover { background: var(--hover); }
   #tools button[aria-pressed="true"] { color: var(--accent); font-weight: 600; }
+  #tools label.box { gap: 4px; padding: 0 0 0 10px; color: var(--muted); border: 1px solid var(--border); margin: 0 2px; }
+  #tools label.box select { color: var(--accent); padding-left: 4px; }
   #tools .sep { width: 1px; align-self: stretch; margin: 6px 4px; background: var(--border); flex: none; }
   #tools label { display: flex; align-items: center; gap: 6px; font-size: 14px; padding: 8px 10px; white-space: nowrap; cursor: pointer; border-radius: 6px; min-height: 36px; }
   #tools label:hover { background: var(--hover); }
@@ -99,12 +101,10 @@
   <div id="tools" role="toolbar" aria-label="Chart settings">
     <select id="index" aria-label="Index"><option>NIFTY 50</option><option>NIFTY BANK</option><option>SENSEX</option></select>
     <span class="sep"></span>
-    <button type="button" data-interval="1m" aria-pressed="false">1m</button>
-    <button type="button" data-interval="5m" aria-pressed="true">5m</button>
-    <button type="button" data-interval="15m" aria-pressed="false">15m</button>
-    <span class="sep"></span>
-    <button type="button" data-days="1" aria-pressed="true">1D</button>
-    <button type="button" data-days="5" aria-pressed="false">5D</button>
+    <!-- the time frame boxes (13 November, the owner, with the 1m 5m 15m 1D 5D buttons marked: "add this as a time frame box with
+         drop down options and also add as 2D, 3D as well"): the candle size in one box, the days shown in the other -->
+    <label class="box">Time frame <select id="interval" aria-label="Time frame"><option value="1m">1m</option><option value="5m">5m</option><option value="15m">15m</option></select></label>
+    <label class="box">Days <select id="days" aria-label="Days shown"><option value="1">1D</option><option value="2">2D</option><option value="3">3D</option><option value="5">5D</option></select></label>
     <span class="sep"></span>
     <label><input type="checkbox" id="show-volume" checked> Volume</label>
     <label><input type="checkbox" id="show-rsi" checked> RSI</label>
@@ -137,7 +137,7 @@
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
   const params = new URLSearchParams(location.search);
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
-  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if (saved.days === 5) state.days = 5; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; } } catch (e) {}
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
   if (![...$("index").options].some(o => o.value === state.name)) state.name = "NIFTY 50";
@@ -559,15 +559,9 @@
 
   // ---------------------------------------------------------------- the tool row
   const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked })); } catch (e) {} };
-  function press() {
-    document.querySelectorAll("#tools button[data-interval]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.interval === state.interval)));
-    document.querySelectorAll("#tools button[data-days]").forEach(b => b.setAttribute("aria-pressed", String(Number(b.dataset.days) === state.days)));
-  }
-  $("tools").addEventListener("click", (e) => {
-    const b = e.target.closest("button"); if (!b) return;
-    if (b.dataset.interval && b.dataset.interval !== state.interval) { state.interval = b.dataset.interval; state.bars = []; state.fine = []; press(); save(); load(); }
-    if (b.dataset.days && Number(b.dataset.days) !== state.days) { state.days = Number(b.dataset.days); press(); save(); shownKey = state.name + state.interval + state.days; setAll(true); }
-  });
+  function press() { $("interval").value = state.interval; $("days").value = String(state.days); }
+  $("interval").addEventListener("change", () => { state.interval = $("interval").value; state.bars = []; state.fine = []; save(); load(); });
+  $("days").addEventListener("change", () => { state.days = Number($("days").value); save(); shownKey = state.name + state.interval + state.days; setAll(true); });
   $("index").addEventListener("change", () => { state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
   // every indicator but the profile has its switch, and the page remembers how each was left
   $("show-volume").addEventListener("change", () => { setVolume(); save(); });
