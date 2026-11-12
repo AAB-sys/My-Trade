@@ -232,6 +232,22 @@ costs), because the calls that run are the ones that pay. And none of these rule
 reclaim -541 points over 144 calls after 8 a call, the VWAP loss -1,346 over 169): the guide helps to decide where to book part of a
 trade, it does not turn the rule into a profitable one.
 
+**The VWAP stretch meter** (12 November, the owner, of a chart where NIFTY 50 had fallen far below the VWAP line: "Candle and VWAP
+line gap should be filled if the gap is too big between them? Is this a standard behaviour?"; "something you have to develop out of
+this observation"; then, of the first screenshots, which showed how often the price had come back on past days: "It should not work
+on past days on live feed, the numbers should be based on live feed only"). One line beside the Settings button while the VWAP line is
+drawn (NIFTY 50, 5-minute candles, the VWAP tick on, while the day runs). A reading of today's candles only, never a call, and no
+number of a past day in it (`MorePat.vwapGap`): the gap between the price and the VWAP now, in points and in ATR, above or below; how
+long since a candle last touched the VWAP; how many times today the price came back to the VWAP after moving 1 ATR or more away; the
+day's widest gap and when. From 3 ATR on the line turns red at its side and says "far from VWAP". Example, 30 October at 11:03: "VWAP
+gap now 1.0 ATR above (26.80 points) · price last touched VWAP 10 min ago · today it came back to VWAP 1 time after moving 1 ATR
+away · widest gap today 1.5 ATR at 10:30 am · today's live data only, not a call". Why a reading and not a rule, from the owner's two
+years of NIFTY 50 5-minute candles (11 November 2024 to 9 November 2026): the price does tend to meet the VWAP again, but slowly and
+less the wider the gap (back within an hour after 60% of the candles 1 to 1.5 ATR away, 30% at 2 to 3, 7% at 4 or more; by the day's
+end 82%, 61%, 23%); a bet on the return (a turn candle after a stretch, stop at the extreme, target the VWAP) lost in all 192 settings
+tried, in both years; a bet with the move at 4 ATR or more (trail 1.5 ATR) made about +3 points a call in each year but lost on more
+days than it won and rested on three days, so it did not pass the bar. `lab/vwap_meter_check.js` checks the reading.
+
 **Not built:** nothing of the document is left out; the rules run on NIFTY 50 only, as the document covers.
 
 ## On the page

@@ -62,6 +62,31 @@
     cs.forEach((c, i) => { const vol = volumes ? volumes[i] : 1.0; pv += (c.high + c.low + c.close) / 3 * vol; vv += vol; out.push(pv / vv); });
     return out;
   }
+  // ---- The VWAP stretch meter (12 November, the owner, of a chart where the price had fallen far below the VWAP line: "Candle and VWAP
+  // line gap should be filled if the gap is too big between them?"; "something you have to develop out of this observation"; then, of
+  // the first two screenshots, which showed how often the price had come back on past days: "It should not work on past days on live
+  // feed, the numbers should be based on live feed only"). A reading of TODAY's candles only, never a call, and no number of any past
+  // day in it: the gap between the price and the VWAP now (points, and in ATR), how long since a candle last touched the VWAP, how
+  // many times the price has come back to the VWAP today after moving a full ATR away, and the day's widest gap. From 3 ATR on it
+  // says the price is far from the VWAP. (The study behind it, on the owner's two years of candles, is in NEW_RULES.md: a bet on the
+  // return lost in all 192 settings tried and a bet with the move did not pass the bar, so this is a reading and nothing more.)
+  const VWAP_FAR_FROM = 3, VWAP_AWAY_FROM = 1;  // in ATR: "far from VWAP" from 3; a return counts after the price was 1 or more away
+  // the meter's reading at candle k (the candle forming now counts, at its price). atrs: the ATR of each of the day's candles (the
+  // page's own, NewRule.atrSeries carried in from the sessions before). null without an ATR at k
+  function vwapGap(cs, k, atrs, volumes = null) {
+    if (!cs || !atrs || k == null || k < 0 || k >= cs.length || !(atrs[k] > 0)) return null;
+    const v = vwapSeries(cs.slice(0, k + 1), volumes ? volumes.slice(0, k + 1) : null);
+    let lastTouch = null, returns = 0, away = false, widest = 0, widestAt = null;
+    for (let i = 0; i <= k; i++) {
+      const touch = cs[i].low <= v[i] && cs[i].high >= v[i], g = atrs[i] > 0 ? Math.abs(cs[i].close - v[i]) / atrs[i] : 0;
+      if (touch) { lastTouch = i; if (away && i > 0) returns++; away = false; }
+      if (!touch && g >= VWAP_AWAY_FROM) away = true;
+      if (g > widest) { widest = g; widestAt = i; }
+    }
+    const gap = cs[k].close - v[k], gapAtr = Math.abs(gap) / atrs[k], r1 = (x) => Math.round(x * 10) / 10;
+    return { vwap: round2(v[k]), gap: round2(gap), gapAtr: r1(gapAtr), side: gap > 0 ? "above" : gap < 0 ? "below" : "on", far: gapAtr >= VWAP_FAR_FROM,
+             sinceTouch: lastTouch == null ? null : k - lastTouch, returns, widest: r1(widest), widestAt };  // sinceTouch: candles since the last touch (0: this candle touches it; null: none today)
+  }
   // ---- 1. head and shoulders: written for the inverse (BUY CE); flipped: head and shoulders, BUY PE
   function inverseHeadShoulders(cs, k, atr, c) {
     const lows = swingLows(cs, k, c.swing_n);
@@ -415,5 +440,5 @@
     const ok = rows.filter(r => r.status === "ok");
     return { signals, rows, atr, summary: { signals: rows.length, ok: ok.length, byRule, often: Object.keys(byRule).filter(key => byRule[key] > 5), okPoints: round2(ok.reduce((sum, r) => sum + (r.paper || 0), 0)) } };
   }
-  root.MorePat = { COMMON, RULES, ORDER, LOOKBACK, candle, atrBefore, flip, flipCtx, swingHighs, swingLows, lineValue, zigzag, vwapSeries, swapWords, unflipSignal, makeSignal, settingsFor, detect, markStatus, runDay, slot, dayLog, round2 };
+  root.MorePat = { COMMON, RULES, ORDER, LOOKBACK, candle, atrBefore, flip, flipCtx, swingHighs, swingLows, lineValue, zigzag, vwapSeries, VWAP_FAR_FROM, VWAP_AWAY_FROM, vwapGap, swapWords, unflipSignal, makeSignal, settingsFor, detect, markStatus, runDay, slot, dayLog, round2 };
 })(typeof window !== "undefined" ? window : globalThis);
