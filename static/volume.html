@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Volume Profile · My-Trade</title>
 <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
 <script src="/static/vendor/lightweight-charts.js"></script>
@@ -30,7 +30,13 @@
     }
   }
   * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
+  /* The page itself never moves (13 November, the owner: "i want chart background fixed, then i can move the things": the
+     whole page must not scroll or shake when the chart is moved). It is pinned to the screen, it cannot be scrolled, bounced,
+     pulled down to refresh or pinched larger, and a drag does not mark its words; only what is inside the chart moves. */
+  html, body { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+  body { position: fixed; inset: 0; width: 100%; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-text-size-adjust: 100%; }
+  #tools, #info, #draw { touch-action: pan-x; overscroll-behavior: contain; }
+  #wrap, #chart { overscroll-behavior: none; }
   body { background: var(--page); color: var(--ink); font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif; display: flex; flex-direction: column; height: 100dvh; overflow: hidden; }
   header { display: flex; align-items: center; gap: 12px; padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); border-bottom: 1px solid var(--border); flex: none; }
   header a { color: var(--ink-2); text-decoration: none; font-size: 13px; padding: 4px 8px; border-radius: 6px; }
@@ -79,6 +85,14 @@
   #info i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   #info i.line { height: 2px; vertical-align: 3px; border-radius: 0; }
   #info .cut { width: 1px; align-self: stretch; background: var(--border); flex: none; }
+  /* the chart's own buttons (13 November, the owner: "there is no manual zoom in and zoom out button on the chart, add those, also add
+     left right up down buttons"): a row at the foot of the candles, in the middle */
+  #nav { position: absolute; left: 50%; transform: translateX(-50%); top: 0; z-index: 4; display: flex; gap: 2px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); opacity: 0.92; visibility: hidden; }
+  #nav button { width: 32px; height: 32px; display: grid; place-items: center; background: transparent; border: 0; border-radius: 6px; color: var(--ink-2); cursor: pointer; padding: 0; touch-action: manipulation; }
+  #nav button:hover { background: var(--hover); color: var(--ink); }
+  #nav button:active { color: var(--accent); }
+  #nav svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #nav .sep { width: 1px; margin: 5px 2px; background: var(--border); }
   #note { margin: 0; padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); flex: none; }
   #note.warn { color: var(--ink-2); }
   @media (max-width: 600px) {
@@ -125,6 +139,17 @@
     </div>
     <div id="wrap">
       <div id="legend" aria-live="off"></div>
+      <div id="nav" role="toolbar" aria-label="Move and zoom the chart">
+        <button type="button" data-nav="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 18 18"><path d="M4 9h10"/></svg></button>
+        <button type="button" data-nav="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 18 18"><path d="M4 9h10M9 4v10"/></svg></button>
+        <span class="sep"></span>
+        <button type="button" data-nav="left" title="Move left (earlier)" aria-label="Move left"><svg viewBox="0 0 18 18"><path d="M11 4L6 9l5 5"/></svg></button>
+        <button type="button" data-nav="right" title="Move right (later)" aria-label="Move right"><svg viewBox="0 0 18 18"><path d="M7 4l5 5-5 5"/></svg></button>
+        <button type="button" data-nav="up" title="Move up (higher prices)" aria-label="Move up"><svg viewBox="0 0 18 18"><path d="M4 11l5-5 5 5"/></svg></button>
+        <button type="button" data-nav="down" title="Move down (lower prices)" aria-label="Move down"><svg viewBox="0 0 18 18"><path d="M4 7l5 5 5-5"/></svg></button>
+        <span class="sep"></span>
+        <button type="button" data-nav="reset" title="Back to the whole view" aria-label="Back to the whole view"><svg viewBox="0 0 18 18"><path d="M4 9a5 5 0 1 0 1.6-3.7M4 3.5v2.5h2.5"/></svg></button>
+      </div>
       <div id="chart"></div>
     </div>
   </div>
@@ -184,7 +209,7 @@
   const volume = chart.addSeries(LC.HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
   volume.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
   // a narrow screen: the words top left take more lines, so the candles start lower
-  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: { top: innerWidth <= 600 ? 0.13 : 0.08, bottom: 0.22 } });
+  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: state.priceView ? { top: 0, bottom: 0 } : { top: innerWidth <= 600 ? 0.13 : 0.08, bottom: 0.22 } });
   roomOnTop(); addEventListener("resize", roomOnTop);
 
   function paint() {
@@ -224,9 +249,14 @@
       const p = s.profile; if (!p || !(p.total > 0)) return;
       const x0c = ts.timeToCoordinate(s.bars[0].time + IST); if (x0c == null) return;
       const x0 = x0c - spacing / 2, lastDay = k === state.profiles.length - 1, right = state.days === 1;
-      if (!right && (x0 > paneW || x0 + full < 0)) return;
-      const width = right ? paneW * 0.24 : Math.max(40, Math.min(full * 0.42, paneW * 0.4));
-      const rect = (from, len, yTop, h) => { const a = right ? paneW - from - len : x0 + from; ctx.fillRect(Math.round(a * hr), Math.round(yTop * vr), Math.max(0, Math.round(len * hr)), Math.max(1, Math.round(h * vr))); };
+      // One day: the profile stands at the end of the day's own room on the time line (where the whole view ends), not at the
+      // screen's edge, and it is as wide as a fixed share of that room: so it moves left and right with the candles and
+      // grows and shrinks with them (the owner, 13 November: "whenever i move up n down, left or right, or make it small or
+      // bigger every price action moves in the same direction and volume profile also in the same direction")
+      const day = BARS_A_DAY[state.interval], edge = x0c + day * 1.36 * spacing;
+      if (right ? (x0 > paneW || edge < 0) : (x0 > paneW || x0 + full < 0)) return;
+      const width = right ? (day * 1.36 + 1.5) * spacing * 0.24 : full * 0.42;
+      const rect = (from, len, yTop, h) => { const a = right ? edge - from - len : x0 + from; ctx.fillRect(Math.round(a * hr), Math.round(yTop * vr), Math.max(0, Math.round(len * hr)), Math.max(1, Math.round(h * vr))); };
       const most = Math.max(...p.rows.map(r => r.total));
       p.rows.forEach((r, i) => {
         if (!(r.total > 0)) return;
@@ -242,7 +272,7 @@
       const line = (price, color, dash, w) => {
         const y = candles.priceToCoordinate(price); if (y == null) return;
         ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = Math.max(1, Math.round(w * vr)); ctx.setLineDash(dash.map(d => d * hr));
-        ctx.beginPath(); const yy = Math.round(y * vr) + 0.5; ctx.moveTo(Math.round(Math.max(0, x0) * hr), yy); ctx.lineTo(Math.round((lastDay ? paneW : x0 + full) * hr), yy); ctx.stroke(); ctx.restore();
+        ctx.beginPath(); const yy = Math.round(y * vr) + 0.5; ctx.moveTo(Math.round(Math.max(0, x0) * hr), yy); ctx.lineTo(Math.round((right ? edge : x0 + full) * hr), yy); ctx.stroke(); ctx.restore();
       };
       line(p.poc, cPoc, [], 1.5);
       line(p.vah, cVa, [4, 4], 1); line(p.val, cVa, [4, 4], 1);
@@ -337,6 +367,7 @@
   candles.attachPrimitive(drawings);
   function drawDrawings(scope) {
     const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, w = scope.mediaSize.width, h = scope.mediaSize.height;
+    if (paneSize.h !== h || paneSize.w !== w) { const nav = $("nav"); nav.style.top = Math.max(0, h - 46) + "px"; nav.style.left = (w / 2) + "px"; nav.style.visibility = "visible"; }
     paneSize = { w, h };
     const color = css("--accent");
     const one = (d, picked, ghost) => {
@@ -465,10 +496,30 @@
     const bars = shown().flat();
     candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
     rebuild(); setVolume(); setRsi(); redraw();
-    if (fit) fitDays();
+    if (fit) { if (state.priceView) priceView(null); fitDays(); }
   }
 
   // one day: the whole session from 9:15 to 15:30 in view, with room on the right for the profile; five days: all of them
+  // The chart's buttons: zoom out and in (the time, about the middle of the view), left and right (a fifth of the view),
+  // up and down (a sixth of the prices in view: the price scale then stays where it was put), and back to the whole view.
+  function navigate(what) {
+    const ts = chart.timeScale(), r = ts.getVisibleLogicalRange(), ps = candles.priceScale();
+    if (what === "reset") { priceView(null); fitDays(); return; }
+    if (!r) return;
+    const width = r.to - r.from, mid = (r.from + r.to) / 2;
+    if (what === "in" || what === "out") { const w = Math.max(8, Math.min(4000, width * (what === "in" ? 0.7 : 1 / 0.7))); ts.setVisibleLogicalRange({ from: mid - w / 2, to: mid + w / 2 }); }
+    else if (what === "left" || what === "right") { const d = width * 0.2 * (what === "left" ? -1 : 1); ts.setVisibleLogicalRange({ from: r.from + d, to: r.to + d }); }
+    else { const v = state.priceView || ps.getVisibleRange(); if (!v) return; const d = (v.to - v.from) / 6 * (what === "up" ? 1 : -1); priceView({ from: v.from + d, to: v.to + d }); }
+  }
+  // The prices in view, when the up and down buttons have moved them: the chart is told that range as the one to show, with
+  // no room added around it (the range read from the scale already holds that room); null: the chart follows the candles again
+  function priceView(range) {
+    state.priceView = range;
+    candles.applyOptions({ autoscaleInfoProvider: range ? () => ({ priceRange: { minValue: range.from, maxValue: range.to } }) : (original) => original() });
+    candles.priceScale().applyOptions({ autoScale: true });
+    roomOnTop();
+  }
+  $("nav").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) navigate(b.dataset.nav); });
   function fitDays() {
     const n = shown().flat().length; if (!n) return;
     if (state.days === 1) { const day = BARS_A_DAY[state.interval]; chart.timeScale().setVisibleLogicalRange({ from: -1.5, to: day * 1.36 }); }
@@ -593,6 +644,13 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
   window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });
+  // The page stays where it is: whatever tries to scroll it is put back at once; the wheel with Ctrl held, a pinch on a
+  // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
+  const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };
+  window.addEventListener("scroll", pinPage, true);
+  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw")) e.preventDefault(); }, { passive: false });
+  for (const kind of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(kind, (e) => e.preventDefault());
+  document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);
   paint();
 })();
