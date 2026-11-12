@@ -219,7 +219,10 @@ their own logic. Read this before touching the code.
   Wilder's smoothing, in a strip under the chart, with the 70 and 30 lines) and six drawing tools. The profile is always drawn; every other indicator (the volume bars, the RSI, and any added later) has a switch in the tool row that the page remembers (the owner: "volume profile should always be there, else every indicator should have an option to enable and disable"). The tools: (trend line, horizontal line,
   vertical line, box, Fibonacci levels, note; pick with a tap, drag to move, delete with the bin), kept per index in the browser only. The chart has its own buttons at the foot of the candles: zoom out, zoom in,
   left, right, up, down, and back to the whole view (the owner, 13 November). `lab/check_volprofile.js` checks
-  the arithmetic. PRs for it are named "Volume_Profile_".
+  the arithmetic. The server checks the page's supply itself (the owner, 13 November: "yes add that check"): every half hour one
+  small request per index for its futures' volume (`dhan.volume_check`, `volume_forever`), shown in `/health` under
+  `feed.volume_profile` (ok, the contract, the last candle, today's volume, Dhan's reason when refused); `lab/check_volume_health.py`.
+  PRs for it are named "Volume_Profile_".
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
   interface, unused since the CSV button went on 16 October; `target=_blank` links kept in the same view so the login's tab

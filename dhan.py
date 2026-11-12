@@ -928,6 +928,34 @@ def future_volume(name: str, minutes: int, days_back: int = 8) -> dict:
     return cached(("future volume", name, minutes, days_back), 20, make)
 
 
+_volume_seen: dict = {}  # name -> what the last check of the futures' volume found, for /health (volume_report)
+
+
+def volume_check(name: str) -> dict:
+    """One look at what the Volume Profile page lives on, kept for /health (the owner, 13 November: "yes add that check",
+    so that a fault on that page is seen without anyone opening it): does Dhan give the index's futures volume now, for
+    which contract, up to which candle, and how much today. Never raises: a refusal is the finding."""
+    seen = {"at": datetime.now(IST).isoformat(timespec="seconds"), "ok": False, "contract": None, "candles": 0, "last_candle": None, "today_volume": None, "problem": None}
+    try:
+        got = future_volume(name, 5)
+        bars = got["bars"]
+        today = today_ist()
+        seen.update(ok=bool(bars), contract=f"{got['contract']['name']} ({got['contract']['expiry']})", candles=len(bars),
+                    last_candle=datetime.fromtimestamp(bars[-1][0], IST).isoformat(timespec="minutes") if bars else None,
+                    today_volume=sum(v for t, v in bars if datetime.fromtimestamp(t, IST).date() == today),
+                    problem=None if bars else "Dhan answered with no candle of volume")
+    except DhanError as exc:
+        seen["problem"] = exc.message[:200]
+    except Exception as exc:
+        seen["problem"] = f"{type(exc).__name__}: {str(exc)[:160]}"
+    _volume_seen[name] = seen
+    return seen
+
+
+def volume_report() -> dict:
+    return {name: dict(seen) for name, seen in _volume_seen.items()}
+
+
 # ---------------------------------------------------------------- the option chain
 
 def nearest_expiry(name: str) -> str:

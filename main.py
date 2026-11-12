@@ -1118,6 +1118,25 @@ async def token_forever() -> None:
         await asyncio.sleep(TOKEN_CHECK_SECONDS)
 
 
+VOLUME_CHECK_SECONDS = float(os.environ.get("VOLUME_CHECK_SECONDS", "1800"))
+
+
+async def volume_forever() -> None:
+    """The Volume Profile page's own check (the owner, 13 November: "yes add that check"): a minute after the start (the
+    instrument list is read by then) and every half hour, one small request per index for its futures' volume; what
+    came is shown in /health under "volume_profile", so a fault on that page is seen without the page being opened."""
+    await asyncio.sleep(60)
+    while True:
+        for name in dhan.OPTION_SEGMENTS:
+            try:
+                seen = await asyncio.to_thread(dhan.volume_check, name)
+                if seen["problem"]:
+                    log.warning("Volume Profile check, %s: %s", name, seen["problem"])
+            except Exception as exc:  # never a dead loop
+                log.warning("Volume Profile check, %s: %s", name, exc)
+        await asyncio.sleep(VOLUME_CHECK_SECONDS)
+
+
 async def give_memory_back_forever() -> None:
     """Once a minute the allocator's free memory goes back to the system (memwatch.give_back; 9 October: 265 MB held
     free against 36 MB in use, and the server grew towards Render's 512 MB), after a full run of the garbage collector
@@ -1160,6 +1179,7 @@ async def lifespan(app: FastAPI):
     if DHAN_ON:
         tasks.append(asyncio.create_task(warm_option_ids()))
         tasks.append(asyncio.create_task(token_forever()))
+        tasks.append(asyncio.create_task(volume_forever()))
         tasks.append(asyncio.create_task(calls_forever()))
         tasks.append(asyncio.create_task(live_forever()))
     if SELF_URL:
@@ -1248,6 +1268,7 @@ def feed_state() -> dict:
             "tick_rate": tick_rate_report(),  # how many ticks a minute each index gets from Dhan, and the longest wait between two (12 November)
             "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
+            "volume_profile": {"page_file": (STATIC / "volume.html").is_file() and (STATIC / "volprofile.js").is_file(), **dhan.volume_report()},  # the Volume Profile page's check (13 November)
             "option_list": dhan.list_report()}  # what Dhan's instrument list gave (9 October, SENSEX): option ids per underlying, SENSEX's expiries and rows
 
 
