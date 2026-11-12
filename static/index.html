@@ -87,6 +87,9 @@
   #pick.open #pick-menu { display: block; }
   #pick-menu a { display: block; padding: 8px 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 14px; font-weight: 600; white-space: nowrap; }
   #pick-menu a:hover, #pick-menu a:focus { background: var(--border); outline: none; }
+  /* The Volume Profile capsule (12 November, the owner: "build a new page with header name as volume profile"): a pill beside Index, opening that page in a new tab */
+  #vp-link { font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; text-decoration: none; display: inline-block; margin: -6px 0 18px 6px; }
+  #vp-link:hover { border-color: var(--ink-2); }
   #open-warning { flex-basis: 100%; color: var(--down); font-size: 13px; }
   /* The Download candles capsule (1 November, the owner: two years of NIFTY 50 candles for a replay of the Calls with Signals rules):
      a pill beside Index; its panel asks the index, the first and last day and the candle size, and saves a CSV that Excel opens */
@@ -163,6 +166,7 @@
     <button id="pick-btn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="pick-menu">Index <span class="caret" aria-hidden="true">▼</span></button>
     <div id="pick-menu" role="menu" aria-label="Index" hidden></div>
   </div>
+  <a id="vp-link" href="/volume-profile" target="_blank" rel="noopener" title="Open the Volume Profile page in a new tab">Volume Profile</a>
   <!-- The Download candles capsule (1 November): a file of an index's 5-minute candles between two days, from Dhan with the server's
        own token, for a replay of the rules; nothing is kept on the server -->
   <div id="dl">
@@ -325,6 +329,9 @@
     };
     ws.onerror = () => ws.close();
   }
+
+  // The Volume Profile capsule (12 November): its link carries the tab's current note, like a tile's
+  (() => { const a = document.getElementById("vp-link"), set = () => { a.href = "/volume-profile#t=" + encodeURIComponent(TAB); }; a.addEventListener("pointerdown", set); a.addEventListener("focus", set); a.addEventListener("click", set); })();
 
   // The Index capsule (30 October): the menu is the three indices in the tiles' order, each a link like a tile (that index's page in a
   // new tab, the tab's note in #t=); the links are made afresh each time the menu opens, so they carry the tab's current note

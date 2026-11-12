@@ -208,6 +208,17 @@ their own logic. Read this before touching the code.
   candles; the score line, the CSV download and the no-call notes left the page on 16 October, the owner's ask; nothing drawn on the chart), computed in the page from the
   summary and the bars. Chart drawn with
   Lightweight Charts, bundled in `static/vendor/` (do not load it from a CDN).
+- `static/volume.html`, `static/volprofile.js` - the Volume Profile page (12 November, the owner: "build a new page with header
+  name as volume profile"), at `/volume-profile`, opened from the dashboard's Volume Profile capsule. A page of its own: it draws the
+  index's candles (`/indices/{name}/detail`), the volume along the bottom and, per day, how much was traded at each price (the rows,
+  the busiest price, the 70% area). An index has no volume, so the weights are the volume of its nearest futures contract
+  (`dhan.future_volume`, `/indices/{name}/volume`, asked of Dhan only while the page is open); without it the rows count time and the
+  page says so. It decides nothing and gives no call; Paper calls and Calls with Signals do not read it, nor it them. The count
+  follows the owner's word of 12 November ("as same as dhan ... nothing different"): 24 equal rows from the day's low to its high,
+  the 70% value area, from the day's 1-minute candles, the same for every index (`volprofile.js`). Also on the page (the owner, 12 November: "add drawing tools and RSI"): the RSI (14 candles,
+  Wilder's smoothing, in a strip under the chart, with the 70 and 30 lines) and six drawing tools. The profile is always drawn; every other indicator (the volume bars, the RSI, and any added later) has a switch in the tool row that the page remembers (the owner: "volume profile should always be there, else every indicator should have an option to enable and disable"). The tools: (trend line, horizontal line,
+  vertical line, box, Fibonacci levels, note; pick with a tap, drag to move, delete with the bin), kept per index in the browser only. `lab/check_volprofile.js` checks
+  the arithmetic. PRs for it are named "Volume_Profile_".
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
   interface, unused since the CSV button went on 16 October; `target=_blank` links kept in the same view so the login's tab
