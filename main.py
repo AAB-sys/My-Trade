@@ -21,6 +21,7 @@ import websockets
 
 import dhan
 import memwatch
+import vpsignal
 import record
 from providers import INDICES, INTERVALS, LONG_INTERVALS, RANGES, DemoTicker, bucket_start, now_ist
 import rule
@@ -1365,6 +1366,22 @@ async def index_volume(name: str, interval_key: str = Query("5m", alias="interva
         log.warning("futures volume failed for %s: %s", key, exc)
         return {**out, "problem": dhan_reason(exc)}
     return {**out, **got}
+
+
+@app.get("/indices/{name}/vp-signal")
+async def index_vp_signal(name: str, premium: float | None = Query(None, ge=0, le=100000)):
+    """The Volume Profile page's signal (the owner's document of 13 November, "Volume Profile Signal Logic"): yesterday's
+    levels, the naked POC list, how today opened, CE, PE or WAIT with the reason, the stop, the target, the lots, and the
+    last sessions for study. The logic is the document's own code in vp/, fed by vpsignal.py. It states; it places no order."""
+    key = known_index(name)
+    if not (DHAN_ON and key in dhan.OPTION_SEGMENTS):
+        return {"name": key, "problem": store["dhan"]["status"]}
+    try:
+        forming = (live.get(key) or {}).get("bars", {}).get("5m") if live_price(key) is not None else None  # the 5-minute candle forming now from the live ticks
+        return {**(await asyncio.to_thread(vpsignal.state, key, premium, forming)), "problem": None}
+    except Exception as exc:
+        log.warning("vp signal failed for %s: %s", key, exc)
+        return {"name": key, "problem": dhan_reason(exc)}
 
 
 @app.get("/indices")

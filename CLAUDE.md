@@ -222,6 +222,16 @@ their own logic. Read this before touching the code.
   the arithmetic. The server checks the page's supply itself (the owner, 13 November: "yes add that check"): every half hour one
   small request per index for its futures' volume (`dhan.volume_check`, `volume_forever`), shown in `/health` under
   `feed.volume_profile` (ok, the contract, the last candle, today's volume, Dhan's reason when refused); `lab/check_volume_health.py`.
+  The page's signal (the owner's document "Volume Profile Signal Logic", 13 November: "read this document
+  thoroughly and implement the changes"): CE, PE or WAIT from yesterday's profile (VAL, POC, VAH, the naked POCs) and today's
+  finished 5-minute candles, four setups (rejection at VAH, rejection at VAL, acceptance outside value, the 80% rule), the reward
+  at least 1.5 times the risk, one signal a day, a stop and a target as index levels, the lots, out at the stop, the target or
+  15:15. The logic is the document's own code, kept as written in `vp/` (`profile.py`, `vp_signal.py`, `vp_config.json`,
+  `vp_cli.py`, `test_vp.py`); `vpsignal.py` feeds it Dhan's candles with the futures' volume and adds the exit;
+  `/indices/{name}/vp-signal` serves it; the page shows it in a panel with its own switch and draws the levels. It states a
+  signal for paper trading and study and places no order; the document's own two-year test did not make money overall, and the
+  page says so. `lab/check_vpsignal.py` (the document's 12 tests, the server against the document's command line day by day,
+  the exit, the sizing). Never change a rule or a number of `vp/` without the owner's word.
   PRs for it are named "Volume_Profile_".
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
