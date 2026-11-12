@@ -134,8 +134,8 @@
       <button type="button" data-tool="fib" aria-pressed="false" title="Fibonacci levels: tap the start and the end of a move" aria-label="Fibonacci levels"><svg viewBox="0 0 20 20"><path d="M3 4h14M3 8h14M3 11h14M3 16h14"/></svg></button>
       <button type="button" data-tool="text" aria-pressed="false" title="Note: tap a place and type" aria-label="Note"><svg viewBox="0 0 20 20"><path d="M5 5h10M10 5v11"/></svg></button>
       <span class="sep"></span>
-      <button type="button" id="draw-delete" disabled title="Delete the picked drawing" aria-label="Delete the picked drawing"><svg viewBox="0 0 20 20"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg></button>
-      <button type="button" id="draw-clear" disabled title="Remove all drawings of this index" aria-label="Remove all drawings"><svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
+      <button type="button" id="draw-delete" disabled title="Delete: the picked drawing, or the last one drawn" aria-label="Delete a drawing"><svg viewBox="0 0 20 20"><path d="M4 6h12M8 6V4h4v2M6 6l1 10h6l1-10"/></svg></button>
+      <button type="button" id="draw-clear" disabled title="Remove all drawings of this index, at once" aria-label="Remove all drawings"><svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg></button>
     </div>
     <div id="wrap">
       <div id="legend" aria-live="off"></div>
@@ -323,7 +323,7 @@
   const redraw = () => drawings.requestUpdate && drawings.requestUpdate();
   function drawButtons() {
     document.querySelectorAll("#draw button[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === draw.tool)));
-    $("draw-delete").disabled = draw.picked < 0; $("draw-clear").disabled = !draw.items.length;
+    $("draw-delete").disabled = $("draw-clear").disabled = !draw.items.length && !draw.first;
     $("wrap").classList.toggle("drawing", !!draw.tool);
   }
   // a time to its place along the candles shown (a candle's number, with a fraction between two candles and beyond the ends), and back
@@ -450,7 +450,7 @@
     if (draw.tool === "hline" || draw.tool === "vline") { draw.items.push(draw.tool === "hline" ? { kind: "hline", price: p.price } : { kind: "vline", time: p.time }); setTool(""); saveDrawings(); redraw(); return; }
     if (draw.tool === "text") { const text = (prompt("Note:") || "").trim().slice(0, 80); if (text) { draw.items.push({ kind: "text", a: p, text }); saveDrawings(); } setTool(""); redraw(); return; }
     if (draw.tool === "line" || draw.tool === "box" || draw.tool === "fib") {
-      if (!draw.first) { draw.first = p; draw.hover = p; redraw(); return; }
+      if (!draw.first) { draw.first = p; draw.hover = p; drawButtons(); redraw(); return; }
       draw.items.push({ kind: draw.tool, a: draw.first, b: p }); setTool(""); saveDrawings(); redraw(); return;
     }
     let hit = -1;  // the pointer: the drawing under the tap is picked (the newest first), a tap elsewhere lets go
@@ -461,12 +461,21 @@
   $("draw").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b || b.disabled) return;
     if (b.dataset.tool != null) setTool(b.dataset.tool === draw.tool ? "" : b.dataset.tool);
-    else if (b.id === "draw-delete" && draw.picked >= 0) { draw.items.splice(draw.picked, 1); draw.picked = -1; saveDrawings(); redraw(); }
-    else if (b.id === "draw-clear" && draw.items.length && confirm("Remove all drawings of " + state.name + "?")) { draw.items = []; draw.picked = -1; saveDrawings(); redraw(); }
+    else if (b.id === "draw-delete") deleteOne();
+    else if (b.id === "draw-clear") { draw.items = []; draw.picked = -1; setTool(""); saveDrawings(); redraw(); }
   });
+  // The bin always deletes something when there is something (13 November, the owner, with a photo of a half-drawn line and
+  // the question box: "when i press delete and when i press cross bar it should be deleted or erased, which is not happening"):
+  // a drawing only half made (its first point set) is dropped; else the picked drawing goes; else, with none picked, the
+  // last one drawn. The cross removes everything at once, a half-made drawing too, without a question. Both put the pointer back.
+  function deleteOne() {
+    if (draw.first) { setTool(""); return; }
+    if (!draw.items.length) return;
+    draw.items.splice(draw.picked >= 0 ? draw.picked : draw.items.length - 1, 1); draw.picked = -1; setTool(""); saveDrawings(); redraw();
+  }
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") setTool("");
-    if ((e.key === "Delete" || e.key === "Backspace") && draw.picked >= 0 && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) { draw.items.splice(draw.picked, 1); draw.picked = -1; saveDrawings(); redraw(); }
+    if ((e.key === "Delete" || e.key === "Backspace") && !/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) deleteOne();
   });
 
   // ---------------------------------------------------------------- the data
