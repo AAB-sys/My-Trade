@@ -79,6 +79,14 @@
   #info i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
   #info i.line { height: 2px; vertical-align: 3px; border-radius: 0; }
   #info .cut { width: 1px; align-self: stretch; background: var(--border); flex: none; }
+  /* the chart's own buttons (13 November, the owner: "there is no manual zoom in and zoom out button on the chart, add those, also add
+     left right up down buttons"): a row at the foot of the candles, in the middle */
+  #nav { position: absolute; left: 50%; transform: translateX(-50%); top: 0; z-index: 4; display: flex; gap: 2px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); opacity: 0.92; visibility: hidden; }
+  #nav button { width: 32px; height: 32px; display: grid; place-items: center; background: transparent; border: 0; border-radius: 6px; color: var(--ink-2); cursor: pointer; padding: 0; touch-action: manipulation; }
+  #nav button:hover { background: var(--hover); color: var(--ink); }
+  #nav button:active { color: var(--accent); }
+  #nav svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  #nav .sep { width: 1px; margin: 5px 2px; background: var(--border); }
   #note { margin: 0; padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); flex: none; }
   #note.warn { color: var(--ink-2); }
   @media (max-width: 600px) {
@@ -125,6 +133,17 @@
     </div>
     <div id="wrap">
       <div id="legend" aria-live="off"></div>
+      <div id="nav" role="toolbar" aria-label="Move and zoom the chart">
+        <button type="button" data-nav="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 18 18"><path d="M4 9h10"/></svg></button>
+        <button type="button" data-nav="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 18 18"><path d="M4 9h10M9 4v10"/></svg></button>
+        <span class="sep"></span>
+        <button type="button" data-nav="left" title="Move left (earlier)" aria-label="Move left"><svg viewBox="0 0 18 18"><path d="M11 4L6 9l5 5"/></svg></button>
+        <button type="button" data-nav="right" title="Move right (later)" aria-label="Move right"><svg viewBox="0 0 18 18"><path d="M7 4l5 5-5 5"/></svg></button>
+        <button type="button" data-nav="up" title="Move up (higher prices)" aria-label="Move up"><svg viewBox="0 0 18 18"><path d="M4 11l5-5 5 5"/></svg></button>
+        <button type="button" data-nav="down" title="Move down (lower prices)" aria-label="Move down"><svg viewBox="0 0 18 18"><path d="M4 7l5 5 5-5"/></svg></button>
+        <span class="sep"></span>
+        <button type="button" data-nav="reset" title="Back to the whole view" aria-label="Back to the whole view"><svg viewBox="0 0 18 18"><path d="M4 9a5 5 0 1 0 1.6-3.7M4 3.5v2.5h2.5"/></svg></button>
+      </div>
       <div id="chart"></div>
     </div>
   </div>
@@ -184,7 +203,7 @@
   const volume = chart.addSeries(LC.HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
   volume.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
   // a narrow screen: the words top left take more lines, so the candles start lower
-  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: { top: innerWidth <= 600 ? 0.13 : 0.08, bottom: 0.22 } });
+  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: state.priceView ? { top: 0, bottom: 0 } : { top: innerWidth <= 600 ? 0.13 : 0.08, bottom: 0.22 } });
   roomOnTop(); addEventListener("resize", roomOnTop);
 
   function paint() {
@@ -337,6 +356,7 @@
   candles.attachPrimitive(drawings);
   function drawDrawings(scope) {
     const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, w = scope.mediaSize.width, h = scope.mediaSize.height;
+    if (paneSize.h !== h || paneSize.w !== w) { const nav = $("nav"); nav.style.top = Math.max(0, h - 46) + "px"; nav.style.left = (w / 2) + "px"; nav.style.visibility = "visible"; }
     paneSize = { w, h };
     const color = css("--accent");
     const one = (d, picked, ghost) => {
@@ -465,10 +485,30 @@
     const bars = shown().flat();
     candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
     rebuild(); setVolume(); setRsi(); redraw();
-    if (fit) fitDays();
+    if (fit) { if (state.priceView) priceView(null); fitDays(); }
   }
 
   // one day: the whole session from 9:15 to 15:30 in view, with room on the right for the profile; five days: all of them
+  // The chart's buttons: zoom out and in (the time, about the middle of the view), left and right (a fifth of the view),
+  // up and down (a sixth of the prices in view: the price scale then stays where it was put), and back to the whole view.
+  function navigate(what) {
+    const ts = chart.timeScale(), r = ts.getVisibleLogicalRange(), ps = candles.priceScale();
+    if (what === "reset") { priceView(null); fitDays(); return; }
+    if (!r) return;
+    const width = r.to - r.from, mid = (r.from + r.to) / 2;
+    if (what === "in" || what === "out") { const w = Math.max(8, Math.min(4000, width * (what === "in" ? 0.7 : 1 / 0.7))); ts.setVisibleLogicalRange({ from: mid - w / 2, to: mid + w / 2 }); }
+    else if (what === "left" || what === "right") { const d = width * 0.2 * (what === "left" ? -1 : 1); ts.setVisibleLogicalRange({ from: r.from + d, to: r.to + d }); }
+    else { const v = state.priceView || ps.getVisibleRange(); if (!v) return; const d = (v.to - v.from) / 6 * (what === "up" ? 1 : -1); priceView({ from: v.from + d, to: v.to + d }); }
+  }
+  // The prices in view, when the up and down buttons have moved them: the chart is told that range as the one to show, with
+  // no room added around it (the range read from the scale already holds that room); null: the chart follows the candles again
+  function priceView(range) {
+    state.priceView = range;
+    candles.applyOptions({ autoscaleInfoProvider: range ? () => ({ priceRange: { minValue: range.from, maxValue: range.to } }) : (original) => original() });
+    candles.priceScale().applyOptions({ autoScale: true });
+    roomOnTop();
+  }
+  $("nav").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) navigate(b.dataset.nav); });
   function fitDays() {
     const n = shown().flat().length; if (!n) return;
     if (state.days === 1) { const day = BARS_A_DAY[state.interval]; chart.timeScale().setVisibleLogicalRange({ from: -1.5, to: day * 1.36 }); }
