@@ -410,12 +410,42 @@ def live_price(name: str, within: float = 10) -> float | None:
     return entry.get("last") if 0 <= age <= within else None
 
 
+# How often each index's price arrives (12 November, the owner: "Check the sensex data update for live feed. It is not as fast as
+# Nifty 50"): the server passes on every tick Dhan sends, the same way for every index, so the question is how many Dhan sends.
+# Counted per index and clock minute: the ticks, how many of them changed the price, and the longest wait between two ticks.
+# /health shows the last full minute and the minute running now. A count only: nothing reads it, no tick is held or dropped.
+tick_rate: dict = {}  # index name -> {"minute", "ticks", "changes", "gap", "at", "price", "via", "last": the minute before, closed}
+
+
+def note_tick_rate(name: str, last: float, now: float, via: str) -> None:
+    minute = int(now // 60)
+    r = tick_rate.get(name)
+    if r is None or r["minute"] != minute:
+        done = None if r is None else {k: r[k] for k in ("minute", "ticks", "changes", "gap", "via")}
+        r = tick_rate[name] = {"minute": minute, "ticks": 0, "changes": 0, "gap": 0.0, "at": r["at"] if r else None, "price": r["price"] if r else None, "via": via, "last": done}
+    if r["at"] is not None:
+        r["gap"] = max(r["gap"], now - r["at"])
+    r["ticks"] += 1
+    r["changes"] += last != r["price"]
+    r.update(at=now, price=last, via=via)
+
+
+def tick_rate_report() -> dict:
+    """Per index, for /health: the last full minute and the one running now (HH:MM IST, ticks, the ticks that changed the
+    price, the longest wait between two ticks in seconds, and whether they came by the stream or the poll)."""
+    def line(m):
+        return None if not m else {"minute": datetime.fromtimestamp(m["minute"] * 60, dhan.IST).strftime("%H:%M"), "ticks": m["ticks"],
+                                   "changes": m["changes"], "longest_gap_s": round(m["gap"], 1), "via": m["via"]}
+    return {name: {"last_minute": line(r["last"]), "this_minute": line(r)} for name, r in sorted(tick_rate.items())}
+
+
 def fold_tick(name: str, last: float, now: float, via: str) -> None:
     """One last price into the index's live entry and the candle of every size forming now. A candle that just closed
     is kept (every closed one of today, of each size: until 23 October the last 48), so the detail answer carries it the
     second it closes, and the whole day is there when Dhan refuses its minute candles (tick_candles_today)."""
     entry = live.setdefault(name, {"bars": {}, "closed": {}})
     entry.update(last=last, time=now_ist(), via=via)
+    note_tick_rate(name, last, now, via)
     if not dhan.in_session({"time": now}):  # the pre-open (09:00 to 09:15) and after the close: the price moves, but the
         return                               # session's candles run from 09:15 to 15:30 (the owner's logic; the saved days are the same)
     for key, spec in INTERVALS.items():
@@ -1215,6 +1245,7 @@ def feed_state() -> dict:
             "intraday_problem": dhan.intraday_problem(),  # Dhan refusing the minute candles (23 October): today's candles then come from the ticks
             "chart_form": dhan.chart_form_report(),  # the form each chart request is accepted in now: the candle size as "text" or "number" (23 October)
             "last_tick": {name: {"last": e.get("last"), "time": e.get("time"), "via": e.get("via")} for name, e in live.items()},
+            "tick_rate": tick_rate_report(),  # how many ticks a minute each index gets from Dhan, and the longest wait between two (12 November)
             "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
             "option_list": dhan.list_report()}  # what Dhan's instrument list gave (9 October, SENSEX): option ids per underlying, SENSEX's expiries and rows
