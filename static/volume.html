@@ -93,6 +93,24 @@
   #nav button:active { color: var(--accent); }
   #nav svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   #nav .sep { width: 1px; margin: 5px 2px; background: var(--border); }
+  /* The signal (13 November, the owner's document "Volume Profile Signal Logic", its note 10: one screen with yesterday's VAL,
+     POC and VAH, the naked POC list, how today opened, the signal or WAIT with its reason, the stop, the target and the lots) */
+  #sig { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
+  #sig[hidden] { display: none; }
+  #sig .line { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; }
+  #sig .line + .line { margin-top: 3px; }
+  #sig .badge { font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 6px; color: #fff; background: var(--muted); letter-spacing: 0.02em; }
+  #sig .badge.ce { background: var(--up); } #sig .badge.pe { background: var(--down); }
+  #sig .k { color: var(--muted); } #sig .v { color: var(--ink); font-variant-numeric: tabular-nums; }
+  #sig .v.up { color: var(--up); } #sig .v.down { color: var(--down); }
+  #sig b { color: var(--ink); font-weight: 600; }
+  #sig input { font: inherit; width: 72px; padding: 1px 6px; border: 1px solid var(--border); border-radius: 5px; background: transparent; color: var(--ink); }
+  #sig button.link { font: inherit; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+  #sig table { border-collapse: collapse; margin-top: 6px; font-variant-numeric: tabular-nums; }
+  #sig th, #sig td { text-align: left; padding: 2px 12px 2px 0; white-space: nowrap; font-weight: 400; }
+  #sig th { color: var(--muted); }
+  #sig .small { color: var(--muted); font-size: 11px; }
+  #sig-more { max-height: 34vh; overflow: auto; touch-action: pan-x pan-y; }
   #note { margin: 0; padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); flex: none; }
   #note.warn { color: var(--ink-2); }
   @media (max-width: 600px) {
@@ -101,6 +119,7 @@
     #draw .sep { width: 1px; height: auto; margin: 6px 4px; }
     header h1 { font-size: 15px; }
     #legend { font-size: 11px; right: 58px; }
+    #sig { padding: 5px 10px; max-height: 30vh; overflow-y: auto; touch-action: pan-y; }
     #legend .sym { font-size: 13px; }
     #status { display: none; }
   }
@@ -122,8 +141,10 @@
     <span class="sep"></span>
     <label><input type="checkbox" id="show-volume" checked> Volume</label>
     <label><input type="checkbox" id="show-rsi" checked> RSI</label>
+    <label><input type="checkbox" id="show-signal" checked> Signal</label>
   </div>
   <div id="info" aria-live="off"></div>
+  <div id="sig" aria-live="polite"></div>
   <div id="main">
     <div id="draw" role="toolbar" aria-label="Drawing tools">
       <button type="button" data-tool="" aria-pressed="true" title="Pointer: move the chart, tap a drawing to pick it" aria-label="Pointer"><svg viewBox="0 0 20 20"><path d="M5 3l10 7-4.5 1 2.5 5-2 1-2.5-5L5 15z"/></svg></button>
@@ -162,7 +183,7 @@
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
   const params = new URLSearchParams(location.search);
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
-  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; } } catch (e) {}
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
   if (![...$("index").options].some(o => o.value === state.name)) state.name = "NIFTY 50";
@@ -627,15 +648,100 @@
     if (draw.first) { const at = pointAt(param); if (at) { draw.hover = { time: at.time, price: at.price }; redraw(); } }
   });
 
+  // ---------------------------------------------------------------- the signal
+  // The owner's document "Volume Profile Signal Logic" (13 November). The server works it out with the document's own code
+  // (/indices/{name}/vp-signal); the page only shows it: CE, PE or WAIT with the reason, the stop, the target and the lots,
+  // yesterday's VAL, POC and VAH, the naked POCs, how today opened, and the last sessions for study. On the chart: yesterday's
+  // three levels as lines, and after a signal its stop and its target. It states a signal; no order is placed anywhere.
+  const SETUPS = { "Rejection at value-area high": "A. Rejection at VAH", "Rejection at value-area low": "B. Rejection at VAL", "Acceptance above value": "C. Acceptance above value",
+                   "Acceptance below value": "C. Acceptance below value", "80% rule": "D. 80% rule" };
+  const OPENED = { inside: "inside yesterday's value area", above: "above yesterday's value area (above VAH)", below: "below yesterday's value area (below VAL)" };
+  let sigLines = [], sigSeq = 0, sigMore = false;
+  const shortDay = (iso) => iso ? new Date(iso + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "";
+  async function loadSignal() {
+    if (!$("show-signal").checked) return;
+    const seq = ++sigSeq, name = state.name, premium = state.premium > 0 ? "?premium=" + encodeURIComponent(state.premium) : "";
+    try {
+      const r = await fetch(`/indices/${encodeURIComponent(name)}/vp-signal${premium}`, withTab());
+      if (r.status === 401 || seq !== sigSeq || name !== state.name) return;
+      state.signal = r.ok ? await r.json() : { problem: "HTTP " + r.status };
+    } catch (e) { if (seq !== sigSeq) return; state.signal = state.signal || { problem: "could not be loaded" }; }
+    drawSignal();
+  }
+  function outcomeWords(o) {
+    if (!o) return "";
+    const pts = `<span class="v ${o.points >= 0 ? "up" : "down"}">${o.points >= 0 ? "+" : "−"}${num(Math.abs(o.points))} points</span>`;
+    return o.how === "stop" ? `Out at the stop, ${o.at}: ${pts}` : o.how === "target" ? `Out at the target, ${o.at}: ${pts}` : o.how === "time" ? `Out at ${o.at} (time): ${pts}` : `Still open: ${pts} now`;
+  }
+  function drawSignal() {
+    if (document.activeElement && document.activeElement.id === "sig-premium" && state.signal && state.signal.signal) return;  // not while the premium is being typed
+    for (const line of sigLines) candles.removePriceLine(line);
+    sigLines = [];
+    const box = $("sig"), g = state.signal, on = $("show-signal").checked;
+    box.hidden = !on;
+    if (!on) return;
+    if (!g) { box.innerHTML = `<div class="line"><span class="badge">…</span><span>Reading the signal…</span></div>`; return; }
+    if (g.problem || !g.signal) { box.innerHTML = `<div class="line"><span class="badge">WAIT</span><span>The signal could not be worked out: ${g.problem || "no answer"}</span></div>`; return; }
+    const s = g.signal, lv = g.levels, kind = s.signal === "CE" ? "ce" : s.signal === "PE" ? "pe" : "";
+    let top = `<span class="badge ${kind}">${s.signal === "WAIT" ? "WAIT" : "BUY " + s.signal}</span>`;
+    if (s.signal === "WAIT") top += `<span><b>${s.reason || "No valid setup yet."}</b></span>` + (s.skipped && s.skipped.length ? `<span class="k">Skipped: ${s.skipped.join("; ")}</span>` : "");
+    else {
+      top += `<span><b>${SETUPS[s.setup] || s.setup}</b> · ${s.why}</span><span><span class="k">Candle</span> <span class="v">${s.candle}</span> <span class="k">index</span> <span class="v">${num(s.index_price)}</span></span>`
+        + `<span><span class="k">Stop</span> <span class="v">${num(s.index_stop)}</span></span><span><span class="k">Target</span> <span class="v">${num(s.index_target)}</span></span>`
+        + `<span><span class="k">Risk</span> <span class="v">${num(s.risk_pts)}</span> <span class="k">reward</span> <span class="v">${num(s.reward_pts)}</span> <span class="k">(${s.reward_to_risk} to 1)</span></span>`;
+      const z = s.sizing;
+      if (z) top += z.lots == null ? `<span class="k">${z.note}</span>` : `<span><span class="k">Lots</span> <span class="v">${z.lots}</span> <span class="k">(lot ${z.lot_size}, about ₹${num(z.approx_loss_at_stop_inr, 0)} lost at the stop${z.cost_inr != null ? ", cost ₹" + num(z.cost_inr, 0) : ""})</span></span>`;
+      top += `<span>${outcomeWords(s.outcome)}</span>`;
+      if (s.skipped && s.skipped.length) top += `<span class="k">Skipped before it: ${s.skipped.join("; ")}</span>`;
+    }
+    let second = "";
+    if (lv) {
+      second += `<span><span class="k">Levels from ${shortDay(g.levels_from)}${lv.uses_volume ? "" : " (time only, no volume)"}:</span> <span class="k">VAL</span> <span class="v">${num(lv.val)}</span> <span class="k">POC</span> <span class="v">${num(lv.poc)}</span> <span class="k">VAH</span> <span class="v">${num(lv.vah)}</span></span>`;
+      second += `<span><span class="k">${shortDay(g.day)} opened</span> <span class="v">${g.opened ? OPENED[g.opened] : "not yet"}</span></span>`;
+      second += `<span><span class="k">Naked POCs:</span> <span class="v">${g.naked && g.naked.length ? g.naked.map(p => num(p.poc) + " (" + shortDay(p.date) + ")").join(", ") : "none"}</span></span>`;
+    }
+    if (s.signal !== "WAIT") second += `<span><label class="k">Option premium ₹ <input id="sig-premium" type="number" min="0" step="0.05" inputmode="decimal" value="${state.premium || ""}" placeholder="optional"></label></span>`;
+    // a narrow screen: the first line alone, the rest behind "Show details", so the chart keeps its room
+    const narrow = innerWidth <= 600, toggle = `<span><button type="button" class="link" id="sig-toggle">${sigMore ? "Hide" : "Show"} ${narrow ? "details" : "the last " + (g.history ? g.history.length : 0) + " days and the settings"}</button></span>`;
+    if (!narrow) second += toggle;
+    else if (sigMore) top += toggle;
+    else {  // the short form: the signal, its stop and target, how it went
+      second = "";
+      top = `<span class="badge ${kind}">${s.signal === "WAIT" ? "WAIT" : "BUY " + s.signal}</span>` + (s.signal === "WAIT" ? `<span><b>${s.reason || "No valid setup yet."}</b></span>`
+        : `<span><b>${SETUPS[s.setup] || s.setup}</b> <span class="k">at</span> <span class="v">${s.candle}</span></span><span><span class="k">Stop</span> <span class="v">${num(s.index_stop)}</span> <span class="k">Target</span> <span class="v">${num(s.index_target)}</span></span><span>${outcomeWords(s.outcome)}</span>`) + toggle;
+    }
+    let more = "";
+    if (sigMore) {
+      more += `<div id="sig-more"><table><tr><th>Day</th><th>Opened</th><th>Signal</th><th>Setup</th><th>Candle</th><th>Index</th><th>Stop</th><th>Target</th><th>Reward to risk</th><th>Result</th></tr>`
+        + (g.history || []).map(h => `<tr><td>${shortDay(h.day)}</td><td>${h.opened || "—"}</td><td>${h.signal}</td><td>${h.setup ? SETUPS[h.setup] || h.setup : h.skipped ? h.skipped + " skipped" : "—"}</td><td>${h.candle || "—"}</td><td>${h.index_price != null ? num(h.index_price) : "—"}</td><td>${h.index_stop != null ? num(h.index_stop) : "—"}</td><td>${h.index_target != null ? num(h.index_target) : "—"}</td><td>${h.reward_to_risk != null ? h.reward_to_risk + " to 1" : "—"}</td><td>${outcomeWords(h.outcome) || "—"}</td></tr>`).join("") + `</table>`;
+      const c = g.settings || {};
+      more += `<div class="small" style="margin-top:6px">Settings: rows of ${c.bin_size_pts} points · value area ${c.value_area_pct}% · an edge counts as touched within ${c.edge_tolerance_pts} points · stop ${c.stop_buffer_pts} points beyond · ${c.acceptance_closes} closes outside for acceptance · reward at least ${c.min_reward_to_risk} times the risk · signals ${c.no_entry_before} to ${c.no_entry_after}, out by ${c.exit_all_by} · one signal a day · sizing: ₹${num(c.max_loss_per_trade_inr, 0)} lost at most a trade, an option taken to move ${c.assumed_delta} a point, at most ${c.max_capital_per_trade_pct}% of ₹${num(c.capital_inr, 0)}.</div>`
+        + `<div class="small">A signal for paper trading and study. In the document's two-year test on NIFTY 50 this logic did not make money overall. It is not advice, and no order is placed.</div></div>`;
+    }
+    box.innerHTML = `<div class="line">${top}</div>${second ? `<div class="line">${second}</div>` : ""}${more}`;
+    $("sig-toggle").addEventListener("click", () => { sigMore = !sigMore; drawSignal(); });
+    const pin = $("sig-premium");
+    if (pin) pin.addEventListener("change", () => { state.premium = Number(pin.value) || 0; loadSignal(); });
+    // on the chart: yesterday's three levels, and the signal's stop and target
+    if (lv) {
+      const line = (price, title, color, style) => sigLines.push(candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true }));
+      line(lv.vah, "VAH " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);
+      line(lv.poc, "POC " + shortDay(g.levels_from), css("--poc"), LC.LineStyle.Dotted);
+      line(lv.val, "VAL " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);
+      if (s.signal !== "WAIT") { line(s.index_stop, "Stop", css("--down"), LC.LineStyle.Solid); line(s.index_target, "Target", css("--up"), LC.LineStyle.Solid); }
+    }
+  }
+
   // ---------------------------------------------------------------- the tool row
-  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, signal: $("show-signal").checked })); } catch (e) {} };
   function press() { $("interval").value = state.interval; $("days").value = String(state.days); }
   $("interval").addEventListener("change", () => { state.interval = $("interval").value; state.bars = []; state.fine = []; save(); load(); });
   $("days").addEventListener("change", () => { state.days = Number($("days").value); save(); shownKey = state.name + state.interval + state.days; setAll(true); });
-  $("index").addEventListener("change", () => { state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
+  $("index").addEventListener("change", () => { state.signal = null; drawSignal(); setTimeout(loadSignal, 0); state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
   // every indicator but the profile has its switch, and the page remembers how each was left
   $("show-volume").addEventListener("change", () => { setVolume(); save(); });
   $("show-rsi").addEventListener("change", () => { setRsi(); drawLegend(); save(); });
+  $("show-signal").addEventListener("change", () => { save(); drawSignal(); if ($("show-signal").checked) loadSignal(); });
   loadDrawings();
   press();
 
@@ -657,17 +763,17 @@
     ws.onerror = () => ws.close();
   }
   function reconnect() { const old = liveWs; liveWs = null; if (old && old.readyState <= WebSocket.OPEN) old.close(); keepAlive(); }
-  beat().then(() => { load(); keepAlive(); });
+  beat().then(() => { load(); loadSignal(); keepAlive(); });
   setInterval(beat, 15000);
-  setInterval(() => { if (!document.hidden) load(); }, 20000);  // the closed candles and the futures' volume, every 20 s
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  setInterval(() => { if (!document.hidden) { load(); loadSignal(); } }, 20000);  // the closed candles, the futures' volume and the signal, every 20 s
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadSignal(); } });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
   window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });
   // The page stays where it is: whatever tries to scroll it is put back at once; the wheel with Ctrl held, a pinch on a
   // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
   const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };
   window.addEventListener("scroll", pinPage, true);
-  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw")) e.preventDefault(); }, { passive: false });
+  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #sig")) e.preventDefault(); }, { passive: false });
   for (const kind of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(kind, (e) => e.preventDefault());
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);

@@ -1,0 +1,23 @@
+{
+  "bin_size_pts": 5,
+  "value_area_pct": 70,
+  "edge_tolerance_pts": 5,
+  "stop_buffer_pts": 10,
+  "acceptance_closes": 2,
+  "min_reward_to_risk": 1.5,
+  "naked_poc_max_age_days": 20,
+  "no_entry_before": "09:30",
+  "no_entry_after": "14:30",
+  "exit_all_by": "15:15",
+  "assumed_delta": 0.5,
+  "capital_inr": 100000,
+  "max_loss_per_trade_inr": 1500,
+  "max_capital_per_trade_pct": 30,
+  "note": "bin_size_pts: 5 suits Nifty. Use about 10 for Bank Nifty and Sensex. Lot size is passed in by the user because exchanges change it.",
+  "bin_size_by_index": {
+    "NIFTY 50": 5,
+    "NIFTY BANK": 10,
+    "SENSEX": 10
+  },
+  "note_by_index": "bin_size_by_index (added for the server, vpsignal.py): the row's height for each index of the dashboard; bin_size_pts stays the value for a file run through vp_cli.py."
+}
