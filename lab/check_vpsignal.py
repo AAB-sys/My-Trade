@@ -67,6 +67,25 @@ check("neither yet, the day still running: open, at the last close", vpsignal.ou
 pe = {"signal": "PE", "candle": "10:00", "index_price": 100.0, "index_stop": 110.0, "index_target": 80.0, "risk_pts": 10.0}
 check("a PE: the stop is above, the target below", [vpsignal.outcome(pe, bars(("10:05", 100, 111, 99, 105)), C)["how"], vpsignal.outcome(pe, bars(("10:05", 100, 101, 79, 82)), C)["points"]], ["stop", 20.0])
 
+# the live feed: the candle forming now never gives a signal, but a stop touched inside it ends the trade at once
+day = "2026-09-30"
+full = vpsignal.day_view(days, day, days[day], C)["signal"]
+if full["signal"] == "WAIT":
+    day = next(d for d in days if d > "2026-09-01" and vpsignal.day_view(days, d, days[d], C)["signal"]["signal"] != "WAIT")
+    full = vpsignal.day_view(days, day, days[day], C)["signal"]
+k = next(i for i, c in enumerate(days[day]) if c["hm"] == full["candle"])
+upto = days[day][:k + 1]
+ce = full["signal"] == "CE"
+nxt = days[day][k + 1]["hm"]
+hit = {"hm": nxt, "o": full["index_price"], "h": full["index_price"] + (1 if ce else 500), "l": full["index_price"] - (500 if ce else 1), "c": full["index_price"]}
+o = vpsignal.day_view(days, day, upto, C, forming=hit)["signal"]["outcome"]
+check("the live price touches the stop inside the forming candle: out at once", (o["how"], o["at"], o["live"]), ("stop", nxt, True))
+calm = {"hm": nxt, "o": full["index_price"], "h": full["index_price"] + 0.5, "l": full["index_price"] - 0.5, "c": full["index_price"] + (0.5 if ce else -0.5)}
+o = vpsignal.day_view(days, day, upto, C, forming=calm)["signal"]["outcome"]
+check("no touch yet: still open, the points from the live price", (o["how"], o["points"], o["live"]), ("open", 0.5, True))
+before = vpsignal.day_view(days, day, days[day][:k], C, forming=days[day][k])["signal"]
+check("the candle that will give the signal gives none while it is still forming", before["signal"], "WAIT")
+
 # the sizing: risk 35 points, lot 75, as the document's worked example
 ex = {"risk_pts": 35.0}
 s = vpsignal.sizing(ex, 75, 110, C)

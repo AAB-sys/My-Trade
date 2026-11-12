@@ -671,7 +671,7 @@
   function outcomeWords(o) {
     if (!o) return "";
     const pts = `<span class="v ${o.points >= 0 ? "up" : "down"}">${o.points >= 0 ? "+" : "−"}${num(Math.abs(o.points))} points</span>`;
-    return o.how === "stop" ? `Out at the stop, ${o.at}: ${pts}` : o.how === "target" ? `Out at the target, ${o.at}: ${pts}` : o.how === "time" ? `Out at ${o.at} (time): ${pts}` : `Still open: ${pts} now`;
+    return o.how === "stop" ? `Out at the stop, ${o.at}: ${pts}` : o.how === "target" ? `Out at the target, ${o.at}: ${pts}` : o.how === "time" ? `Out at ${o.at} (time): ${pts}` : `Still open: ${pts} now${o.live ? " (live price)" : ""}`;
   }
   function drawSignal() {
     if (document.activeElement && document.activeElement.id === "sig-premium" && state.signal && state.signal.signal) return;  // not while the premium is being typed
@@ -698,7 +698,8 @@
     if (lv) {
       second += `<span><span class="k">Levels from ${shortDay(g.levels_from)}${lv.uses_volume ? "" : " (time only, no volume)"}:</span> <span class="k">VAL</span> <span class="v">${num(lv.val)}</span> <span class="k">POC</span> <span class="v">${num(lv.poc)}</span> <span class="k">VAH</span> <span class="v">${num(lv.vah)}</span></span>`;
       second += `<span><span class="k">${shortDay(g.day)} opened</span> <span class="v">${g.opened ? OPENED[g.opened] : "not yet"}</span></span>`;
-      second += `<span><span class="k">Naked POCs:</span> <span class="v">${g.naked && g.naked.length ? g.naked.map(p => num(p.poc) + " (" + shortDay(p.date) + ")").join(", ") : "none"}</span></span>`;
+      second += `<span><span class="k">Read up to the candle of</span> <span class="v">${g.last_candle || "—"}</span><span class="k">${g.live ? ", exits on the live price" : ""}</span></span>`;
+    second += `<span><span class="k">Naked POCs:</span> <span class="v">${g.naked && g.naked.length ? g.naked.map(p => num(p.poc) + " (" + shortDay(p.date) + ")").join(", ") : "none"}</span></span>`;
     }
     if (s.signal !== "WAIT") second += `<span><label class="k">Option premium ₹ <input id="sig-premium" type="number" min="0" step="0.05" inputmode="decimal" value="${state.premium || ""}" placeholder="optional"></label></span>`;
     // a narrow screen: the first line alone, the rest behind "Show details", so the chart keeps its room
@@ -765,7 +766,10 @@
   function reconnect() { const old = liveWs; liveWs = null; if (old && old.readyState <= WebSocket.OPEN) old.close(); keepAlive(); }
   beat().then(() => { load(); loadSignal(); keepAlive(); });
   setInterval(beat, 15000);
-  setInterval(() => { if (!document.hidden) { load(); loadSignal(); } }, 20000);  // the closed candles, the futures' volume and the signal, every 20 s
+  setInterval(() => { if (!document.hidden) load(); }, 20000);  // the closed candles and the futures' volume, every 20 s
+  // the signal follows the live feed (the owner, 13 November: "it should run on live feed"): asked every 5 seconds, so a
+  // candle that has just finished gives its signal within seconds, and a stop or a target touched by the live price shows at once
+  setInterval(() => { if (!document.hidden) loadSignal(); }, 5000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadSignal(); } });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
   window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });

@@ -1377,7 +1377,8 @@ async def index_vp_signal(name: str, premium: float | None = Query(None, ge=0, l
     if not (DHAN_ON and key in dhan.OPTION_SEGMENTS):
         return {"name": key, "problem": store["dhan"]["status"]}
     try:
-        return {**(await asyncio.to_thread(vpsignal.state, key, premium)), "problem": None}
+        forming = (live.get(key) or {}).get("bars", {}).get("5m") if live_price(key) is not None else None  # the 5-minute candle forming now from the live ticks
+        return {**(await asyncio.to_thread(vpsignal.state, key, premium, forming)), "problem": None}
     except Exception as exc:
         log.warning("vp signal failed for %s: %s", key, exc)
         return {"name": key, "problem": dhan_reason(exc)}

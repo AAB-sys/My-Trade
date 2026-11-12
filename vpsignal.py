@@ -115,10 +115,12 @@ def sizing(signal: dict, lot_size, premium, cfg: dict) -> dict:
             "premium": None, "note": "By the loss limit only. Type the option's premium to also check the 30% of capital limit."}
 
 
-def day_view(days: dict, day: str, finished: list, cfg: dict, lot_size=None, premium=None) -> dict:
+def day_view(days: dict, day: str, finished: list, cfg: dict, lot_size=None, premium=None, forming=None) -> dict:
     """Everything the signal screen shows for one session: the levels it uses (from the session before), the naked POC
     list, how it opened, the signal or WAIT with its reason, and after a signal its exit. `finished` are the session's
-    finished candles (none before the open)."""
+    finished candles (none before the open). `forming` is the candle forming now on the live feed: it never gives a signal
+    (the document, note 2: "never evaluate a candle that is still forming"), but a stop or a target touched inside it ends
+    the trade at once (step 7: "exit when the index touches the stop level"), not five minutes later."""
     prev, prev_day, naked = prepare(days, day, cfg)
     view = {"day": day, "levels": None, "levels_from": prev_day, "naked": [p for p in naked if p["date"] != prev_day], "opened": None, "signal": None}
     if prev is None:
@@ -135,7 +137,9 @@ def day_view(days: dict, day: str, finished: list, cfg: dict, lot_size=None, pre
         found["reason"] = ("No valid setup today." if last > vp_signal._mins(cfg["no_entry_after"]) else
                            "Signals start at " + cfg["no_entry_before"] + "." if last < vp_signal._mins(cfg["no_entry_before"]) else "No valid setup yet.")
     else:
-        found["outcome"] = outcome(found, finished, cfg)
+        watched = finished + [forming] if forming and vp_signal._mins(forming["hm"]) > vp_signal._mins(finished[-1]["hm"]) else finished
+        found["outcome"] = outcome(found, watched, cfg)
+        found["outcome"]["live"] = watched is not finished  # the exit, or the points now, read from the live price
         found["sizing"] = sizing(found, lot_size, premium, cfg)
     view["signal"] = found
     return view
@@ -155,8 +159,9 @@ def _history(name: str) -> tuple:
     return dhan.cached(("vp signal history", name), 600, make)
 
 
-def state(name: str, premium=None) -> dict:
-    """The signal screen's answer for one index, now."""
+def state(name: str, premium=None, live_bar=None) -> dict:
+    """The signal screen's answer for one index, now. `live_bar` is the 5-minute candle the server is building from the
+    live ticks ({"time", "open", "high", "low", "close"}), when it has one."""
     cfg = config_for(name)
     bars, volumes, volume_problem = _history(name)
     today = dhan.today_ist().isoformat()
@@ -169,22 +174,28 @@ def state(name: str, premium=None) -> dict:
     earlier = [d for d in days if d < today]
     # the session shown: today once it has a finished candle, or (a weekday before the open, a weekend, a night) the coming one
     weekday = datetime.fromtimestamp(now, dhan.IST).weekday() < 5
-    view = day_view(days, today, finished, cfg, dhan.lot_size(name), premium) if (finished or weekday) else None
+    forming = None
+    if live_bar and finished and datetime.fromtimestamp(live_bar["time"], dhan.IST).date().isoformat() == today and live_bar["time"] > finished[-1]["t"] and live_bar["time"] + 300 > now:
+        forming = candle(live_bar, None)
+    view = day_view(days, today, finished, cfg, dhan.lot_size(name), premium, forming) if (finished or weekday) else None
     if view is None:  # a weekend: the levels for the next session, from the last one
         nxt = (datetime.fromtimestamp(now, dhan.IST) + timedelta(days=1)).date()
         while nxt.weekday() >= 5:
             nxt += timedelta(days=1)
         view = day_view(days, nxt.isoformat(), [], cfg)
-    past = []
-    for d in earlier[-HISTORY_SHOWN:]:
-        v = day_view(days, d, days[d], cfg, dhan.lot_size(name))
-        s = v["signal"]
-        past.append({"day": d, "opened": v["opened"], "signal": s["signal"], "setup": s.get("setup"), "candle": s.get("candle"), "index_price": s.get("index_price"),
-                     "index_stop": s.get("index_stop"), "index_target": s.get("index_target"), "reward_to_risk": s.get("reward_to_risk"),
-                     "outcome": s.get("outcome"), "skipped": len(s.get("skipped") or [])})
+    def earlier_days():  # the sessions before today do not change: worked out once in ten minutes, not at every look
+        past = []
+        for d in earlier[-HISTORY_SHOWN:]:
+            v = day_view(days, d, days[d], cfg, dhan.lot_size(name))
+            s = v["signal"]
+            past.append({"day": d, "opened": v["opened"], "signal": s["signal"], "setup": s.get("setup"), "candle": s.get("candle"), "index_price": s.get("index_price"),
+                         "index_stop": s.get("index_stop"), "index_target": s.get("index_target"), "reward_to_risk": s.get("reward_to_risk"),
+                         "outcome": s.get("outcome"), "skipped": len(s.get("skipped") or [])})
+        return past
+    past = dhan.cached(("vp signal past", name, today), 600, earlier_days)
     for c in finished:
         c.pop("t", None)
-    return {"name": name, **view, "history": past[::-1], "volume_problem": volume_problem,
+    return {"name": name, **view, "history": past[::-1], "volume_problem": volume_problem, "last_candle": finished[-1]["hm"] if finished else None, "live": forming is not None,
             "settings": {k: cfg[k] for k in ("bin_size_pts", "value_area_pct", "edge_tolerance_pts", "stop_buffer_pts", "acceptance_closes", "min_reward_to_risk",
                                              "naked_poc_max_age_days", "no_entry_before", "no_entry_after", "exit_all_by", "assumed_delta", "capital_inr",
                                              "max_loss_per_trade_inr", "max_capital_per_trade_pct")},
