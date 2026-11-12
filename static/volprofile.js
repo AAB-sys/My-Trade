@@ -6,41 +6,37 @@
 // contract traded in the same minutes (the server's /indices/{name}/volume). When Dhan gives no volume, each candle
 // weighs 1: the profile then shows the TIME spent at each price, and the page says so.
 //
-// The open choices, each the smallest reasonable one, (owner to decide):
-//   ROWS_WANTED   about how many price rows a day's profile has (the row's height is a round number of points)
-//   VALUE_SHARE   the share of the day's volume the "value area" holds, around the busiest row
+// The owner, 12 November: "This should be as same as dhan, no gaps, no changes, nothing different." So the profile is counted
+// the way the volume profile on a broker's trading chart is, with that chart's usual settings, the same for every index:
+//   ROWS          24 rows, of equal height, from the day's low to the day's high
+//   VALUE_SHARE   the value area holds 70% of the day's volume
+//   the value area grows from the busiest row: the two rows above it are weighed against the two rows below it, the heavier
+//   pair is taken, and so on until 70% is inside
+//   the count is made from the day's 1-minute candles whatever candle size the chart shows (the page passes them)
 (function (root) {
   "use strict";
-  const ROWS_WANTED = 40;
+  const ROWS = 24;
   const VALUE_SHARE = 0.70;
-  const STEPS = [0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000];
-
-  // the row's height in points for a session whose prices span `range` points: the round number that gives ROWS_WANTED rows or fewer
-  function stepFor(range, wanted = ROWS_WANTED) {
-    if (!(range > 0)) return STEPS[0];
-    for (const s of STEPS) if (range / s <= wanted) return s;
-    return STEPS[STEPS.length - 1];
-  }
 
   // bars: [{time, open, high, low, close}], weights: Map or object time -> volume (null: every candle weighs 1).
   // A candle's volume is spread evenly over the rows its low-to-high range covers, by the share of the range in each row.
   // Returns {step, rows: [{price (the row's lower edge), up, down, total}] lowest first, total, poc, vah, val, counted, timeOnly}
   // poc: the middle of the busiest row; vah/val: the top and the bottom of the value area.
-  function build(bars, weights, step) {
+  function build(bars, weights, count = ROWS) {
     const get = weights == null ? null : (weights instanceof Map ? (t) => weights.get(t) : (t) => weights[t]);
     if (!bars || !bars.length) return null;
     let lo = Infinity, hi = -Infinity;
     for (const b of bars) { if (b.low < lo) lo = b.low; if (b.high > hi) hi = b.high; }
-    step = step || stepFor(hi - lo);
-    const first = Math.floor(lo / step), n = Math.max(1, Math.floor(hi / step) - first + 1);
-    const rows = Array.from({ length: n }, (_, i) => ({ price: (first + i) * step, up: 0, down: 0, total: 0 }));
+    const n = hi > lo ? count : 1, step = hi > lo ? (hi - lo) / n : 0.05;
+    const rowOf = (price) => Math.max(0, Math.min(n - 1, Math.floor((price - lo) / step)));
+    const rows = Array.from({ length: n }, (_, i) => ({ price: lo + i * step, up: 0, down: 0, total: 0 }));
     let total = 0, counted = 0;
     for (const b of bars) {
       const w = get ? Number(get(b.time)) : 1;
       if (!(w > 0)) continue;
       counted++;
       const side = b.close >= b.open ? "up" : "down", span = b.high - b.low;
-      const a = Math.floor(b.low / step) - first, z = Math.min(n - 1, Math.floor(b.high / step) - first);
+      const a = rowOf(b.low), z = rowOf(b.high);
       for (let i = a; i <= z; i++) {
         const share = span > 0 ? (Math.min(b.high, rows[i].price + step) - Math.max(b.low, rows[i].price)) / span : (i === a ? 1 : 0);
         if (share <= 0) continue;
@@ -51,11 +47,11 @@
     if (!(total > 0)) return { step, rows, total: 0, poc: null, vah: null, val: null, counted: 0, timeOnly: get == null };
     let p = 0;
     for (let i = 1; i < n; i++) if (rows[i].total > rows[p].total) p = i;
-    // the value area: from the busiest row outwards, each time taking the busier of the two rows next to it, until VALUE_SHARE of the volume is inside
     let a = p, z = p, inside = rows[p].total;
+    const sum = (from, to) => { let x = 0; for (let i = Math.max(0, from); i <= Math.min(n - 1, to); i++) x += rows[i].total; return x; };
     while (inside < total * VALUE_SHARE && (a > 0 || z < n - 1)) {
-      const below = a > 0 ? rows[a - 1].total : -1, above = z < n - 1 ? rows[z + 1].total : -1;
-      if (above >= below) { z++; inside += rows[z].total; } else { a--; inside += rows[a].total; }
+      const above = z < n - 1 ? sum(z + 1, z + 2) : -1, below = a > 0 ? sum(a - 2, a - 1) : -1;
+      if (above >= below) { inside += above; z = Math.min(n - 1, z + 2); } else { inside += below; a = Math.max(0, a - 2); }
     }
     return { step, rows, total, poc: rows[p].price + step / 2, pocRow: p, vah: rows[z].price + step, val: rows[a].price, vaFrom: a, vaTo: z, counted, timeOnly: get == null };
   }
@@ -72,6 +68,6 @@
     return out;
   }
 
-  const api = { ROWS_WANTED, VALUE_SHARE, stepFor, build, sessions };
+  const api = { ROWS, VALUE_SHARE, build, sessions };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.VolProfile = api;
 })(typeof window !== "undefined" ? window : globalThis);

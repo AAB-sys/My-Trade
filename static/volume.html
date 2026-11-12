@@ -98,7 +98,7 @@
   const IST = 19800;  // the chart library draws times as UTC: every time is moved by the IST offset on its way in
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
   const params = new URLSearchParams(location.search);
-  const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
+  const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
   try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if (saved.days === 5) state.days = 5; if (saved.name) state.name = saved.name; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
@@ -217,10 +217,14 @@
     return days.slice(-state.days);
   }
   function rebuild() {
-    const days = shown(), bars = days.flat();
-    const have = bars.some(b => state.volumes.get(b.time) > 0);
+    // the count is made from each day's 1-minute candles and their volume, whatever candle size is shown; where those
+    // are missing, from the candles shown
+    const days = shown(), fineDays = new Map(VolProfile.sessions(state.fine).map(d => [Math.floor((d[0].time + IST) / 86400), d]));
+    const useFine = state.fine.length > 0 && (state.fineVolumes.size > 0 || state.volumes.size === 0);
+    const vols = useFine ? state.fineVolumes : state.volumes;
+    const have = [...vols.values()].some(v => v > 0);
     state.timeOnly = !have;
-    state.profiles = days.map(d => ({ bars: d, profile: VolProfile.build(d, have ? state.volumes : null) }));
+    state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); return { bars: d, profile: VolProfile.build(f || d, have ? vols : null) }; });
     profile.requestUpdate && profile.requestUpdate();
     drawLegend(); drawNote();
   }
@@ -247,13 +251,20 @@
     const seq = ++loadSeq, name = state.name, interval = state.interval, status = $("status");
     try {
       const get = (url) => fetch(url, withTab());
-      const [d, v] = await Promise.all([get(`/indices/${encodeURIComponent(name)}/detail?range=5d&interval=${interval}`), get(`/indices/${encodeURIComponent(name)}/volume?interval=${interval}`)]);
+      const at = (kind, size) => get(`/indices/${encodeURIComponent(name)}/${kind}${kind === "detail" ? "?range=5d&" : "?"}interval=${size}`);
+      const fineWanted = interval !== "1m";  // the profile's own 1-minute candles and volume, when the chart shows larger candles
+      const [d, v, fd, fv] = await Promise.all([at("detail", interval), at("volume", interval), fineWanted ? at("detail", "1m") : null, fineWanted ? at("volume", "1m") : null]);
       if (d.status === 401 || v.status === 401) { location.href = "/login"; return; }
       if (seq !== loadSeq) return;  // an older request finishing late
       if (!d.ok) { let why = "HTTP " + d.status; try { why = (await d.json()).detail || why; } catch (e) {} throw new Error(why); }
       const detail = await d.json(), vol = v.ok ? await v.json() : { bars: [], problem: "HTTP " + v.status };
       state.summary = detail.summary; state.bars = detail.candles || [];
       state.volumes = new Map((vol.bars || []).map(([t, x]) => [t, x])); state.contract = vol.contract; state.problem = vol.problem;
+      if (!fineWanted) { state.fine = state.bars; state.fineVolumes = state.volumes; }
+      else {
+        const fine = fd && fd.ok ? await fd.json() : null, fineVol = fv && fv.ok ? await fv.json() : null;
+        state.fine = fine && fine.candles || []; state.fineVolumes = new Map((fineVol && fineVol.bars || []).map(([t, x]) => [t, x]));
+      }
       const k = name + interval + state.days;
       setAll(k !== shownKey); shownKey = k;
       status.className = ""; status.textContent = (detail.summary && detail.summary.open ? "Live · " : "Market closed · ") + "updated " + new Date().toLocaleTimeString("en-GB");
@@ -272,6 +283,8 @@
     const last = state.bars[state.bars.length - 1];
     if (b.time < last.time) return;
     if (b.time === last.time) Object.assign(last, { high: Math.max(last.high, b.high), low: Math.min(last.low, b.low), close: b.close }); else state.bars.push({ ...b });
+    const m = tick.bars["1m"];  // the profile's 1-minute candles follow the price too
+    if (m && state.fine.length && state.fine !== state.bars) { const f = state.fine[state.fine.length - 1]; if (m.time === f.time) Object.assign(f, { high: Math.max(f.high, m.high), low: Math.min(f.low, m.low), close: m.close }); else if (m.time > f.time) state.fine.push({ ...m }); }
     const now = state.bars[state.bars.length - 1];
     candles.update({ time: now.time + IST, open: now.open, high: now.high, low: now.low, close: now.close });
     if (Date.now() - recount > 1000) { recount = Date.now(); rebuild(); }
@@ -291,8 +304,8 @@
       const what = state.timeOnly ? "time" : "volume";
       html += `<div class="row"><span><i class="line" style="background:var(--poc)"></i><span class="k">Busiest price</span> <span class="v">${num(p.poc)}</span></span><span><span class="k">70% of the ${what} between</span> <span class="v">${num(p.val)} – ${num(p.vah)}</span></span>${state.timeOnly ? "" : `<span><span class="k">Day's volume</span> <span class="v">${short(p.total)}</span></span>`}</div>`;
       if (state.hover && state.hover.price != null) {
-        const r = p.rows[Math.floor(state.hover.price / p.step) - Math.floor(p.rows[0].price / p.step)];
-        if (r && r.total > 0) html += `<div class="row"><span class="k">At ${num(r.price, p.step < 1 ? 1 : 0)} – ${num(r.price + p.step, p.step < 1 ? 1 : 0)}</span> <span class="v">${state.timeOnly ? (r.total / p.total * 100).toFixed(1) + "% of the day's time" : short(r.total) + " (" + (r.total / p.total * 100).toFixed(1) + "% of the day)"}</span><span><i style="background:var(--vp-up)"></i><span class="k">rising candles</span> <span class="v">${Math.round(r.up / r.total * 100)}%</span></span><span><i style="background:var(--vp-down)"></i><span class="k">falling</span> <span class="v">${Math.round(r.down / r.total * 100)}%</span></span></div>`;
+        const r = p.rows[Math.floor((state.hover.price - p.rows[0].price) / p.step)];
+        if (r && r.total > 0) html += `<div class="row"><span class="k">At ${num(r.price)} – ${num(r.price + p.step)}</span> <span class="v">${state.timeOnly ? (r.total / p.total * 100).toFixed(1) + "% of the day's time" : short(r.total) + " (" + (r.total / p.total * 100).toFixed(1) + "% of the day)"}</span><span><i style="background:var(--vp-up)"></i><span class="k">rising candles</span> <span class="v">${Math.round(r.up / r.total * 100)}%</span></span><span><i style="background:var(--vp-down)"></i><span class="k">falling</span> <span class="v">${Math.round(r.down / r.total * 100)}%</span></span></div>`;
       }
     }
     $("legend").innerHTML = html;
@@ -320,10 +333,10 @@
   }
   $("tools").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b) return;
-    if (b.dataset.interval && b.dataset.interval !== state.interval) { state.interval = b.dataset.interval; state.bars = []; press(); save(); load(); }
+    if (b.dataset.interval && b.dataset.interval !== state.interval) { state.interval = b.dataset.interval; state.bars = []; state.fine = []; press(); save(); load(); }
     if (b.dataset.days && Number(b.dataset.days) !== state.days) { state.days = Number(b.dataset.days); press(); save(); shownKey = state.name + state.interval + state.days; setAll(true); }
   });
-  $("index").addEventListener("change", () => { state.name = $("index").value; state.bars = []; save(); load(); reconnect(); });
+  $("index").addEventListener("change", () => { state.name = $("index").value; state.bars = []; state.fine = []; save(); load(); reconnect(); });
   $("show-profile").addEventListener("change", () => profile.requestUpdate && profile.requestUpdate());
   $("show-volume").addEventListener("change", setVolume);
   press();

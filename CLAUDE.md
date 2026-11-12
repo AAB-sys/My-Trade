@@ -213,8 +213,9 @@ their own logic. Read this before touching the code.
   index's candles (`/indices/{name}/detail`), the volume along the bottom and, per day, how much was traded at each price (the rows,
   the busiest price, the 70% area). An index has no volume, so the weights are the volume of its nearest futures contract
   (`dhan.future_volume`, `/indices/{name}/volume`, asked of Dhan only while the page is open); without it the rows count time and the
-  page says so. It decides nothing and gives no call; Paper calls and Calls with Signals do not read it, nor it them. The open
-  choices (about 40 rows a day, the 70% share) are marked "(owner to decide)" in `volprofile.js`. `lab/check_volprofile.js` checks
+  page says so. It decides nothing and gives no call; Paper calls and Calls with Signals do not read it, nor it them. The count
+  follows the owner's word of 12 November ("as same as dhan ... nothing different"): 24 equal rows from the day's low to its high,
+  the 70% value area, from the day's 1-minute candles, the same for every index (`volprofile.js`). `lab/check_volprofile.js` checks
   the arithmetic. PRs for it are named "Volume_Profile_".
 - `android/` - the dashboard as an Android app (Java, one Activity with a
   WebView on the owner's server; blob downloads saved through a JavaScript
