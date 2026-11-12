@@ -148,7 +148,10 @@
   #paper th, #paper td, #signals th, #signals td { text-align: right; padding: 5px 12px 5px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
   #paper th:first-child, #paper td:first-child, #signals th:first-child, #signals td:first-child { text-align: left; }
   #paper th, #signals th { font-weight: 500; color: var(--muted); font-size: 12px; }
-  #signals-bar { display: flex; align-items: center; margin: 0 0 10px; }  /* Calls with Signals (21 October): the Settings button over the table */
+  #signals-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 10px; }
+  #vwap-meter { font-size: 13px; line-height: 1.4; color: var(--ink-2); background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--vwap); border-radius: 8px; padding: 6px 10px; margin: 0; }  /* the VWAP stretch meter (12 November): a reading beside the Settings button, no call */
+  #vwap-meter b { color: var(--ink); font-weight: 600; }
+  #vwap-meter.trend { border-left-color: var(--candle-down); }  /* Calls with Signals (21 October): the Settings button over the table */
   #signals-settings { display: inline-flex; align-items: center; gap: 6px; } #signals-settings svg { width: 15px; height: 15px; }
   .signals-scroll { max-height: 72vh; }
   .indicators { display: grid; gap: 8px 14px; margin-bottom: 14px; } .indicators label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
@@ -459,6 +462,7 @@
          will develop asap". The tick is kept (state.signalsFib) for that logic; until it is built, ticking draws nothing -->
     <div id="signals-bar">
       <button type="button" class="pill" id="signals-settings" aria-haspopup="dialog" title="Indicators: active or inactive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
+      <p id="vwap-meter" hidden></p>
     </div>
     <div class="chain-scroll signals-scroll">
       <table id="signals">
@@ -2171,7 +2175,19 @@
     vwapLine = chart.addSeries(LightweightCharts.LineSeries, { color: cssVar("--vwap"), lineWidth: 2, title: "VWAP", lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null });
     vwapLine.setData(points);
   }
+  // The VWAP stretch meter (12 November, the owner: "yes built it"; then "the numbers should be based on live feed only"): one line
+  // beside the Settings button while the VWAP line is drawn. A reading of today's candles only, never a call, no number of a past day
+  // (MorePat.vwapGap): the gap now, how long since the price last touched the VWAP, the returns so far today, the day's widest gap
+  function drawVwapMeter(m, bars) {
+    const el = document.getElementById("vwap-meter");
+    if (!m) { el.hidden = true; el.textContent = ""; return; }
+    el.hidden = false; el.className = m.far ? "trend" : "";
+    const mins = m.sinceTouch == null ? null : m.sinceTouch * SECONDS[state.interval] / 60, ago = mins == null ? "has not touched VWAP today" : mins === 0 ? "is touching VWAP now" : `last touched VWAP ${mins >= 60 ? Math.floor(mins / 60) + " h " + (mins % 60 ? (mins % 60) + " min" : "") : mins + " min"} ago`;
+    el.innerHTML = `<b>VWAP gap now ${m.gapAtr.toFixed(1)} ATR ${m.side === "on" ? "" : m.side}</b> (${fmt.format(Math.abs(m.gap))} points)${m.far ? " · <b>far from VWAP</b>" : ""} · price ${ago.trim()}`
+      + ` · today it came back to VWAP <b>${m.returns}</b> ${m.returns === 1 ? "time" : "times"} after moving 1 ATR away · widest gap today ${m.widest.toFixed(1)} ATR${m.widestAt != null && bars && bars[m.widestAt] ? " at " + istTime(bars[m.widestAt].time, false) : ""} · today's live data only, not a call`;
+  }
   function clearSignals() {
+    drawVwapMeter(null);
     document.querySelector("#signals tbody").replaceChildren();
     drawDbLog(null);
     drawMoreLog(null);
@@ -2222,6 +2238,7 @@
     // on and on the index it runs on. Each VWAP call's flat line stays: it is the call's level, the VWAP at its signal candle ("VWAP at call")
     const vwapOn = ticked.vwap && typeof MorePat !== "undefined" && NewRule.moreOn(name, null) && run.bars.length > 0;
     setVwapLine(vwapOn ? MorePat.vwapSeries(run.bars).map((v, i) => ({ time: run.bars[i].time + IST_OFFSET, value: v })) : []);
+    drawVwapMeter(vwapOn && state.interval === "5m" && !run.dayEnd ? MorePat.vwapGap(run.bars, run.bars.length - 1, guideAtrs.slice(guideBase)) : null, run.bars);  // 5-minute candles only (the candles the VWAP rule reads), while the day runs
     const body = document.querySelector("#signals tbody");
     const rows = run.trades.slice().sort((a, b) => b.signalTime - a.signalTime).map(t => {
       const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";
