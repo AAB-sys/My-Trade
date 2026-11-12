@@ -496,7 +496,11 @@
     const bars = shown().flat();
     candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
     rebuild(); setVolume(); setRsi(); redraw();
-    if (fit) { if (state.priceView) priceView(null); fitDays(); }
+    // A new index, time frame or number of days: the chart shows that choice whole, its own times and its own prices. The
+    // price scale is told to follow the candles again every time: after the up and down buttons, and also after the owner
+    // dragged the price scale or the chart by hand (13 November: SENSEX's prices stayed on the scale when NIFTY 50 was chosen,
+    // and the chart stood empty until it was dragged back)
+    if (fit) { priceView(null); fitDays(); }
   }
 
   // one day: the whole session from 9:15 to 15:30 in view, with room on the right for the profile; five days: all of them
