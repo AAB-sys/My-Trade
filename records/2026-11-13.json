@@ -1317,11 +1317,14 @@
   "index_at_entry": 25206.65,
   "premium_paid": 174.45,
   "paid_at": "2026-11-13T10:38:51+05:30",
-  "premium_now": 192.65,
-  "now_at": "2026-11-13T15:30:11+05:30",
+  "premium_now": 190.85,
+  "now_at": "2026-11-13T15:40:21+05:30",
   "sell_below": 113.39,
   "sold": null,
-  "ended": null,
+  "ended": {
+   "how": "day end",
+   "at": "2026-11-13T15:40:27+05:30"
+  },
   "security_id": 45401,
   "premium_low": 153.25,
   "premium_low_at": "2026-11-13T10:45:32+05:30",
