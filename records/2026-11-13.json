@@ -1,0 +1,94 @@
+[
+ {
+  "key": "NIFTY BANK|5m|1794544500|PE|close",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-11-23",
+  "strike": 61100.0,
+  "index_at_entry": 61038.05,
+  "premium_paid": 762.45,
+  "paid_at": "2026-11-13T10:33:25+05:30",
+  "premium_now": 765.65,
+  "now_at": "2026-11-13T10:33:40+05:30",
+  "sell_below": 495.59,
+  "sold": null,
+  "ended": null,
+  "security_id": 62338,
+  "premium_low": 748.8,
+  "premium_low_at": "2026-11-13T10:15:00+05:30",
+  "stop15": null,
+  "late": {
+   "paid": "2026-11-13T10:10:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1794544800|PE|prev",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-11-19",
+  "strike": 81700.0,
+  "index_at_entry": 81669.19,
+  "premium_paid": 709.5,
+  "paid_at": "2026-11-13T10:33:34+05:30",
+  "premium_now": 658.0,
+  "now_at": "2026-11-13T10:33:40+05:30",
+  "sell_below": 461.18,
+  "sold": null,
+  "ended": null,
+  "security_id": 1165577,
+  "premium_low": 642.95,
+  "premium_low_at": "2026-11-13T10:32:00+05:30",
+  "stop15": null,
+  "late": {
+   "paid": "2026-11-13T10:20:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1794542100|CE|close",
+  "index": "SENSEX",
+  "side": "CE",
+  "expiry": "2026-11-19",
+  "strike": 81400.0,
+  "index_at_entry": 81477.44,
+  "premium_paid": 745.0,
+  "paid_at": "2026-11-13T10:33:35+05:30",
+  "premium_now": 910.0,
+  "now_at": "2026-11-13T10:33:40+05:30",
+  "sell_below": 484.25,
+  "sold": null,
+  "ended": null,
+  "security_id": 1165568,
+  "premium_low": 707.2,
+  "premium_low_at": "2026-11-13T09:31:00+05:30",
+  "stop15": null,
+  "late": {
+   "paid": "2026-11-13T09:30:00+05:30",
+   "sold": null
+  }
+ },
+ {
+  "key": "SENSEX|5m|1794543000|CE|close",
+  "index": "SENSEX",
+  "side": "CE",
+  "expiry": "2026-11-19",
+  "strike": 81600.0,
+  "index_at_entry": 81657.25,
+  "premium_paid": 748.95,
+  "paid_at": "2026-11-13T10:33:35+05:30",
+  "premium_now": 800.0,
+  "now_at": "2026-11-13T10:33:40+05:30",
+  "sell_below": 486.82,
+  "sold": null,
+  "ended": null,
+  "security_id": 1165587,
+  "premium_low": 732.1,
+  "premium_low_at": "2026-11-13T10:21:00+05:30",
+  "stop15": null,
+  "late": {
+   "paid": "2026-11-13T09:45:00+05:30",
+   "sold": null
+  }
+ }
+]
