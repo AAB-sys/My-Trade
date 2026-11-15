@@ -21,7 +21,8 @@
 (function (root) {
   "use strict";
   const CFG = { rows: 30, va: 0.70, smooth: 2, secondRatio: 0.60, valleyRatio: 0.70, posHi: 0.66, posLo: 0.34,
-                from: "12:10", to: "13:30", exit: "15:15", minBars: 12 };
+                from: "12:10", to: "13:30", exit: "15:15", minBars: 12,
+                shapeFrom: "10:15", shapeTo: "14:30" };  // the shape-wise calls' window
   const NAMES = { D: "D-shape (balanced)", B: "B-shape (busy at the bottom)", P: "P-shape (busy at the top)", Double: "Double Zone (two busy areas)" };
   const IST = 19800;
   const hm = (t) => { const s = ((t + IST) % 86400 + 86400) % 86400; return String(Math.floor(s / 3600)).padStart(2, "0") + ":" + String(Math.floor(s % 3600 / 60)).padStart(2, "0"); };
@@ -62,7 +63,9 @@
   function read(bars, weights, c = CFG) {
     if (!bars || !bars.length) return null;
     const pr = build(bars, weights, c.rows), raw = pr.v.indexOf(Math.max(...pr.v)), [up, dn] = valueArea(pr.v, raw, c.va), k = classify(pr.v, c);
-    return { shape: k.shape, position: k.position, poc: pr.lo + (raw + 0.5) * pr.step, vah: pr.lo + (up + 1) * pr.step, val: pr.lo + dn * pr.step, low: pr.lo, high: pr.hi };
+    const mid = (r) => pr.lo + (r + 0.5) * pr.step, two = k.peak2 >= 0;  // a Double Zone's two busy prices (the smoothed peaks)
+    return { shape: k.shape, position: k.position, poc: mid(raw), vah: pr.lo + (up + 1) * pr.step, val: pr.lo + dn * pr.step, low: pr.lo, high: pr.hi,
+             zoneLow: two ? mid(Math.min(k.peak, k.peak2)) : null, zoneHigh: two ? mid(Math.max(k.peak, k.peak2)) : null };
   }
   // 1-minute candles into 5-minute ones (09:15, 09:20 ...), oldest first
   function five(fine) {
@@ -100,6 +103,54 @@
     return out;
   }
 
-  const api = { CFG, NAMES, hm, build, valueArea, classify, read, five, calls };
+  // THE SHAPE-WISE CALLS (15 November, the owner: "keep the signals shapewise also and keep the calls signals with earlier logic as
+  // well. Both should work hand in hand"): a second list beside the break calls above, its own one call open at a time. From 10:15
+  // to 14:30, on the day's profile up to the candle before the signal candle, each shape has its own setup:
+  //   P       the candle dips to the busiest price and closes back above it (the candle before closed above it too): Buy CE, stop
+  //           at the value area's low
+  //   B       the candle rises to the busiest price and closes back below it (the candle before closed below it too): Buy PE, stop
+  //           a tenth of the value area's height above the candle's high
+  //   D       the candle touches the value area's high and closes back below it: Buy PE, stop at the day's high; it touches the
+  //           value area's low and closes back above it: Buy CE, stop at the day's low (a candle doing both gives nothing)
+  //   Double  the close crosses the middle between the two busy prices: upward Buy CE, stop at the lower busy price; downward
+  //           Buy PE, stop at the upper one
+  // Entry at the next candle's open, out at the stop or the 15:15 open, as the break calls. Of the versions tried on the two years
+  // (stops at the candle or at the far edge, with and without a target) these were each shape's best; a target made every one
+  // worse. The check's replay prints what they made
+  const SETUPS = { P: "P: dipped to the busiest price and held", B: "B: rose to the busiest price and failed", "D-high": "D: turned down at the value area's high",
+                   "D-low": "D: turned up at the value area's low", "Double-up": "Double Zone: crossed the gap upward", "Double-down": "Double Zone: crossed the gap downward" };
+  function setupOf(p, b, pb) {
+    if (p.shape === "P") return b.low <= p.poc && b.close > p.poc && pb.close > p.poc ? { side: "CE", stop: p.val, setup: "P" } : null;
+    if (p.shape === "B") return b.high >= p.poc && b.close < p.poc && pb.close < p.poc ? { side: "PE", stop: b.high + 0.1 * (p.vah - p.val), setup: "B" } : null;
+    if (p.shape === "D") { const down = b.high >= p.vah && b.close < p.vah, up = b.low <= p.val && b.close > p.val;
+      return down === up ? null : down ? { side: "PE", stop: p.high, setup: "D-high" } : { side: "CE", stop: p.low, setup: "D-low" }; }
+    const m = (p.zoneLow + p.zoneHigh) / 2;
+    return pb.close <= m && b.close > m ? { side: "CE", stop: p.zoneLow, setup: "Double-up" } : pb.close >= m && b.close < m ? { side: "PE", stop: p.zoneHigh, setup: "Double-down" } : null;
+  }
+  function shapeCalls(bars5, closed, fine, weights, c = CFG) {
+    const out = [], b = bars5;
+    let open = null;
+    for (let k = c.minBars; k < b.length; k++) {
+      if (open) {
+        if (hm(b[k].time) >= c.exit) { Object.assign(open, { how: "time", exitTime: b[k].time, exit: b[k].open }); open = null; }
+        else if (open.side === "CE" ? b[k].low <= open.stop : b[k].high >= open.stop) { Object.assign(open, { how: "stop", exitTime: b[k].time, exit: open.stop }); open = null; }
+        else continue;
+      }
+      const when = hm(b[k].time);
+      if (when < c.shapeFrom || when > c.shapeTo || k >= closed || k + 1 >= b.length) continue;
+      const p = read(fine.filter(m => m.time < b[k].time), weights, c);
+      const s = p && setupOf(p, b[k], b[k - 1]);
+      if (!s) continue;
+      const entry = b[k + 1].open;
+      if (s.side === "CE" ? entry <= s.stop : entry >= s.stop) continue;
+      open = { n: out.length + 1, side: s.side, setup: s.setup, signalTime: b[k].time, entryTime: b[k + 1].time, entry, stop: s.stop, shape: p.shape, how: "open", exitTime: null, exit: null };
+      out.push(open);
+    }
+    const last = b.length ? b[b.length - 1].close : null;
+    for (const t of out) t.points = (t.side === "CE" ? 1 : -1) * ((t.exit != null ? t.exit : last) - t.entry);
+    return out;
+  }
+
+  const api = { CFG, NAMES, SETUPS, hm, build, valueArea, classify, read, five, calls, shapeCalls };
   if (typeof module !== "undefined" && module.exports) module.exports = api; else root.VpShape = api;
 })(typeof window !== "undefined" ? window : globalThis);

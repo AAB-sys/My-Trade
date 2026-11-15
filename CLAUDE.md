@@ -233,8 +233,13 @@ their own logic. Read this before touching the code.
   calls: from 12:10 to 13:30 a 5-minute candle closing outside the day's value area so far gives Buy CE (above) or Buy PE (below)
   at the next candle's open, stop at the busiest price of that moment, out at the stop or the 15:15 open; one open at a time, a new
   one after it ends (many a day). Paper only. Tested on two years of NIFTY 50 with time in place of volume: 539 calls, 33% won,
-  +579 after 8 a call (first year -652, second +1,231): a weak rule, the owner's choice. `lab/check_vpshape.js` (15 checks; with
-  a candles file it replays it). Never change its numbers without the owner's word; the document's Signal (`vp/`) is separate.
+  +579 after 8 a call (first year -652, second +1,231): a weak rule, the owner's choice. A second list beside these "break calls" (the owner: "keep the signals
+  shapewise also and keep the calls signals with earlier logic as well. Both should work hand in hand"): the SHAPE calls, 10:15 to
+  14:30, each shape its own setup (P: a dip to the busiest price that holds, CE; B: a rise to it that fails, PE; D: a turn at the
+  value area's high, PE, or low, CE; Double Zone: a close across the middle of the gap), its own one call open at a time; on the
+  two years they LOST 1,569 points over 708 calls (only the Double Zone setups were positive): the owner's choice, paper only.
+  The shape's name stands above each day's profile while the box is ticked. `lab/check_vpshape.js` (21 checks; with a candles file
+  it replays both lists). Never change its numbers without the owner's word; the document's Signal (`vp/`) is separate.
   The page's signal (the owner's document "Volume Profile Signal Logic", 13 November: "read this document
   thoroughly and implement the changes"): CE, PE or WAIT from yesterday's profile (VAL, POC, VAH, the naked POCs) and today's
   finished 5-minute candles, four setups (rejection at VAH, rejection at VAL, acceptance outside value, the 80% rule), the reward

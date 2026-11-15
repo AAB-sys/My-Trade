@@ -48,10 +48,40 @@ c = S.calls(b, b.length, b, null);
 check("a call still open at 15:15 ends at that candle's open", [at(72), c.length, c[0].how, c[0].exit, c[0].points], ["15:15", 1, "time", 117, 2]);
 check("the same candles give the same calls again", JSON.stringify(S.calls(b, b.length, b, null)), JSON.stringify(c));
 
+// ---- the shape-wise calls
+{
+  const mk = (list) => list.map((x, i) => bar(i, ...x));
+  // a P day: 20 candles busy at 120-130 after a climb from 100; then a dip to the busiest price that holds
+  let p = []; for (let i = 0; i < 4; i++) p.push([100 + i * 7, 108 + i * 7, 100 + i * 7, 107 + i * 7]); for (let i = 0; i < 16; i++) p.push([124, 130, 120, 126]);
+  let d = mk(p.concat([[126, 127, 121, 126.5], [126.5, 131, 126, 130]])), r = S.read(d.slice(0, 20), null);
+  let sc = S.shapeCalls(d, d.length, d, null);
+  check("a P day: the dip to the busiest price that closes back above it gives Buy CE, stop at the value area's low", [r.shape, sc.length >= 1, sc[0].side, sc[0].setup, sc.every(t => t.side === "CE" && t.setup === "P")], ["P", true, "CE", "P", true]);
+  // a B day: the mirror
+  p = []; for (let i = 0; i < 4; i++) p.push([130 - i * 7, 130 - i * 7, 122 - i * 7, 123 - i * 7]); for (let i = 0; i < 16; i++) p.push([106, 110, 100, 104]);
+  d = mk(p.concat([[104, 109, 103, 103.5], [103.5, 104, 99, 100]])); sc = S.shapeCalls(d, d.length, d, null);
+  check("a B day: the rise to the busiest price that closes back below it gives Buy PE", [S.read(d.slice(0, 20), null).shape, sc.length, sc[0] && sc[0].side, sc[0] && sc[0].setup], ["B", 1, "PE", "B"]);
+  // a D day: wide candles 100-130 with the middle busiest; a touch of the value area's high that closes back under it
+  p = []; for (let i = 0; i < 20; i++) p.push(i % 5 === 0 ? [115, 130, 100, 115] : [114, 119, 111, 116]);
+  d = mk(p); const vd = S.read(d, null);
+  d = mk(p.concat([[116, vd.vah + 1, 115, vd.vah - 2], [vd.vah - 2, vd.vah - 1, 110, 111]])); sc = S.shapeCalls(d, d.length, d, null);
+  check("a D day: a touch of the value area's high that closes back below it gives Buy PE, stop at the day's high", [vd.shape, sc.length, sc[0] && sc[0].side, sc[0] && sc[0].setup, sc[0] && sc[0].stop], ["D", 1, "PE", "D-high", 130]);
+  // a Double Zone day: 10 candles at 100-104, 10 at 126-130; then the close crosses the middle downward
+  p = []; for (let i = 0; i < 10; i++) p.push([101, 104, 100, 103]); for (let i = 0; i < 10; i++) p.push([127, 130, 126, 129]);
+  d = mk(p); const vz = S.read(d, null);
+  d = mk(p.concat([[129, 129, 110, 111], [111, 112, 105, 106]])); sc = S.shapeCalls(d, d.length, d, null);
+  check("a Double Zone day: the close crossing the middle of the gap downward gives Buy PE, stop at the upper busy price", [vz.shape, vz.zoneLow < 105 && vz.zoneHigh > 125, sc.length, sc[0] && sc[0].side, sc[0] && sc[0].setup, sc[0] && sc[0].stop === vz.zoneHigh], ["Double", true, 1, "PE", "Double-down", true]);
+  check("no shape-wise call before 10:15 (the day's first hour)", S.shapeCalls(d.slice(0, 12), 12, d.slice(0, 12), null).length, 0);
+  check("the break calls and the shape-wise calls are separate lists: the break calls of this day", S.calls(d, d.length, d, null).length, 0);
+}
+
 if (process.argv[2]) {  // a replay of a candles file, the way the rule was tested
   const days = {}; for (const [d, t, o, h, l, cl] of fs.readFileSync(process.argv[2], "utf8").trim().split("\n").slice(1).map(l => l.split(","))) (days[d] = days[d] || []).push({ time: Date.parse(`${d}T${t}:00+05:30`) / 1000, open: +o, high: +h, low: +l, close: +cl });
   let n = 0, won = 0, pts = 0, most = 0; const dates = Object.keys(days).sort().filter(d => days[d].length >= 70);
   for (const d of dates) { const L = S.calls(days[d], days[d].length, days[d], null).map(t => t.how === "open" ? { ...t, points: (t.side === "CE" ? 1 : -1) * (days[d][days[d].length - 1].close - t.entry) } : t); n += L.length; most = Math.max(most, L.length); L.forEach(t => { pts += t.points - 8; won += t.points - 8 > 0; }); }
+  const by = {}; let sn = 0, sp = 0;
+  dates.forEach((d, i) => S.shapeCalls(days[d], days[d].length, days[d], null).forEach(t => { const pts = (t.how === "open" ? (t.side === "CE" ? 1 : -1) * (days[d][days[d].length - 1].close - t.entry) : t.points) - 8, y = by[t.setup] = by[t.setup] || { n: 0, won: 0, pts: 0, y1: 0, y2: 0 }; y.n++; y.won += pts > 0; y.pts += pts; y[i < dates.length / 2 ? "y1" : "y2"] += pts; sn++; sp += pts; }));
+  console.log("\nshape-wise calls, after 8 a call:"); for (const k of Object.keys(S.SETUPS)) if (by[k]) console.log(`  ${S.SETUPS[k].padEnd(48)} ${String(by[k].n).padStart(4)} calls, ${String(Math.round(100 * by[k].won / by[k].n)).padStart(2)}% won, ${by[k].pts.toFixed(0).padStart(6)} points (first year ${by[k].y1.toFixed(0)}, second ${by[k].y2.toFixed(0)})`);
+  console.log(`  all shape-wise calls: ${sn} calls, ${sp.toFixed(0)} points`);
   console.log(`\nreplay of ${dates.length} days (${dates[0]} to ${dates[dates.length - 1]}): ${n} calls, ${Math.round(100 * won / n)}% won, ${pts.toFixed(0)} points after 8 a call, at most ${most} a day`);
 }
 console.log(bad ? `\n${bad} WRONG` : "\nALL GOOD");

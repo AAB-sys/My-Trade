@@ -309,6 +309,11 @@
       };
       line(p.poc, cPoc, [], 1.5);
       line(p.vah, cVa, [4, 4], 1); line(p.val, cVa, [4, 4], 1);
+      if (s.shape && (right || x0 >= 0)) {  // the shape's name above the day's profile, only while "Shape signal" is ticked (15 November)
+        const top = p.rows[p.rows.length - 1], y = candles.priceToCoordinate(top.price + p.step);
+        if (y != null) { ctx.save(); ctx.font = `600 ${Math.round(11 * vr)}px -apple-system, "Segoe UI", Roboto, sans-serif`; ctx.fillStyle = css("--ink-2"); ctx.textBaseline = "bottom"; ctx.textAlign = right ? "right" : "left";
+          ctx.fillText(VpShape.NAMES[s.shape].split(" (")[0], Math.round((right ? edge : Math.max(0, x0) + 2) * hr), Math.round((y - 4) * vr)); ctx.restore(); }
+      }
     });
   }
 
@@ -530,7 +535,7 @@
     const vols = useFine ? state.fineVolumes : state.volumes;
     const have = [...vols.values()].some(v => v > 0);
     state.timeOnly = !have;
-    state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); return { bars: d, profile: VolProfile.build(f || d, have ? vols : null) }; });
+    state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); const got = $("show-shape").checked ? VpShape.read(f || d, have ? vols : null) : null; return { bars: d, profile: VolProfile.build(f || d, have ? vols : null), shape: got && got.shape }; });
     profile.requestUpdate && profile.requestUpdate();
     drawLegend(); drawNote(); drawShape();
   }
@@ -751,43 +756,47 @@
   // option 1 but this user interface should not be changed at all". So: one tick box, off until ticked; with it on, one block of
   // lines under the signal's and small marks on the chart; with it off the page is as it was. Counted in the page from the last
   // day's 1-minute candles and their futures volume (time when there is none), again with every recount: paper only, no order
-  let shapeMarks = null, shapeStop = null;
+  // Two lists work side by side (the owner: "keep the signals shapewise also and keep the calls signals with earlier logic as well.
+  // Both should work hand in hand"): the BREAK calls (a close outside the value area, 12:10 to 13:30) and the SHAPE calls (each
+  // shape's own setup, 10:15 to 14:30); each list has its own one call open at a time. The shape's name stands above each profile
+  let shapeMarks = null, shapeStops = [];
   function drawShape() {
     const box = $("shape"), on = $("show-shape").checked;
     box.hidden = !on;
-    if (shapeStop) { candles.removePriceLine(shapeStop); shapeStop = null; }
+    for (const l of shapeStops) candles.removePriceLine(l);
+    shapeStops = [];
     if (!on) { if (shapeMarks) shapeMarks.setMarkers([]); return; }
     const days = VolProfile.sessions(state.fine), fine = days[days.length - 1] || [];
     if (!fine.length) { box.innerHTML = `<div class="line"><span class="badge">…</span><span>Reading the candles…</span></div>`; return; }
     const have = [...state.fineVolumes.values()].some(v => v > 0), weights = have ? state.fineVolumes : null;
-    const b5 = VpShape.five(fine), now = Date.now() / 1000, closed = b5.filter(b => b.time + 300 <= now).length;
-    const p = VpShape.read(fine, weights), calls = VpShape.calls(b5, closed, fine, weights), open = calls.find(t => t.how === "open"), c = VpShape.CFG;
+    const b5 = VpShape.five(fine), now = Date.now() / 1000, closed = b5.filter(b => b.time + 300 <= now).length, c = VpShape.CFG;
+    const p = VpShape.read(fine, weights), lists = [{ key: "Break", calls: VpShape.calls(b5, closed, fine, weights), from: c.from, to: c.to }, { key: "Shape", calls: VpShape.shapeCalls(b5, closed, fine, weights), from: c.shapeFrom, to: c.shapeTo }];
     const day = dayOf(fine[0].time), today = Math.floor((fine[0].time + IST) / 86400) === Math.floor((now + IST) / 86400), clock = VpShape.hm(now);
     const pts = (x) => `<span class="v ${x >= 0 ? "up" : "down"}">${x >= 0 ? "+" : "−"}${num(Math.abs(x))} points</span>`;
-    let top = `<span class="badge ${open ? open.side.toLowerCase() : ""}">${open ? "BUY " + open.side : "WAIT"}</span><span><b>Shape signal</b> <span class="k">paper only</span></span>`
-      + `<span><span class="k">Shape ${day}</span> <span class="v">${VpShape.NAMES[p.shape]}</span></span>`;
-    if (open) top += `<span><b>Call ${open.n}</b> fired <span class="v">${VpShape.hm(open.entryTime)}</span> <span class="k">at</span> <span class="v">${num(open.entry)}</span></span>`
-      + `<span><span class="k">Stop (busiest price then)</span> <span class="v">${num(open.stop)}</span></span><span><span class="k">Now</span> ${pts(open.points)}</span><span class="k">Out at the stop or at ${c.exit}</span>`;
-    else top += `<span><b>${!today || clock > c.to ? "No call open. The window " + c.from + " to " + c.to + " is over." : clock < c.from ? "Waiting: calls come from " + c.from + " to " + c.to + "." : "No call open. Waiting for a 5-minute close outside today's value area."}</b></span>`
-      + `<span><span class="k">Value area so far</span> <span class="v">${num(p.val)}</span> <span class="k">to</span> <span class="v">${num(p.vah)}</span> <span class="k">busiest</span> <span class="v">${num(p.poc)}</span></span>`;
-    let list = "";
-    if (calls.length) {
-      const how = (t) => t.how === "stop" ? `stop ${VpShape.hm(t.exitTime)}` : t.how === "time" ? `out ${VpShape.hm(t.exitTime)}` : "open";
-      list = `<div class="line"><span class="k">Calls ${day}:</span>` + calls.map(t => `<span><span class="k">${t.n}.</span> <span class="v">${VpShape.hm(t.entryTime)} ${t.side} ${num(t.entry)}</span> <span class="k">${how(t)}</span> ${pts(t.points)}</span>`).join("")
-        + (calls.length > 1 ? `<span><span class="k">Total</span> ${pts(calls.reduce((a, t) => a + t.points, 0))}</span>` : "") + `</div>`;
+    const how = (t) => t.how === "stop" ? `stop ${VpShape.hm(t.exitTime)}` : t.how === "time" ? `out ${VpShape.hm(t.exitTime)}` : "open";
+    let html = `<div class="line"><span><b>Shape signal</b> <span class="k">paper only</span></span><span><span class="k">Shape ${day}</span> <span class="v">${VpShape.NAMES[p.shape]}</span></span>`
+      + `<span><span class="k">Value area so far</span> <span class="v">${num(p.val)}</span> <span class="k">to</span> <span class="v">${num(p.vah)}</span> <span class="k">busiest</span> <span class="v">${num(p.poc)}</span></span></div>`;
+    for (const L of lists) {
+      const open = L.calls.find(t => t.how === "open"), state2 = !today || clock > L.to ? "window over" : clock < L.from ? `from ${L.from}` : "waiting";
+      html += `<div class="line"><span class="badge ${open ? open.side.toLowerCase() : ""}">${open ? "BUY " + open.side : "WAIT"}</span><span><b>${L.key} calls</b> <span class="k">${L.from} to ${L.to}</span></span>`
+        + (open ? `<span><b>Call ${open.n}</b>${open.setup ? " · " + VpShape.SETUPS[open.setup] : ""} · fired <span class="v">${VpShape.hm(open.entryTime)}</span> <span class="k">at</span> <span class="v">${num(open.entry)}</span></span><span><span class="k">Stop</span> <span class="v">${num(open.stop)}</span></span><span><span class="k">Now</span> ${pts(open.points)}</span>`
+                : `<span class="k">No call open (${state2})</span>`)
+        + L.calls.filter(t => t !== open).map(t => `<span><span class="k">${t.n}.</span> <span class="v">${VpShape.hm(t.entryTime)} ${t.side} ${num(t.entry)}</span> <span class="k">${t.setup ? t.setup.split("-")[0] + " · " : ""}${how(t)}</span> ${pts(t.points)}</span>`).join("")
+        + (L.calls.length > 1 ? `<span><span class="k">Total</span> ${pts(L.calls.reduce((a, t) => a + t.points, 0))}</span>` : "") + `</div>`;
     }
-    box.innerHTML = `<div class="line">${top}</div>${list}<div class="line rule"><span class="k">Rule: from ${c.from} to ${c.to}, a 5-minute candle closing outside the day's value area so far gives a call with the break; stop at the busiest price of that moment; out at the stop or at ${c.exit}.${have ? "" : " Counted by time: no volume."}</span></div>`;
-    // on the chart: each call's entry and exit, and the open call's stop
+    html += `<div class="line rule"><span class="k">Break calls: a 5-minute candle closing outside the day's value area so far, stop at the busiest price of that moment. Shape calls: P a dip to the busiest price that holds (CE); B a rise to it that fails (PE); D a turn at the value area's high (PE) or low (CE); Double Zone a close across the gap. Every call is out at its stop or at ${c.exit}.${have ? "" : " Counted by time: no volume."}</span></div>`;
+    box.innerHTML = html;
+    // on the chart: each call's entry and exit (the shape calls carry their shape's letter), and the open calls' stops
     const seconds = { "1m": 60, "5m": 300, "15m": 900 }[state.interval], at = (t) => { const b = state.bars.find(b => t >= b.time && t < b.time + seconds); return b ? b.time + IST : null; };
     const marks = [];
-    for (const t of calls) {
-      const up = t.side === "CE", e = at(t.entryTime), x = t.exitTime != null ? at(t.exitTime) : null;
-      if (e != null) marks.push({ time: e, position: up ? "belowBar" : "aboveBar", color: css(up ? "--up" : "--down"), shape: up ? "arrowUp" : "arrowDown", text: t.side + " " + t.n });
-      if (x != null) marks.push({ time: x, position: up ? "aboveBar" : "belowBar", color: css("--muted"), shape: up ? "arrowDown" : "arrowUp", text: "X" + t.n });
+    for (const L of lists) for (const t of L.calls) {
+      const up = t.side === "CE", e = at(t.entryTime), x = t.exitTime != null ? at(t.exitTime) : null, tag = L.key === "Shape" ? (t.shape === "Double" ? "DZ" : t.shape) + " " : "";
+      if (e != null) marks.push({ time: e, position: up ? "belowBar" : "aboveBar", color: css(up ? "--up" : "--down"), shape: up ? "arrowUp" : "arrowDown", text: tag + t.side + " " + t.n });
+      if (x != null) marks.push({ time: x, position: up ? "aboveBar" : "belowBar", color: css("--muted"), shape: up ? "arrowDown" : "arrowUp", text: (tag ? "x" + tag.trim() : "X") + t.n });
+      if (t.how === "open") shapeStops.push(candles.createPriceLine({ price: t.stop, title: L.key + " stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true }));
     }
     if (!shapeMarks) shapeMarks = LC.createSeriesMarkers(candles, []);
     shapeMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
-    if (open) shapeStop = candles.createPriceLine({ price: open.stop, title: "Shape stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true });
   }
 
   // ---------------------------------------------------------------- the tool row
@@ -800,7 +809,7 @@
   $("show-volume").addEventListener("change", () => { setVolume(); save(); });
   $("show-rsi").addEventListener("change", () => { setRsi(); drawLegend(); save(); });
   $("show-signal").addEventListener("change", () => { save(); drawSignal(); if ($("show-signal").checked) loadSignal(); });
-  $("show-shape").addEventListener("change", () => { save(); drawShape(); });
+  $("show-shape").addEventListener("change", () => { save(); rebuild(); });
   loadDrawings();
   press();
 
