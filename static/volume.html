@@ -97,6 +97,8 @@
   #nav .sep { width: 1px; margin: 5px 2px; background: var(--border); }
   /* The signal (13 November, the owner's document "Volume Profile Signal Logic", its note 10: one screen with yesterday's VAL,
      POC and VAH, the naked POC list, how today opened, the signal or WAIT with its reason, the stop, the target and the lots) */
+  #calls { flex: none; max-height: 34vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; border-top: 1px solid var(--border); }
+  #calls > div:last-child, #calls > div:not([hidden]):last-of-type { border-bottom: 0; }
   #sig { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
   #sig[hidden] { display: none; }
   #shape { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
@@ -111,8 +113,8 @@
   #impulse .k { color: var(--muted); } #impulse .v { color: var(--ink); font-variant-numeric: tabular-nums; } #impulse .v.up { color: var(--up); } #impulse .v.down { color: var(--down); }
   #shape b { color: var(--ink); font-weight: 600; }
   #impulse b { color: var(--ink); font-weight: 600; }
-  @media (max-width: 600px) { #shape { padding: 5px 10px; max-height: 22vh; overflow-y: auto; touch-action: pan-y; } #shape .rule { display: none; } }
-  @media (max-width: 600px) { #impulse { padding: 5px 10px; max-height: 22vh; overflow-y: auto; touch-action: pan-y; } #impulse .rule { display: none; } }
+  @media (max-width: 600px) { #shape { padding: 5px 10px; } #shape .rule { display: none; } }
+  @media (max-width: 600px) { #impulse { padding: 5px 10px; } #impulse .rule { display: none; } #calls { max-height: 30vh; } }
   #sig .line { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; }
   #sig .line + .line { margin-top: 3px; }
   #sig .badge { font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 6px; color: #fff; background: var(--muted); letter-spacing: 0.02em; }
@@ -135,7 +137,7 @@
     #draw .sep { width: 1px; height: auto; margin: 6px 4px; }
     header h1 { font-size: 15px; }
     #legend { font-size: 11px; right: 58px; }
-    #sig { padding: 5px 10px; max-height: 30vh; overflow-y: auto; touch-action: pan-y; }
+    #sig { padding: 5px 10px; }
     #legend .sym { font-size: 13px; }
     #status { display: none; }
   }
@@ -165,9 +167,6 @@
     <label><input type="checkbox" id="show-impulse"> Impulse MACD</label>
   </div>
   <div id="info" aria-live="off"></div>
-  <div id="sig" aria-live="polite"></div>
-  <div id="shape" aria-live="polite" hidden></div>
-  <div id="impulse" aria-live="polite" hidden></div>
   <div id="main">
     <div id="draw" role="toolbar" aria-label="Drawing tools">
       <button type="button" data-tool="" aria-pressed="true" title="Pointer: move the chart, tap a drawing to pick it" aria-label="Pointer"><svg viewBox="0 0 20 20"><path d="M5 3l10 7-4.5 1 2.5 5-2 1-2.5-5L5 15z"/></svg></button>
@@ -196,6 +195,14 @@
       </div>
       <div id="chart"></div>
     </div>
+  </div>
+  <!-- every call the page states stands BELOW the chart (15 November, the owner, with the signal lines marked: "move all the calls
+       below the chart ... whatever the call page fires, move it all below the chart"): the document's Signal, the Shape signal,
+       the Impulse calls. The block scrolls inside itself when it is long, so the chart keeps its room -->
+  <div id="calls">
+    <div id="sig" aria-live="polite"></div>
+    <div id="shape" aria-live="polite" hidden></div>
+    <div id="impulse" aria-live="polite" hidden></div>
   </div>
   <p id="note"></p>
 
@@ -918,7 +925,7 @@
   // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
   const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };
   window.addEventListener("scroll", pinPage, true);
-  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #sig, #shape, #impulse")) e.preventDefault(); }, { passive: false });
+  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #calls")) e.preventDefault(); }, { passive: false });
   for (const kind of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(kind, (e) => e.preventDefault());
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);
