@@ -97,6 +97,12 @@
   #nav .sep { width: 1px; margin: 5px 2px; background: var(--border); }
   /* The signal (13 November, the owner's document "Volume Profile Signal Logic", its note 10: one screen with yesterday's VAL,
      POC and VAH, the naked POC list, how today opened, the signal or WAIT with its reason, the stop, the target and the lots) */
+  #calls-wrap { position: relative; flex: none; }
+  #calls-scroll { position: absolute; right: 12px; bottom: 8px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+  #calls-scroll[hidden] { display: none; }
+  #calls-scroll svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+  #calls-scroll.up svg { transform: rotate(180deg); }
+  @media (max-width: 600px) { #calls-scroll { width: 40px; height: 40px; right: 10px; } }
   #calls { flex: none; max-height: 34vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; border-top: 1px solid var(--border); }
   #calls > div:last-child, #calls > div:not([hidden]):last-of-type { border-bottom: 0; }
   #sig { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
@@ -199,10 +205,15 @@
   <!-- every call the page states stands BELOW the chart (15 November, the owner, with the signal lines marked: "move all the calls
        below the chart ... whatever the call page fires, move it all below the chart"): the document's Signal, the Shape signal,
        the Impulse calls. The block scrolls inside itself when it is long, so the chart keeps its room -->
-  <div id="calls">
-    <div id="sig" aria-live="polite"></div>
-    <div id="shape" aria-live="polite" hidden></div>
-    <div id="impulse" aria-live="polite" hidden></div>
+  <div id="calls-wrap">
+    <div id="calls">
+      <div id="sig" aria-live="polite"></div>
+      <div id="shape" aria-live="polite" hidden></div>
+      <div id="impulse" aria-live="polite" hidden></div>
+    </div>
+    <!-- the scroll button (15 November, the owner: "add the scroll down button for the web and mobile both"): there only while the
+         calls do not fit; it moves the block down, and at the end it turns and brings it back to the top -->
+    <button type="button" id="calls-scroll" hidden aria-label="Scroll the calls down" title="Scroll the calls down"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
   </div>
   <p id="note"></p>
 
@@ -878,6 +889,26 @@
     if (!impMarks) impMarks = LC.createSeriesMarkers(candles, []);
     impMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
   }
+
+  // ---------------------------------------------------------------- the calls' scroll button
+  // shown only while the calls' block is longer than its room; a press moves it down by most of its height; at the end the
+  // arrow turns and a press brings it back to the top. It follows what the block holds (a signal ticked on or off, a new call)
+  (() => {
+    const box = $("calls"), btn = $("calls-scroll");
+    const look = () => {
+      const more = box.scrollHeight - box.clientHeight > 4, end = box.scrollTop + box.clientHeight >= box.scrollHeight - 4;
+      btn.hidden = !more;
+      box.style.paddingRight = more ? "52px" : "";  // the words keep clear of the button
+      btn.classList.toggle("up", more && end);
+      const words = more && end ? "Back to the first call" : "Scroll the calls down";
+      btn.title = words; btn.setAttribute("aria-label", words);
+    };
+    btn.addEventListener("click", () => { const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 4; box.scrollTo({ top: end ? 0 : box.scrollTop + Math.max(60, box.clientHeight * 0.8), behavior: "smooth" }); });
+    box.addEventListener("scroll", look, { passive: true });
+    new MutationObserver(look).observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    window.addEventListener("resize", look);
+    look();
+  })();
 
   // ---------------------------------------------------------------- the tool row
   const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, signal: $("show-signal").checked, shape: $("show-shape").checked, impulse: $("show-impulse").checked })); } catch (e) {} };
