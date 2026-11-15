@@ -1663,6 +1663,69 @@ async def download_candles(index: str, from_day: str = Query(alias="from"), to_d
                     headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store", "X-Candles": str(len(bars))})
 
 
+@app.get("/download/volume")
+async def download_volume(index: str, from_day: str = Query(alias="from"), to_day: str = Query(alias="to"), size: int = 5, store: str = ""):
+    """The same file as /download/candles with the volume beside each candle (the owner, 15 November: "I want to download the
+    volume data from the past for the Nifty 50 ... the same way you did it before for the candles data"). An index has no
+    volume of its own: the Volume column is what the index's nearest futures contract traded in the same minutes
+    (dhan.future_history), and the Contract column names it. Dhan gives the volume of the contract trading now only, as far
+    back as that contract has traded, so the file starts at the first day that has volume (the answer says which day, and
+    why it is later than asked). Eight columns: Date, Time, Open, High, Low, Close, Volume, Contract. store=github: onto
+    the data branch under history/, as the candles file. Nothing is kept on the server; no rule reads this."""
+    key = known_index(index)
+    if not DHAN_ON or key not in dhan.QUOTE_IDS:
+        raise HTTPException(status_code=503, detail="Dhan is not set up on this server, so there is no volume to download.")
+    if size not in (1, 5, 15):
+        raise HTTPException(status_code=400, detail="size must be 1, 5 or 15 (minutes a candle).")
+    try:
+        first, last = date.fromisoformat(from_day), date.fromisoformat(to_day)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="from and to must be dates like 2024-11-01.")
+    today = dhan.today_ist()
+    if last > today:
+        last = today
+    if first > last:
+        raise HTTPException(status_code=400, detail="from must be on or before to.")
+    if (last - first).days > HISTORY_MAX_DAYS:
+        raise HTTPException(status_code=400, detail="at most five years at a time.")
+    try:
+        vol = await asyncio.to_thread(dhan.future_history, key, size, first, last)
+    except dhan.DhanError as exc:
+        raise HTTPException(status_code=502, detail=f"Dhan did not give the volume: {exc.message}")
+    volumes = {t: v for t, v in vol["bars"]}
+    contract = f"{vol['contract']['name']} ({vol['contract']['expiry']})"
+    start = datetime.fromtimestamp(vol["bars"][0][0], dhan.IST).date() if vol["bars"] else None
+    bars = []
+    if start:
+        try:
+            bars = await asyncio.to_thread(dhan.history, key, size, start, last)
+        except dhan.DhanError as exc:
+            raise HTTPException(status_code=502, detail=f"The volume came, but Dhan did not give the candles: {exc.message}")
+    lines = ["Date,Time,Open,High,Low,Close,Volume,Contract"]
+    with_volume = 0
+    for b in bars:
+        t, v = datetime.fromtimestamp(b["time"], dhan.IST), volumes.get(b["time"])
+        with_volume += v is not None
+        lines.append(f"{t:%Y-%m-%d},{t:%H:%M},{b['open']:.2f},{b['high']:.2f},{b['low']:.2f},{b['close']:.2f},{'' if v is None else v},{contract}")
+    first_day = start.isoformat() if start else ""
+    note = "" if not start else ("" if start <= first + timedelta(days=4) else
+                                 f"Dhan gives the volume of the contract trading now ({contract}) only, so the file starts on {first_day}, not {first.isoformat()}")
+    name = f"{key.replace(' ', '')}_{size}min_volume_{first_day or first.isoformat()}_{last.isoformat()}.csv"
+    if store == "github":
+        if not record.TOKEN:
+            raise HTTPException(status_code=503, detail="GitHub is not set up on this server (GITHUB_DATA_TOKEN), so the file cannot be saved there. Download it instead.")
+        rel = f"history/{name}"
+        try:
+            await asyncio.to_thread(record.push_bytes, rel, ("\n".join(lines) + "\n").encode(), f"Candles with volume {key} {size} min, {first_day} to {last.isoformat()}")
+        except record.RecordError as exc:
+            raise HTTPException(status_code=502, detail=f"The volume came ({len(bars)} candles), but GitHub did not take the file: {exc}")
+        return {"saved": rel, "repo": record.REPO, "branch": record.BRANCH, "candles": len(bars), "with_volume": with_volume, "first_day": first_day, "contract": contract, "note": note,
+                "url": f"https://github.com/{record.REPO}/blob/{record.BRANCH}/{rel}"}
+    return Response("\n".join(lines) + "\n", media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store", "X-Candles": str(len(bars)), "X-With-Volume": str(with_volume),
+                             "X-First-Day": first_day, "X-Note": note.encode("ascii", "replace").decode()})
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
     """The tab icon for a browser that asks /favicon.ico on its own (the pages name static/icon.svg; before 30 October this

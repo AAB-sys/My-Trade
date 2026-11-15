@@ -928,6 +928,53 @@ def future_volume(name: str, minutes: int, days_back: int = 8) -> dict:
     return cached(("future volume", name, minutes, days_back), 20, make)
 
 
+def future_history(name: str, minutes: int, first: date, last: date) -> dict:
+    """The volume of the index's nearest futures contract per candle of `minutes`, from the day first to the day last, as far
+    back as Dhan gives it (the owner, 15 November: "I want to download the volume data from the past for the Nifty 50 ...
+    the same way you did it before for the candles data"). An index has no volume; the contract is the one trading now
+    (future_of): Dhan's instrument list no longer names the contracts that have expired, so their volume cannot be asked
+    for here. Asked in pieces of 90 days like history(), the NEWEST piece first: the first older piece that Dhan refuses or
+    leaves empty ends the walk, and what came is kept. {"contract": {"name", "expiry"}, "bars": [[time, volume], ...] oldest
+    first, "stopped": why the walk ended before `first` (None when it reached it)}."""
+    contract = future_of(name)
+    if not contract:
+        raise DhanError("other", f"Dhan's instrument list shows no {UNDERLYING[name]} futures contract")
+    base = {"securityId": str(contract["id"]), "exchangeSegment": OPTION_SEGMENTS[name], "instrument": "FUTIDX", "oi": False}
+    shapes = [(f, st) for f in ("span", "plain") for st in ("text", "number")]
+    known, got, stopped = None, {}, None
+    end = last
+    while end >= first:
+        start = max(first, end - timedelta(days=HISTORY_PIECE_DAYS - 1))
+        bars, refusal = None, None
+        for form, style in ([known] + [x for x in shapes if x != known] if known else shapes):
+            body = {**base, "interval": str(minutes) if style == "text" else int(minutes)}
+            if form == "span":
+                body["fromDate"], body["toDate"] = f"{start.isoformat()} 09:15:00", f"{end.isoformat()} 15:30:00"
+            else:
+                body["fromDate"], body["toDate"] = start.isoformat(), (end + timedelta(days=1)).isoformat()
+            try:
+                bars = _volumes(call("POST", "/charts/intraday", body))
+            except DhanError as exc:
+                if exc.kind != "other":
+                    raise
+                refusal = exc
+                continue
+            known = (form, style)
+            break
+        if bars is None:
+            if not got:
+                raise refusal  # not even the newest piece: Dhan's reason goes to the owner
+            stopped = f"Dhan gave nothing before {start.isoformat()} to {end.isoformat()}: {refusal.message[:120]}"
+            break
+        kept = [(t, v) for t, v in bars if start <= datetime.fromtimestamp(t, IST).date() <= end]
+        if not kept and got:
+            stopped = f"Dhan has no volume of this contract in {start.isoformat()} to {end.isoformat()}"
+            break
+        got.update(kept)
+        end = start - timedelta(days=1)
+    return {"contract": {"name": contract["name"], "expiry": contract["expiry"]}, "bars": sorted([t, v] for t, v in got.items()), "stopped": stopped}
+
+
 _volume_seen: dict = {}  # name -> what the last check of the futures' volume found, for /health (volume_report)
 
 

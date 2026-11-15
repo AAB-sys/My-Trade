@@ -176,9 +176,10 @@
       <label>From <input id="dl-from" type="date"></label>
       <label>To <input id="dl-to" type="date"></label>
       <label>Candles <select id="dl-size"><option value="5">5 minutes</option><option value="1">1 minute</option><option value="15">15 minutes</option></select></label>
+      <label>File <select id="dl-what"><option value="candles">Candles</option><option value="volume">Candles with volume</option></select></label>
       <button id="dl-go" type="button">Download</button>
       <button id="dl-gh" type="button" class="second">Save on GitHub</button>
-      <p id="dl-status">Six columns: Date, Time, Open, High, Low, Close. Two years is about a minute. "Save on GitHub" puts the file on the data branch, under history/.</p>
+      <p id="dl-status">Six columns: Date, Time, Open, High, Low, Close. Two years is about a minute. "Candles with volume" adds Volume and Contract: the volume of the index's futures contract trading now, as far back as Dhan gives it. "Save on GitHub" puts the file on the data branch, under history/.</p>
     </div>
   </div>
 
@@ -354,7 +355,7 @@
   // is saved through the browser under the server's file name. The dates start at two years back and today
   (() => {
     const box = document.getElementById("dl"), btn = document.getElementById("dl-btn"), panel = document.getElementById("dl-panel");
-    const index = document.getElementById("dl-index"), from = document.getElementById("dl-from"), to = document.getElementById("dl-to"), size = document.getElementById("dl-size");
+    const index = document.getElementById("dl-index"), from = document.getElementById("dl-from"), to = document.getElementById("dl-to"), size = document.getElementById("dl-size"), what = document.getElementById("dl-what");
     const go = document.getElementById("dl-go"), gh = document.getElementById("dl-gh"), status = document.getElementById("dl-status"), hint = status.textContent;
     index.replaceChildren(...PINNED.map(name => { const o = document.createElement("option"); o.value = name; o.textContent = name; return o; }));
     const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -373,18 +374,21 @@
       go.disabled = gh.disabled = true; say("Asking Dhan, piece by piece. Two years takes about a minute, please wait…");
       try {
         const q = `index=${encodeURIComponent(index.value)}&from=${from.value}&to=${to.value}&size=${size.value}` + (toGitHub ? "&store=github" : "");
-        const res = await fetch("/download/candles?" + q, withTab());
+        const volume = what.value === "volume";  // 15 November, the owner: the past volume, "the same way you did it before for the candles data"
+        const res = await fetch((volume ? "/download/volume?" : "/download/candles?") + q, withTab());
         if (!res.ok) { let why = `HTTP ${res.status}`; try { why = (await res.json()).detail || why; } catch (e) {} say("Not saved: " + why, true); later(); return; }
         if (toGitHub) {
           const got = await res.json(), n = Number(got.candles || 0);
           status.replaceChildren(`Saved on GitHub, branch ${got.branch}: `, Object.assign(document.createElement("a"), { href: got.url, target: "_blank", rel: "noopener", textContent: got.saved }), ` · ${n.toLocaleString("en-IN")} candles` + (n === 0 ? " · Dhan had no candles for these days" : ""));
+          if (volume) status.append(n ? ` · volume from ${got.first_day}` : "", got.note ? ` · ${got.note}` : "");
           status.classList.remove("bad"); later(); return;
         }
         const blob = await res.blob(), m = /filename="([^"]+)"/.exec(res.headers.get("Content-Disposition") || ""), name = m ? m[1] : "candles.csv";
         const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();  // not added to the page: its click would count as a click outside the panel and close it
         setTimeout(() => URL.revokeObjectURL(a.href), 60000);
         const n = res.headers.get("X-Candles");
-        say(`Saved ${name}` + (n ? ` · ${Number(n).toLocaleString("en-IN")} candles` : "") + (n === "0" ? " · Dhan had no candles for these days" : "")); later();
+        const day = res.headers.get("X-First-Day"), note = res.headers.get("X-Note");
+        say(`Saved ${name}` + (n ? ` · ${Number(n).toLocaleString("en-IN")} candles` : "") + (n === "0" ? (volume ? " · Dhan had no volume for these days" : " · Dhan had no candles for these days") : "") + (volume && day ? ` · volume from ${day}` : "") + (volume && note ? ` · ${note}` : "")); later();
       } catch (e) { say("Not saved: " + (e.message || e), true); later(); }
       finally { go.disabled = gh.disabled = false; }
     };

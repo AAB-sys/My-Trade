@@ -222,6 +222,10 @@ their own logic. Read this before touching the code.
   the arithmetic. The server checks the page's supply itself (the owner, 13 November: "yes add that check"): every half hour one
   small request per index for its futures' volume (`dhan.volume_check`, `volume_forever`), shown in `/health` under
   `feed.volume_profile` (ok, the contract, the last candle, today's volume, Dhan's reason when refused); `lab/check_volume_health.py`.
+  The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
+  before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
+  (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
+  no longer names expired contracts), newest piece first until Dhan has no more; `lab/check_volume_download.py`.
   The page's signal (the owner's document "Volume Profile Signal Logic", 13 November: "read this document
   thoroughly and implement the changes"): CE, PE or WAIT from yesterday's profile (VAL, POC, VAH, the naked POCs) and today's
   finished 5-minute candles, four setups (rejection at VAH, rejection at VAL, acceptance outside value, the 80% rule), the reward
