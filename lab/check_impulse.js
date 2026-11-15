@@ -2,7 +2,7 @@
 // and the calls. No network.
 //     node lab/check_impulse.js                     (from the repo's folder)
 //     node lab/check_impulse.js <candles.csv>       also replays a file of 5-minute candles (the Main Menu's Download candles); on
-//                                                   NIFTY50_5min_2024-11-09_2026-11-09.csv: 267 calls, +1,431 after 8 a call
+//                                                   NIFTY50_5min_2024-11-09_2026-11-09.csv: 813 calls, -385 after 8 a call
 const I = require("../static/impulse.js"), S = require("../static/vpshape.js"), fs = require("fs");
 let bad = 0;
 const check = (what, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want); bad += !ok; console.log((ok ? "ok    " : "WRONG ") + what + (ok ? "" : `: got ${JSON.stringify(got)}, wanted ${JSON.stringify(want)}`)); };
@@ -51,6 +51,23 @@ got = I.calls(d.all, d.today.length, d.today, null);
 check("a run down: Buy PE, with md below 0 and below its signal", [got.calls.length, got.calls[0].side, got.calls[0].md < 0 && got.calls[0].md < got.calls[0].sb], [1, "PE", true]);
 check("the same candles give the same calls again", JSON.stringify(I.calls(d.all, d.today.length, d.today, null).calls), JSON.stringify(got.calls));
 check("the indicator's values come back by candle time, one a candle", [got.values.size, got.values.get(d.all[d.all.length - 1].time).md < 0], [d.all.length, true]);
+
+// the whole day (the owner, 15 November: "fired all the day ... there should not be any time cap or call numbers limit")
+{
+  const early = []; let i = 0;
+  for (let dd = 0; dd < 4; dd++) for (let k = 0; k < 75; k++) early.push({ time: T + dd * 86400 + k * 300, open: 104, high: 110, low: 100, close: 106 });
+  const t0 = T + 4 * 86400, today = [[104, 110, 100, 106], [104, 110, 100, 106], [104, 110, 100, 106], [106, 116, 106, 115], [115, 124, 114, 123], [123, 132, 122, 131], [131, 140, 130, 139], [139, 148, 138, 147], [147, 156, 146, 155]].map((x, k) => ({ time: t0 + k * 300, open: x[0], high: x[1], low: x[2], close: x[3] }));
+  const g = I.calls(early.concat(today), today.length, today, null).calls;
+  check("a run from 09:30: the Impulse call comes in the morning, long before 12:10", [g.length, g[0].side, S.hm(g[0].entryTime) < "10:15"], [1, "CE", true]);
+  check("the break calls keep their own hours: none of them this early", S.calls(today, today.length, today, null).length, 0);
+  check("the calls' day runs from the open to the 15:05 candle, with a profile of three candles", [I.CFG.from, I.CFG.to, I.CFG.minBars], ["09:15", "15:05", 3]);
+  // more than one call a day: a run up (Buy CE), then a long fall through the stop and out of the value area (Buy PE); nothing counts them
+  const zig = [[104, 110, 100, 106], [104, 110, 100, 106], [104, 110, 100, 106]]; let p = 106;
+  for (let k = 0; k < 6; k++) { zig.push([p, p + 10, p - 1, p + 9]); p += 9; }
+  for (let k = 0; k < 30; k++) { zig.push([p, p + 1, p - 16, p - 15]); p -= 15; }
+  const zt = zig.map((x, k) => ({ time: t0 + k * 300, open: x[0], high: x[1], low: x[2], close: x[3] })), zc = I.calls(early.concat(zt), zt.length, zt, null).calls;
+  check("no limit on the number of calls in a day: after the CE is stopped the fall gives a PE", [zc.length >= 2, zc[0].side, zc[0].how, zc[zc.length - 1].side], [true, "CE", "stop", "PE"]);
+}
 
 if (process.argv[2]) {  // a replay, the way the rule was tested; then again as the page counts it, from the last five days only
   const byDay = {}; for (const [dd, t, o, h, l, cl] of fs.readFileSync(process.argv[2], "utf8").trim().split("\n").slice(1).map(l => l.split(","))) (byDay[dd] = byDay[dd] || []).push({ time: Date.parse(`${dd}T${t}:00+05:30`) / 1000, open: +o, high: +h, low: +l, close: +cl });

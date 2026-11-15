@@ -868,20 +868,20 @@
     const have = [...state.fineVolumes.values()].some(v => v > 0), weights = have ? state.fineVolumes : null;
     const all5 = VpShape.five(state.fine), now = Date.now() / 1000, dayNo = (t) => Math.floor((t + IST) / 86400), last = dayNo(fine[0].time);
     const closed = all5.filter(b => dayNo(b.time) === last && b.time + 300 <= now).length;
-    const got = Impulse.calls(all5, closed, fine, weights), calls = got.calls, open = calls.find(t => t.how === "open"), c = VpShape.CFG;
+    const got = Impulse.calls(all5, closed, fine, weights), calls = got.calls, open = calls.find(t => t.how === "open"), c = VpShape.CFG, ic = Impulse.CFG;
     const day = dayOf(fine[0].time), today = last === dayNo(now), clock = VpShape.hm(now);
     const done = all5.filter(b => b.time + 300 <= now), x = done.length ? got.values.get(done[done.length - 1].time) : null;
     const pts = (v) => `<span class="v ${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : "−"}${num(Math.abs(v))} points</span>`;
     const how = (t) => t.how === "stop" ? `stop ${VpShape.hm(t.exitTime)}` : t.how === "time" ? `out ${VpShape.hm(t.exitTime)}` : "open";
-    const state2 = !today || clock > c.to ? "window over" : clock < c.from ? `from ${c.from}` : "waiting";
+    const state2 = !today || clock >= c.exit ? "the day is over" : "waiting";
     const words = !x || x.sh == null ? "not enough candles yet" : x.md > 0 ? (x.sh > 0 ? "up and growing" : "up, fading") : x.md < 0 ? (x.sh < 0 ? "down and growing" : "down, fading") : "none (inside the channel)";
-    let html = `<div class="line"><span class="badge ${open ? open.side.toLowerCase() : ""}">${open ? "BUY " + open.side : "WAIT"}</span><span><b>Impulse calls</b> <span class="k">${c.from} to ${c.to} · paper only</span></span>`
+    let html = `<div class="line"><span class="badge ${open ? open.side.toLowerCase() : ""}">${open ? "BUY " + open.side : "WAIT"}</span><span><b>Impulse calls</b> <span class="k">all day · paper only</span></span>`
       + (open ? `<span><b>Call ${open.n}</b> · fired <span class="v">${VpShape.hm(open.entryTime)}</span> <span class="k">at</span> <span class="v">${num(open.entry)}</span></span><span><span class="k">Stop</span> <span class="v">${num(open.stop)}</span></span><span><span class="k">Now</span> ${pts(open.points)}</span>`
               : `<span class="k">No call open (${state2})</span>`)
       + calls.filter(t => t !== open).map(t => `<span><span class="k">${t.n}.</span> <span class="v">${VpShape.hm(t.entryTime)} ${t.side} ${num(t.entry)}</span> <span class="k">${how(t)}</span> ${pts(t.points)}</span>`).join("")
       + (calls.length > 1 ? `<span><span class="k">Total</span> ${pts(calls.reduce((a, t) => a + t.points, 0))}</span>` : "") + `</div>`;
     html += `<div class="line"><span><span class="k">Impulse on the last 5-minute candle (${day}):</span> <span class="v">${words}</span></span>` + (x && x.sb != null ? `<span><span class="k">Impulse MACD</span> <span class="v">${num(x.md)}</span> <span class="k">signal</span> <span class="v">${num(x.sb)}</span></span>` : "") + `</div>`;
-    html += `<div class="line rule"><span class="k">Impulse calls: a break call (a 5-minute candle closing outside the day's value area so far) is taken only when the Impulse MACD agrees and is growing on that candle: above 0 and above its signal for Buy CE, below 0 and below its signal for Buy PE. Stop at the busiest price of that moment; out at the stop or at ${c.exit}.${have ? "" : " Counted by time: no volume."}</span></div>`;
+    html += `<div class="line rule"><span class="k">Impulse calls, all day from the open with no limit on their number: a 5-minute candle closing outside the day's value area so far gives a call only when the Impulse MACD agrees and is growing on that candle: above 0 and above its signal for Buy CE, below 0 and below its signal for Buy PE. Stop at the busiest price of that moment; out at the stop or at ${c.exit}.${have ? "" : " Counted by time: no volume."}</span></div>`;
     box.innerHTML = html;
     const seconds = { "1m": 60, "5m": 300, "15m": 900 }[state.interval], at = (t) => { const b = state.bars.find(b => t >= b.time && t < b.time + seconds); return b ? b.time + IST : null; };
     const marks = [];

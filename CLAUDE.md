@@ -236,11 +236,14 @@ their own logic. Read this before touching the code.
   on volume profile page ... Test this on the Nifty 50 data"): `static/impulse.js`. The tick box "Impulse MACD" is OFF until ticked;
   with it off the page is as it was. On: the indicator in its own pane under the RSI's, as the script draws it (lengths 34 and 9:
   md as coloured bars, md minus its signal as blue bars, the signal line), following the candle size shown; and the Impulse calls:
-  a break call (`vpshape.js`, 12:10 to 13:30) is taken only when on its signal candle md is above 0 and above its signal (CE) or
-  below 0 and below it (PE), read on the 5-minute candles of the last five days; stop, exit and one-at-a-time as the break calls.
-  Of 100 ways tried on the two years the indicator alone gave no rule that held; this filter did: as the page counts it 266 calls,
-  38% won, +1,199 after 8 a call (first year +77, second +1,122; CE +662, PE +537) against the break calls' +579. A modest edge,
-  time in place of volume, NIFTY 50 only: paper only. `lab/check_impulse.js` (17 checks; with a candles file it replays it).
+  a 5-minute candle closing outside the day's value area so far (the break call's signal, `vpshape.js`) gives a call only when on
+  that candle md is above 0 and above its signal (CE) or below 0 and below it (PE), read on the 5-minute candles of the last five
+  days; stop, exit and one-at-a-time as the break calls. ALL DAY, no time cap and no limit on the number of calls (the owner: "IMACD
+  signals should be fired all the day starting from the start of the market session till the end. there should not be any time cap
+  or call numbers limit"): signal candles from 09:30 to 15:05. Of 100 ways tried on the two years the indicator alone gave no rule
+  that held. As the page counts it the all-day calls made -385 after 8 a call (813 calls, 32% won; first year -444, second +59);
+  held to 12:10-13:30 the same rule made +1,199 (266 calls): the owner chose the whole day. Time in place of volume, NIFTY 50 only:
+  paper only. `lab/check_impulse.js` (21 checks; with a candles file it replays it).
   Where the calls stand (15 November, the owner, with the signal lines marked: "move all the calls below the chart ... whatever
   the call page fires, move it all below the chart"): the document's Signal, the Shape signal and the Impulse calls are one block
   (`#calls`) BELOW the chart, above the note; it scrolls inside itself when it is long (at most about a third of the screen). Two round

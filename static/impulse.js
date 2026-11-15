@@ -12,22 +12,26 @@
 //   colour   of each md bar: (h+l+c)/3 above mi: "lime" when also above hi, else "green"; not above mi: "red" when below lo, else "orange"
 // The averages run on through the days, as on a chart; the page gives them the last five days of candles.
 //
-// THE CALLS (my own rule; of 100 ways tried on two years of NIFTY 50 5-minute candles, 11 Nov 2024 to 9 Nov 2026, the one that
-// held on both years and for both CE and PE). The Impulse MACD alone gave no rule that held: every start of an impulse, every
-// cross of its signal, with every exit tried, lost or held on one year only. As a FILTER on the page's own break calls it did:
-//   - the break call's signal: from 12:10 to 13:30 a 5-minute candle closes outside the day's value area so far (static/vpshape.js);
+// THE CALLS (my own rule). The Impulse MACD alone gave no rule that held on two years of NIFTY 50 5-minute candles (11 Nov 2024
+// to 9 Nov 2026): every start of an impulse, every cross of its signal, with every exit tried, lost or held on one year only.
+// As a FILTER on the page's own break calls it did better than they do alone:
+//   - the break call's signal: a 5-minute candle closes outside the day's value area so far (static/vpshape.js);
 //   - the impulse agrees and is growing on that same candle: for Buy CE md is above 0 and above its signal (sh > 0); for Buy PE
 //     md is below 0 and below its signal (sh < 0);
 //   - the rest is the break call's: entry at the next candle's open, stop at the busiest price of that moment, out at the stop
 //     or at the 15:15 open, one call open at a time, a new one after it ends.
-// On the two years, time in place of volume, after 8 points a call, counted as the page counts it (the averages over the last
-// five days of candles): 266 calls, 38% won, +1,199 (first year +77, second +1,122; CE +662, PE +537). With the averages run
-// over the whole two years: 267 calls, +1,431. The break calls without the filter: 539 calls, +579 (first year -652).
-// A modest edge, about 4.5 points a call, and thin in the first year: paper only.
+// THE WHOLE DAY (15 November, the owner: "IMACD signals should be fired all the day starting from the start of the market session
+// till the end. there should not be any time cap or call numbers limit"): the signal candles run from the day's fourth candle
+// (09:30, the first with a profile of three candles before it) to the 15:05 candle, the last whose call can still enter before
+// the 15:15 exit; there is no limit on the number of calls. On the two years, time in place of volume, after 8 points a call,
+// counted as the page counts it (the averages over the last five days of candles): 813 calls, 32% won, -385 (first year -444,
+// second +59; CE -700, PE +315; at most 5 a day). By the hour of entry the 9 and 12 o'clock
+// hours made points and the 10 and 13 o'clock hours lost more. The same rule held to 12:10-13:30 made +1,199 (266 calls, 38% won): the owner chose the whole day.
+// Paper only.
 (function (root) {
   "use strict";
   const VpShape = typeof module !== "undefined" && module.exports ? require("./vpshape.js") : root.VpShape;
-  const CFG = { lengthMA: 34, lengthSignal: 9 };
+  const CFG = { lengthMA: 34, lengthSignal: 9, from: "09:15", to: "15:05", minBars: 3 };  // the calls' day: no time cap (the owner, 15 November)
   const IST = 19800;
 
   // bars: [{time, open, high, low, close}] oldest first. Returns one entry a candle: {time, hi, lo, mi, md, sb, sh, colour}
@@ -59,7 +63,8 @@
     const all = compute(bars5All), values = new Map(all.map(x => [x.time, x]));
     const day = (t) => Math.floor((t + IST) / 86400), last = bars5All.length ? day(bars5All[bars5All.length - 1].time) : null;
     const today = bars5All.filter(b => day(b.time) === last);
-    const list = VpShape.calls(today, closed, fine, weights, VpShape.CFG, (bar, side) => agrees(values.get(bar.time), side));
+    const day5 = { ...VpShape.CFG, from: CFG.from, to: CFG.to, minBars: CFG.minBars };
+    const list = VpShape.calls(today, closed, fine, weights, day5, (bar, side) => agrees(values.get(bar.time), side));
     for (const t of list) { const x = values.get(t.signalTime); t.md = x.md; t.sb = x.sb; }
     return { calls: list, values };
   }
