@@ -1039,26 +1039,26 @@ console.log("rules unit checks passed");
   const mk = (h, m, side, how = "open", points = 0, exit = null) => ({ signalTime: at(h, m) - 300, entryTime: at(h, m), side, how, points, exit });
   const trades = [mk(11, 59, "CE", "back", -8, 1), mk(12, 0, "PE", "early", 10, 1), mk(12, 30, "CE", "back", -5, 1), mk(13, 10, "PE", "trail", 20, 1), mk(14, 59, "CE"), mk(15, 0, "PE"),
                   { signalTime: at(12, 40), side: "CE", how: "open" }, { signalTime: at(12, 50), entryTime: at(12, 55), side: "PE", how: "cancelled" }];
-  assert(R.planStep(trades, R.PLAN) === 3, "the plan takes 3 calls");
+  assert(R.planStep(trades, R.PLAN_FIRST3) === 3, "the plan takes 3 calls");
   const say = (t) => `${t.plan} ${t.planWhy}`;
   assert(say(trades[0]) === "SKIP fired at 11:59, before 12:00", "11:59 is before the window: " + say(trades[0]));
   assert(say(trades[1]) === "TAKE call 1 of 3" && say(trades[2]) === "TAKE call 2 of 3" && say(trades[3]) === "TAKE call 3 of 3", "12:00, 12:30 and 13:10 are the plan's three calls");
   assert(say(trades[4]) === "SKIP the 3 calls are taken", "the fourth call in the window is skipped: " + say(trades[4]));
   assert(say(trades[5]) === "SKIP fired at 15:00, after 15:00", "15:00 is outside the window: " + say(trades[5]));
   assert(trades[6].plan === undefined && trades[7].plan === undefined, "a call not fired yet and a cancelled signal get no verdict");
-  assert(R.planStep(trades, R.PLAN) === 3 && say(trades[3]) === "TAKE call 3 of 3", "running the plan again changes nothing");
+  assert(R.planStep(trades, R.PLAN_FIRST3) === 3 && say(trades[3]) === "TAKE call 3 of 3", "running the plan again changes nothing");
   // counted by the moment fired, not by the signal: a later signal that fired first is call 1
   const t2 = [{ signalTime: at(12, 0), entryTime: at(12, 20), side: "CE", how: "open" }, { signalTime: at(12, 5), entryTime: at(12, 10), side: "PE", how: "open" }];
-  R.planStep(t2, R.PLAN); assert(t2[1].planWhy === "call 1 of 3" && t2[0].planWhy === "call 2 of 3", "the order is the moment each call fired");
+  R.planStep(t2, R.PLAN_FIRST3); assert(t2[1].planWhy === "call 1 of 3" && t2[0].planWhy === "call 2 of 3", "the order is the moment each call fired");
   // two calls firing on one candle both count, CE before PE
   const t3 = [{ signalTime: at(12, 0), entryTime: at(12, 5), side: "PE", how: "open" }, { signalTime: at(12, 0), entryTime: at(12, 5), side: "CE", how: "open" }];
-  R.planStep(t3, R.PLAN); assert(t3[1].planWhy === "call 1 of 3" && t3[0].planWhy === "call 2 of 3", "two calls on one candle both count");
+  R.planStep(t3, R.PLAN_FIRST3); assert(t3[1].planWhy === "call 1 of 3" && t3[0].planWhy === "call 2 of 3", "two calls on one candle both count");
   // the plan's line
-  let s = R.planSummary(trades, R.PLAN, at(13, 30)); assert(s.taken === 3 && s.state === "done" && s.points === 25 && s.open === 0 && s.text === "Done for today: 3 calls taken.", "done: " + JSON.stringify(s));
-  s = R.planSummary(trades.slice(0, 2), R.PLAN, at(12, 30)); assert(s.taken === 1 && s.state === "open" && s.text === "1 of 3 calls taken, 2 more allowed until 15:00.", "open: " + s.text);
-  s = R.planSummary(trades.slice(0, 1), R.PLAN, at(11, 0)); assert(s.state === "waiting" && s.text === "Waiting: the plan's calls start at 12:00.", "waiting: " + s.text);
-  s = R.planSummary(trades.slice(0, 2), R.PLAN, at(15, 10)); assert(s.state === "closed" && s.text === "The plan's window closed at 15:00: 1 of 3 calls taken.", "closed: " + s.text);
-  s = R.planSummary(trades.slice(0, 2), R.PLAN, null); assert(s.state === "replay" && s.text === "1 of 3 calls taken.", "a finished day: " + s.text);
+  let s = R.planSummary(trades, R.PLAN_FIRST3, at(13, 30)); assert(s.taken === 3 && s.state === "done" && s.points === 25 && s.open === 0 && s.text === "Done for today: 3 calls taken.", "done: " + JSON.stringify(s));
+  s = R.planSummary(trades.slice(0, 2), R.PLAN_FIRST3, at(12, 30)); assert(s.taken === 1 && s.state === "open" && s.text === "1 of 3 calls taken, 2 more allowed until 15:00.", "open: " + s.text);
+  s = R.planSummary(trades.slice(0, 1), R.PLAN_FIRST3, at(11, 0)); assert(s.state === "waiting" && s.text === "Waiting: the plan's calls start at 12:00.", "waiting: " + s.text);
+  s = R.planSummary(trades.slice(0, 2), R.PLAN_FIRST3, at(15, 10)); assert(s.state === "closed" && s.text === "The plan's window closed at 15:00: 1 of 3 calls taken.", "closed: " + s.text);
+  s = R.planSummary(trades.slice(0, 2), R.PLAN_FIRST3, null); assert(s.state === "replay" && s.text === "1 of 3 calls taken.", "a finished day: " + s.text);
   // off: no plan, no mark (an index the plan does not run on)
   const t4 = [mk(12, 0, "CE")]; const r = R.paperTrades({ bars: [], levelsAt: () => [], now: 0, seconds: 300, dayCandles: false, signal: "both", tradePlan: null });
   assert(r.trades.length === 0 && t4[0].plan === undefined, "with the plan off the engine marks nothing");
@@ -1094,6 +1094,30 @@ console.log("rules unit checks passed");
   const twice = fired.map(t => ({ ...t })); R.builderStep(twice, bars, { prevClose: 99, atrSeed: 2 }, b); const once = JSON.stringify(twice); R.builderStep(twice, bars, { prevClose: 99, atrSeed: 2 }, b);
   assert(JSON.stringify(twice) === once, "the mark is idempotent");
   assert(R.BUILDER.rules.length === 5 && R.BUILDER.rules.every(r => r.facts.length >= 1 && r.foundOn === "2026-10-29") && R.BUILDER.medianAtr > 0, "the five surviving rules of 29 October are in the engine");
+  // The Trade Plan from 15 November (the owner's yes): the rule "green + after 12:00" is the plan. A steady climb of clear green candles
+  // (body 1 on an ATR of 2 = 0.5 ATR): a call fired before 12:00 is skipped for the time, one after 12:00 is taken, a red candle is skipped
+  {
+    const day = []; for (let i = 0; i < 60; i++) day.push(i === 40 ? bar(i, 141 + 0, 141.5, 139.5, 140) : bar(i, 100 + i, 101.5 + i, 99.5 + i, 101 + i));  // candle 40 (12:35) is red
+    const pc = (i, side) => ({ signalTime: t0 + i * 300, entryTime: t0 + (i + 1) * 300, exitTime: t0 + (i + 3) * 300, exit: 1, points: 4, side, ratio: 0.236, how: "trail" });
+    const ts = [pc(8, "CE"), pc(34, "CE"), pc(40, "CE"), pc(45, "PE"), { signalTime: t0 + 50 * 300, entryTime: null, side: "CE", ratio: 0, how: "open" }];
+    const n = R.planStep(ts, R.PLAN, { bars: day, prevClose: 99, atrSeed: 2 });
+    const say = (t) => `${t.plan} ${t.planWhy}`;
+    assert(n === 2 && say(ts[0]) === "SKIP fired at 10:00, before 12:00", "new plan: a green call before 12:00 is skipped: " + say(ts[0]));
+    assert(say(ts[1]) === "TAKE call 1: green + after 12:00" && say(ts[3]) === "TAKE call 2: green + after 12:00", "new plan: green calls after 12:00 are taken, CE or PE, with no limit: " + say(ts[1]) + " / " + say(ts[3]));
+    assert(ts[2].plan === "SKIP" && /^the signal candle is (big red|red|small), not green$/.test(ts[2].planWhy), "new plan: a red signal candle after 12:00 is skipped: " + say(ts[2]));
+    assert(ts[4].plan === undefined, "new plan: a call not fired yet has no verdict");
+    const before = JSON.stringify(ts); R.planStep(ts, R.PLAN, { bars: day, prevClose: 99, atrSeed: 2 }); assert(JSON.stringify(ts) === before, "new plan: running it again changes nothing");
+    const bt = ts.map(t => ({ ...t, plan: undefined, planWhy: undefined })); R.builderStep(bt, day, { prevClose: 99, atrSeed: 2 });
+    assert(bt.filter(t => (t.builderWhy || "").split("; ").includes("green + after 12:00")).length === 2, "new plan: the plan's calls are the rule builder's \"green + after 12:00\" calls");
+    const clock = (h, m) => t0 - (9 * 3600 + 15 * 60) + h * 3600 + m * 60;
+    let ps = R.planSummary(ts, R.PLAN, clock(11, 0)); assert(ps.state === "waiting" && ps.text === "Waiting: the plan's calls start at 12:00.", "new plan line, waiting: " + ps.text);
+    ps = R.planSummary(ts, R.PLAN, clock(14, 0)); assert(ps.state === "open" && ps.taken === 2 && ps.points === 8 && ps.text === "2 calls taken so far.", "new plan line, open: " + ps.text);
+    ps = R.planSummary([], R.PLAN, clock(14, 0)); assert(ps.text === "No call yet today.", "new plan line, none: " + ps.text);
+    ps = R.planSummary(ts.slice(0, 2), R.PLAN, null); assert(ps.state === "replay" && ps.text === "1 call taken.", "new plan line, a finished day: " + ps.text);
+    assert(R.planStep(ts.map(t => ({ ...t })), R.PLAN, null) === 0, "new plan: without the day's candles it marks nothing");
+    assert(R.PLAN.facts.length === 2 && R.PLAN.label === "green + after 12:00" && R.PLAN.indices.join() === "NIFTY 50" && R.PLAN_FIRST3.maxCalls === 3, "the plan is the rule green + after 12:00, NIFTY 50; the first plan is kept by name");
+    console.log("Trade Plan (15 November) checks passed (green after 12:00 taken with no limit, before 12:00 and a red candle skipped with the reason, not fired: no verdict, idempotent, the same calls as the rule builder's mark, the plan's line)");
+  }
   const off = R.paperTrades({ bars: [], levelsAt: () => [], now: 0, seconds: 300, dayCandles: false, signal: "both", builder: null });
   assert(off.trades.every(t => t.builder === undefined), "builder off: no mark");
   console.log("Rule builder checks passed (the ATR path, the facts of the 1st, 2nd and 3rd call, a call after a win and after one still open, calm and wild days, the mark KEEP with its rules and SKIP, cancelled signals, idempotent, off, the five rules present)");

@@ -834,7 +834,7 @@
     } else {
       open.forEach(t => { if (over) end(t, last.close, last, "day end"); else { t.points = gain(t, last.close); t.last = last.close; } });
     }
-    if (tradePlan) planStep(trades, tradePlan);  // the Trade Plan's mark on every call that fired (29 October)
+    if (tradePlan) planStep(trades, tradePlan, { bars, prevClose, atrSeed });  // the Trade Plan's mark on every call that fired (29 October)
     if (builder) builderStep(trades, bars, { prevClose, atrSeed }, builder);  // the rule builder's mark on every call that fired (30 October)
     return { trades, closed: closed.length, cancelled, zonesFound: zone.found, lcZonesFound: lcZone.found, lcZonesEnded: lcZone.ended };
   }
@@ -1016,7 +1016,14 @@
   // place no order for the others. Counted by the moment each call fired (entryTime), the earliest first; two firing on one candle
   // both count; a call that has not fired yet, or a signal cancelled before firing, has no verdict. A pure pass over the day's calls
   // once they are known (planStep, at the end of paperTrades), so the page and the server (rule.py plan_step) mark the same calls
-  const PLAN = { mode: "SHADOW", name: "afternoon 3", indices: ["NIFTY 50"], from: "12:00", to: "15:00", maxCalls: 3 };
+  // 15 November, the owner's yes ("Yes ... apply the same once on the Trade plan page"): the plan's rule is now the rule builder's
+  // "green + after 12:00", the one rule that passed its forward test (30 October to 13 November: 10 days, 21 calls, +819 points after
+  // 8 a call, 6 days up and 3 down; +146 without the best day). A call is "TAKE" when it fired at or after 12:00 and its signal candle
+  // is a clear green candle (callFacts: candle "green", the body 0.3 to 1.0 ATR up; afterNoon "after 12:00"); every other call that
+  // fired "SKIP" and why. No limit on the number of calls and no end time. The first plan (PLAN_FIRST3: the first 3 calls fired from
+  // 12:00 to 15:00) stopped after 8 of its 10 forward days, 3 up and 5 down, -247.6 points after charges
+  const PLAN_FIRST3 = { mode: "SHADOW", name: "afternoon 3", indices: ["NIFTY 50"], from: "12:00", to: "15:00", maxCalls: 3 };
+  const PLAN = { mode: "SHADOW", name: "green after 12:00", label: "green + after 12:00", indices: ["NIFTY 50"], from: "12:00", facts: [["candle", "green"], ["afterNoon", "after 12:00"]] };
   // ---- THE RULE BUILDER (the owner, 30 October: "i want him to do rule building based on the data"; then "yes" to the marks on the page).
   // ULTROAN's evening builder (scratchpad wf/build_rules.js) reads every call the page gave on the saved days with the FACTS of the moment
   // it fired (callFacts below, the same code), tries every fact and every pair of facts as a rule "keep only these calls", and keeps the
@@ -1073,9 +1080,21 @@
     });
     return kept;
   }
-  function planStep(trades, p = PLAN) {
+  function planStep(trades, p = PLAN, ctx = null) {  // ctx {bars, prevClose, atrSeed}: the day's candles, for a plan made of facts
     let taken = 0;
     const fired = trades.filter(t => t.entryTime != null && t.how !== "cancelled").sort((a, b) => a.entryTime - b.entryTime || a.signalTime - b.signalTime || (a.side < b.side ? -1 : a.side > b.side ? 1 : 0));
+    if (p.facts) {  // the rule builder's rule as the plan (15 November): TAKE when every fact of the call matches
+      if (!ctx || !ctx.bars) return 0;
+      const atrs = atrPath(ctx.bars, ctx.atrSeed);
+      fired.forEach((t, n) => {
+        const f = callFacts(t, fired, n, ctx.bars, atrs, { prevClose: ctx.prevClose, atrSeed: ctx.atrSeed, medianAtr: BUILDER.medianAtr });
+        if (!f) return;
+        const when = istHM(t.entryTime), miss = p.facts.find(([k, v]) => f[k] !== v);
+        if (!miss) { taken++; t.plan = "TAKE"; t.planWhy = `call ${taken}: ${p.label}`; }
+        else { t.plan = "SKIP"; t.planWhy = when < p.from ? `fired at ${when}, before ${p.from}` : miss[0] === "candle" ? `the signal candle is ${f.candle}, not ${miss[1]}` : `${miss[0]} is ${f[miss[0]]}, not ${miss[1]}`; }
+      });
+      return taken;
+    }
     for (const t of fired) {
       const when = istHM(t.entryTime);
       if (when < p.from) { t.plan = "SKIP"; t.planWhy = `fired at ${when}, before ${p.from}`; }
@@ -1090,6 +1109,11 @@
   function planSummary(trades, p = PLAN, now = null) {
     const take = trades.filter(t => t.plan === "TAKE"), open = take.filter(t => t.exit == null);
     const points = round2(take.reduce((s, t) => s + (t.points || 0), 0)), when = now == null ? null : istHM(now);
+    if (p.facts) {  // a plan made of facts has no limit and no end time
+      const n = take.length, calls = `${n} call${n === 1 ? "" : "s"}`, st = when == null ? "replay" : when < p.from ? "waiting" : "open";
+      const say = st === "waiting" ? `Waiting: the plan's calls start at ${p.from}.` : st === "replay" ? `${calls} taken.` : n ? `${calls} taken so far.` : "No call yet today.";
+      return { taken: n, max: null, open: open.length, points, state: st, text: say };
+    }
     const state = take.length >= p.maxCalls ? "done" : when == null ? "replay" : when < p.from ? "waiting" : when >= p.to ? "closed" : "open";
     const text = state === "done" ? `Done for today: ${p.maxCalls} calls taken.`
       : state === "waiting" ? `Waiting: the plan's calls start at ${p.from}.`
@@ -1104,5 +1128,5 @@
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary,
                  LC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary,
                  LOCK, LOCK_PRESETS, lockFloor, lockStep, lockSummary,
-                 PLAN, istHM, planStep, planSummary };
+                 PLAN, PLAN_FIRST3, istHM, planStep, planSummary };
 })(typeof window !== "undefined" ? window : globalThis);

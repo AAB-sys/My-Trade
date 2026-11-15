@@ -1164,9 +1164,24 @@ leaving out the 23.6% level (a gain on NIFTY BANK only, to watch).
 The lab (`lab/replay.js`) replays every idea over the saved days and is the
 record of what was tested.
 
-**The signal box** (15 November, the owner: "need some other space for these signal message other than this
-existing table ... which can be recognized easily"). Above the chart on the NIFTY 50 page, today only: the calls the
-rule builder marked KEEP for the rule "green + after 12:00" (the one rule that passed its forward test). Green and
-blinking while such a call is open ("SIGNAL NOW: Buy ..."), then the last one with its points, "Waiting" before 12:00,
-"No signal yet today" after. It reads the mark the table already shows and decides nothing: no call, order or record
-changes. The name of the rule it shows is `READY_RULE` in `static/detail.html`.
+**The Trade Plan from 15 November** (the owner: "Yes and whatever the changes you have done on paper calls page,
+revoke those changes and apply the same once on the Trade plan page including the message pop up at the top").
+This replaces the plan's rule of item 11 above:
+
+- **The rule.** The rule builder's "green + after 12:00" is now the Trade Plan (`PLAN` in `static/rules.js` and
+  `rule.py`): a call is TAKE when it fired at or after 12:00 and its signal candle is a clear green candle (the body
+  0.3 to 1.0 ATR up). Every other call that fired is SKIP, with the reason. No limit on the number of calls and no
+  end time. NIFTY 50 only, mode SHADOW (a mark; no order is placed or held back).
+- **Why.** It passed the builder's forward test: 30 October to 13 November, 10 days, 21 calls, +819 points after 8 a
+  call, 6 days up and 3 down, 12 calls won and 9 lost. Without the best day (6 November, +673) it made +146, and its
+  last three days were small losses: a young rule on a short test.
+- **The first plan** (the first 3 calls fired from 12:00 to 15:00, `PLAN_FIRST3`) stopped after 8 of its 10 forward
+  days: 3 up, 5 down, -247.6 points after charges.
+- **The Trade Plan page** shows the rule's calls alone, with the plan's two columns. **Paper calls** shows every
+  call as before and no longer shows the plan's or the rule builder's columns (both marks still go to the day's
+  record).
+- **The signal box** above the chart (NIFTY 50, today): green and blinking while a Trade Plan call is open
+  ("SIGNAL NOW: Buy ..."), then the last one with its points, "Waiting" before 12:00, "No signal yet today" after.
+  A click opens the Trade Plan. It reads the plan's mark and decides nothing.
+- **Checked.** `node lab/check.js` (the new plan's checks), and the page's engine against the server's on the 30
+  saved days: 458 calls, the same mark and reason on every one.
