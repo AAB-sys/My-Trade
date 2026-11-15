@@ -270,6 +270,9 @@ their own logic. Read this before touching the code.
   the chart opens closed, so the chart has the whole height; a capsule opens it (22vh, 46vh with the larger button), the arrow
   closes it, the i button shows the rules in words (`callsLook`, localStorage "volumeProfileCallsLook"). `fitPanes()` gives each
   pane a fixed share (candles 76% with Impulse, 64% with RSI and Impulse, 80% with RSI) and a pane's edge cannot be dragged.
+  The zoom and move buttons (`#nav`) sit at the right end of the info row (`#inforow`), not over the chart (the owner, 15
+  November, marking the spot). The Shape and the Impulse marks go through one marker set (`drawMarks`): two sets drew two calls
+  of one candle over each other ("why it is mixing up ?"); in one set the chart stacks them.
   With Volume unticked the candles use the volume's room. The note is one line; a press opens it. No call logic in any of this.
   The Shape signal (15 November, the owner, with the Pine script "Volume Profile Anatomies (D / B / P / Double Zone)": "make your
   own volume profile strategy out of it"; "multiple signals should be allowed in a day"; "Build option 1 but this user interface
