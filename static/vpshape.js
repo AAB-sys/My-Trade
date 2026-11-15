@@ -78,7 +78,8 @@
   // One day's calls. bars5: the day's 5-minute candles oldest first, the one forming now last; closed: how many of them have closed;
   // fine: the candles the profile is counted from (the day's 1-minute candles, or bars5 itself); weights: their volume (null: time).
   // Returns [{n, side "CE"|"PE", signalTime, entryTime, entry, stop, shape, vah, val, how "open"|"stop"|"time", exitTime, exit, points}]
-  function calls(bars5, closed, fine, weights, c = CFG) {
+  // allow(bar, side): an extra yes or no on a signal candle (the Impulse calls, static/impulse.js); a signal it refuses opens nothing
+  function calls(bars5, closed, fine, weights, c = CFG, allow = null) {
     const out = [], b = bars5;
     let open = null;
     for (let k = c.minBars; k < b.length; k++) {
@@ -93,6 +94,7 @@
       if (!p) continue;
       const side = b[k].close > p.vah ? "CE" : b[k].close < p.val ? "PE" : null;
       if (!side) continue;
+      if (allow && !allow(b[k], side)) continue;
       const entry = b[k + 1].open;
       if (side === "CE" ? entry <= p.poc : entry >= p.poc) continue;
       open = { n: out.length + 1, side, signalTime: b[k].time, entryTime: b[k + 1].time, entry, stop: p.poc, shape: p.shape, vah: p.vah, val: p.val, how: "open", exitTime: null, exit: null };

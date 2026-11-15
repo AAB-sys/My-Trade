@@ -232,6 +232,15 @@ their own logic. Read this before touching the code.
   day takes the one that traded more that day (`dhan.future_volume`, `roll_volume`; the page's note says so); (5) only 09:15 to
   15:30 counts, "yesterday" is the previous trading day (Monday reads Friday), the 70% area grows right with one row left on a side.
   Checks: `lab/check_volprofile.js`, `lab/check_vpsignal.py`, `lab/check_volume_health.py`.
+  The Impulse MACD (15 November, the owner, with LazyBear's Pine script: "develope a best strategy out of it and develop the same
+  on volume profile page ... Test this on the Nifty 50 data"): `static/impulse.js`. The tick box "Impulse MACD" is OFF until ticked;
+  with it off the page is as it was. On: the indicator in its own pane under the RSI's, as the script draws it (lengths 34 and 9:
+  md as coloured bars, md minus its signal as blue bars, the signal line), following the candle size shown; and the Impulse calls:
+  a break call (`vpshape.js`, 12:10 to 13:30) is taken only when on its signal candle md is above 0 and above its signal (CE) or
+  below 0 and below it (PE), read on the 5-minute candles of the last five days; stop, exit and one-at-a-time as the break calls.
+  Of 100 ways tried on the two years the indicator alone gave no rule that held; this filter did: as the page counts it 266 calls,
+  38% won, +1,199 after 8 a call (first year +77, second +1,122; CE +662, PE +537) against the break calls' +579. A modest edge,
+  time in place of volume, NIFTY 50 only: paper only. `lab/check_impulse.js` (17 checks; with a candles file it replays it).
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list

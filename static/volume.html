@@ -8,6 +8,7 @@
 <script src="/static/vendor/lightweight-charts.js"></script>
 <script src="/static/volprofile.js"></script>
 <script src="/static/vpshape.js"></script>
+<script src="/static/impulse.js"></script>
 <!-- The Volume Profile page (12 November, the owner: "build a new page with header name as volume profile ... the chart format
      which dhan uses for pc and mobile"). A page of its own: it reads the index's candles and the futures' volume, draws them,
      and decides nothing. Paper calls and Calls with Signals are not read here and do not read this page. The chart is drawn
@@ -19,7 +20,7 @@
     --page: #ffffff; --surface: #ffffff; --border: #e0e3eb; --grid: #f0f3fa;
     --ink: #131722; --ink-2: #434651; --muted: #787b86;
     --up: #089981; --down: #f23645; --accent: #2962ff; --hover: #f0f3fa;
-    --vp-up: #5b9cf6; --vp-down: #f5b83d; --poc: #e0245e; --va: #787b86; --rsi: #7e57c2;
+    --vp-up: #5b9cf6; --vp-down: #f5b83d; --poc: #e0245e; --va: #787b86; --rsi: #7e57c2; --imp-lime: #22c55e; --imp-green: #15803d; --imp-orange: #f59e0b; --imp-red: #ef4444; --imp-hist: #2962ff; --imp-signal: #800000;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -27,7 +28,7 @@
       --page: #131722; --surface: #131722; --border: #2a2e39; --grid: #1e222d;
       --ink: #d1d4dc; --ink-2: #b2b5be; --muted: #787b86;
       --up: #089981; --down: #f23645; --accent: #5b9cf6; --hover: #2a2e39;
-      --vp-up: #3d7fd9; --vp-down: #c9912a; --poc: #ff5c8a; --va: #9598a1; --rsi: #b39ddb;
+      --vp-up: #3d7fd9; --vp-down: #c9912a; --poc: #ff5c8a; --va: #9598a1; --rsi: #b39ddb; --imp-lime: #4ade80; --imp-green: #16a34a; --imp-orange: #fbbf24; --imp-red: #f87171; --imp-hist: #5b9cf6; --imp-signal: #e57373;
     }
   }
   * { box-sizing: border-box; }
@@ -99,12 +100,19 @@
   #sig { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
   #sig[hidden] { display: none; }
   #shape { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
+  #impulse { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
   #shape .line { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; } #shape .line + .line { margin-top: 3px; }
+  #impulse .line { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; } #impulse .line + .line { margin-top: 3px; }
   #shape .badge { font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 6px; color: #fff; background: var(--muted); letter-spacing: 0.02em; }
+  #impulse .badge { font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 6px; color: #fff; background: var(--muted); letter-spacing: 0.02em; }
   #shape .badge.ce { background: var(--up); } #shape .badge.pe { background: var(--down); }
+  #impulse .badge.ce { background: var(--up); } #impulse .badge.pe { background: var(--down); }
   #shape .k { color: var(--muted); } #shape .v { color: var(--ink); font-variant-numeric: tabular-nums; } #shape .v.up { color: var(--up); } #shape .v.down { color: var(--down); }
+  #impulse .k { color: var(--muted); } #impulse .v { color: var(--ink); font-variant-numeric: tabular-nums; } #impulse .v.up { color: var(--up); } #impulse .v.down { color: var(--down); }
   #shape b { color: var(--ink); font-weight: 600; }
+  #impulse b { color: var(--ink); font-weight: 600; }
   @media (max-width: 600px) { #shape { padding: 5px 10px; max-height: 22vh; overflow-y: auto; touch-action: pan-y; } #shape .rule { display: none; } }
+  @media (max-width: 600px) { #impulse { padding: 5px 10px; max-height: 22vh; overflow-y: auto; touch-action: pan-y; } #impulse .rule { display: none; } }
   #sig .line { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; }
   #sig .line + .line { margin-top: 3px; }
   #sig .badge { font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 6px; color: #fff; background: var(--muted); letter-spacing: 0.02em; }
@@ -153,10 +161,13 @@
     <!-- the Shape signal (15 November, the owner: "Build option 1 but this user interface should not be changed at all"): off until
          ticked; with it off the page is as it was -->
     <label><input type="checkbox" id="show-shape"> Shape signal</label>
+    <!-- the Impulse MACD (15 November, the owner, with LazyBear's Pine script): off until ticked; with it off the page is as it was -->
+    <label><input type="checkbox" id="show-impulse"> Impulse MACD</label>
   </div>
   <div id="info" aria-live="off"></div>
   <div id="sig" aria-live="polite"></div>
   <div id="shape" aria-live="polite" hidden></div>
+  <div id="impulse" aria-live="polite" hidden></div>
   <div id="main">
     <div id="draw" role="toolbar" aria-label="Drawing tools">
       <button type="button" data-tool="" aria-pressed="true" title="Pointer: move the chart, tap a drawing to pick it" aria-label="Pointer"><svg viewBox="0 0 20 20"><path d="M5 3l10 7-4.5 1 2.5 5-2 1-2.5-5L5 15z"/></svg></button>
@@ -195,7 +206,7 @@
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
   const params = new URLSearchParams(location.search);
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
-  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
   if (![...$("index").options].some(o => o.value === state.name)) state.name = "NIFTY 50";
@@ -537,7 +548,7 @@
     state.timeOnly = !have;
     state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); const got = $("show-shape").checked ? VpShape.read(f || d, have ? vols : null) : null; return { bars: d, profile: VolProfile.build(f || d, have ? vols : null), shape: got && got.shape }; });
     profile.requestUpdate && profile.requestUpdate();
-    drawLegend(); drawNote(); drawShape();
+    drawLegend(); drawNote(); drawShape(); drawImpulse();
   }
   function setVolume() {
     const up = alpha(css("--up"), 0.45), down = alpha(css("--down"), 0.45);
@@ -547,7 +558,7 @@
   function setAll(fit) {
     const bars = shown().flat();
     candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
-    rebuild(); setVolume(); setRsi(); redraw();
+    rebuild(); setVolume(); setRsi(); setImpulse(); redraw();
     // A new index, time frame or number of days: the chart shows that choice whole, its own times and its own prices. The
     // price scale is told to follow the candles again every time: after the up and down buttons, and also after the owner
     // dragged the price scale or the chart by hand (13 November: SENSEX's prices stayed on the scale when NIFTY 50 was chosen,
@@ -623,7 +634,7 @@
     if (m && state.fine.length && state.fine !== state.bars) { const f = state.fine[state.fine.length - 1]; if (m.time === f.time) Object.assign(f, { high: Math.max(f.high, m.high), low: Math.min(f.low, m.low), close: m.close }); else if (m.time > f.time) state.fine.push({ ...m }); }
     const now = state.bars[state.bars.length - 1];
     candles.update({ time: now.time + IST, open: now.open, high: now.high, low: now.low, close: now.close });
-    if (Date.now() - recount > 1000) { recount = Date.now(); rebuild(); if (rsi) { state.rsi = rsiSeries(state.bars); const v = state.rsi.get(now.time); if (v != null) rsi.update({ time: now.time + IST, value: v }); } }
+    if (Date.now() - recount > 1000) { recount = Date.now(); rebuild(); setImpulse(); if (rsi) { state.rsi = rsiSeries(state.bars); const v = state.rsi.get(now.time); if (v != null) rsi.update({ time: now.time + IST, value: v }); } }
   }
 
   // ---------------------------------------------------------------- the words on the chart
@@ -799,17 +810,80 @@
     shapeMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
   }
 
+  // ---------------------------------------------------------------- the Impulse MACD (static/impulse.js)
+  // 15 November, the owner, with LazyBear's Pine script "Impulse MACD": "develope a best strategy out of it and develop the same on
+  // volume profile page". One tick box, off until ticked; with it off the page is as it was. On: the indicator in a pane of its own
+  // under the chart (and under the RSI's), drawn as the script draws it: md as coloured bars, md minus its signal as blue bars, the
+  // signal as a line; and the Impulse calls: the page's break calls that the impulse agrees with (the rule is in impulse.js).
+  // The pane follows the candle size shown; the calls always read the 5-minute candles of the last five days. Paper only
+  let imp = null, impMarks = null, impStop = null;
+  function dropImpulse() { if (imp) { for (const x of [imp.md, imp.sh, imp.sb]) chart.removeSeries(x); imp = null; } }
+  function setImpulse() {
+    if (!$("show-impulse").checked) { dropImpulse(); return; }
+    if (!imp) {
+      const pane = rsi ? 2 : 1, plain = { priceLineVisible: false, lastValueVisible: false, priceFormat: { type: "price", precision: 2, minMove: 0.01 } };
+      imp = { sh: chart.addSeries(LC.HistogramSeries, { ...plain, color: alpha(css("--imp-hist"), 0.55) }, pane),
+              md: chart.addSeries(LC.HistogramSeries, { ...plain, lastValueVisible: true }, pane),
+              sb: chart.addSeries(LC.LineSeries, { ...plain, color: css("--imp-signal"), lineWidth: 1.5, crosshairMarkerVisible: false }, pane) };
+      imp.md.createPriceLine({ price: 0, color: css("--muted"), lineWidth: 1, lineStyle: LC.LineStyle.Solid, axisLabelVisible: false, title: "" });
+      const panes = chart.panes(), share = rsi ? [0.66, 0.15, 0.19] : [0.8, 0.2];  // each pane's share of the chart's height: with the RSI's pane above it, both stay readable
+      share.forEach((x, i) => { if (panes[i]) panes[i].setStretchFactor(x); });
+    }
+    const values = new Map(Impulse.compute(state.bars).map(x => [x.time, x])), tone = { lime: css("--imp-lime"), green: css("--imp-green"), orange: css("--imp-orange"), red: css("--imp-red") };
+    const bars = shown().flat().map(b => values.get(b.time)).filter(x => x && x.colour);
+    imp.md.setData(bars.map(x => ({ time: x.time + IST, value: x.md, color: tone[x.colour] })));
+    imp.sh.setData(bars.filter(x => x.sh != null).map(x => ({ time: x.time + IST, value: x.sh })));
+    imp.sb.setData(bars.filter(x => x.sb != null).map(x => ({ time: x.time + IST, value: x.sb })));
+  }
+  function drawImpulse() {
+    const box = $("impulse"), on = $("show-impulse").checked;
+    box.hidden = !on;
+    if (impStop) { candles.removePriceLine(impStop); impStop = null; }
+    if (!on) { if (impMarks) impMarks.setMarkers([]); return; }
+    const days = VolProfile.sessions(state.fine), fine = days[days.length - 1] || [];
+    if (!fine.length) { box.innerHTML = `<div class="line"><span class="badge">…</span><span>Reading the candles…</span></div>`; return; }
+    const have = [...state.fineVolumes.values()].some(v => v > 0), weights = have ? state.fineVolumes : null;
+    const all5 = VpShape.five(state.fine), now = Date.now() / 1000, dayNo = (t) => Math.floor((t + IST) / 86400), last = dayNo(fine[0].time);
+    const closed = all5.filter(b => dayNo(b.time) === last && b.time + 300 <= now).length;
+    const got = Impulse.calls(all5, closed, fine, weights), calls = got.calls, open = calls.find(t => t.how === "open"), c = VpShape.CFG;
+    const day = dayOf(fine[0].time), today = last === dayNo(now), clock = VpShape.hm(now);
+    const done = all5.filter(b => b.time + 300 <= now), x = done.length ? got.values.get(done[done.length - 1].time) : null;
+    const pts = (v) => `<span class="v ${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : "−"}${num(Math.abs(v))} points</span>`;
+    const how = (t) => t.how === "stop" ? `stop ${VpShape.hm(t.exitTime)}` : t.how === "time" ? `out ${VpShape.hm(t.exitTime)}` : "open";
+    const state2 = !today || clock > c.to ? "window over" : clock < c.from ? `from ${c.from}` : "waiting";
+    const words = !x || x.sh == null ? "not enough candles yet" : x.md > 0 ? (x.sh > 0 ? "up and growing" : "up, fading") : x.md < 0 ? (x.sh < 0 ? "down and growing" : "down, fading") : "none (inside the channel)";
+    let html = `<div class="line"><span class="badge ${open ? open.side.toLowerCase() : ""}">${open ? "BUY " + open.side : "WAIT"}</span><span><b>Impulse calls</b> <span class="k">${c.from} to ${c.to} · paper only</span></span>`
+      + (open ? `<span><b>Call ${open.n}</b> · fired <span class="v">${VpShape.hm(open.entryTime)}</span> <span class="k">at</span> <span class="v">${num(open.entry)}</span></span><span><span class="k">Stop</span> <span class="v">${num(open.stop)}</span></span><span><span class="k">Now</span> ${pts(open.points)}</span>`
+              : `<span class="k">No call open (${state2})</span>`)
+      + calls.filter(t => t !== open).map(t => `<span><span class="k">${t.n}.</span> <span class="v">${VpShape.hm(t.entryTime)} ${t.side} ${num(t.entry)}</span> <span class="k">${how(t)}</span> ${pts(t.points)}</span>`).join("")
+      + (calls.length > 1 ? `<span><span class="k">Total</span> ${pts(calls.reduce((a, t) => a + t.points, 0))}</span>` : "") + `</div>`;
+    html += `<div class="line"><span><span class="k">Impulse on the last 5-minute candle (${day}):</span> <span class="v">${words}</span></span>` + (x && x.sb != null ? `<span><span class="k">Impulse MACD</span> <span class="v">${num(x.md)}</span> <span class="k">signal</span> <span class="v">${num(x.sb)}</span></span>` : "") + `</div>`;
+    html += `<div class="line rule"><span class="k">Impulse calls: a break call (a 5-minute candle closing outside the day's value area so far) is taken only when the Impulse MACD agrees and is growing on that candle: above 0 and above its signal for Buy CE, below 0 and below its signal for Buy PE. Stop at the busiest price of that moment; out at the stop or at ${c.exit}.${have ? "" : " Counted by time: no volume."}</span></div>`;
+    box.innerHTML = html;
+    const seconds = { "1m": 60, "5m": 300, "15m": 900 }[state.interval], at = (t) => { const b = state.bars.find(b => t >= b.time && t < b.time + seconds); return b ? b.time + IST : null; };
+    const marks = [];
+    for (const t of calls) {
+      const up = t.side === "CE", e = at(t.entryTime), xx = t.exitTime != null ? at(t.exitTime) : null;
+      if (e != null) marks.push({ time: e, position: up ? "belowBar" : "aboveBar", color: css(up ? "--up" : "--down"), shape: up ? "arrowUp" : "arrowDown", text: "I " + t.side + " " + t.n });
+      if (xx != null) marks.push({ time: xx, position: up ? "aboveBar" : "belowBar", color: css("--muted"), shape: up ? "arrowDown" : "arrowUp", text: "xI" + t.n });
+      if (t.how === "open") impStop = candles.createPriceLine({ price: t.stop, title: "Impulse stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true });
+    }
+    if (!impMarks) impMarks = LC.createSeriesMarkers(candles, []);
+    impMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
+  }
+
   // ---------------------------------------------------------------- the tool row
-  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, signal: $("show-signal").checked, shape: $("show-shape").checked })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, signal: $("show-signal").checked, shape: $("show-shape").checked, impulse: $("show-impulse").checked })); } catch (e) {} };
   function press() { $("interval").value = state.interval; $("days").value = String(state.days); }
   $("interval").addEventListener("change", () => { state.interval = $("interval").value; state.bars = []; state.fine = []; save(); load(); });
   $("days").addEventListener("change", () => { state.days = Number($("days").value); save(); shownKey = state.name + state.interval + state.days; setAll(true); });
   $("index").addEventListener("change", () => { state.signal = null; drawSignal(); setTimeout(loadSignal, 0); state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
   // every indicator but the profile has its switch, and the page remembers how each was left
   $("show-volume").addEventListener("change", () => { setVolume(); save(); });
-  $("show-rsi").addEventListener("change", () => { setRsi(); drawLegend(); save(); });
+  $("show-rsi").addEventListener("change", () => { dropImpulse(); setRsi(); setImpulse(); drawLegend(); save(); });  // the Impulse pane stands under the RSI's: taken off and put back so the panes keep their order
   $("show-signal").addEventListener("change", () => { save(); drawSignal(); if ($("show-signal").checked) loadSignal(); });
   $("show-shape").addEventListener("change", () => { save(); rebuild(); });
+  $("show-impulse").addEventListener("change", () => { save(); setImpulse(); drawImpulse(); });
   loadDrawings();
   press();
 
@@ -844,7 +918,7 @@
   // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
   const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };
   window.addEventListener("scroll", pinPage, true);
-  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #sig, #shape")) e.preventDefault(); }, { passive: false });
+  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #sig, #shape, #impulse")) e.preventDefault(); }, { passive: false });
   for (const kind of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(kind, (e) => e.preventDefault());
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);
