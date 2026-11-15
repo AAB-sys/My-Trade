@@ -899,32 +899,86 @@ def _volumes(body: dict) -> list:
     return out
 
 
+ROLL_DAYS = 5  # in the last calendar days before the nearest contract expires, the next month's contract is looked at too
+
+
+def futures_of(name: str) -> list:
+    """The index's futures contracts still to expire, soonest first: [{"expiry", "id", "name"}]."""
+    option_ids()
+    with _option_ids_lock:
+        rows = list(_futures.get(UNDERLYING[name]) or [])
+    today = today_ist().isoformat()
+    return [{"expiry": r[0], "id": r[1], "name": r[2]} for r in rows if r[0] >= today]
+
+
+def _contract_volume(name: str, contract: dict, minutes: int, days_back: int) -> list:
+    """[[candle start, volume], ...] of one futures contract for the last days, in the date forms the minute candles use."""
+    day = today_ist()
+    start = (day - timedelta(days=days_back)).isoformat()
+    now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
+    base = {"securityId": str(contract["id"]), "exchangeSegment": OPTION_SEGMENTS[name], "instrument": "FUTIDX", "oi": False}
+    forms = [(start, (day + timedelta(days=1)).isoformat(), str(minutes)), (start, day.isoformat(), str(minutes)),
+             (f"{start} 09:15:00", now, str(minutes)), (start, (day + timedelta(days=1)).isoformat(), minutes), (f"{start} 09:15:00", now, minutes)]
+    last = None
+    for from_date, to_date, interval in forms:
+        try:
+            return _volumes(call("POST", "/charts/intraday", {**base, "interval": interval, "fromDate": from_date, "toDate": to_date}))
+        except DhanError as exc:
+            if exc.kind != "other":
+                raise
+            last = exc
+    raise last
+
+
+def roll_volume(near: list, nxt: list) -> tuple:
+    """The two contracts' volume joined day by day: each IST day takes the contract that traded more that day (the nearest
+    one on a tie, and on days the next one has nothing). Returns (the bars, {day: "near" | "next"})."""
+    def by_day(bars):
+        days: dict = {}
+        for t, v in bars:
+            days.setdefault(datetime.fromtimestamp(t, IST).date().isoformat(), []).append([t, v])
+        return days
+    a, b = by_day(near), by_day(nxt)
+    out, used = [], {}
+    for day in sorted(set(a) | set(b)):
+        take = "next" if sum(v for _, v in b.get(day, [])) > sum(v for _, v in a.get(day, [])) else "near"
+        used[day] = take
+        out.extend(b[day] if take == "next" else a[day])
+    return out, used
+
+
 def future_volume(name: str, minutes: int, days_back: int = 8) -> dict:
-    """The volume traded in the index's nearest futures contract, per candle of `minutes`, for the last days: an index
-    is a calculated number with no volume of its own, so the Volume Profile page weighs the index's candles with these.
-    {"contract": {"name", "expiry"}, "bars": [[time, volume], ...]}. Asked of Dhan at most every 20 s, only while that
-    page is open. The dates go in the forms the index's own minute candles use (see _chart)."""
+    """The volume traded in the index's futures, per candle of `minutes`, for the last days: an index is a calculated
+    number with no volume of its own, so the Volume Profile page weighs the index's candles with these (the prices stay
+    the index's own: a futures candle only lends its volume to the index candle of the same minutes).
+    The contract is the nearest one. In its last ROLL_DAYS calendar days the trade moves to the next month's contract and
+    the nearest one thins out (15 November, the owner's fine-tuning list: "Switch to the next contract a few days before
+    expiry, or whenever its volume is higher"): then both are read, and each day takes the one that traded more that day.
+    {"contract": {"name", "expiry"} (the one used for the last day), "bars": [[time, volume], ...], "rolled": None or the
+    words for it}. Asked of Dhan at most every 20 s, only while that page is open."""
     def make():
-        contract = future_of(name)
-        if not contract:
+        listed = futures_of(name)
+        if not listed:
             raise DhanError("other", f"Dhan's instrument list shows no {UNDERLYING[name]} futures contract")
-        day = today_ist()
-        start = (day - timedelta(days=days_back)).isoformat()
-        now = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S")
-        base = {"securityId": str(contract["id"]), "exchangeSegment": OPTION_SEGMENTS[name], "instrument": "FUTIDX", "oi": False}
-        forms = [(start, (day + timedelta(days=1)).isoformat(), str(minutes)), (start, day.isoformat(), str(minutes)),
-                 (f"{start} 09:15:00", now, str(minutes)), (start, (day + timedelta(days=1)).isoformat(), minutes), (f"{start} 09:15:00", now, minutes)]
-        last = None
-        for from_date, to_date, interval in forms:
+        near = listed[0]
+        bars = _contract_volume(name, near, minutes, days_back)
+        contract, rolled = near, None
+        days_left = (date.fromisoformat(near["expiry"]) - today_ist()).days
+        if len(listed) > 1 and days_left <= ROLL_DAYS:
             try:
-                bars = _volumes(call("POST", "/charts/intraday", {**base, "interval": interval, "fromDate": from_date, "toDate": to_date}))
+                nxt = _contract_volume(name, listed[1], minutes, days_back)
             except DhanError as exc:
                 if exc.kind != "other":
                     raise
-                last = exc
-                continue
-            return {"contract": {"name": contract["name"], "expiry": contract["expiry"]}, "bars": bars}
-        raise last
+                nxt = []  # the next contract could not be read: the nearest one alone, as on every other day
+            if nxt:
+                bars, used = roll_volume(bars, nxt)
+                moved = sorted(d for d, w in used.items() if w == "next")
+                if moved:
+                    if used[max(used)] == "next":
+                        contract = listed[1]
+                    rolled = f"{listed[1]['name']} traded more than {near['name']} on {len(moved)} day{'s' if len(moved) != 1 else ''} (from {moved[0]}): its volume is used on those days"
+        return {"contract": {"name": contract["name"], "expiry": contract["expiry"]}, "bars": bars, "rolled": rolled}
     return cached(("future volume", name, minutes, days_back), 20, make)
 
 
