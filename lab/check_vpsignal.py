@@ -102,5 +102,48 @@ v = vpsignal.day_view(days, "2026-10-01", [], C)
 check("before the open: the levels are there and the signal is WAIT", (v["levels"] is not None, v["signal"]["signal"], v["levels_from"]), (True, "WAIT", "2026-09-30"))
 check("no file of vp/ holds a password or a key", any(w in open(os.path.join(VP, f)).read().lower() for f in os.listdir(VP) if f.endswith((".py", ".json")) for w in ("password", "access_token", "api_key")), False)
 
+# ---- the fine-tuning list of 15 November
+import dhan
+from datetime import datetime
+def stamp(day, hm):
+    return int(datetime.fromisoformat(f"{day}T{hm}:00+05:30").timestamp())
+# 5. only 09:15 to 15:30 counts: a bar stamped 18:45 and one at 09:10 are left out
+raw = [{"time": stamp("2026-11-13", hm), "open": 100, "high": 101, "low": 99, "close": 100} for hm in ("09:10", "09:15", "15:25", "15:30", "18:45")]
+check("only candles from 09:15 up to 15:30 are counted", [c["hm"] for c in vpsignal.sessions_of(raw, {})["2026-11-13"]], ["09:15", "15:25"])
+# 5. "yesterday" is the previous trading day: Monday 16 November reads Friday 13, across the weekend; a holiday the same way
+week = {d: days[k] for d, k in zip(("2026-11-11", "2026-11-12", "2026-11-13", "2026-11-16"), list(days)[:4])}
+check("Monday reads Friday: the levels come from the last trading day before it", vpsignal.day_view(week, "2026-11-16", [], C)["levels_from"], "2026-11-13")
+check("a Saturday or a Sunday in between changes nothing (no session, no profile)", vpsignal.prepare(week, "2026-11-15", C)[1], "2026-11-13")
+# 3. yesterday's profile from the 1-minute candles: the same day, cut in 1-minute candles of the same prices and volume
+def minutes_of(candles):
+    out = []
+    for c in candles:
+        h, m = map(int, c["hm"].split(":"))
+        for j in range(5):
+            mm = h * 60 + m + j
+            out.append({"hm": f"{mm // 60:02d}:{mm % 60:02d}", "o": c["o"], "h": c["h"], "l": c["l"], "c": c["c"], "v": c["v"] / 5})
+    return out
+fine = {d: minutes_of(c) for d, c in week.items()}
+p5, _, _ = vpsignal.prepare(week, "2026-11-16", C)
+p1, d1, _ = vpsignal.prepare(week, "2026-11-16", C, fine)
+check("with the day's 1-minute candles the profile is built from them, and says so", (p1["candles"], d1, p5.get("candles")), ("1m", "2026-11-13", "5m"))
+check("minutes that repeat their 5-minute candle give the same levels: one calculation, whatever the candle size", [p1[k] for k in ("val", "poc", "vah")], [p5[k] for k in ("val", "poc", "vah")])
+real = {d: [dict(c, h=c["h"] - (i % 5) * 0.4, l=c["l"] + (i % 5) * 0.4) for i, c in enumerate(m)] for d, m in fine.items()}
+pr = vpsignal.prepare(week, "2026-11-16", C, real)[0]
+check("real 1-minute candles (narrower than their 5-minute candle) keep the document's rows: every level on the 5-point grid", [pr["val"] % 5, pr["vah"] % 5, (pr["poc"] - 2.5) % 5], [0.0, 0.0, 0.0])
+short_fine = dict(fine); short_fine["2026-11-13"] = fine["2026-11-13"][:200]
+check("a day with too few 1-minute candles (under 350) is built from its 5-minute candles, not skipped", (vpsignal.prepare(week, "2026-11-16", C, short_fine)[0]["candles"], vpsignal.prepare(week, "2026-11-16", C, short_fine)[1]), ("5m", "2026-11-13"))
+v = vpsignal.day_view(week, "2026-11-16", [], C, fine=fine)
+check("the answer says what the levels were counted from", (v["levels"]["candles"], v["levels"]["bin_size_pts"], v["levels"]["uses_volume"]), ("1m", C["bin_size_pts"], True))
+# 2. the Signal's profile uses the futures volume: the same candles with and without it give different busiest prices
+heavy = {d: [dict(c, v=(50000.0 if i < 5 else 1.0)) for i, c in enumerate(cs)] for d, cs in week.items()}
+bare = {d: [{k: x for k, x in c.items() if k != "v"} for c in cs] for d, cs in week.items()}
+ph, pb = vpsignal.prepare(heavy, "2026-11-16", C)[0], vpsignal.prepare(bare, "2026-11-16", C)[0]
+check("the volume decides the levels (uses_volume true), and without it the count is by time and says so", (ph["uses_volume"], pb["uses_volume"], ph["poc"] != pb["poc"]), (True, False, True))
+# 5. the document's 70% rule with one row left on a side, and none
+check("the document's value area with one row left above the busiest row", vpsignal.vp_profile._value_area([1, 1, 2, 10, 3], 3, 0.7), (3, 4))
+check("the document's value area with the busiest row at the top edge", vpsignal.vp_profile._value_area([1, 1, 2, 3, 10], 4, 0.7), (3, 4))
+check("the document's value area never runs past the rows, even at 100%", vpsignal.vp_profile._value_area([1, 5, 1], 1, 1.0), (0, 2))
+
 print("\n" + ("all fine" if not bad else f"{bad} WRONG"))
 sys.exit(1 if bad else 0)

@@ -595,7 +595,7 @@
       if (!d.ok) { let why = "HTTP " + d.status; try { why = (await d.json()).detail || why; } catch (e) {} throw new Error(why); }
       const detail = await d.json(), vol = v.ok ? await v.json() : { bars: [], problem: "HTTP " + v.status };
       state.summary = detail.summary; state.bars = detail.candles || [];
-      state.volumes = new Map((vol.bars || []).map(([t, x]) => [t, x])); state.contract = vol.contract; state.problem = vol.problem;
+      state.volumes = new Map((vol.bars || []).map(([t, x]) => [t, x])); state.contract = vol.contract; state.problem = vol.problem; state.rolled = vol.rolled || null;
       if (!fineWanted) { state.fine = state.bars; state.fineVolumes = state.volumes; }
       else {
         const fine = fd && fd.ok ? await fd.json() : null, fineVol = fv && fv.ok ? await fv.json() : null;
@@ -654,7 +654,7 @@
     if (!state.bars.length) { note.className = "warn"; note.textContent = "No candles yet."; return; }
     if (state.timeOnly) { note.className = "warn"; note.textContent = "No volume from Dhan right now" + (state.problem ? " (" + state.problem + ")" : "") + ". The rows show how much TIME the price spent at each level, not how much was traded."; return; }
     note.className = "";
-    note.textContent = `An index has no volume of its own: the rows use the volume of ${state.contract ? state.contract.name + " (expiry " + state.contract.expiry + ")" : "the index's futures"}, from Dhan. Blue: traded in rising candles. Amber: in falling ones. Not a call.`;
+    note.textContent = `An index has no volume of its own: the rows use the volume of ${state.contract ? state.contract.name + " (expiry " + state.contract.expiry + ")" : "the index's futures"}, from Dhan${state.rolled ? " (" + state.rolled + ")" : ""}. Blue: traded in rising candles. Amber: in falling ones. Today's rows are cut again as the day's range grows, so today's busiest price can move until the close. Not a call.`;
   }
 
   chart.subscribeCrosshairMove((param) => {
@@ -713,7 +713,7 @@
     }
     let second = "";
     if (lv) {
-      second += `<span><span class="k">Levels from ${shortDay(g.levels_from)}${lv.uses_volume ? "" : " (time only, no volume)"}:</span> <span class="k">VAL</span> <span class="v">${num(lv.val)}</span> <span class="k">POC</span> <span class="v">${num(lv.poc)}</span> <span class="k">VAH</span> <span class="v">${num(lv.vah)}</span></span>`;
+      second += `<span><span class="k">Previous trading day's levels (${shortDay(g.levels_from)}: ${lv.candles === "1m" ? "1-minute" : "5-minute"} candles, ${lv.uses_volume ? "futures volume" : "time only, no volume"}, ${lv.bin_size_pts}-point rows):</span> <span class="k">VAL</span> <span class="v">${num(lv.val)}</span> <span class="k">POC</span> <span class="v">${num(lv.poc)}</span> <span class="k">VAH</span> <span class="v">${num(lv.vah)}</span></span>`;
       second += `<span><span class="k">${shortDay(g.day)} opened</span> <span class="v">${g.opened ? OPENED[g.opened] : "not yet"}</span></span>`;
       second += `<span><span class="k">Read up to the candle of</span> <span class="v">${g.last_candle || "—"}</span><span class="k">${g.live ? ", exits on the live price" : ""}</span></span>`;
     second += `<span><span class="k">Naked POCs:</span> <span class="v">${g.naked && g.naked.length ? g.naked.map(p => num(p.poc) + " (" + shortDay(p.date) + ")").join(", ") : "none"}</span></span>`;
@@ -743,9 +743,9 @@
     // on the chart: yesterday's three levels, and the signal's stop and target
     if (lv) {
       const line = (price, title, color, style) => sigLines.push(candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true }));
-      line(lv.vah, "VAH " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);
-      line(lv.poc, "POC " + shortDay(g.levels_from), css("--poc"), LC.LineStyle.Dotted);
-      line(lv.val, "VAL " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);
+      line(lv.vah, "Prev day VAH " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);  // named as the previous day's (15 November): the drawn profile of the same day has its own 24 rows
+      line(lv.poc, "Prev day POC " + shortDay(g.levels_from), css("--poc"), LC.LineStyle.Dotted);
+      line(lv.val, "Prev day VAL " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);
       if (s.signal !== "WAIT") { line(s.index_stop, "Stop", css("--down"), LC.LineStyle.Solid); line(s.index_target, "Target", css("--up"), LC.LineStyle.Solid); }
     }
   }

@@ -5,7 +5,9 @@ The logic itself is the document's own code, kept as it was written in the folde
 vp_config.json, with its command line vp_cli.py and its 12 tests test_vp.py). This file only feeds it: the index's
 5-minute candles from Dhan, each weighed with the volume its nearest futures contract traded in the same five minutes
 (an index has no volume; the prices stay the index's own, so levels and prices are never mixed), the sessions cut by the
-IST day, and only finished candles. It adds what the document's step 7 says in words: after a signal, the exit at the
+IST day, and only finished candles. From 15 November yesterday's profile is counted from the day's 1-minute candles and
+their futures volume (the candles the page's drawn profile uses), with the document's fixed rows and its 70% rule; the
+rules still read today's 5-minute candles. It adds what the document's step 7 says in words: after a signal, the exit at the
 stop, at the target, or at 15:15.
 
 It states a signal; it places no order. Paper calls and Calls with Signals do not read it, nor it them."""
@@ -35,6 +37,7 @@ CFG = json.loads((VP / "vp_config.json").read_text())
 
 HISTORY_DAYS = 45       # calendar days asked of Dhan: a naked POC lives 20 sessions, and the first profile needs a day before it
 MIN_CANDLES = 70        # the document, note 3: "skip any session with fewer than about 70 candles when building a profile"
+MIN_FINE = 350          # the same share of a day in 1-minute candles (375 a day): fewer, and the day's 5-minute candles build its profile
 HISTORY_SHOWN = 5       # the last sessions listed under the signal, for study
 
 
@@ -58,21 +61,33 @@ def sessions_of(bars: list, volumes: dict) -> dict:
     """{IST day (iso): its candles, oldest first}, in the order of the days."""
     days: dict = {}
     for b in bars:
+        if not dhan.in_session(b):  # only 09:15 to 15:30 counts
+            continue
         days.setdefault(datetime.fromtimestamp(b["time"], dhan.IST).date().isoformat(), []).append(candle(b, volumes.get(b["time"])))
     return dict(sorted(days.items()))
 
 
-def prepare(days: dict, day: str, cfg: dict):
+def prepare(days: dict, day: str, cfg: dict, fine: dict | None = None):
     """Yesterday's profile and the naked POC list as they stood before `day` opened: the document's vp_cli.prepare, with its
-    note 3 (a session of fewer than about 70 candles builds no profile). Returns (profile, its date, the naked list)."""
+    note 3 (a session of fewer than about 70 candles builds no profile). "Yesterday" is the last session before `day` that
+    has its candles: the previous TRADING day, so a Monday reads Friday and the day after a holiday the day before it.
+    `fine` (15 November, the owner's fine-tuning list: "I'd have the Signal use 1-minute candles too, and keep its fixed row
+    size"): the same days' 1-minute candles. A day that has them (MIN_FINE or more) builds its profile from them, the same
+    candles the page's drawn profile is counted from, with the document's own rows and 70% rule; a day without them builds
+    it from its 5-minute candles as before. The profile says which ("candles": "1m" or "5m").
+    Returns (profile, its date, the naked list)."""
     naked, prev, prev_day = [], None, None
     for d, candles in days.items():
         if d >= day:
             break
-        if len(candles) < MIN_CANDLES:
-            continue
-        prev = vp_profile.build_profile(candles, cfg["bin_size_pts"], cfg["value_area_pct"])
-        naked = vp_profile.update_naked_pocs(naked, d, candles, prev, cfg["naked_poc_max_age_days"])
+        use, basis = (fine or {}).get(d) or [], "1m"
+        if len(use) < MIN_FINE:
+            use, basis = candles, "5m"
+            if len(candles) < MIN_CANDLES:
+                continue
+        prev = vp_profile.build_profile(use, cfg["bin_size_pts"], cfg["value_area_pct"])
+        prev["candles"] = basis
+        naked = vp_profile.update_naked_pocs(naked, d, use, prev, cfg["naked_poc_max_age_days"])
         prev_day = d
     return prev, prev_day, naked
 
@@ -115,18 +130,19 @@ def sizing(signal: dict, lot_size, premium, cfg: dict) -> dict:
             "premium": None, "note": "By the loss limit only. Type the option's premium to also check the 30% of capital limit."}
 
 
-def day_view(days: dict, day: str, finished: list, cfg: dict, lot_size=None, premium=None, forming=None) -> dict:
+def day_view(days: dict, day: str, finished: list, cfg: dict, lot_size=None, premium=None, forming=None, fine: dict | None = None) -> dict:
     """Everything the signal screen shows for one session: the levels it uses (from the session before), the naked POC
     list, how it opened, the signal or WAIT with its reason, and after a signal its exit. `finished` are the session's
     finished candles (none before the open). `forming` is the candle forming now on the live feed: it never gives a signal
     (the document, note 2: "never evaluate a candle that is still forming"), but a stop or a target touched inside it ends
     the trade at once (step 7: "exit when the index touches the stop level"), not five minutes later."""
-    prev, prev_day, naked = prepare(days, day, cfg)
+    prev, prev_day, naked = prepare(days, day, cfg, fine)
     view = {"day": day, "levels": None, "levels_from": prev_day, "naked": [p for p in naked if p["date"] != prev_day], "opened": None, "signal": None}
     if prev is None:
         view["signal"] = {"signal": "WAIT", "reason": "No earlier session with enough candles to build a profile from.", "skipped": []}
         return view
-    view["levels"] = {k: prev[k] for k in ("val", "poc", "vah", "hvn", "lvn", "session_low", "session_high", "uses_volume")}
+    view["levels"] = {**{k: prev[k] for k in ("val", "poc", "vah", "hvn", "lvn", "session_low", "session_high", "uses_volume")},
+                      "candles": prev.get("candles", "5m"), "bin_size_pts": cfg["bin_size_pts"]}
     if not finished:
         view["signal"] = {"signal": "WAIT", "reason": "The market has not opened yet.", "skipped": []}
         return view
@@ -150,12 +166,24 @@ def _history(name: str) -> tuple:
     and kept for ten minutes: the sessions before today do not change, and today's candles are read apart."""
     def make():
         bars = dhan.intraday(name, 5, HISTORY_DAYS)
+        try:  # the 1-minute candles and their volume: what yesterday's profile is counted from (15 November)
+            fine_bars = dhan.intraday(name, 1, HISTORY_DAYS)
+        except dhan.DhanError:
+            fine_bars = []  # none: every day's profile from its 5-minute candles, as before
+        problem, fine_volumes, volumes = None, {}, {}
         try:
-            volumes = {t: v for t, v in dhan.future_volume(name, 5, HISTORY_DAYS)["bars"]}
-            problem = None
+            fine_volumes = {t: v for t, v in dhan.future_volume(name, 1, HISTORY_DAYS)["bars"]}
+            for t, v in fine_volumes.items():  # the 5-minute candles' volume is the sum of their minutes'
+                volumes[t - t % 300] = volumes.get(t - t % 300, 0) + v
         except dhan.DhanError as exc:
-            volumes, problem = {}, exc.message[:160]  # no volume: every candle counts as 1, as the document says, and it is said
-        return bars, volumes, problem
+            problem = exc.message[:160]
+        if not volumes:
+            try:
+                volumes = {t: v for t, v in dhan.future_volume(name, 5, HISTORY_DAYS)["bars"]}
+                problem = None
+            except dhan.DhanError as exc:
+                problem = exc.message[:160]  # no volume: every candle counts as 1, as the document says, and it is said
+        return bars, volumes, problem, sessions_of(fine_bars, fine_volumes)
     return dhan.cached(("vp signal history", name), 600, make)
 
 
@@ -163,7 +191,7 @@ def state(name: str, premium=None, live_bar=None) -> dict:
     """The signal screen's answer for one index, now. `live_bar` is the 5-minute candle the server is building from the
     live ticks ({"time", "open", "high", "low", "close"}), when it has one."""
     cfg = config_for(name)
-    bars, volumes, volume_problem = _history(name)
+    bars, volumes, volume_problem, fine = _history(name)
     today = dhan.today_ist().isoformat()
     now = time.time()
     fresh = [b for b in dhan.intraday(name, 5) if datetime.fromtimestamp(b["time"], dhan.IST).date().isoformat() == today]
@@ -177,16 +205,16 @@ def state(name: str, premium=None, live_bar=None) -> dict:
     forming = None
     if live_bar and finished and datetime.fromtimestamp(live_bar["time"], dhan.IST).date().isoformat() == today and live_bar["time"] > finished[-1]["t"] and live_bar["time"] + 300 > now:
         forming = candle(live_bar, None)
-    view = day_view(days, today, finished, cfg, dhan.lot_size(name), premium, forming) if (finished or weekday) else None
+    view = day_view(days, today, finished, cfg, dhan.lot_size(name), premium, forming, fine) if (finished or weekday) else None
     if view is None:  # a weekend: the levels for the next session, from the last one
         nxt = (datetime.fromtimestamp(now, dhan.IST) + timedelta(days=1)).date()
         while nxt.weekday() >= 5:
             nxt += timedelta(days=1)
-        view = day_view(days, nxt.isoformat(), [], cfg)
+        view = day_view(days, nxt.isoformat(), [], cfg, fine=fine)
     def earlier_days():  # the sessions before today do not change: worked out once in ten minutes, not at every look
         past = []
         for d in earlier[-HISTORY_SHOWN:]:
-            v = day_view(days, d, days[d], cfg, dhan.lot_size(name))
+            v = day_view(days, d, days[d], cfg, dhan.lot_size(name), fine=fine)
             s = v["signal"]
             past.append({"day": d, "opened": v["opened"], "signal": s["signal"], "setup": s.get("setup"), "candle": s.get("candle"), "index_price": s.get("index_price"),
                          "index_stop": s.get("index_stop"), "index_target": s.get("index_target"), "reward_to_risk": s.get("reward_to_risk"),

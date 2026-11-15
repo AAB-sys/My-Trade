@@ -222,6 +222,16 @@ their own logic. Read this before touching the code.
   the arithmetic. The server checks the page's supply itself (the owner, 13 November: "yes add that check"): every half hour one
   small request per index for its futures' volume (`dhan.volume_check`, `volume_forever`), shown in `/health` under
   `feed.volume_profile` (ok, the contract, the last candle, today's volume, Dhan's reason when refused); `lab/check_volume_health.py`.
+  The fine-tuning of 15 November (the owner's list of five points: "check first, go thoroughly and build the logic properly"):
+  (1) the volume is placed at the INDEX candle's low and high, a futures candle lends only its volume by its minute (it was so;
+  now checked); (2) the Signal's profile uses the same Dhan futures volume (it did; time only when Dhan gives none, and says so);
+  (3) the Signal's profile of the previous trading day is counted from that day's 1-MINUTE candles (`vpsignal.prepare(..., fine)`),
+  the candles the drawn profile uses, with the document's fixed rows (5 / 10 points) and its 70% rule; a day without 350 of them
+  falls back to its 5-minute candles; the rules still read today's 5-minute candles; the lines are named "Prev day VAH / POC / VAL";
+  (4) the contract's roll: in the nearest contract's last 5 calendar days (`dhan.ROLL_DAYS`) the next month's is read too and each
+  day takes the one that traded more that day (`dhan.future_volume`, `roll_volume`; the page's note says so); (5) only 09:15 to
+  15:30 counts, "yesterday" is the previous trading day (Monday reads Friday), the 70% area grows right with one row left on a side.
+  Checks: `lab/check_volprofile.js`, `lab/check_vpsignal.py`, `lab/check_volume_health.py`.
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
