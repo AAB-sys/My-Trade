@@ -98,11 +98,12 @@
   /* The signal (13 November, the owner's document "Volume Profile Signal Logic", its note 10: one screen with yesterday's VAL,
      POC and VAH, the naked POC list, how today opened, the signal or WAIT with its reason, the stop, the target and the lots) */
   #calls-wrap { position: relative; flex: none; }
-  #calls-scroll { position: absolute; right: 12px; bottom: 8px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+  #calls-scroll { position: absolute; right: 12px; bottom: 6px; display: flex; flex-direction: column; gap: 6px; }
   #calls-scroll[hidden] { display: none; }
-  #calls-scroll svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
-  #calls-scroll.up svg { transform: rotate(180deg); }
-  @media (max-width: 600px) { #calls-scroll { width: 40px; height: 40px; right: 10px; } }
+  #calls-scroll button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+  #calls-scroll button:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+  #calls-scroll svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  @media (max-width: 600px) { #calls-scroll { right: 10px; } #calls-scroll button { width: 38px; height: 38px; } }
   #calls { flex: none; max-height: 34vh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; border-top: 1px solid var(--border); }
   #calls > div:last-child, #calls > div:not([hidden]):last-of-type { border-bottom: 0; }
   #sig { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--ink-2); flex: none; -webkit-user-select: text; user-select: text; }
@@ -211,9 +212,13 @@
       <div id="shape" aria-live="polite" hidden></div>
       <div id="impulse" aria-live="polite" hidden></div>
     </div>
-    <!-- the scroll button (15 November, the owner: "add the scroll down button for the web and mobile both"): there only while the
-         calls do not fit; it moves the block down, and at the end it turns and brings it back to the top -->
-    <button type="button" id="calls-scroll" hidden aria-label="Scroll the calls down" title="Scroll the calls down"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
+    <!-- the scroll buttons (15 November, the owner: "add the scroll down button for the web and mobile both", then "it should move
+         one by one to downside and one by one to the upside when press above round button"): there only while the calls do not
+         fit; the upper one moves the block one row of text up, the lower one one row down -->
+    <div id="calls-scroll" hidden>
+      <button type="button" id="calls-up" aria-label="One row up" title="One row up"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 12l5-5 5 5"/></svg></button>
+      <button type="button" id="calls-down" aria-label="One row down" title="One row down"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
+    </div>
   </div>
   <p id="note"></p>
 
@@ -890,20 +895,22 @@
     impMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
   }
 
-  // ---------------------------------------------------------------- the calls' scroll button
-  // shown only while the calls' block is longer than its room; a press moves it down by most of its height; at the end the
-  // arrow turns and a press brings it back to the top. It follows what the block holds (a signal ticked on or off, a new call)
+  // ---------------------------------------------------------------- the calls' scroll buttons
+  // shown only while the calls' block is longer than its room. One press moves the block by ONE row of text: the lower
+  // button one row down, the upper one one row up; at an end its button goes pale. They follow what the block
+  // holds (a signal ticked on or off, a new call)
   (() => {
-    const box = $("calls"), btn = $("calls-scroll");
+    const box = $("calls"), wrap = $("calls-scroll"), up = $("calls-up"), down = $("calls-down");
+    const row = () => { const cs = getComputedStyle($("sig")), h = parseFloat(cs.lineHeight); return Math.round((h > 0 ? h : parseFloat(cs.fontSize) * 1.4) + 2); };  // one row of the calls' text, with the gap between rows
+    const most = () => box.scrollHeight - box.clientHeight;
     const look = () => {
-      const more = box.scrollHeight - box.clientHeight > 4, end = box.scrollTop + box.clientHeight >= box.scrollHeight - 4;
-      btn.hidden = !more;
-      box.style.paddingRight = more ? "52px" : "";  // the words keep clear of the button
-      btn.classList.toggle("up", more && end);
-      const words = more && end ? "Back to the first call" : "Scroll the calls down";
-      btn.title = words; btn.setAttribute("aria-label", words);
+      const more = most() > 4;
+      wrap.hidden = !more;
+      box.style.paddingRight = more ? "52px" : "";  // the words keep clear of the buttons
+      up.disabled = box.scrollTop <= 2; down.disabled = box.scrollTop >= most() - 2;
     };
-    btn.addEventListener("click", () => { const end = box.scrollTop + box.clientHeight >= box.scrollHeight - 4; box.scrollTo({ top: end ? 0 : box.scrollTop + Math.max(60, box.clientHeight * 0.8), behavior: "smooth" }); });
+    const go = (dir) => box.scrollTo({ top: Math.max(0, Math.min(most(), box.scrollTop + dir * row())), behavior: "smooth" });
+    up.addEventListener("click", () => go(-1)); down.addEventListener("click", () => go(1));
     box.addEventListener("scroll", look, { passive: true });
     new MutationObserver(look).observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
     window.addEventListener("resize", look);

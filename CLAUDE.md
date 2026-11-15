@@ -243,9 +243,9 @@ their own logic. Read this before touching the code.
   time in place of volume, NIFTY 50 only: paper only. `lab/check_impulse.js` (17 checks; with a candles file it replays it).
   Where the calls stand (15 November, the owner, with the signal lines marked: "move all the calls below the chart ... whatever
   the call page fires, move it all below the chart"): the document's Signal, the Shape signal and the Impulse calls are one block
-  (`#calls`) BELOW the chart, above the note; it scrolls inside itself when it is long (at most about a third of the screen). A round scroll
-  button stands at its lower right while the calls do not fit ("add the scroll down button for the web and mobile both"): a press
-  moves the block down, at the end the arrow turns and a press brings it back to the top.
+  (`#calls`) BELOW the chart, above the note; it scrolls inside itself when it is long (at most about a third of the screen). Two round
+  scroll buttons stand at its lower right while the calls do not fit ("add the scroll down button for the web and mobile both";
+  "it should move one by one to downside and one by one to the upside"): each press moves the block by one row of text, the upper button up, the lower one down.
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
