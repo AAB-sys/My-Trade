@@ -1184,5 +1184,8 @@ This replaces the plan's rule of item 11 above:
   ("SIGNAL NOW: Buy ..."), then the last one with its points, "Waiting" before 12:00, "No signal yet today" after.
   It shows only while the Trade Plan capsule is open (the owner: "have you moved it to Trade plan page at the same
   placce"), not on Paper calls. It reads the plan's mark and decides nothing.
+- **The marks on the chart** (the owner: "add these signals to the Trade plan page, same as you did in the attacched
+  screenshot"): while the Trade Plan capsule is open, each call the plan takes is marked on its candles: **S** the
+  signal candle, **B** the buy, **X** the exit, with the call's number. Marks only; off on the other capsules.
 - **Checked.** `node lab/check.js` (the new plan's checks), and the page's engine against the server's on the 30
   saved days: 458 calls, the same mark and reason on every one.

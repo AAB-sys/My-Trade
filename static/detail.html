@@ -222,6 +222,7 @@
   @keyframes rule-signal-blink { 50% { opacity: 0.2; } }
   @media (prefers-reduced-motion: reduce) { #rule-signal.on .dot { animation: none; } }
   @media (max-width: 600px) { #rule-signal .big { font-size: 19px; } }
+  #plan-key { margin-top: 4px; font-size: 13px; color: var(--ink-2); }
   #plan-line { margin-top: 6px; font-weight: 600; } #plan-line .pts.up { color: var(--up); } #plan-line .pts.down { color: var(--down); }
   #paper.no-pl th:nth-child(14), #paper.no-pl td:nth-child(14) { display: none; }  /* the Profit Lock's column: NIFTY 50 only (24 October) */
   #paper td.lock b { font-weight: 600; } #paper td.lock b.said { color: var(--watch); } #paper td.lock small { display: block; color: var(--muted); }
@@ -461,7 +462,7 @@
     <div id="paper-note"></div>
     <div id="feed-note" hidden></div>
     <!-- The Trade Plan (29 October): NIFTY 50, from 15 November the rule "green + after 12:00" (before: the first 3 calls fired between 12:00 and 15:00). Its own pill (30 October) shows the plan's calls alone -->
-    <div id="plan-box" hidden><b>Trade Plan</b> · NIFTY 50 · rule "green + after 12:00": calls fired after 12:00 with a clear green signal candle<div id="plan-line"></div></div>
+    <div id="plan-box" hidden><b>Trade Plan</b> · NIFTY 50 · rule "green + after 12:00": calls fired after 12:00 with a clear green signal candle<div id="plan-key">On the chart: <b>S</b> signal candle · <b>B</b> buy · <b>X</b> exit · the number is the call's number</div><div id="plan-line"></div></div>
     <div class="scroll">
       <table id="paper">
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th><th>Profit Lock</th><th>Trade Plan</th><th>Plan reason</th><th>Builder</th><th>Builder rules</th></tr></thead>
@@ -1181,8 +1182,32 @@
     const table = document.getElementById("paper"), plan = planShown();
     table.classList.toggle("plan-only", plan && planHere());
     table.classList.toggle("no-plan", !(plan && planHere()));  // the plan's columns: in the Trade Plan view only (15 November)
+    drawPlanMarks(trades);
     table.hidden = !trades.length || (plan && (!planHere() || !trades.some(t => t.plan === "TAKE")));
     drawPlanLine(trades);
+  }
+  // The Trade Plan's calls on the chart (15 November, the owner, with the picture of the rule on two days: "add these signals to the
+  // Trade plan page, same as you did in the attacched screenshot"): while the Trade Plan capsule is open, each call the plan takes is
+  // marked on its candles: S the signal candle, B the buy (the candle it fired on), X the exit, with the call's number (the table's
+  // "call 1", "call 2"). A marker set of its own on the series, so the Calls with Signals marks are not touched. Marks only
+  let planMarkers = null;
+  function drawPlanMarks(trades) {
+    if (!series || typeof LightweightCharts.createSeriesMarkers !== "function") return;
+    const marks = [];
+    if (planShown() && planHere() && !longCandles()) {
+      const bars = shownBars(), seconds = SECONDS[state.interval];
+      const at = (t) => { const b = bars.find(b => t >= b.time && t < b.time + seconds); return b ? b.time + IST_OFFSET : null; };  // the candle on the chart that holds this moment
+      const blue = cssVar("--line"), grey = cssVar("--muted");
+      trades.filter(t => t.plan === "TAKE").sort((a, b) => a.entryTime - b.entryTime || a.signalTime - b.signalTime).forEach((t, i) => {
+        const n = i + 1, up = t.side === "CE", side = cssVar(up ? "--candle-up" : "--candle-down"), near = up ? "belowBar" : "aboveBar", far = up ? "aboveBar" : "belowBar";
+        const s = at(t.signalTime), b = at(t.entryTime), x = t.exitTime != null ? at(t.exitTime) : null;
+        if (s != null) marks.push({ time: s, position: near, color: blue, shape: up ? "arrowUp" : "arrowDown", text: "S" + n });
+        if (b != null) marks.push({ time: b, position: near, color: side, shape: up ? "arrowUp" : "arrowDown", text: "B" + n });
+        if (x != null) marks.push({ time: x, position: far, color: grey, shape: up ? "arrowDown" : "arrowUp", text: "X" + n });
+      });
+    }
+    if (!planMarkers || planMarkers.series !== series) { if (!marks.length) return; planMarkers = { series, set: LightweightCharts.createSeriesMarkers(series, []) }; }
+    planMarkers.set.setMarkers(marks.sort((a, b) => a.time - b.time));
   }
   function drawPlanLine(trades) {
     const box = document.getElementById("plan-box"), line = document.getElementById("plan-line");
