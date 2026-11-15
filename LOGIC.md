@@ -1182,6 +1182,7 @@ This replaces the plan's rule of item 11 above:
   record).
 - **The signal box** above the chart (NIFTY 50, today): green and blinking while a Trade Plan call is open
   ("SIGNAL NOW: Buy ..."), then the last one with its points, "Waiting" before 12:00, "No signal yet today" after.
-  A click opens the Trade Plan. It reads the plan's mark and decides nothing.
+  It shows only while the Trade Plan capsule is open (the owner: "have you moved it to Trade plan page at the same
+  placce"), not on Paper calls. It reads the plan's mark and decides nothing.
 - **Checked.** `node lab/check.js` (the new plan's checks), and the page's engine against the server's on the 30
   saved days: 458 calls, the same mark and reason on every one.
