@@ -232,6 +232,35 @@ their own logic. Read this before touching the code.
   day takes the one that traded more that day (`dhan.future_volume`, `roll_volume`; the page's note says so); (5) only 09:15 to
   15:30 counts, "yesterday" is the previous trading day (Monday reads Friday), the 70% area grows right with one row left on a side.
   Checks: `lab/check_volprofile.js`, `lab/check_vpsignal.py`, `lab/check_volume_health.py`.
+  The Impulse MACD (15 November, the owner, with LazyBear's Pine script: "develope a best strategy out of it and develop the same
+  on volume profile page ... Test this on the Nifty 50 data"): `static/impulse.js`. The tick box "Impulse MACD" is OFF until ticked;
+  with it off the page is as it was. On: the indicator in its own pane under the RSI's, as the script draws it (lengths 34 and 9:
+  md as coloured bars, md minus its signal as blue bars, the signal line), following the candle size shown; and the Impulse calls:
+  a 5-minute candle closing outside the day's value area so far (the break call's signal, `vpshape.js`) gives a call only when on
+  that candle md is above 0 and above its signal (CE) or below 0 and below it (PE), read on the 5-minute candles of the last five
+  days; stop, exit and one-at-a-time as the break calls. ALL DAY, no time cap and no limit on the number of calls (the owner: "IMACD
+  signals should be fired all the day starting from the start of the market session till the end. there should not be any time cap
+  or call numbers limit"): signal candles from 09:30 to 15:05. Of 100 ways tried on the two years the indicator alone gave no rule
+  that held. As the page counts it the all-day calls made -385 after 8 a call (813 calls, 32% won; first year -444, second +59);
+  held to 12:10-13:30 the same rule made +1,199 (266 calls): the owner chose the whole day. THE SIDEWAYS FILTER (the owner: "make it more
+  perfect because it is the only indicator which can help on the sideways market ... remove the unwanted noise"): a call is refused
+  while the closes crossed the day's busiest price more than 4 times in the last 24 five-minute candles, and for 3 candles after
+  a stopped Impulse call (`Impulse.CFG.chopBars`, `chopMax`, `pauseBars`). About 80 ways were tried; asking more of the impulse
+  itself did not help. With the filter the all-day calls made +899 (634 calls, 32% won; first year +89, second +810), at the
+  window of 18 to 36 candles between +797 and +1,520. The Impulse lines show the count of crossings and say when calls are held. Time in place of volume, NIFTY 50 only:
+  paper only. `lab/check_impulse.js` (28 checks; with a candles file it replays it).
+  Where the calls stand (15 November, the owner, with the signal lines marked: "move all the calls below the chart ... whatever
+  the call page fires, move it all below the chart"): the document's Signal, the Shape signal and the Impulse calls are one block
+  (`#calls`) BELOW the chart, above the note; it scrolls inside itself when it is long (at most about a third of the screen). Two round
+  scroll buttons stand at its lower right while the calls do not fit ("add the scroll down button for the web and mobile both";
+  "it should move one by one to downside and one by one to the upside"): each press moves the block by one row of text, the upper button up, the lower one down.
+  The Impulse call table (15 November, the owner: "make a separate table with header as Impulse call table as a sperate capsule
+  tab and add all the impulse calls in that table. table should have scroll up and down button. table should have all the headers
+  a fixed row and also should have the functionality of moving the column from left to right and right to left by holding the
+  column itself"): two capsules above the calls' block, "Calls" (the lines) and "Impulse call table": every Impulse call of the
+  days the page holds (the last five; the first only warms the averages up), the newest first, 14 columns. The header row stays
+  in place; a column is moved by holding its header and dragging it (mouse or finger), the order kept on the device
+  (`volumeProfileImpulseCols`); the two scroll buttons move it one table row a press. The capsule left open is remembered.
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
