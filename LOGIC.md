@@ -1164,3 +1164,9 @@ leaving out the 23.6% level (a gain on NIFTY BANK only, to watch).
 The lab (`lab/replay.js`) replays every idea over the saved days and is the
 record of what was tested.
 
+**The signal box** (15 November, the owner: "need some other space for these signal message other than this
+existing table ... which can be recognized easily"). Above the chart on the NIFTY 50 page, today only: the calls the
+rule builder marked KEEP for the rule "green + after 12:00" (the one rule that passed its forward test). Green and
+blinking while such a call is open ("SIGNAL NOW: Buy ..."), then the last one with its points, "Waiting" before 12:00,
+"No signal yet today" after. It reads the mark the table already shows and decides nothing: no call, order or record
+changes. The name of the rule it shows is `READY_RULE` in `static/detail.html`.

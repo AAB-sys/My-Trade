@@ -211,6 +211,17 @@
   #paper.no-builder th:nth-child(17), #paper.no-builder td:nth-child(17), #paper.no-builder th:nth-child(18), #paper.no-builder td:nth-child(18) { display: none; }  /* the rule builder's columns: NIFTY 50 only (30 October) */  /* the Trade Plan's columns: NIFTY 50 only (29 October) */
   #paper.plan-only tr.off-plan { display: none; }  /* the Trade Plan only view: the plan's calls alone */
   #plan-box { margin: 6px 0 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  #rule-signal { margin: 0 0 14px; padding: 12px 14px; border: 2px solid var(--border); border-radius: 12px; background: var(--surface); }
+  #rule-signal .tag { font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+  #rule-signal .big { font-size: 22px; font-weight: 700; line-height: 1.25; margin-top: 2px; }
+  #rule-signal .more { margin-top: 2px; color: var(--ink-2); }
+  #rule-signal .pts.up { color: var(--up); font-weight: 600; } #rule-signal .pts.down { color: var(--down); font-weight: 600; }
+  #rule-signal.on { border-color: var(--up); background: color-mix(in srgb, var(--up) 12%, var(--surface)); }
+  #rule-signal.on .tag, #rule-signal.on .big { color: var(--up); }
+  #rule-signal.on .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--up); margin-right: 6px; animation: rule-signal-blink 1s ease-in-out infinite; }
+  @keyframes rule-signal-blink { 50% { opacity: 0.2; } }
+  @media (prefers-reduced-motion: reduce) { #rule-signal.on .dot { animation: none; } }
+  @media (max-width: 600px) { #rule-signal .big { font-size: 19px; } }
   #plan-line { margin-top: 6px; font-weight: 600; } #plan-line .pts.up { color: var(--up); } #plan-line .pts.down { color: var(--down); }
   #paper.no-pl th:nth-child(14), #paper.no-pl td:nth-child(14) { display: none; }  /* the Profit Lock's column: NIFTY 50 only (24 October) */
   #paper td.lock b { font-weight: 600; } #paper td.lock b.said { color: var(--watch); } #paper td.lock small { display: block; color: var(--muted); }
@@ -355,6 +366,10 @@
     <span id="asof"></span>
     <span id="live-note" hidden></span>
   </div>
+
+  <!-- The signal box (15 November, the owner: "need some other space for these signal message other than this existing table ... which
+       can be recognized easily"): NIFTY 50, today. It only shows what the rule builder's mark already says; it decides nothing -->
+  <div id="rule-signal" role="status" aria-live="polite" hidden></div>
 
   <section class="summary" id="summary" aria-label="Summary"></section>
 
@@ -1023,7 +1038,7 @@
 
   function drawPaper(levels) {
     const box = document.getElementById("paper-box");
-    if (!levels.length) { box.hidden = true; lastPaper = { trades: [], levels: [] }; return; }
+    if (!levels.length) { box.hidden = true; lastPaper = { trades: [], levels: [] }; drawRuleSignal([]); return; }
     box.hidden = false;
     const table = document.getElementById("paper"), note = document.getElementById("paper-note");
     // the score line and the no-call notes (idea 13, ideas 8 and 5) stood here until 16 October: the owner took them off
@@ -1031,6 +1046,7 @@
     const { trades, cancelled } = paperTrades(levels);
     markSold(trades);
     lastPaper = { trades, levels };
+    drawRuleSignal(trades);
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
     table.hidden = !trades.length;
     table.classList.toggle("no-lc", !lcHere());  // the Loss Cutter's two columns only where it runs (NIFTY 50)
@@ -1130,6 +1146,31 @@
   // and, when every one has a premium, their rupees at 1 lot. Paper calls keeps every call, the plan's verdict in its two columns
   // The rule builder (30 October; Rules.BUILDER): "KEEP" when one of ULTROAN's surviving rules matches the call's facts (which ones), else "SKIP"; shadow
   const builderCells = (t) => !t.builder ? `<td class="gate"></td><td class="why"></td>` : `<td class="gate ${t.builder === "SKIP" ? "skip" : "take"}">${t.builder}</td><td class="why">${t.builderWhy || ""}</td>`;
+  // The signal box above the chart (15 November, the owner: "need some other space for these signal message other than this existing
+  // table"): the calls the rule builder marked KEEP for the one rule that passed its forward test (READY_RULE), on NIFTY 50, today only.
+  // Green and blinking while such a call is open, then the last one with its points, else "no signal yet". It reads the mark, nothing more
+  const READY_RULE = "green + after 12:00", READY_FROM = "12:00";
+  const esc = (v) => String(v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function drawRuleSignal(trades) {
+    const box = document.getElementById("rule-signal"), session = currentSession();
+    box.hidden = !builderHere() || longCandles() || !session || session === "all" || !isToday(session);
+    if (box.hidden) return;
+    const mine = trades.filter(t => t.builder === "KEEP" && (t.builderWhy || "").split("; ").includes(READY_RULE)).sort((a, b) => a.entryTime - b.entryTime);
+    const open = mine.filter(t => t.exit == null), last = mine[mine.length - 1];
+    const what = (t) => { const r = optionRecords[callKey(t)], k = strikeOf(t, r); return `Buy ${k != null ? k + " " : ""}${t.side}${r ? " " + expiryLabel(r.expiry) : ""}`; };
+    const where = (t) => `Fired ${firedWhen(t)} at ${fmt.format(t.entry)}`;
+    const head = `<div class="tag">Signal · rule "${esc(READY_RULE)}" · ${esc(name)}</div>`;
+    box.classList.toggle("on", open.length > 0);
+    if (open.length) {
+      box.innerHTML = head + open.slice().reverse().map(t => `<div class="big"><span class="dot" aria-hidden="true"></span>SIGNAL NOW: ${esc(what(t))}</div><div class="more">${esc(where(t))} · target ${fmt.format(t.target)} · the call is open</div>`).join("");
+    } else if (last) {
+      const p = last.points, tone = p > 0 ? "up" : p < 0 ? "down" : "";
+      box.innerHTML = head + `<div class="big">No open signal now</div><div class="more">Last signal: ${esc(what(last))} · ${esc(where(last))} · ended ${esc(callTime(last.exitTime))}${p != null ? ` · <span class="pts ${tone}">${p > 0 ? "+" : p < 0 ? "−" : ""}${fmt.format(Math.abs(p))} points</span>` : ""} · ${mine.length} signal${mine.length === 1 ? "" : "s"} today</div>`;
+    } else {
+      const early = new Date((serverNow() + 19800) * 1000).toISOString().slice(11, 16) < READY_FROM;
+      box.innerHTML = head + `<div class="big">${early ? "Waiting" : "No signal yet today"}</div><div class="more">${early ? `This rule gives signals only after ${READY_FROM}.` : "A signal shows here in green the moment the rule keeps a call."}</div>`;
+    }
+  }
   const planCells = (t) => !t.plan ? `<td class="gate"></td><td class="why"></td>` : `<td class="gate ${t.plan === "SKIP" ? "skip" : "take"}">${t.plan}</td><td class="why">${t.planWhy || ""}</td>`;
   const planShown = () => document.getElementById("panels").dataset.panel === "plan";  // the Trade Plan pill is the one open
   function applyPlanView(trades) {  // Trade Plan open: the plan's calls alone (none yet: no table, the line says where the day stands); Paper calls: every call
