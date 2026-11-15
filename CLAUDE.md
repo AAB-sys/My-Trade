@@ -226,6 +226,15 @@ their own logic. Read this before touching the code.
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
   no longer names expired contracts), newest piece first until Dhan has no more; `lab/check_volume_download.py`.
+  The Shape signal (15 November, the owner, with the Pine script "Volume Profile Anatomies (D / B / P / Double Zone)": "make your
+  own volume profile strategy out of it"; "multiple signals should be allowed in a day"; "Build option 1 but this user interface
+  should not be changed at all"): `static/vpshape.js`, counted in the page. The tick box "Shape signal" is OFF until ticked; with
+  it off the page is as it was. On: the day's shape (D, B, P, Double Zone: the script's classifier, its settings unchanged) and the
+  calls: from 12:10 to 13:30 a 5-minute candle closing outside the day's value area so far gives Buy CE (above) or Buy PE (below)
+  at the next candle's open, stop at the busiest price of that moment, out at the stop or the 15:15 open; one open at a time, a new
+  one after it ends (many a day). Paper only. Tested on two years of NIFTY 50 with time in place of volume: 539 calls, 33% won,
+  +579 after 8 a call (first year -652, second +1,231): a weak rule, the owner's choice. `lab/check_vpshape.js` (15 checks; with
+  a candles file it replays it). Never change its numbers without the owner's word; the document's Signal (`vp/`) is separate.
   The page's signal (the owner's document "Volume Profile Signal Logic", 13 November: "read this document
   thoroughly and implement the changes"): CE, PE or WAIT from yesterday's profile (VAL, POC, VAH, the naked POCs) and today's
   finished 5-minute candles, four setups (rejection at VAH, rejection at VAL, acceptance outside value, the 80% rule), the reward
