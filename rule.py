@@ -623,7 +623,11 @@ LOCK = {"mode": "SHADOW", "name": "MAX", **LOCK_PRESETS["MAX"], "compare": ["STE
 
 # The Trade Plan (static/rules.js PLAN, 29 October): on NIFTY 50, the first 3 calls that fired at or after 12:00 and before 15:00, "TAKE"
 # (call 1, 2 or 3 of 3); every other call that fired "SKIP" and why; mode SHADOW: a mark only, every call keeps its row and its order
-PLAN = {"mode": "SHADOW", "name": "afternoon 3", "indices": ["NIFTY 50"], "from": "12:00", "to": "15:00", "maxCalls": 3}
+# 15 November, the owner's yes: the plan's rule is now the rule builder's "green + after 12:00" (a call fired at or after 12:00 whose
+# signal candle is a clear green candle is "TAKE"; no limit, no end time). PLAN_FIRST3 is the first plan, stopped after 8 forward days
+PLAN_FIRST3 = {"mode": "SHADOW", "name": "afternoon 3", "indices": ["NIFTY 50"], "from": "12:00", "to": "15:00", "maxCalls": 3}
+PLAN = {"mode": "SHADOW", "name": "green after 12:00", "label": "green + after 12:00", "indices": ["NIFTY 50"], "from": "12:00",
+        "facts": [["candle", "green"], ["afterNoon", "after 12:00"]]}
 # The rule builder (static/rules.js BUILDER, 30 October): the evening builder's survivors, each a list of facts a call must match; mode
 # SHADOW: a mark "KEEP" (which rules) or "SKIP" on every call that fired
 BUILDER = {"mode": "SHADOW", "indices": ["NIFTY 50"], "medianAtr": 20.82269926267992, "rules": [
@@ -708,10 +712,30 @@ def ist_hm(t: float) -> str:
     return f"{s // 3600:02d}:{s % 3600 // 60:02d}"
 
 
-def plan_step(trades: list, p: dict = PLAN) -> int:
+def plan_step(trades: list, p: dict = PLAN, bars: list | None = None, prev_close=None, atr_seed=None) -> int:
     """The plan's mark on every call that fired (static/rules.js planStep): by the moment fired, the earliest first."""
     taken = 0
     fired = sorted((t for t in trades if t.get("entryTime") is not None and t.get("how") != "cancelled"), key=lambda t: (t["entryTime"], t["signalTime"], t["side"]))
+    if p.get("facts"):  # the rule builder's rule as the plan (15 November): TAKE when every fact of the call matches
+        if not bars:
+            return 0
+        atrs = atr_path(bars, atr_seed)
+        for n, t in enumerate(fired):
+            f = call_facts(t, fired, n, bars, atrs, prev_close, atr_seed, BUILDER["medianAtr"])
+            if f is None:
+                continue
+            when = ist_hm(t["entryTime"])
+            miss = next(((k, v) for k, v in p["facts"] if f.get(k) != v), None)
+            if miss is None:
+                taken += 1
+                t["plan"], t["planWhy"] = "TAKE", f"call {taken}: {p['label']}"
+            elif when < p["from"]:
+                t["plan"], t["planWhy"] = "SKIP", f"fired at {when}, before {p['from']}"
+            elif miss[0] == "candle":
+                t["plan"], t["planWhy"] = "SKIP", f"the signal candle is {f['candle']}, not {miss[1]}"
+            else:
+                t["plan"], t["planWhy"] = "SKIP", f"{miss[0]} is {f.get(miss[0])}, not {miss[1]}"
+        return taken
     for t in fired:
         when = ist_hm(t["entryTime"])
         if when < p["from"]:
@@ -1192,7 +1216,7 @@ def paper_trades(bars: list, levels_at, now: float, seconds: int, day_candles: b
             else:
                 t["points"], t["last"] = gain(t, last["close"]), last["close"]
     if trade_plan:
-        plan_step(trades, trade_plan)  # the Trade Plan's mark on every call that fired (29 October)
+        plan_step(trades, trade_plan, bars, prev_close, atr_seed)  # the Trade Plan's mark on every call that fired (29 October)
     if builder:
         builder_step(trades, bars, prev_close, atr_seed, builder)  # the rule builder's mark on every call that fired (30 October)
     return {"trades": trades, "closed": len(closed), "cancelled": cancelled, "zonesFound": zone["found"], "lcZonesFound": lc_zone["found"], "lcZonesEnded": lc_zone["ended"]}
