@@ -898,17 +898,22 @@
     const got = Impulse.calls(all5, closed, fine, weights), calls = got.calls, open = calls.find(t => t.how === "open"), c = VpShape.CFG, ic = Impulse.CFG;
     const day = dayOf(fine[0].time), today = last === dayNo(now), clock = VpShape.hm(now);
     const done = all5.filter(b => b.time + 300 <= now), x = done.length ? got.values.get(done[done.length - 1].time) : null;
+    // the sideways filter's reading on the last finished candle of the day: how often the closes crossed the busiest price in two hours
+    const today5 = all5.filter(b => dayNo(b.time) === last), kLast = closed - 1, before = kLast >= ic.minBars ? VpShape.read(fine.filter(m => m.time < today5[kLast].time), weights) : null;
+    const crossed = before ? Impulse.crossings(today5, kLast, before.poc) : null, choppy = crossed != null && crossed > ic.chopMax;
+    const stopped = calls.filter(t => t.how === "stop").pop(), sinceStop = stopped ? today5.findIndex(b => b.time === today5[kLast].time) - today5.findIndex(b => b.time === stopped.exitTime) : Infinity, pausing = today && !open && sinceStop < ic.pauseBars;
     const pts = (v) => `<span class="v ${v >= 0 ? "up" : "down"}">${v >= 0 ? "+" : "−"}${num(Math.abs(v))} points</span>`;
     const how = (t) => t.how === "stop" ? `stop ${VpShape.hm(t.exitTime)}` : t.how === "time" ? `out ${VpShape.hm(t.exitTime)}` : "open";
     const state2 = !today || clock >= c.exit ? "the day is over" : "waiting";
     const words = !x || x.sh == null ? "not enough candles yet" : x.md > 0 ? (x.sh > 0 ? "up and growing" : "up, fading") : x.md < 0 ? (x.sh < 0 ? "down and growing" : "down, fading") : "none (inside the channel)";
     let html = `<div class="line"><span class="badge ${open ? open.side.toLowerCase() : ""}">${open ? "BUY " + open.side : "WAIT"}</span><span><b>Impulse calls</b> <span class="k">all day · paper only</span></span>`
       + (open ? `<span><b>Call ${open.n}</b> · fired <span class="v">${VpShape.hm(open.entryTime)}</span> <span class="k">at</span> <span class="v">${num(open.entry)}</span></span><span><span class="k">Stop</span> <span class="v">${num(open.stop)}</span></span><span><span class="k">Now</span> ${pts(open.points)}</span>`
-              : `<span class="k">No call open (${state2})</span>`)
+              : `<span class="k">No call open (${today && clock < c.exit && choppy ? "sideways: calls are held back" : pausing ? "pause after a stop" : state2})</span>`)
       + calls.filter(t => t !== open).map(t => `<span><span class="k">${t.n}.</span> <span class="v">${VpShape.hm(t.entryTime)} ${t.side} ${num(t.entry)}</span> <span class="k">${how(t)}</span> ${pts(t.points)}</span>`).join("")
       + (calls.length > 1 ? `<span><span class="k">Total</span> ${pts(calls.reduce((a, t) => a + t.points, 0))}</span>` : "") + `</div>`;
-    html += `<div class="line"><span><span class="k">Impulse on the last 5-minute candle (${day}):</span> <span class="v">${words}</span></span>` + (x && x.sb != null ? `<span><span class="k">Impulse MACD</span> <span class="v">${num(x.md)}</span> <span class="k">signal</span> <span class="v">${num(x.sb)}</span></span>` : "") + `</div>`;
-    html += `<div class="line rule"><span class="k">Impulse calls, all day from the open with no limit on their number: a 5-minute candle closing outside the day's value area so far gives a call only when the Impulse MACD agrees and is growing on that candle: above 0 and above its signal for Buy CE, below 0 and below its signal for Buy PE. Stop at the busiest price of that moment; out at the stop or at ${c.exit}.${have ? "" : " Counted by time: no volume."}</span></div>`;
+    html += `<div class="line"><span><span class="k">Impulse on the last 5-minute candle (${day}):</span> <span class="v">${words}</span></span>` + (x && x.sb != null ? `<span><span class="k">Impulse MACD</span> <span class="v">${num(x.md)}</span> <span class="k">signal</span> <span class="v">${num(x.sb)}</span></span>` : "")
+      + (crossed != null ? `<span><span class="k">Sideways check: the price crossed the busiest price</span> <span class="v ${choppy ? "down" : ""}">${crossed} time${crossed === 1 ? "" : "s"}</span> <span class="k">in the last 2 hours (calls are held back above ${ic.chopMax})</span></span>` : "") + `</div>`;
+    html += `<div class="line rule"><span class="k">Impulse calls, all day from the open with no limit on their number: a 5-minute candle closing outside the day's value area so far gives a call only when the Impulse MACD agrees and is growing on that candle: above 0 and above its signal for Buy CE, below 0 and below its signal for Buy PE. No call while the market is sideways (the price crossed the busiest price more than ${ic.chopMax} times in the last 2 hours), and none for ${ic.pauseBars * 5} minutes after a stopped call. Stop at the busiest price of that moment; out at the stop or at ${c.exit}.${have ? "" : " Counted by time: no volume."}</span></div>`;
     box.innerHTML = html;
     const seconds = { "1m": 60, "5m": 300, "15m": 900 }[state.interval], at = (t) => { const b = state.bars.find(b => t >= b.time && t < b.time + seconds); return b ? b.time + IST : null; };
     const marks = [];

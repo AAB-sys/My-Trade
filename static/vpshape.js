@@ -78,14 +78,16 @@
   // One day's calls. bars5: the day's 5-minute candles oldest first, the one forming now last; closed: how many of them have closed;
   // fine: the candles the profile is counted from (the day's 1-minute candles, or bars5 itself); weights: their volume (null: time).
   // Returns [{n, side "CE"|"PE", signalTime, entryTime, entry, stop, shape, vah, val, how "open"|"stop"|"time", exitTime, exit, points}]
-  // allow(bar, side): an extra yes or no on a signal candle (the Impulse calls, static/impulse.js); a signal it refuses opens nothing
+  // allow(bar, side, about): an extra yes or no on a signal candle (the Impulse calls, static/impulse.js); a signal it refuses opens
+  // nothing. about = {k: the candle's place in bars5, bars: bars5, profile: the profile it was judged on, sinceStop: how many
+  // candles ago the last call of this list was stopped (Infinity: none yet today)}
   function calls(bars5, closed, fine, weights, c = CFG, allow = null) {
     const out = [], b = bars5;
-    let open = null;
+    let open = null, lastStop = -Infinity;
     for (let k = c.minBars; k < b.length; k++) {
       if (open) {
         if (hm(b[k].time) >= c.exit) { Object.assign(open, { how: "time", exitTime: b[k].time, exit: b[k].open }); open = null; }
-        else if (open.side === "CE" ? b[k].low <= open.stop : b[k].high >= open.stop) { Object.assign(open, { how: "stop", exitTime: b[k].time, exit: open.stop }); open = null; }
+        else if (open.side === "CE" ? b[k].low <= open.stop : b[k].high >= open.stop) { Object.assign(open, { how: "stop", exitTime: b[k].time, exit: open.stop }); open = null; lastStop = k; }
         else continue;
       }
       const when = hm(b[k].time);
@@ -94,7 +96,7 @@
       if (!p) continue;
       const side = b[k].close > p.vah ? "CE" : b[k].close < p.val ? "PE" : null;
       if (!side) continue;
-      if (allow && !allow(b[k], side)) continue;
+      if (allow && !allow(b[k], side, { k, bars: b, profile: p, sinceStop: k - lastStop })) continue;
       const entry = b[k + 1].open;
       if (side === "CE" ? entry <= p.poc : entry >= p.poc) continue;
       open = { n: out.length + 1, side, signalTime: b[k].time, entryTime: b[k + 1].time, entry, stop: p.poc, shape: p.shape, vah: p.vah, val: p.val, how: "open", exitTime: null, exit: null };

@@ -242,8 +242,13 @@ their own logic. Read this before touching the code.
   signals should be fired all the day starting from the start of the market session till the end. there should not be any time cap
   or call numbers limit"): signal candles from 09:30 to 15:05. Of 100 ways tried on the two years the indicator alone gave no rule
   that held. As the page counts it the all-day calls made -385 after 8 a call (813 calls, 32% won; first year -444, second +59);
-  held to 12:10-13:30 the same rule made +1,199 (266 calls): the owner chose the whole day. Time in place of volume, NIFTY 50 only:
-  paper only. `lab/check_impulse.js` (21 checks; with a candles file it replays it).
+  held to 12:10-13:30 the same rule made +1,199 (266 calls): the owner chose the whole day. THE SIDEWAYS FILTER (the owner: "make it more
+  perfect because it is the only indicator which can help on the sideways market ... remove the unwanted noise"): a call is refused
+  while the closes crossed the day's busiest price more than 4 times in the last 24 five-minute candles, and for 3 candles after
+  a stopped Impulse call (`Impulse.CFG.chopBars`, `chopMax`, `pauseBars`). About 80 ways were tried; asking more of the impulse
+  itself did not help. With the filter the all-day calls made +899 (634 calls, 32% won; first year +89, second +810), at the
+  window of 18 to 36 candles between +797 and +1,520. The Impulse lines show the count of crossings and say when calls are held. Time in place of volume, NIFTY 50 only:
+  paper only. `lab/check_impulse.js` (28 checks; with a candles file it replays it).
   Where the calls stand (15 November, the owner, with the signal lines marked: "move all the calls below the chart ... whatever
   the call page fires, move it all below the chart"): the document's Signal, the Shape signal and the Impulse calls are one block
   (`#calls`) BELOW the chart, above the note; it scrolls inside itself when it is long (at most about a third of the screen). Two round

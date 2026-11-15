@@ -2,7 +2,7 @@
 // and the calls. No network.
 //     node lab/check_impulse.js                     (from the repo's folder)
 //     node lab/check_impulse.js <candles.csv>       also replays a file of 5-minute candles (the Main Menu's Download candles); on
-//                                                   NIFTY50_5min_2024-11-09_2026-11-09.csv: 813 calls, -385 after 8 a call
+//                                                   NIFTY50_5min_2024-11-09_2026-11-09.csv: 634 calls, +899 after 8 a call
 const I = require("../static/impulse.js"), S = require("../static/vpshape.js"), fs = require("fs");
 let bad = 0;
 const check = (what, got, want) => { const ok = JSON.stringify(got) === JSON.stringify(want); bad += !ok; console.log((ok ? "ok    " : "WRONG ") + what + (ok ? "" : `: got ${JSON.stringify(got)}, wanted ${JSON.stringify(want)}`)); };
@@ -67,6 +67,29 @@ check("the indicator's values come back by candle time, one a candle", [got.valu
   for (let k = 0; k < 30; k++) { zig.push([p, p + 1, p - 16, p - 15]); p -= 15; }
   const zt = zig.map((x, k) => ({ time: t0 + k * 300, open: x[0], high: x[1], low: x[2], close: x[3] })), zc = I.calls(early.concat(zt), zt.length, zt, null).calls;
   check("no limit on the number of calls in a day: after the CE is stopped the fall gives a PE", [zc.length >= 2, zc[0].side, zc[0].how, zc[zc.length - 1].side], [true, "CE", "stop", "PE"]);
+}
+
+// the sideways filter (the owner, 15 November: "to filter out most of the unwanted signals and can remove the unwanted noise")
+{
+  const mk = (closes) => closes.map((c, k) => ({ time: T + k * 300, open: c, high: c + 1, low: c - 1, close: c }));
+  check("crossings: closes going back and forth across a price are counted, a steady side is not", [I.crossings(mk([99, 101, 99, 101, 99, 101]), 5, 100), I.crossings(mk([101, 102, 103, 104, 105, 106]), 5, 100), I.crossings(mk([99, 101, 102, 103, 99, 98]), 5, 100)], [5, 0, 2]);
+  check("crossings look back 24 candles only", I.crossings(mk([99, 101, 99, 101, 99, 101].concat(Array.from({ length: 30 }, (_, i) => 102 + i))), 35, 100), 0);
+  check("the filter's numbers: more than 4 crossings in 24 candles refuse a call; 3 candles' pause after a stop", [I.CFG.chopBars, I.CFG.chopMax, I.CFG.pauseBars], [24, 4, 3]);
+  // wired into the calls: the day of "more than one call a day" above (a CE that is stopped, then a PE) under other settings
+  const flat = []; for (let dd = 0; dd < 4; dd++) for (let k = 0; k < 75; k++) flat.push({ time: T + dd * 86400 + k * 300, open: 104, high: 110, low: 100, close: 106 });
+  const t0 = T + 4 * 86400, zig = [[104, 110, 100, 106], [104, 110, 100, 106], [104, 110, 100, 106]]; let p = 106;
+  for (let k = 0; k < 6; k++) { zig.push([p, p + 10, p - 1, p + 9]); p += 9; }
+  for (let k = 0; k < 30; k++) { zig.push([p, p + 1, p - 16, p - 15]); p -= 15; }
+  const day = zig.map((x, k) => ({ time: t0 + k * 300, open: x[0], high: x[1], low: x[2], close: x[3] })), all = flat.concat(day), keep = { ...I.CFG };
+  const base = I.calls(all, day.length, day, null).calls;
+  I.CFG.chopMax = -1; const none = I.calls(all, day.length, day, null).calls.length; I.CFG.chopMax = keep.chopMax;
+  check("the chop rule is part of the calls: with no crossing allowed at all, no call comes", [base.length >= 2, none], [true, 0]);
+  I.CFG.pauseBars = 999; const held = I.calls(all, day.length, day, null).calls; I.CFG.pauseBars = keep.pauseBars;
+  check("the pause is part of the calls: with an endless pause the stopped CE is the day's last call", [held.length, held[0].side, held[0].how], [1, "CE", "stop"]);
+  const stopAt = day.findIndex(b => b.time === base[0].exitTime), next = day.findIndex(b => b.time === base[1].signalTime);
+  check("after the stop the next call's signal candle is at least 3 candles later", next - stopAt >= 3, true);
+  const seen = []; S.calls(day, day.length, day, null, { ...S.CFG, from: "09:15", to: "15:05", minBars: 3 }, (bar, side, a) => { seen.push(a.sinceStop); return false; });
+  check("before any stop today the pause does not hold a call back", seen.length > 0 && seen.every(x => x === Infinity), true);
 }
 
 if (process.argv[2]) {  // a replay, the way the rule was tested; then again as the page counts it, from the last five days only
