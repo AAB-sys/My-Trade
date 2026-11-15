@@ -102,6 +102,19 @@
   #calls-tabs .cap { font: inherit; font-size: 12px; font-weight: 600; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--ink); cursor: pointer; }
   #calls-tabs .cap:hover { background: var(--hover); }
   #calls-tabs .cap.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  #calls-tabs { align-items: center; padding-top: 5px; padding-bottom: 5px; }
+  #calls-tabs .cap { white-space: nowrap; }
+  #calls-tabs .grow { flex: 1; }
+  #calls-tabs .ic { width: 30px; height: 30px; flex: none; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--ink-2); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
+  #calls-tabs .ic:hover { background: var(--hover); } #calls-tabs .ic[aria-pressed="true"] { background: var(--hover); color: var(--ink); border-color: var(--ink-2); }
+  #calls-tabs .ic svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+  #calls-wrap.shut #calls-hide svg, #calls-wrap.large #calls-size svg { transform: rotate(180deg); }
+  /* the block's height: small by default so the chart keeps most of the screen; larger on the owner's press; hidden: the capsule row alone */
+  #calls-wrap #calls, #calls-wrap #imptable { max-height: 22vh; }
+  #calls-wrap.large #calls, #calls-wrap.large #imptable { max-height: 46vh; }
+  #calls-wrap.shut #calls, #calls-wrap.shut #imptable, #calls-wrap.shut #calls-scroll { display: none; }
+  #calls:not(.rules) .rule { display: none; }
+  #imptable th { padding-top: 5px; padding-bottom: 5px; } #imptable td { padding-top: 3px; padding-bottom: 3px; }
   #imptable { flex: none; max-height: 34vh; overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y; border-top: 1px solid var(--border); }
   #imptable[hidden], #calls[hidden] { display: none; }
   #imptable table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -112,7 +125,7 @@
   #imptable td.k { color: var(--ink-2); } #imptable td.up { color: var(--up); font-weight: 600; } #imptable td.down { color: var(--down); font-weight: 600; }
   #imptable td .side { font-weight: 700; padding: 0 8px; border-radius: 5px; color: #fff; background: var(--muted); } #imptable td .side.ce { background: var(--up); } #imptable td .side.pe { background: var(--down); }
   #imptable-empty { margin: 0; padding: 10px 12px; color: var(--muted); font-size: 12px; }
-  @media (max-width: 600px) { #imptable { max-height: 30vh; } #calls-tabs { padding: 5px 10px; } }
+  @media (max-width: 600px) { #calls-tabs { padding: 5px 10px; } }
   #calls-scroll { position: absolute; right: 12px; bottom: 6px; display: flex; flex-direction: column; gap: 6px; }
   #calls-scroll[hidden] { display: none; }
   #calls-scroll button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
@@ -135,8 +148,8 @@
   #impulse .k { color: var(--muted); } #impulse .v { color: var(--ink); font-variant-numeric: tabular-nums; } #impulse .v.up { color: var(--up); } #impulse .v.down { color: var(--down); }
   #shape b { color: var(--ink); font-weight: 600; }
   #impulse b { color: var(--ink); font-weight: 600; }
-  @media (max-width: 600px) { #shape { padding: 5px 10px; } #shape .rule { display: none; } }
-  @media (max-width: 600px) { #impulse { padding: 5px 10px; } #impulse .rule { display: none; } #calls { max-height: 30vh; } }
+  @media (max-width: 600px) { #shape { padding: 5px 10px; } }
+  @media (max-width: 600px) { #impulse { padding: 5px 10px; } #calls-wrap #calls, #calls-wrap #imptable { max-height: 24vh; } #calls-wrap.large #calls, #calls-wrap.large #imptable { max-height: 44vh; } #calls-tabs { gap: 6px; } #calls-tabs .cap { padding: 4px 10px; } }
   #sig .line { display: flex; flex-wrap: wrap; gap: 2px 12px; align-items: baseline; }
   #sig .line + .line { margin-top: 3px; }
   #sig .badge { font-size: 13px; font-weight: 700; padding: 1px 10px; border-radius: 6px; color: #fff; background: var(--muted); letter-spacing: 0.02em; }
@@ -153,6 +166,8 @@
   #sig-more { max-height: 34vh; overflow: auto; touch-action: pan-x pan-y; }
   #note { margin: 0; padding: 6px 12px; padding-bottom: max(6px, env(safe-area-inset-bottom)); font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); flex: none; }
   #note.warn { color: var(--ink-2); }
+  #note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; padding-top: 4px; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+  #note.open { white-space: normal; }
   @media (max-width: 600px) {
     #main { flex-direction: column; }
     #draw { flex-direction: row; padding: 2px 8px; border-right: 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
@@ -227,6 +242,13 @@
     <div id="calls-tabs" role="tablist" aria-label="Calls">
       <button type="button" class="cap on" id="tab-lines" role="tab" aria-selected="true">Calls</button>
       <button type="button" class="cap" id="tab-imptable" role="tab" aria-selected="false">Impulse call table</button>
+      <!-- the block's own controls (15 November, the owner, with the page not fitting: "think more about the better UI and do the
+           changes with proper chart fit"): the rules' words shown or not, the block larger or small, the block hidden so the
+           chart takes its room -->
+      <span class="grow"></span>
+      <button type="button" class="ic" id="calls-rules" aria-pressed="false" aria-label="Show the rules in words" title="Show the rules in words"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
+      <button type="button" class="ic" id="calls-size" aria-pressed="false" aria-label="Make the calls larger" title="Make the calls larger"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 12l5-5 5 5"/><path d="M5 16h10"/></svg></button>
+      <button type="button" class="ic" id="calls-hide" aria-pressed="false" aria-label="Hide the calls" title="Hide the calls"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
     </div>
     <div id="calls">
       <div id="sig" aria-live="polite"></div>
@@ -293,7 +315,7 @@
   const LC = LightweightCharts;
   const chart = LC.createChart($("chart"), {
     autoSize: true,
-    layout: { attributionLogo: false, fontSize: 12, fontFamily: getComputedStyle(document.body).fontFamily },
+    layout: { attributionLogo: false, fontSize: 12, fontFamily: getComputedStyle(document.body).fontFamily, panes: { enableResize: false } },
     rightPriceScale: { scaleMargins: { top: 0.12, bottom: 0.22 } },
     timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 9, minBarSpacing: 1 },
     crosshair: { mode: LC.CrosshairMode.Normal },
@@ -303,7 +325,7 @@
   const volume = chart.addSeries(LC.HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
   volume.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
   // a narrow screen: the words top left take more lines, so the candles start lower
-  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: state.priceView ? { top: 0, bottom: 0 } : { top: innerWidth <= 600 ? 0.13 : 0.08, bottom: 0.22 } });
+  const roomOnTop = () => chart.priceScale("right").applyOptions({ scaleMargins: state.priceView ? { top: 0, bottom: 0 } : { top: innerWidth <= 600 ? 0.13 : 0.08, bottom: $("show-volume").checked && !state.timeOnly ? 0.22 : 0.06 } });  // the room under the candles is the volume bars': without them the candles use it
   roomOnTop(); addEventListener("resize", roomOnTop);
 
   function paint() {
@@ -381,6 +403,13 @@
   // ---------------------------------------------------------------- RSI (12 November, the owner: "add drawing tools and RSI")
   // The usual RSI: 14 candles, Wilder's smoothing, on the closes of the candle size shown; its own strip under the chart, with
   // the 70 and 30 lines. It is counted over every candle the page holds (five days), so the day shown starts with a settled value.
+  // Each pane's share of the chart's height, set again whenever a pane comes or goes or the chart's room changes (15 November, the
+  // owner, with the candles squeezed into a strip above a tall Impulse pane: "main candle chart with volume profile is also not
+  // fitting well"): the candles always keep the most; a pane's edge cannot be dragged, so the shares cannot be lost by a slip
+  function fitPanes() {
+    const panes = chart.panes(), both = !!(rsi && imp), share = both ? [0.64, 0.14, 0.22] : imp ? [0.76, 0.24] : rsi ? [0.8, 0.2] : [1];
+    share.forEach((x, i) => { if (panes[i]) panes[i].setStretchFactor(x); });
+  }
   const RSI_LENGTH = 14;
   let rsi = null;
   function rsiSeries(bars, n = RSI_LENGTH) {
@@ -394,13 +423,13 @@
   }
   function setRsi() {
     const on = $("show-rsi").checked;
-    if (!on) { if (rsi) { chart.removeSeries(rsi); rsi = null; } state.rsi = null; return; }
+    if (!on) { if (rsi) { chart.removeSeries(rsi); rsi = null; fitPanes(); } state.rsi = null; return; }
     if (!rsi) {
       rsi = chart.addSeries(LC.LineSeries, { color: css("--rsi"), lineWidth: 1.5, priceLineVisible: false, lastValueVisible: true, priceFormat: { type: "price", precision: 2, minMove: 0.01 },
         autoscaleInfoProvider: () => ({ priceRange: { minValue: 0, maxValue: 100 } }) }, 1);
       rsi.priceScale().applyOptions({ scaleMargins: { top: 0.06, bottom: 0.06 } });
       for (const level of [70, 30]) rsi.createPriceLine({ price: level, color: css("--muted"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true, title: "" });
-      const panes = chart.panes(); if (panes[1]) panes[1].setHeight(Math.max(90, Math.round($("chart").clientHeight * 0.2)));
+      fitPanes();
     }
     state.rsi = rsiSeries(state.bars);
     rsi.setData(shown().flat().filter(b => state.rsi.has(b.time)).map(b => ({ time: b.time + IST, value: state.rsi.get(b.time) })));
@@ -867,7 +896,7 @@
   // signal as a line; and the Impulse calls: the page's break calls that the impulse agrees with (the rule is in impulse.js).
   // The pane follows the candle size shown; the calls always read the 5-minute candles of the last five days. Paper only
   let imp = null, impMarks = null, impStop = null;
-  function dropImpulse() { if (imp) { for (const x of [imp.md, imp.sh, imp.sb]) chart.removeSeries(x); imp = null; } }
+  function dropImpulse() { if (imp) { for (const x of [imp.md, imp.sh, imp.sb]) chart.removeSeries(x); imp = null; fitPanes(); } }
   function setImpulse() {
     if (!$("show-impulse").checked) { dropImpulse(); return; }
     if (!imp) {
@@ -876,8 +905,7 @@
               md: chart.addSeries(LC.HistogramSeries, { ...plain, lastValueVisible: true }, pane),
               sb: chart.addSeries(LC.LineSeries, { ...plain, color: css("--imp-signal"), lineWidth: 1.5, crosshairMarkerVisible: false }, pane) };
       imp.md.createPriceLine({ price: 0, color: css("--muted"), lineWidth: 1, lineStyle: LC.LineStyle.Solid, axisLabelVisible: false, title: "" });
-      const panes = chart.panes(), share = rsi ? [0.66, 0.15, 0.19] : [0.8, 0.2];  // each pane's share of the chart's height: with the RSI's pane above it, both stay readable
-      share.forEach((x, i) => { if (panes[i]) panes[i].setStretchFactor(x); });
+      fitPanes();
     }
     const values = new Map(Impulse.compute(state.bars).map(x => [x.time, x])), tone = { lime: css("--imp-lime"), green: css("--imp-green"), orange: css("--imp-orange"), red: css("--imp-red") };
     const bars = shown().flat().map(b => values.get(b.time)).filter(x => x && x.colour);
@@ -995,7 +1023,23 @@
     try { localStorage.setItem("volumeProfileCallsTab", tab ? "table" : "lines"); } catch (e) {}
     drawImpulseTable(); window.dispatchEvent(new Event("resize"));
   }
-  $("tab-lines").addEventListener("click", () => showCalls("lines")); $("tab-imptable").addEventListener("click", () => showCalls("table"));
+  $("tab-lines").addEventListener("click", () => { openCalls(); showCalls("lines"); }); $("tab-imptable").addEventListener("click", () => { openCalls(); showCalls("table"); });
+  // the block's own controls: hidden (the chart takes its room), larger, the rules in words. Each is remembered on the device
+  const callsLook = { shut: true, large: false, rules: false };
+  try { Object.assign(callsLook, JSON.parse(localStorage.getItem("volumeProfileCallsLook") || "{}")); } catch (e) {}
+  function drawCallsLook() {
+    const wrap = $("calls-wrap"), set = (id, on, off, yes) => { const b = $(id); b.setAttribute("aria-pressed", String(!!on)); b.title = on ? yes : off; b.setAttribute("aria-label", b.title); };
+    wrap.classList.toggle("shut", !!callsLook.shut); wrap.classList.toggle("large", !!callsLook.large && !callsLook.shut); $("calls").classList.toggle("rules", !!callsLook.rules);
+    set("calls-hide", callsLook.shut, "Hide the calls", "Show the calls"); set("calls-size", callsLook.large, "Make the calls larger", "Make the calls small again"); set("calls-rules", callsLook.rules, "Show the rules in words", "Hide the rules in words");
+    try { localStorage.setItem("volumeProfileCallsLook", JSON.stringify(callsLook)); } catch (e) {}
+    window.dispatchEvent(new Event("resize"));
+  }
+  function openCalls() { if (callsLook.shut) { callsLook.shut = false; drawCallsLook(); } }
+  $("calls-hide").addEventListener("click", () => { callsLook.shut = !callsLook.shut; drawCallsLook(); });
+  $("calls-size").addEventListener("click", () => { callsLook.large = !callsLook.large; callsLook.shut = false; drawCallsLook(); });
+  $("calls-rules").addEventListener("click", () => { callsLook.rules = !callsLook.rules; callsLook.shut = false; drawCallsLook(); if (callsLook.rules && tableShown()) showCalls("lines"); });
+  $("note").addEventListener("click", () => $("note").classList.toggle("open"));
+  drawCallsLook();
 
   // ---------------------------------------------------------------- the calls' scroll buttons
   // shown only while the block that is open (the calls' lines or the Impulse call table) is longer than its room. One press moves
@@ -1029,7 +1073,7 @@
   $("days").addEventListener("change", () => { state.days = Number($("days").value); save(); shownKey = state.name + state.interval + state.days; setAll(true); });
   $("index").addEventListener("change", () => { state.signal = null; drawSignal(); setTimeout(loadSignal, 0); state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
   // every indicator but the profile has its switch, and the page remembers how each was left
-  $("show-volume").addEventListener("change", () => { setVolume(); save(); });
+  $("show-volume").addEventListener("change", () => { setVolume(); roomOnTop(); save(); });
   $("show-rsi").addEventListener("change", () => { dropImpulse(); setRsi(); setImpulse(); drawLegend(); save(); });  // the Impulse pane stands under the RSI's: taken off and put back so the panes keep their order
   $("show-signal").addEventListener("change", () => { save(); drawSignal(); if ($("show-signal").checked) loadSignal(); });
   $("show-shape").addEventListener("change", () => { save(); rebuild(); });

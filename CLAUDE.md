@@ -265,6 +265,12 @@ their own logic. Read this before touching the code.
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
   no longer names expired contracts), newest piece first until Dhan has no more; `lab/check_volume_download.py`.
+  The page's fit (15 November, the owner, with a photo of the candles squeezed above a tall Impulse pane and table: "main candle
+  chart with volume profile is also not fitting well", then a reference picture "about the chart size"): the calls block under
+  the chart opens closed, so the chart has the whole height; a capsule opens it (22vh, 46vh with the larger button), the arrow
+  closes it, the i button shows the rules in words (`callsLook`, localStorage "volumeProfileCallsLook"). `fitPanes()` gives each
+  pane a fixed share (candles 76% with Impulse, 64% with RSI and Impulse, 80% with RSI) and a pane's edge cannot be dragged.
+  With Volume unticked the candles use the volume's room. The note is one line; a press opens it. No call logic in any of this.
   The Shape signal (15 November, the owner, with the Pine script "Volume Profile Anatomies (D / B / P / Double Zone)": "make your
   own volume profile strategy out of it"; "multiple signals should be allowed in a day"; "Build option 1 but this user interface
   should not be changed at all"): `static/vpshape.js`, counted in the page. The tick box "Shape signal" is OFF until ticked; with
