@@ -98,6 +98,21 @@
   /* The signal (13 November, the owner's document "Volume Profile Signal Logic", its note 10: one screen with yesterday's VAL,
      POC and VAH, the naked POC list, how today opened, the signal or WAIT with its reason, the stop, the target and the lots) */
   #calls-wrap { position: relative; flex: none; }
+  #calls-tabs { display: flex; gap: 8px; padding: 6px 12px; border-top: 1px solid var(--border); }
+  #calls-tabs .cap { font: inherit; font-size: 12px; font-weight: 600; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--ink); cursor: pointer; }
+  #calls-tabs .cap:hover { background: var(--hover); }
+  #calls-tabs .cap.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  #imptable { flex: none; max-height: 34vh; overflow: auto; overscroll-behavior: contain; touch-action: pan-x pan-y; border-top: 1px solid var(--border); }
+  #imptable[hidden], #calls[hidden] { display: none; }
+  #imptable table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+  #imptable th { position: sticky; top: 0; z-index: 2; background: var(--surface); text-align: left; padding: 7px 12px; white-space: nowrap; font-weight: 600; color: var(--ink-2); border-bottom: 1px solid var(--border); cursor: grab; -webkit-user-select: none; user-select: none; touch-action: none; }
+  #imptable th.drag { opacity: 0.45; cursor: grabbing; }
+  #imptable th.before { box-shadow: inset 3px 0 0 var(--accent); } #imptable th.after { box-shadow: inset -3px 0 0 var(--accent); }
+  #imptable td { padding: 5px 12px; white-space: nowrap; border-bottom: 1px solid var(--border); color: var(--ink); }
+  #imptable td.k { color: var(--ink-2); } #imptable td.up { color: var(--up); font-weight: 600; } #imptable td.down { color: var(--down); font-weight: 600; }
+  #imptable td .side { font-weight: 700; padding: 0 8px; border-radius: 5px; color: #fff; background: var(--muted); } #imptable td .side.ce { background: var(--up); } #imptable td .side.pe { background: var(--down); }
+  #imptable-empty { margin: 0; padding: 10px 12px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 600px) { #imptable { max-height: 30vh; } #calls-tabs { padding: 5px 10px; } }
   #calls-scroll { position: absolute; right: 12px; bottom: 6px; display: flex; flex-direction: column; gap: 6px; }
   #calls-scroll[hidden] { display: none; }
   #calls-scroll button { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18); cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; }
@@ -207,10 +222,22 @@
        below the chart ... whatever the call page fires, move it all below the chart"): the document's Signal, the Shape signal,
        the Impulse calls. The block scrolls inside itself when it is long, so the chart keeps its room -->
   <div id="calls-wrap">
+    <!-- two capsules (15 November, the owner: "make a separate table with header as Impulse call table as a sperate capsule tab and
+         add all the impulse calls in that table"): the calls' lines as before, or the table of the Impulse calls -->
+    <div id="calls-tabs" role="tablist" aria-label="Calls">
+      <button type="button" class="cap on" id="tab-lines" role="tab" aria-selected="true">Calls</button>
+      <button type="button" class="cap" id="tab-imptable" role="tab" aria-selected="false">Impulse call table</button>
+    </div>
     <div id="calls">
       <div id="sig" aria-live="polite"></div>
       <div id="shape" aria-live="polite" hidden></div>
       <div id="impulse" aria-live="polite" hidden></div>
+    </div>
+    <!-- the Impulse call table: every Impulse call of the days loaded, the newest first; the header row stays in place; a column
+         is moved left or right by holding its header and dragging it; the order is remembered -->
+    <div id="imptable" hidden>
+      <table aria-label="Impulse call table"><thead><tr></tr></thead><tbody></tbody></table>
+      <p id="imptable-empty" hidden></p>
     </div>
     <!-- the scroll buttons (15 November, the owner: "add the scroll down button for the web and mobile both", then "it should move
          one by one to downside and one by one to the upside when press above round button"): there only while the calls do not
@@ -571,7 +598,7 @@
     state.timeOnly = !have;
     state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); const got = $("show-shape").checked ? VpShape.read(f || d, have ? vols : null) : null; return { bars: d, profile: VolProfile.build(f || d, have ? vols : null), shape: got && got.shape }; });
     profile.requestUpdate && profile.requestUpdate();
-    drawLegend(); drawNote(); drawShape(); drawImpulse();
+    drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable();
   }
   function setVolume() {
     const up = alpha(css("--up"), 0.45), down = alpha(css("--down"), 0.45);
@@ -895,27 +922,100 @@
     impMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
   }
 
-  // ---------------------------------------------------------------- the calls' scroll buttons
-  // shown only while the calls' block is longer than its room. One press moves the block by ONE row of text: the lower
-  // button one row down, the upper one one row up; at an end its button goes pale. They follow what the block
-  // holds (a signal ticked on or off, a new call)
+  // ---------------------------------------------------------------- the Impulse call table
+  // 15 November, the owner: "make a separate table with header as Impulse call table as a sperate capsule tab and add all the impulse
+  // calls in that table. table should have scroll up and down button. table should have all the headers a fixed row and also should
+  // have the functionality of moving the column from left to right and right to left by holding the column itself."
+  // Every Impulse call of the days the page holds (the last five; the first of them only warms the averages up), the newest first.
+  // The header row stays while the rows move under it; a column is moved by holding its header and dragging it left or right, with
+  // the mouse or a finger; the order is remembered on this device. The calls are the ones static/impulse.js gives: nothing is decided here
+  const IMP_COLS = [["day", "Date"], ["n", "No."], ["side", "Call"], ["signal", "Signal candle"], ["entryAt", "Entry time"], ["entry", "Entry"], ["stop", "Stop"],
+                    ["exitAt", "Exit time"], ["exit", "Exit"], ["how", "Ended by"], ["points", "Points"], ["md", "Impulse MACD"], ["sb", "Signal line"], ["shape", "Shape then"]];
+  let impOrder = IMP_COLS.map(c => c[0]), impPast = new Map(), impHead = "", impBody = "", impDrag = null;
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfileImpulseCols") || "null"); if (Array.isArray(saved) && saved.length === impOrder.length && impOrder.every(k => saved.includes(k))) impOrder = saved; } catch (e) {}
+  const tableShown = () => !$("imptable").hidden;
+  function impulseRows() {
+    const days = VolProfile.sessions(state.fine), have = [...state.fineVolumes.values()].some(v => v > 0), weights = have ? state.fineVolumes : null, now = Date.now() / 1000, rows = [];
+    for (let i = 1; i < days.length; i++) {  // the first day loaded has no candles before it for the averages: it only warms them up
+      const fine = days[i], lastDay = i === days.length - 1, key = `${state.name}|${fine[0].time}|${fine.length}|${have}`;
+      let calls = lastDay ? null : impPast.get(key);
+      if (!calls) {
+        const all5 = VpShape.five(days.slice(0, i + 1).flat()), dayNo = Math.floor((fine[0].time + IST) / 86400);
+        const closed = all5.filter(b => Math.floor((b.time + IST) / 86400) === dayNo && b.time + 300 <= now).length;
+        calls = Impulse.calls(all5, closed, fine, weights).calls;
+        if (!lastDay) { if (impPast.size > 40) impPast.clear(); impPast.set(key, calls); }
+      }
+      for (const t of calls) rows.push({ t, day: dayOf(fine[0].time) });
+    }
+    return rows.sort((a, b) => b.t.entryTime - a.t.entryTime);
+  }
+  function drawImpulseTable() {
+    if (!tableShown() || impDrag) return;
+    const names = new Map(IMP_COLS), head = impOrder.join(",");
+    if (head !== impHead) { impHead = head; impBody = ""; $("imptable").querySelector("thead tr").innerHTML = impOrder.map(k => `<th data-col="${k}" title="Hold and drag to move this column">${names.get(k)}</th>`).join(""); }
+    const rows = impulseRows(), sign = (x) => `${x >= 0 ? "+" : "−"}${num(Math.abs(x))}`;
+    const cell = {
+      day: (r) => `<td class="k">${r.day}</td>`, n: (r) => `<td class="k">${r.t.n}</td>`,
+      side: (r) => `<td><span class="side ${r.t.side.toLowerCase()}">Buy ${r.t.side}</span></td>`,
+      signal: (r) => `<td>${VpShape.hm(r.t.signalTime)}</td>`, entryAt: (r) => `<td>${VpShape.hm(r.t.entryTime)}</td>`, entry: (r) => `<td>${num(r.t.entry)}</td>`, stop: (r) => `<td>${num(r.t.stop)}</td>`,
+      exitAt: (r) => `<td>${r.t.exitTime != null ? VpShape.hm(r.t.exitTime) : "—"}</td>`, exit: (r) => `<td>${r.t.exit != null ? num(r.t.exit) : "—"}</td>`,
+      how: (r) => `<td class="k">${r.t.how === "stop" ? "Stop" : r.t.how === "time" ? "15:15" : "Still open"}</td>`,
+      points: (r) => `<td class="${r.t.points >= 0 ? "up" : "down"}">${sign(r.t.points)}</td>`,
+      md: (r) => `<td>${num(r.t.md)}</td>`, sb: (r) => `<td>${r.t.sb != null ? num(r.t.sb) : "—"}</td>`, shape: (r) => `<td class="k">${VpShape.NAMES[r.t.shape].split(" (")[0]}</td>`,
+    };
+    const body = rows.map(r => `<tr>${impOrder.map(k => cell[k](r)).join("")}</tr>`).join("");
+    if (body !== impBody) { impBody = body; $("imptable").querySelector("tbody").innerHTML = body; }
+    const empty = $("imptable-empty"); empty.hidden = rows.length > 0;
+    if (!rows.length) empty.textContent = state.fine.length ? "No Impulse call on the days loaded." : "Reading the candles…";
+  }
+  // a column is moved by holding its header: the header under the pointer shows on which side it will land
   (() => {
-    const box = $("calls"), wrap = $("calls-scroll"), up = $("calls-up"), down = $("calls-down");
-    const row = () => { const cs = getComputedStyle($("sig")), h = parseFloat(cs.lineHeight); return Math.round((h > 0 ? h : parseFloat(cs.fontSize) * 1.4) + 2); };  // one row of the calls' text, with the gap between rows
-    const most = () => box.scrollHeight - box.clientHeight;
+    const table = $("imptable"), heads = () => [...table.querySelectorAll("th")], clear = () => heads().forEach(th => th.classList.remove("before", "after", "drag"));
+    const target = (x) => { const hs = heads().filter(th => th.dataset.col !== impDrag.key); let best = null; for (const th of hs) { const r = th.getBoundingClientRect(); if (x >= r.left && x <= r.right) best = { th, after: x > r.left + r.width / 2 }; }
+      if (!best && hs.length) { const first = hs[0].getBoundingClientRect(), lastTh = hs[hs.length - 1]; best = x < first.left ? { th: hs[0], after: false } : { th: lastTh, after: true }; } return best; };
+    table.addEventListener("pointerdown", (e) => { const th = e.target.closest("th"); if (!th || (e.pointerType === "mouse" && e.button !== 0)) return; impDrag = { key: th.dataset.col, x: e.clientX, moved: false, id: e.pointerId }; try { th.setPointerCapture(e.pointerId); } catch (err) {} });
+    table.addEventListener("pointermove", (e) => { if (!impDrag || e.pointerId !== impDrag.id) return; if (!impDrag.moved && Math.abs(e.clientX - impDrag.x) < 6) return; impDrag.moved = true; e.preventDefault();
+      clear(); const own = heads().find(th => th.dataset.col === impDrag.key); if (own) own.classList.add("drag"); const t = target(e.clientX); if (t) t.th.classList.add(t.after ? "after" : "before"); });
+    const end = (e, drop) => { if (!impDrag || e.pointerId !== impDrag.id) return; const d = impDrag, t = drop && d.moved ? target(e.clientX) : null; impDrag = null; clear();
+      if (t) { const order = impOrder.filter(k => k !== d.key), at = order.indexOf(t.th.dataset.col) + (t.after ? 1 : 0); order.splice(at, 0, d.key); impOrder = order; try { localStorage.setItem("volumeProfileImpulseCols", JSON.stringify(order)); } catch (err) {} }
+      drawImpulseTable(); };
+    table.addEventListener("pointerup", (e) => end(e, true)); table.addEventListener("pointercancel", (e) => end(e, false));
+  })();
+  // the two capsules: the calls' lines, or the table
+  function showCalls(which) {
+    const tab = which === "table";
+    $("calls").hidden = tab; $("imptable").hidden = !tab;
+    $("tab-lines").classList.toggle("on", !tab); $("tab-imptable").classList.toggle("on", tab);
+    $("tab-lines").setAttribute("aria-selected", String(!tab)); $("tab-imptable").setAttribute("aria-selected", String(tab));
+    try { localStorage.setItem("volumeProfileCallsTab", tab ? "table" : "lines"); } catch (e) {}
+    drawImpulseTable(); window.dispatchEvent(new Event("resize"));
+  }
+  $("tab-lines").addEventListener("click", () => showCalls("lines")); $("tab-imptable").addEventListener("click", () => showCalls("table"));
+
+  // ---------------------------------------------------------------- the calls' scroll buttons
+  // shown only while the block that is open (the calls' lines or the Impulse call table) is longer than its room. One press moves
+  // it by ONE row (a row of text, or a row of the table): the lower button one row down, the upper one one row up; at an end its
+  // button goes pale. They follow what the block holds (a signal ticked on or off, a new call, the other capsule)
+  (() => {
+    const lines = $("calls"), table = $("imptable"), wrap = $("calls-scroll"), up = $("calls-up"), down = $("calls-down");
+    const box = () => table.hidden ? lines : table;
+    const row = () => { if (!table.hidden) { const tr = table.querySelector("tbody tr"); if (tr) return Math.round(tr.getBoundingClientRect().height); }
+      const cs = getComputedStyle($("sig")), h = parseFloat(cs.lineHeight); return Math.round((h > 0 ? h : parseFloat(cs.fontSize) * 1.4) + 2); };  // one row of the calls' text, with the gap between rows
+    const most = () => box().scrollHeight - box().clientHeight;
     const look = () => {
       const more = most() > 4;
       wrap.hidden = !more;
-      box.style.paddingRight = more ? "52px" : "";  // the words keep clear of the buttons
-      up.disabled = box.scrollTop <= 2; down.disabled = box.scrollTop >= most() - 2;
+      lines.style.paddingRight = more && table.hidden ? "52px" : "";  // the words keep clear of the buttons
+      table.style.paddingRight = more && !table.hidden ? "52px" : "";
+      up.disabled = box().scrollTop <= 2; down.disabled = box().scrollTop >= most() - 2;
     };
-    const go = (dir) => box.scrollTo({ top: Math.max(0, Math.min(most(), box.scrollTop + dir * row())), behavior: "smooth" });
+    const go = (dir) => box().scrollTo({ top: Math.max(0, Math.min(most(), box().scrollTop + dir * row())), behavior: "smooth" });
     up.addEventListener("click", () => go(-1)); down.addEventListener("click", () => go(1));
-    box.addEventListener("scroll", look, { passive: true });
-    new MutationObserver(look).observe(box, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    for (const el of [lines, table]) { el.addEventListener("scroll", look, { passive: true }); new MutationObserver(look).observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] }); }
     window.addEventListener("resize", look);
     look();
   })();
+  try { if (localStorage.getItem("volumeProfileCallsTab") === "table") showCalls("table"); } catch (e) {}
 
   // ---------------------------------------------------------------- the tool row
   const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, signal: $("show-signal").checked, shape: $("show-shape").checked, impulse: $("show-impulse").checked })); } catch (e) {} };
@@ -963,7 +1063,7 @@
   // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
   const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };
   window.addEventListener("scroll", pinPage, true);
-  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #calls")) e.preventDefault(); }, { passive: false });
+  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #calls-wrap")) e.preventDefault(); }, { passive: false });
   for (const kind of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(kind, (e) => e.preventDefault());
   document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);

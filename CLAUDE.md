@@ -249,6 +249,13 @@ their own logic. Read this before touching the code.
   (`#calls`) BELOW the chart, above the note; it scrolls inside itself when it is long (at most about a third of the screen). Two round
   scroll buttons stand at its lower right while the calls do not fit ("add the scroll down button for the web and mobile both";
   "it should move one by one to downside and one by one to the upside"): each press moves the block by one row of text, the upper button up, the lower one down.
+  The Impulse call table (15 November, the owner: "make a separate table with header as Impulse call table as a sperate capsule
+  tab and add all the impulse calls in that table. table should have scroll up and down button. table should have all the headers
+  a fixed row and also should have the functionality of moving the column from left to right and right to left by holding the
+  column itself"): two capsules above the calls' block, "Calls" (the lines) and "Impulse call table": every Impulse call of the
+  days the page holds (the last five; the first only warms the averages up), the newest first, 14 columns. The header row stays
+  in place; a column is moved by holding its header and dragging it (mouse or finger), the order kept on the device
+  (`volumeProfileImpulseCols`); the two scroll buttons move it one table row a press. The capsule left open is remembered.
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
