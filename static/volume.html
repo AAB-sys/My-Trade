@@ -89,8 +89,10 @@
   #info .cut { width: 1px; align-self: stretch; background: var(--border); flex: none; }
   /* the chart's own buttons (13 November, the owner: "there is no manual zoom in and zoom out button on the chart, add those, also add
      left right up down buttons"): a row at the foot of the candles, in the middle */
-  #nav { position: absolute; left: 50%; transform: translateX(-50%); top: 0; z-index: 4; display: flex; gap: 2px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); opacity: 0.92; visibility: hidden; }
-  #nav button { width: 32px; height: 32px; display: grid; place-items: center; background: transparent; border: 0; border-radius: 6px; color: var(--ink-2); cursor: pointer; padding: 0; touch-action: manipulation; }
+  #inforow { display: flex; align-items: stretch; border-bottom: 1px solid var(--border); flex: none; }
+  #inforow #info { flex: 1; min-width: 0; border-bottom: 0; align-items: center; }
+  #nav { display: flex; align-items: center; gap: 1px; padding: 0 6px; border-left: 1px solid var(--border); flex: none; }
+  #nav button { width: 28px; height: 26px; display: grid; place-items: center; background: transparent; border: 0; border-radius: 6px; color: var(--ink-2); cursor: pointer; padding: 0; touch-action: manipulation; }
   #nav button:hover { background: var(--hover); color: var(--ink); }
   #nav button:active { color: var(--accent); }
   #nav svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
@@ -203,7 +205,20 @@
     <!-- the Impulse MACD (15 November, the owner, with LazyBear's Pine script): off until ticked; with it off the page is as it was -->
     <label><input type="checkbox" id="show-impulse"> Impulse MACD</label>
   </div>
-  <div id="info" aria-live="off"></div>
+  <div id="inforow">
+    <div id="info" aria-live="off"></div>
+  <div id="nav" role="toolbar" aria-label="Move and zoom the chart">
+    <button type="button" data-nav="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 18 18"><path d="M4 9h10"/></svg></button>
+    <button type="button" data-nav="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 18 18"><path d="M4 9h10M9 4v10"/></svg></button>
+    <span class="sep"></span>
+    <button type="button" data-nav="left" title="Move left (earlier)" aria-label="Move left"><svg viewBox="0 0 18 18"><path d="M11 4L6 9l5 5"/></svg></button>
+    <button type="button" data-nav="right" title="Move right (later)" aria-label="Move right"><svg viewBox="0 0 18 18"><path d="M7 4l5 5-5 5"/></svg></button>
+    <button type="button" data-nav="up" title="Move up (higher prices)" aria-label="Move up"><svg viewBox="0 0 18 18"><path d="M4 11l5-5 5 5"/></svg></button>
+    <button type="button" data-nav="down" title="Move down (lower prices)" aria-label="Move down"><svg viewBox="0 0 18 18"><path d="M4 7l5 5 5-5"/></svg></button>
+    <span class="sep"></span>
+    <button type="button" data-nav="reset" title="Back to the whole view" aria-label="Back to the whole view"><svg viewBox="0 0 18 18"><path d="M4 9a5 5 0 1 0 1.6-3.7M4 3.5v2.5h2.5"/></svg></button>
+  </div>
+  </div>
   <div id="main">
     <div id="draw" role="toolbar" aria-label="Drawing tools">
       <button type="button" data-tool="" aria-pressed="true" title="Pointer: move the chart, tap a drawing to pick it" aria-label="Pointer"><svg viewBox="0 0 20 20"><path d="M5 3l10 7-4.5 1 2.5 5-2 1-2.5-5L5 15z"/></svg></button>
@@ -219,17 +234,6 @@
     </div>
     <div id="wrap">
       <div id="legend" aria-live="off"></div>
-      <div id="nav" role="toolbar" aria-label="Move and zoom the chart">
-        <button type="button" data-nav="out" title="Zoom out" aria-label="Zoom out"><svg viewBox="0 0 18 18"><path d="M4 9h10"/></svg></button>
-        <button type="button" data-nav="in" title="Zoom in" aria-label="Zoom in"><svg viewBox="0 0 18 18"><path d="M4 9h10M9 4v10"/></svg></button>
-        <span class="sep"></span>
-        <button type="button" data-nav="left" title="Move left (earlier)" aria-label="Move left"><svg viewBox="0 0 18 18"><path d="M11 4L6 9l5 5"/></svg></button>
-        <button type="button" data-nav="right" title="Move right (later)" aria-label="Move right"><svg viewBox="0 0 18 18"><path d="M7 4l5 5-5 5"/></svg></button>
-        <button type="button" data-nav="up" title="Move up (higher prices)" aria-label="Move up"><svg viewBox="0 0 18 18"><path d="M4 11l5-5 5 5"/></svg></button>
-        <button type="button" data-nav="down" title="Move down (lower prices)" aria-label="Move down"><svg viewBox="0 0 18 18"><path d="M4 7l5 5 5-5"/></svg></button>
-        <span class="sep"></span>
-        <button type="button" data-nav="reset" title="Back to the whole view" aria-label="Back to the whole view"><svg viewBox="0 0 18 18"><path d="M4 9a5 5 0 1 0 1.6-3.7M4 3.5v2.5h2.5"/></svg></button>
-      </div>
       <div id="chart"></div>
     </div>
   </div>
@@ -495,7 +499,7 @@
   candles.attachPrimitive(drawings);
   function drawDrawings(scope) {
     const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, w = scope.mediaSize.width, h = scope.mediaSize.height;
-    if (paneSize.h !== h || paneSize.w !== w) { const nav = $("nav"); nav.style.top = Math.max(0, h - 46) + "px"; nav.style.left = (w / 2) + "px"; nav.style.visibility = "visible"; }
+    if (paneSize.h !== h || paneSize.w !== w) {  }
     paneSize = { w, h };
     const color = css("--accent");
     const one = (d, picked, ghost) => {
@@ -849,13 +853,21 @@
   // Two lists work side by side (the owner: "keep the signals shapewise also and keep the calls signals with earlier logic as well.
   // Both should work hand in hand"): the BREAK calls (a close outside the value area, 12:10 to 13:30) and the SHAPE calls (each
   // shape's own setup, 10:15 to 14:30); each list has its own one call open at a time. The shape's name stands above each profile
-  let shapeMarks = null, shapeStops = [];
+  // One marker set for the Shape and the Impulse marks (15 November, the owner, with the texts of two calls drawn over each other
+  // on one candle: "why it is mixing up ?"): two sets each drew at the same spot; in one set the chart stacks them, one above the other
+  const markSets = { shape: [], impulse: [] }; let allMarks = null;
+  function drawMarks(which, marks) {
+    markSets[which] = marks;
+    if (!allMarks) allMarks = LC.createSeriesMarkers(candles, []);
+    allMarks.setMarkers([...markSets.shape, ...markSets.impulse].sort((a, b) => a.time - b.time));
+  }
+  let shapeStops = [];
   function drawShape() {
     const box = $("shape"), on = $("show-shape").checked;
     box.hidden = !on;
     for (const l of shapeStops) candles.removePriceLine(l);
     shapeStops = [];
-    if (!on) { if (shapeMarks) shapeMarks.setMarkers([]); return; }
+    if (!on) { drawMarks("shape", []); return; }
     const days = VolProfile.sessions(state.fine), fine = days[days.length - 1] || [];
     if (!fine.length) { box.innerHTML = `<div class="line"><span class="badge">…</span><span>Reading the candles…</span></div>`; return; }
     const have = [...state.fineVolumes.values()].some(v => v > 0), weights = have ? state.fineVolumes : null;
@@ -885,8 +897,7 @@
       if (x != null) marks.push({ time: x, position: up ? "aboveBar" : "belowBar", color: css("--muted"), shape: up ? "arrowDown" : "arrowUp", text: (tag ? "x" + tag.trim() : "X") + t.n });
       if (t.how === "open") shapeStops.push(candles.createPriceLine({ price: t.stop, title: L.key + " stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true }));
     }
-    if (!shapeMarks) shapeMarks = LC.createSeriesMarkers(candles, []);
-    shapeMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
+    drawMarks("shape", marks);
   }
 
   // ---------------------------------------------------------------- the Impulse MACD (static/impulse.js)
@@ -895,7 +906,7 @@
   // under the chart (and under the RSI's), drawn as the script draws it: md as coloured bars, md minus its signal as blue bars, the
   // signal as a line; and the Impulse calls: the page's break calls that the impulse agrees with (the rule is in impulse.js).
   // The pane follows the candle size shown; the calls always read the 5-minute candles of the last five days. Paper only
-  let imp = null, impMarks = null, impStop = null;
+  let imp = null, impStop = null;
   function dropImpulse() { if (imp) { for (const x of [imp.md, imp.sh, imp.sb]) chart.removeSeries(x); imp = null; fitPanes(); } }
   function setImpulse() {
     if (!$("show-impulse").checked) { dropImpulse(); return; }
@@ -917,7 +928,7 @@
     const box = $("impulse"), on = $("show-impulse").checked;
     box.hidden = !on;
     if (impStop) { candles.removePriceLine(impStop); impStop = null; }
-    if (!on) { if (impMarks) impMarks.setMarkers([]); return; }
+    if (!on) { drawMarks("impulse", []); return; }
     const days = VolProfile.sessions(state.fine), fine = days[days.length - 1] || [];
     if (!fine.length) { box.innerHTML = `<div class="line"><span class="badge">…</span><span>Reading the candles…</span></div>`; return; }
     const have = [...state.fineVolumes.values()].some(v => v > 0), weights = have ? state.fineVolumes : null;
@@ -951,8 +962,7 @@
       if (xx != null) marks.push({ time: xx, position: up ? "aboveBar" : "belowBar", color: css("--muted"), shape: up ? "arrowDown" : "arrowUp", text: "xI" + t.n });
       if (t.how === "open") impStop = candles.createPriceLine({ price: t.stop, title: "Impulse stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true });
     }
-    if (!impMarks) impMarks = LC.createSeriesMarkers(candles, []);
-    impMarks.setMarkers(marks.sort((a, b) => a.time - b.time));
+    drawMarks("impulse", marks);
   }
 
   // ---------------------------------------------------------------- the Impulse call table
