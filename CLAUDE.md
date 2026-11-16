@@ -261,6 +261,9 @@ their own logic. Read this before touching the code.
   days the page holds (the last five; the first only warms the averages up), the newest first, 14 columns. The header row stays
   in place; a column is moved by holding its header and dragging it (mouse or finger), the order kept on the device
   (`volumeProfileImpulseCols`); the two scroll buttons move it one table row a press. The capsule left open is remembered.
+  Where each day's profile stands (16 November, the owner: "why the volume is looking onto right side ? if you see the days,
+  it is on left side ?"): every day's profile starts at its first candle and grows to the right, with one day shown or five; the
+  one-day view keeps no room on the right for it any more (`right = false` in drawProfiles, `fitDays`).
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
