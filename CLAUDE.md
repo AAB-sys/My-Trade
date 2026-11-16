@@ -262,8 +262,9 @@ their own logic. Read this before touching the code.
   in place; a column is moved by holding its header and dragging it (mouse or finger), the order kept on the device
   (`volumeProfileImpulseCols`); the two scroll buttons move it one table row a press. The capsule left open is remembered.
   Where each day's profile stands (16 November, the owner: "why the volume is looking onto right side ? if you see the days,
-  it is on left side ?"): every day's profile starts at its first candle and grows to the right, with one day shown or five; the
-  one-day view keeps no room on the right for it any more (`right = false` in drawProfiles, `fitDays`).
+  it is on left side ?"): every day's profile started at its first candle (#254); then the same night: "on current or running day,
+  this volume profile should be on right side only": the running (last) day's profile stands at the right edge with any Days
+  setting, the days before it at their own first candle (`right = lastDay` in drawProfiles; `fitDays` keeps room on the right).
   VWAP (16 November, the owner: "add VWAP line on volume profile page"; "keep it unticked"): a "VWAP" tick box, off by default
   and remembered; with it on, each day shown gets its own line from 09:15, sum((high + low + close) / 3 x volume) / sum(volume)
   on the chart's candles with the futures volume the page already reads (`vwapOf`, `setVwap`, `updateVwap` for the live
