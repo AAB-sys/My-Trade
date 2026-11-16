@@ -239,3 +239,10 @@ Warning: in year 2 nearly all profit is on the PE side (a falling market); none 
   Lesson: one day's picture is not a rule; without volume the edges give nothing on 2 years.
 - Watch list, new day 1 (16 Nov): QUIET-BREAK 1 call -128 (CE, bought the break of the first 15 minutes, stopped at the far side);
   NEWHIGH-TREND 1 call -44; DIR-1215 no call.
+
+## 16 Nov night: idea 9 NOON (from the two-year profile study, done on ULTROAN's own initiative). Variants ever tried: 562
+At 11:30/12:00/12:30/13:00, the day's profile so far (page code, by time): close above VAH -> CE, below VAL -> PE (optionally only
+with the shape agreeing), stop POC / middle / 2 ATR, out 15:15. 48 variants (strat/noonnb.js shows all, both years).
+Year 1: 46 of 48 lose or are flat. Year 2: 12:30 wins well (86 calls +2,648 to +2,926, CE and PE both positive), every other time
+is small or negative. Verdict: a one-time-of-day, one-year effect; NOT on the watch list. The tendency is real (noon outside
+the value area closes outside 67-69%), but after 8 points a call it does not pay on year 1. Re-test on the volume days.
