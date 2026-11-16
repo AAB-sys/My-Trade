@@ -9,3 +9,11 @@ and answers these by itself every evening; open questions are re-answered as day
 ## Q2 (open): after a wick through VAH or VAL and a close back inside, how far does price move away, and how often does it reach the POC?
 ## Q3 (open): does the shape at 11:00 tell the afternoon's direction (P up, B down, D both ways)? Answerable on the 2-year candles (time profile).
 ## Q4 (open): do yesterday's VAH and VAL turn the price when touched, or does price go through? (yesterday's levels were not touched on 16 Nov)
+
+## Answered 16 Nov night on 2 YEARS of NIFTY 50 (497 days, 26,000+ candles 10:15-14:45; profile counted by time, the file has no volume; vpday/twoyears.js)
+1. Inside the value area the POC pulls: from either half, price touches the POC first ~45% of the time vs the near edge ~37%.
+2. Outside the value area it depends on the shape: P (busy top): above VAH comes back 58%, below VAL comes back only 36% (keeps going down);
+   B (busy bottom): below VAL comes back 65%, above VAH only 44%. A break AWAY from the busy side tends to continue; a break on the busy side returns.
+3. Noon tells the close: at 12:00 above VAH -> closes above VAH 67%; below VAL -> closes below VAL 69% (all days: 36% / 38%).
+4. Shape at 12:00 and the afternoon: P -> up 60%; B -> down 57%; Double -> down 59%; D -> 50/50.
+Not profits, tendencies. To be checked with real volume on the saved days (growing test) and turned into ideas for the lab.

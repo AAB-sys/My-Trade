@@ -1,0 +1,33 @@
+12:00 all                          n   497 | close below VAL 38%, close above VAH 36%, close inside 26%
+12:00 place POC-VAH                n   168 | close above VAH 43%, close inside 31%, close below VAL 26%
+12:00 place VAL-POC                n   166 | close below VAL 42%, close inside 30%, close above VAH 28%
+12:00 place above VAH              n    72 | close above VAH 67%, close below VAL 18%, close inside 15%
+12:00 place below VAL              n    91 | close below VAL 69%, close inside 16%, close above VAH 14%
+12:00 shape B                      n   110 | close below VAL 45%, close above VAH 34%, close inside 21%
+12:00 shape B dir                  n   110 | down 57%, up 43%
+12:00 shape D                      n   147 | close below VAL 37%, close above VAH 36%, close inside 27%
+12:00 shape D dir                  n   147 | up 50%, down 50%
+12:00 shape Double                 n   103 | close inside 38%, close below VAL 35%, close above VAH 27%
+12:00 shape Double dir             n   103 | down 59%, up 41%
+12:00 shape P                      n   137 | close above VAH 45%, close below VAL 36%, close inside 20%
+12:00 shape P dir                  n   137 | up 60%, down 40%
+place POC-VAH                      n  8510 | POC 46%, VAH 37%, two 8%, none 8%, VAL 0%
+place VAL-POC                      n  8398 | POC 44%, VAL 39%, two 8%, none 8%, VAH 0%
+place above VAH                    n  4998 | none 50%, VAH 46%, two 4%
+place below VAL                    n  5423 | none 53%, VAL 44%, two 2%, POC 0%
+shape B | POC-VAH                  n  2085 | POC 52%, VAH 30%, two 9%, none 9%
+shape B | VAL-POC                  n  2125 | VAL 45%, POC 42%, two 9%, none 4%
+shape B | above VAH                n  1003 | none 53%, VAH 44%, two 2%
+shape B | below VAL                n   807 | VAL 65%, none 29%, two 6%, POC 0%
+shape D | POC-VAH                  n  2184 | POC 44%, VAH 40%, two 11%, none 6%, VAL 0%
+shape D | VAL-POC                  n  2128 | POC 43%, VAL 42%, two 10%, none 6%, VAH 0%
+shape D | above VAH                n  1919 | none 54%, VAH 42%, two 4%
+shape D | below VAL                n  2000 | none 57%, VAL 41%, two 2%
+shape Double | POC-VAH             n  1848 | POC 44%, VAH 37%, none 14%, two 5%, VAL 0%
+shape Double | VAL-POC             n  1817 | POC 45%, VAL 34%, none 15%, two 6%, VAH 0%
+shape Double | above VAH           n  1125 | none 52%, VAH 47%, two 2%
+shape Double | below VAL           n  1179 | none 53%, VAL 46%, two 1%
+shape P | POC-VAH                  n  2393 | POC 45%, VAH 43%, two 7%, none 5%
+shape P | VAL-POC                  n  2328 | POC 48%, VAL 34%, two 9%, none 9%, VAH 0%
+shape P | above VAH                n   951 | VAH 58%, none 34%, two 9%
+shape P | below VAL                n  1437 | none 62%, VAL 36%, two 1%
