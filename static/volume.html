@@ -835,11 +835,13 @@
     const pin = $("sig-premium");
     if (pin) pin.addEventListener("change", () => { state.premium = Number(pin.value) || 0; loadSignal(); });
     // on the chart: yesterday's three levels, and the signal's stop and target
+    // after the close the lines show today's levels, for the next session (16 November: "only levels on the chart"); the box above is unchanged
+    const cl = g.chart_levels, lvc = cl ? cl.levels : lv, from = cl ? cl.levels_from : g.levels_from;
     if (lv) {
       const line = (price, title, color, style) => sigLines.push(candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true }));
-      line(lv.vah, "Prev day VAH " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);  // named as the previous day's (15 November): the drawn profile of the same day has its own 24 rows
-      line(lv.poc, "Prev day POC " + shortDay(g.levels_from), css("--poc"), LC.LineStyle.Dotted);
-      line(lv.val, "Prev day VAL " + shortDay(g.levels_from), css("--va"), LC.LineStyle.Dotted);
+      line(lvc.vah, "Prev day VAH " + shortDay(from), css("--va"), LC.LineStyle.Dotted);  // named as the previous day's (15 November): the drawn profile of the same day has its own 24 rows
+      line(lvc.poc, "Prev day POC " + shortDay(from), css("--poc"), LC.LineStyle.Dotted);
+      line(lvc.val, "Prev day VAL " + shortDay(from), css("--va"), LC.LineStyle.Dotted);
       if (s.signal !== "WAIT") { line(s.index_stop, "Stop", css("--down"), LC.LineStyle.Solid); line(s.index_target, "Target", css("--up"), LC.LineStyle.Solid); }
     }
   }

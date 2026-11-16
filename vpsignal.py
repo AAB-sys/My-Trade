@@ -206,6 +206,19 @@ def state(name: str, premium=None, live_bar=None) -> dict:
     if live_bar and finished and datetime.fromtimestamp(live_bar["time"], dhan.IST).date().isoformat() == today and live_bar["time"] > finished[-1]["t"] and live_bar["time"] + 300 > now:
         forming = candle(live_bar, None)
     view = day_view(days, today, finished, cfg, dhan.lot_size(name), premium, forming, fine) if (finished or weekday) else None
+    # the chart's three lines after the close (16 November, the owner, at night, the page still drawing Friday's VAH, POC and VAL:
+    # "Why volume profile page is still showing 13th Novembers VAH VAL and POC ?"; "I am talking about only levels on the chart not
+    # about the calls"): once today's session is over, the lines show today's levels, the ones the next session will use. The
+    # signal, its reason and its history stay today's, unchanged
+    nowt = datetime.fromtimestamp(now, dhan.IST)
+    chart_levels = None
+    if view is not None and finished and (nowt.hour, nowt.minute) >= dhan.SESSION_CLOSE:
+        nxt = (nowt + timedelta(days=1)).date()
+        while nxt.weekday() >= 5:
+            nxt += timedelta(days=1)
+        ahead = day_view(days, nxt.isoformat(), [], cfg, fine=fine)
+        if ahead["levels"] and ahead["levels_from"] == today:
+            chart_levels = {"levels": ahead["levels"], "levels_from": today, "for_day": nxt.isoformat()}
     if view is None:  # a weekend: the levels for the next session, from the last one
         nxt = (datetime.fromtimestamp(now, dhan.IST) + timedelta(days=1)).date()
         while nxt.weekday() >= 5:
@@ -223,7 +236,7 @@ def state(name: str, premium=None, live_bar=None) -> dict:
     past = dhan.cached(("vp signal past", name, today), 600, earlier_days)
     for c in finished:
         c.pop("t", None)
-    return {"name": name, **view, "history": past[::-1], "volume_problem": volume_problem, "last_candle": finished[-1]["hm"] if finished else None, "live": forming is not None,
+    return {"name": name, **view, "history": past[::-1], "volume_problem": volume_problem, "last_candle": finished[-1]["hm"] if finished else None, "live": forming is not None, "chart_levels": chart_levels,
             "settings": {k: cfg[k] for k in ("bin_size_pts", "value_area_pct", "edge_tolerance_pts", "stop_buffer_pts", "acceptance_closes", "min_reward_to_risk",
                                              "naked_poc_max_age_days", "no_entry_before", "no_entry_after", "exit_all_by", "assumed_delta", "capital_inr",
                                              "max_loss_per_trade_inr", "max_capital_per_trade_pct")},
