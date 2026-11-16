@@ -1138,6 +1138,61 @@ async def volume_forever() -> None:
         await asyncio.sleep(VOLUME_CHECK_SECONDS)
 
 
+# The past futures volume, kept on GitHub for the research (16 November, the owner: "Yes, make the PR and make the study on every 5
+# day"): Dhan still gives the minute volume of the contract trading now, so once a day, outside market hours, the server writes
+# each index's 1-minute candles with that volume to the data branch, history/volume/<INDEX>_1min.csv (the same eight columns as
+# the "Candles with volume" download). The day's save keeps the volume from 16 November on; this file holds the days before
+# it that Dhan can still give. No page and no rule reads it.
+VOLUME_HISTORY_DAYS = 120
+VOLUME_HISTORY: dict = {}  # name -> what the last write found, for /health
+
+
+def volume_file(key: str, size: int, first: date, last: date) -> dict:
+    """The "Candles with volume" file for one index: {"lines", "candles", "with_volume", "first_day", "contract"}. Raises dhan.DhanError."""
+    vol = dhan.future_history(key, size, first, last)
+    volumes = {t: v for t, v in vol["bars"]}
+    contract = f"{vol['contract']['name']} ({vol['contract']['expiry']})"
+    start = datetime.fromtimestamp(vol["bars"][0][0], dhan.IST).date() if vol["bars"] else None
+    bars = dhan.history(key, size, start, last) if start else []
+    lines, with_volume = ["Date,Time,Open,High,Low,Close,Volume,Contract"], 0
+    for b in bars:
+        t, v = datetime.fromtimestamp(b["time"], dhan.IST), volumes.get(b["time"])
+        with_volume += v is not None
+        lines.append(f"{t:%Y-%m-%d},{t:%H:%M},{b['open']:.2f},{b['high']:.2f},{b['low']:.2f},{b['close']:.2f},{'' if v is None else v},{contract}")
+    return {"lines": lines, "candles": len(bars), "with_volume": with_volume, "first_day": start.isoformat() if start else None, "contract": contract}
+
+
+def volume_history_once(today: date) -> None:
+    """One pass: every index's file written to GitHub; what happened is kept in VOLUME_HISTORY. Never raises."""
+    first = today - timedelta(days=VOLUME_HISTORY_DAYS)
+    for name in dhan.OPTION_SEGMENTS:
+        seen = {"at": datetime.now(dhan.IST).isoformat(timespec="seconds"), "ok": False, "file": None, "first_day": None, "candles": 0, "with_volume": 0, "contract": None, "problem": None}
+        try:
+            got = volume_file(name, 1, first, today)
+            rel = f"history/volume/{name.replace(' ', '')}_1min.csv"
+            record.push_bytes(rel, ("\n".join(got["lines"]) + "\n").encode(), f"Candles with volume {name} 1 min, {got['first_day']} to {today.isoformat()}")
+            seen.update(ok=True, file=rel, **{k: got[k] for k in ("first_day", "candles", "with_volume", "contract")})
+        except Exception as exc:  # noqa: BLE001 - a refusal is the finding; the next day tries again
+            seen["problem"] = str(getattr(exc, "message", exc))[:200]
+            log.warning("volume history, %s: %s", name, seen["problem"])
+        VOLUME_HISTORY[name] = seen
+
+
+async def volume_history_forever() -> None:
+    """Once a day, outside market hours (before 09:00 or after 15:45 IST, or a weekend), a few minutes after the start."""
+    if not record.TOKEN:
+        return
+    await asyncio.sleep(180)
+    done = None
+    while True:
+        now = datetime.now(dhan.IST)
+        quiet = now.weekday() >= 5 or now.hour < 9 or (now.hour, now.minute) >= (15, 45)
+        if quiet and done != now.date():
+            await asyncio.to_thread(volume_history_once, now.date())
+            done = now.date()
+        await asyncio.sleep(1800)
+
+
 async def give_memory_back_forever() -> None:
     """Once a minute the allocator's free memory goes back to the system (memwatch.give_back; 9 October: 265 MB held
     free against 36 MB in use, and the server grew towards Render's 512 MB), after a full run of the garbage collector
@@ -1181,6 +1236,7 @@ async def lifespan(app: FastAPI):
         tasks.append(asyncio.create_task(warm_option_ids()))
         tasks.append(asyncio.create_task(token_forever()))
         tasks.append(asyncio.create_task(volume_forever()))
+        tasks.append(asyncio.create_task(volume_history_forever()))
         tasks.append(asyncio.create_task(calls_forever()))
         tasks.append(asyncio.create_task(live_forever()))
     if SELF_URL:
@@ -1269,7 +1325,7 @@ def feed_state() -> dict:
             "tick_rate": tick_rate_report(),  # how many ticks a minute each index gets from Dhan, and the longest wait between two (12 November)
             "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
-            "volume_profile": {"page_file": (STATIC / "volume.html").is_file() and (STATIC / "volprofile.js").is_file(), **dhan.volume_report()},  # the Volume Profile page's check (13 November)
+            "volume_profile": {"page_file": (STATIC / "volume.html").is_file() and (STATIC / "volprofile.js").is_file(), **dhan.volume_report()}, "volume_history": VOLUME_HISTORY,  # the Volume Profile page's check (13 November)
             "option_list": dhan.list_report()}  # what Dhan's instrument list gave (9 October, SENSEX): option ids per underlying, SENSEX's expiries and rows
 
 

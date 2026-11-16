@@ -269,6 +269,11 @@ their own logic. Read this before touching the code.
   and remembered; with it on, each day shown gets its own line from 09:15, sum((high + low + close) / 3 x volume) / sum(volume)
   on the chart's candles with the futures volume the page already reads (`vwapOf`, `setVwap`, `updateVwap` for the live
   candle); its value in the row above the chart. No volume: no line. No calls.
+  The past futures volume for the research (16 November, the owner: "Yes, make the PR and make the study on every 5 day"):
+  once a day outside market hours (`volume_history_forever`, three minutes after the start, then every half hour it checks),
+  `volume_history_once` writes each index's 1-minute candles with the futures volume Dhan still gives (the contract trading
+  now, the last 120 days) to the data branch as `history/volume/<INDEX>_1min.csv`, the download's eight columns
+  (`volume_file`). /health shows it under feed.volume_history. No page and no rule reads it; `lab/check_volume_history.py`.
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
