@@ -278,6 +278,10 @@ their own logic. Read this before touching the code.
   index's part of `sessions/<date>.json` gains `volume: {contract, 1m: [[time, volume], ...]}` (`record.build_day`), so the
   page's profile of a past day can be rebuilt exactly; a refusal leaves the part out and never costs the candles;
   `lab/check_record_volume.py`.
+  The chart's three "Prev day" lines after the close (16 November, the owner: "Why volume profile page is still showing 13th
+  Novembers VAH VAL and POC ?"; "I am talking about only levels on the chart not about the calls"): from 15:30 until the next
+  open, `vpsignal.state` adds `chart_levels` (today's levels, which the next session uses) and the page draws the lines from
+  them; the Signal box, its levels text and the calls stay today's, unchanged.
   The Shape signal (15 November, the owner, with the Pine script "Volume Profile Anatomies (D / B / P / Double Zone)": "make your
   own volume profile strategy out of it"; "multiple signals should be allowed in a day"; "Build option 1 but this user interface
   should not be changed at all"): `static/vpshape.js`, counted in the page. The tick box "Shape signal" is OFF until ticked; with
