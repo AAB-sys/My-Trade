@@ -1,0 +1,208 @@
+{
+ "NIFTY 50": {
+  "day": "2026-11-16",
+  "levels": {
+   "val": 25075,
+   "poc": 25112.5,
+   "vah": 25175,
+   "hvn": [
+    25112.5
+   ],
+   "lvn": [
+    25157.5
+   ],
+   "session_low": 25054.4,
+   "session_high": 25246.35,
+   "uses_volume": false,
+   "candles": "1m",
+   "bin_size_pts": 5
+  },
+  "levels_from": "2026-11-13",
+  "naked": [
+   {
+    "date": "2026-10-29",
+    "poc": 22852.5,
+    "age": 10
+   },
+   {
+    "date": "2026-10-30",
+    "poc": 23012.5,
+    "age": 9
+   },
+   {
+    "date": "2026-11-02",
+    "poc": 23332.5,
+    "age": 8
+   },
+   {
+    "date": "2026-11-03",
+    "poc": 23657.5,
+    "age": 7
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 23912.5,
+    "age": 6
+   },
+   {
+    "date": "2026-11-06",
+    "poc": 24617.5,
+    "age": 4
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 25002.5,
+    "age": 3
+   },
+   {
+    "date": "2026-11-12",
+    "poc": 25257.5,
+    "age": 1
+   }
+  ],
+  "opened": "above",
+  "signal": {
+   "signal": "CE",
+   "setup": "Acceptance above value",
+   "why": "2 closes in a row outside the value area",
+   "candle": "14:15",
+   "index_price": 25195.55,
+   "index_stop": 25165,
+   "index_target": 25257.5,
+   "risk_pts": 30.55,
+   "reward_pts": 61.95,
+   "reward_to_risk": 2.03,
+   "opened": "above",
+   "skipped": [],
+   "outcome": {
+    "how": "time",
+    "at": "15:15",
+    "exit": 25220.05,
+    "points": 24.5,
+    "live": false
+   },
+   "sizing": {
+    "lots": null,
+    "note": "The lot size is not known yet (Dhan's instrument list is still being read)."
+   }
+  }
+ },
+ "NIFTY BANK": {
+  "day": "2026-11-16",
+  "levels": {
+   "val": 60930,
+   "poc": 61025.0,
+   "vah": 61060,
+   "hvn": [
+    60995.0,
+    61015.0
+   ],
+   "lvn": [],
+   "session_low": 60780.55,
+   "session_high": 61300.55,
+   "uses_volume": false,
+   "candles": "1m",
+   "bin_size_pts": 10
+  },
+  "levels_from": "2026-11-13",
+  "naked": [
+   {
+    "date": "2026-11-02",
+    "poc": 54875.0,
+    "age": 8
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 55815.0,
+    "age": 6
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 59205.0,
+    "age": 3
+   },
+   {
+    "date": "2026-11-11",
+    "poc": 60545.0,
+    "age": 2
+   },
+   {
+    "date": "2026-11-12",
+    "poc": 61465.0,
+    "age": 1
+   }
+  ],
+  "opened": "above",
+  "signal": {
+   "signal": "WAIT",
+   "reason": "No valid setup today.",
+   "opened": "above",
+   "levels": {
+    "val": 60930,
+    "poc": 61025.0,
+    "vah": 61060
+   },
+   "skipped": []
+  }
+ },
+ "SENSEX": {
+  "day": "2026-11-16",
+  "levels": {
+   "val": 81330,
+   "poc": 81465.0,
+   "vah": 81640,
+   "hvn": [
+    81465.0,
+    81605.0
+   ],
+   "lvn": [
+    81575.0
+   ],
+   "session_low": 81288.75,
+   "session_high": 81879.51,
+   "uses_volume": false,
+   "candles": "1m",
+   "bin_size_pts": 10
+  },
+  "levels_from": "2026-11-13",
+  "naked": [
+   {
+    "date": "2026-10-30",
+    "poc": 74395.0,
+    "age": 9
+   },
+   {
+    "date": "2026-11-02",
+    "poc": 75405.0,
+    "age": 8
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 77215.0,
+    "age": 6
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 81065.0,
+    "age": 3
+   },
+   {
+    "date": "2026-11-12",
+    "poc": 81965.0,
+    "age": 1
+   }
+  ],
+  "opened": "above",
+  "signal": {
+   "signal": "WAIT",
+   "reason": "No valid setup today.",
+   "opened": "above",
+   "levels": {
+    "val": 81330,
+    "poc": 81465.0,
+    "vah": 81640
+   },
+   "skipped": []
+  }
+ }
+}
