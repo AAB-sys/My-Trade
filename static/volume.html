@@ -20,7 +20,7 @@
     --page: #ffffff; --surface: #ffffff; --border: #e0e3eb; --grid: #f0f3fa;
     --ink: #131722; --ink-2: #434651; --muted: #787b86;
     --up: #089981; --down: #f23645; --accent: #2962ff; --hover: #f0f3fa;
-    --vp-up: #5b9cf6; --vp-down: #f5b83d; --poc: #e0245e; --va: #787b86; --rsi: #7e57c2; --imp-lime: #22c55e; --imp-green: #15803d; --imp-orange: #f59e0b; --imp-red: #ef4444; --imp-hist: #2962ff; --imp-signal: #800000;
+    --vp-up: #5b9cf6; --vp-down: #f5b83d; --poc: #e0245e; --va: #787b86; --rsi: #7e57c2; --vwap: #0891b2; --imp-lime: #22c55e; --imp-green: #15803d; --imp-orange: #f59e0b; --imp-red: #ef4444; --imp-hist: #2962ff; --imp-signal: #800000;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -28,7 +28,7 @@
       --page: #131722; --surface: #131722; --border: #2a2e39; --grid: #1e222d;
       --ink: #d1d4dc; --ink-2: #b2b5be; --muted: #787b86;
       --up: #089981; --down: #f23645; --accent: #5b9cf6; --hover: #2a2e39;
-      --vp-up: #3d7fd9; --vp-down: #c9912a; --poc: #ff5c8a; --va: #9598a1; --rsi: #b39ddb; --imp-lime: #4ade80; --imp-green: #16a34a; --imp-orange: #fbbf24; --imp-red: #f87171; --imp-hist: #5b9cf6; --imp-signal: #e57373;
+      --vp-up: #3d7fd9; --vp-down: #c9912a; --poc: #ff5c8a; --va: #9598a1; --rsi: #b39ddb; --vwap: #22d3ee; --imp-lime: #4ade80; --imp-green: #16a34a; --imp-orange: #fbbf24; --imp-red: #f87171; --imp-hist: #5b9cf6; --imp-signal: #e57373;
     }
   }
   * { box-sizing: border-box; }
@@ -200,6 +200,9 @@
     <label><input type="checkbox" id="show-volume" checked> Volume</label>
     <label><input type="checkbox" id="show-rsi" checked> RSI</label>
     <label><input type="checkbox" id="show-signal" checked> Signal</label>
+    <!-- VWAP (16 November, the owner: "add VWAP line on volume profile page"; "Yes, keep it unticked"): each day's
+         volume-weighted average price; off until ticked, so the chart stays as it was -->
+    <label><input type="checkbox" id="show-vwap"> VWAP</label>
     <!-- the Shape signal (15 November, the owner: "Build option 1 but this user interface should not be changed at all"): off until
          ticked; with it off the page is as it was -->
     <label><input type="checkbox" id="show-shape"> Shape signal</label>
@@ -283,7 +286,7 @@
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
   const params = new URLSearchParams(location.search);
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
-  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.vwap === true) document.getElementById("show-vwap").checked = true; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
   // No calls on the page (16 November, the owner: "remove all the call tables, i dont want that, and also remove all the signals
@@ -639,6 +642,35 @@
     profile.requestUpdate && profile.requestUpdate();
     drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable();
   }
+  // VWAP (16 November, the owner: "add VWAP line on volume profile page"): for each day shown, the volume-weighted average price
+  // from 09:15, sum(typical price x volume) / sum(volume), typical price = (high + low + close) / 3, the volume being the futures'
+  // volume the page already reads (an index has none of its own). One line a day, so it starts again each morning. Without
+  // volume there is no VWAP, and no line is drawn
+  let vwapLines = [];
+  function vwapOf(day) {
+    let pv = 0, v = 0; const out = [];
+    for (const b of day) { const w = state.volumes.get(b.time) || 0; if (w > 0) { pv += w * (b.high + b.low + b.close) / 3; v += w; } if (v > 0) out.push({ time: b.time + IST, value: pv / v }); }
+    return out;
+  }
+  function setVwap() {
+    for (const line of vwapLines) chart.removeSeries(line);
+    vwapLines = []; state.vwap = new Map();
+    if (!$("show-vwap").checked || state.timeOnly) return;
+    const days = shown();
+    days.forEach((day, i) => {
+      const pts = vwapOf(day); if (!pts.length) return;
+      for (const p of pts) state.vwap.set(p.time - IST, p.value);
+      const last = i === days.length - 1, line = chart.addSeries(LC.LineSeries, { color: css("--vwap"), lineWidth: 2, priceLineVisible: false, lastValueVisible: last, crosshairMarkerVisible: false, title: last ? "VWAP" : "" });
+      line.setData(pts); vwapLines.push(line);
+    });
+    drawLegend();  // the VWAP's figure in the row above the chart
+  }
+  function updateVwap() {  // the live candle: only today's line is worked out again
+    if (!vwapLines.length) return;
+    const days = shown(), pts = vwapOf(days[days.length - 1]);
+    for (const p of pts) state.vwap.set(p.time - IST, p.value);
+    vwapLines[vwapLines.length - 1].setData(pts);
+  }
   function setVolume() {
     const up = alpha(css("--up"), 0.45), down = alpha(css("--down"), 0.45);
     const bars = $("show-volume").checked && !state.timeOnly ? shown().flat() : [];
@@ -647,7 +679,7 @@
   function setAll(fit) {
     const bars = shown().flat();
     candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
-    rebuild(); setVolume(); setRsi(); setImpulse(); redraw();
+    rebuild(); setVolume(); setRsi(); setImpulse(); setVwap(); redraw();
     // A new index, time frame or number of days: the chart shows that choice whole, its own times and its own prices. The
     // price scale is told to follow the candles again every time: after the up and down buttons, and also after the owner
     // dragged the price scale or the chart by hand (13 November: SENSEX's prices stayed on the scale when NIFTY 50 was chosen,
@@ -723,7 +755,7 @@
     if (m && state.fine.length && state.fine !== state.bars) { const f = state.fine[state.fine.length - 1]; if (m.time === f.time) Object.assign(f, { high: Math.max(f.high, m.high), low: Math.min(f.low, m.low), close: m.close }); else if (m.time > f.time) state.fine.push({ ...m }); }
     const now = state.bars[state.bars.length - 1];
     candles.update({ time: now.time + IST, open: now.open, high: now.high, low: now.low, close: now.close });
-    if (Date.now() - recount > 1000) { recount = Date.now(); rebuild(); setImpulse(); if (rsi) { state.rsi = rsiSeries(state.bars); const v = state.rsi.get(now.time); if (v != null) rsi.update({ time: now.time + IST, value: v }); } }
+    if (Date.now() - recount > 1000) { recount = Date.now(); rebuild(); setImpulse(); updateVwap(); if (rsi) { state.rsi = rsiSeries(state.bars); const v = state.rsi.get(now.time); if (v != null) rsi.update({ time: now.time + IST, value: v }); } }
   }
 
   // ---------------------------------------------------------------- the words on the chart
@@ -737,6 +769,7 @@
     let html = `<div class="row"><span class="sym">${state.name}</span><span class="k">${state.interval} · ${dayOf(at.time)} ${hhmm(at.time)}</span>${f("O", at.open)}${f("H", at.high)}${f("L", at.low)}${f("C", at.close)}<span class="v ${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : "−"}${num(Math.abs(ch))} (${(ch / before * 100 >= 0 ? "+" : "−") + Math.abs(ch / before * 100).toFixed(2)}%)</span></div>`;
     let info = "";  // the indicators' figures: in the line above the chart, not on it
     if (state.rsi && state.rsi.has(at.time)) info += `<span><i class="line" style="background:var(--rsi)"></i><span class="k">RSI ${RSI_LENGTH}</span> <span class="v">${state.rsi.get(at.time).toFixed(2)}</span></span><span class="cut"></span>`;
+    if (state.vwap && state.vwap.has(at.time)) info += `<span><i class="line" style="background:var(--vwap)"></i><span class="k">VWAP</span> <span class="v">${num(state.vwap.get(at.time))}</span></span><span class="cut"></span>`;
     if (!state.timeOnly) info += `<span><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></span><span class="cut"></span>`;
     if (p && p.total > 0) {
       const what = state.timeOnly ? "time" : "volume";
@@ -1086,7 +1119,7 @@
   try { if (localStorage.getItem("volumeProfileCallsTab") === "table") showCalls("table"); } catch (e) {}
 
   // ---------------------------------------------------------------- the tool row
-  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, signal: $("show-signal").checked, shape: $("show-shape").checked, impulse: $("show-impulse").checked })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, vwap: $("show-vwap").checked, signal: $("show-signal").checked, shape: $("show-shape").checked, impulse: $("show-impulse").checked })); } catch (e) {} };
   function press() { $("interval").value = state.interval; $("days").value = String(state.days); }
   $("interval").addEventListener("change", () => { state.interval = $("interval").value; state.bars = []; state.fine = []; save(); load(); });
   $("days").addEventListener("change", () => { state.days = Number($("days").value); save(); shownKey = state.name + state.interval + state.days; setAll(true); });
@@ -1094,6 +1127,7 @@
   // every indicator but the profile has its switch, and the page remembers how each was left
   $("show-volume").addEventListener("change", () => { setVolume(); roomOnTop(); save(); });
   $("show-rsi").addEventListener("change", () => { dropImpulse(); setRsi(); setImpulse(); drawLegend(); save(); });  // the Impulse pane stands under the RSI's: taken off and put back so the panes keep their order
+  $("show-vwap").addEventListener("change", () => { setVwap(); drawLegend(); save(); });
   $("show-signal").addEventListener("change", () => { save(); drawSignal(); if ($("show-signal").checked) loadSignal(); });
   $("show-shape").addEventListener("change", () => { save(); rebuild(); });
   $("show-impulse").addEventListener("change", () => { save(); setImpulse(); drawImpulse(); });
