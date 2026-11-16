@@ -274,6 +274,10 @@ their own logic. Read this before touching the code.
   November, marking the spot). The Shape and the Impulse marks go through one marker set (`drawMarks`): two sets drew two calls
   of one candle over each other ("why it is mixing up ?"); in one set the chart stacks them.
   With Volume unticked the candles use the volume's room. The note is one line; a press opens it. No call logic in any of this.
+  The day's save keeps the futures' volume too (16 November, the owner: "record every movement for todays session"): each
+  index's part of `sessions/<date>.json` gains `volume: {contract, 1m: [[time, volume], ...]}` (`record.build_day`), so the
+  page's profile of a past day can be rebuilt exactly; a refusal leaves the part out and never costs the candles;
+  `lab/check_record_volume.py`.
   The Shape signal (15 November, the owner, with the Pine script "Volume Profile Anatomies (D / B / P / Double Zone)": "make your
   own volume profile strategy out of it"; "multiple signals should be allowed in a day"; "Build option 1 but this user interface
   should not be changed at all"): `static/vpshape.js`, counted in the page. The tick box "Shape signal" is OFF until ticked; with

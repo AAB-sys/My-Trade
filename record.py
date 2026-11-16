@@ -262,6 +262,16 @@ def build_day(day: date, complete: bool) -> dict | None:
         earlier = sorted(d for d in days if d < day)
         previous = {"date": earlier[-1].isoformat(), **days[earlier[-1]]} if earlier else None
         indices[name] = {"candles": candles, "day": day_figures(minutes), "previous": previous}
+        # the futures' volume of the day, per minute (16 November, the owner: "record every movement for todays session ... how
+        # market movement is happening around the VAH, VAL and POC"): the Volume Profile page weighs the index's candles with it,
+        # and the candles alone cannot rebuild the page's profile afterwards. A refusal never costs the day its candles.
+        try:
+            got = dhan.future_volume(name, 1)
+            volume = [[t, v] for t, v in got["bars"] if ist_date(t) == day]
+            if volume:
+                indices[name]["volume"] = {"contract": got["contract"], "1m": volume}
+        except Exception as exc:  # noqa: BLE001 - whatever Dhan or the list says, the candles are saved
+            log.warning("record: %s: the futures' volume was not saved with the day: %s", name, getattr(exc, "message", exc))
     if not indices:
         if missing:
             raise RecordError("Dhan gave no candles: " + "; ".join(f"{n}: {m}" for n, m in missing.items()))
