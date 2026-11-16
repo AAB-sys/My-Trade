@@ -17,3 +17,11 @@ and answers these by itself every evening; open questions are re-answered as day
 3. Noon tells the close: at 12:00 above VAH -> closes above VAH 67%; below VAL -> closes below VAL 69% (all days: 36% / 38%).
 4. Shape at 12:00 and the afternoon: P -> up 60%; B -> down 57%; Double -> down 59%; D -> 50/50.
 Not profits, tendencies. To be checked with real volume on the saved days (growing test) and turned into ideas for the lab.
+
+## THE VOLUME QUESTIONS (16 Nov night; the owner called the noon finding obvious, rightly). These come FIRST, one a night, on the
+## real-volume days (history/volume/<INDEX>_1min.csv + saved sessions), re-run as days are added. Not obvious, volume only.
+## V1 (open): edge touches that hold vs break: the volume at the edge row (heavy vs thin) when VAH/VAL is touched -> turn or go through?
+## V2 (open): POC migration: when the developing POC moves up/down, does price follow within the next hour, and how far?
+## V3 (open): thin zones (low-volume rows inside the profile): does price cross them fast to the next busy zone?
+## V4 (open): shape changing during the day (D->P, D->B, P->Double ...): does the change come before the price move?
+## V5 (open): today's value area vs yesterday's (above, below, overlapping) by 10:30-11:00: trend day or sideways day?
