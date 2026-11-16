@@ -25,3 +25,11 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 ## V3 (open): thin zones (low-volume rows inside the profile): does price cross them fast to the next busy zone?
 ## V4 (open): shape changing during the day (D->P, D->B, P->Double ...): does the change come before the price move?
 ## V5 (open): today's value area vs yesterday's (above, below, overlapping) by 10:30-11:00: trend day or sideways day?
+
+## V1 answered 17 Nov 01:30 (18 real-volume days, 21 Oct to 16 Nov, 3 indices, 433 edge touches; vpday/v1.js, v1trade.js)
+- The CLOSE of the touch candle decides, not the volume at the edge: closed back inside -> turned 61% (broke 35%); closed beyond ->
+  broke 73%. Closed beyond with a THIN row just outside -> broke 81%. Closed back inside with a HEAVY row just outside -> turned 69%.
+- The edge row's own volume (thin/medium/heavy) made almost no difference (turn 32-40%).
+- As a trade (fade the wick back to the POC, stop past the wick): loses on all three indices (NIFTY 48 calls -414). With a heavy row
+  outside: NIFTY -53 (12 calls), BANK +404 (11), SENSEX -318 (7): too few, mixed. Not a strategy. The useful part: a close beyond
+  the edge with thin volume outside is a real break (81%). Next: test going WITH that break (V1b).

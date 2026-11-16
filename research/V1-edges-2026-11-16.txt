@@ -1,0 +1,49 @@
+NIFTY 50 real days 18 2026-10-21 to 2026-11-16 edge touches 146
+NIFTY BANK real days 18 2026-10-21 to 2026-11-16 edge touches 147
+SENSEX real days 18 2026-10-15 to 2026-11-16 edge touches 140
+
+all touches
+  all                                      n  433 turn 38% break 57% none 6%
+
+by index
+  NIFTY 50                                 n  146 turn 38% break 57% none 5%
+  NIFTY BANK                               n  147 turn 38% break 60% none 2%
+  SENSEX                                   n  140 turn 37% break 53% none 10%
+
+edge row volume
+  a thin (<25% of POC)                     n   88 turn 32% break 58% none 10%
+  b medium (25-50%)                        n  181 turn 40% break 55% none 5%
+  c heavy (>50%)                           n  164 turn 38% break 57% none 4%
+
+row just beyond the edge
+  a thin (<25% of POC)                     n  197 turn 34% break 61% none 6%
+  b medium (25-50%)                        n  138 turn 39% break 53% none 8%
+  c heavy (>50%)                           n   98 turn 44% break 53% none 3%
+
+candle closed back inside?
+  closed back inside                       n  188 turn 61% break 35% none 5%
+  closed beyond                            n  245 turn 20% break 73% none 7%
+
+closed back inside x beyond row
+  back | a thin (<25% of POC)              n   89 turn 56% break 36% none 8%
+  back | b medium (25-50%)                 n   50 turn 60% break 40% none 0%
+  back | c heavy (>50%)                    n   49 turn 69% break 27% none 4%
+  beyond | a thin (<25% of POC)            n  108 turn 15% break 81% none 4%
+  beyond | b medium (25-50%)               n   88 turn 27% break 60% none 13%
+  beyond | c heavy (>50%)                  n   49 turn 18% break 80% none 2%
+
+by shape x side
+  B VAH                                    n   22 turn 41% break 59% none 0%
+  B VAL                                    n   39 turn 51% break 49% none 0%
+  D VAH                                    n   86 turn 36% break 50% none 14%
+  D VAL                                    n   51 turn 43% break 55% none 2%
+  Double VAH                               n   78 turn 33% break 60% none 6%
+  Double VAL                               n   71 turn 44% break 52% none 4%
+  P VAH                                    n   57 turn 30% break 68% none 2%
+  P VAL                                    n   29 turn 24% break 66% none 10%
+any beyond row   NIFTY 50    days 18 calls 48 won 23% net -414 pts (-9 a call) days up/down 4/13 CE -163 PE -251
+any beyond row   NIFTY BANK  days 18 calls 37 won 32% net -391 pts (-11 a call) days up/down 5/9 CE -34 PE -357
+any beyond row   SENSEX      days 18 calls 40 won 25% net -1642 pts (-41 a call) days up/down 3/12 CE -84 PE -1559
+beyond row heavy NIFTY 50    days 18 calls 12 won 25% net -53 pts (-4 a call) days up/down 3/5 CE -71 PE 18
+beyond row heavy NIFTY BANK  days 18 calls 11 won 55% net 404 pts (37 a call) days up/down 6/3 CE 164 PE 240
+beyond row heavy SENSEX      days 18 calls 7 won 29% net -318 pts (-45 a call) days up/down 1/4 CE -61 PE -257
