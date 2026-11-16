@@ -282,6 +282,11 @@ their own logic. Read this before touching the code.
   Novembers VAH VAL and POC ?"; "I am talking about only levels on the chart not about the calls"): from 15:30 until the next
   open, `vpsignal.state` adds `chart_levels` (today's levels, which the next session uses) and the page draws the lines from
   them; the Signal box, its levels text and the calls stay today's, unchanged.
+  No calls on the page (16 November, the owner: "remove all the call tables, i dont want that, and also remove all the
+  signals from the chart, except the shape names"; "remove call and remove signals from the chart as well, just keep the shape
+  name"): `SHOW_CALLS = false` in volume.html hides the calls block under the chart (`#calls-wrap hidden`) and draws no call
+  arrow, stop or target line. The calls are still worked out and the code is kept. The levels, the shape names, RSI and the
+  Impulse MACD pane stay.
   The Shape signal (15 November, the owner, with the Pine script "Volume Profile Anatomies (D / B / P / Double Zone)": "make your
   own volume profile strategy out of it"; "multiple signals should be allowed in a day"; "Build option 1 but this user interface
   should not be changed at all"): `static/vpshape.js`, counted in the page. The tick box "Shape signal" is OFF until ticked; with

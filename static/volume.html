@@ -100,6 +100,7 @@
   /* The signal (13 November, the owner's document "Volume Profile Signal Logic", its note 10: one screen with yesterday's VAL,
      POC and VAH, the naked POC list, how today opened, the signal or WAIT with its reason, the stop, the target and the lots) */
   #calls-wrap { position: relative; flex: none; }
+  #calls-wrap[hidden] { display: none; }
   #calls-tabs { display: flex; gap: 8px; padding: 6px 12px; border-top: 1px solid var(--border); }
   #calls-tabs .cap { font: inherit; font-size: 12px; font-weight: 600; padding: 4px 14px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--ink); cursor: pointer; }
   #calls-tabs .cap:hover { background: var(--hover); }
@@ -240,7 +241,7 @@
   <!-- every call the page states stands BELOW the chart (15 November, the owner, with the signal lines marked: "move all the calls
        below the chart ... whatever the call page fires, move it all below the chart"): the document's Signal, the Shape signal,
        the Impulse calls. The block scrolls inside itself when it is long, so the chart keeps its room -->
-  <div id="calls-wrap">
+  <div id="calls-wrap" hidden>
     <!-- two capsules (15 November, the owner: "make a separate table with header as Impulse call table as a sperate capsule tab and
          add all the impulse calls in that table"): the calls' lines as before, or the table of the Impulse calls -->
     <div id="calls-tabs" role="tablist" aria-label="Calls">
@@ -285,6 +286,11 @@
   try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
+  // No calls on the page (16 November, the owner: "remove all the call tables, i dont want that, and also remove all the signals
+  // from the chart, except the shape names"): the calls block under the chart is hidden, and no call's arrow, stop or target is
+  // drawn. The calls are still worked out (the code is kept, so they can come back by setting this to true); the levels, the
+  // shape names and the indicators stay
+  const SHOW_CALLS = false;
   if (![...$("index").options].some(o => o.value === state.name)) state.name = "NIFTY 50";
   $("index").value = state.name;
 
@@ -842,7 +848,7 @@
       line(lvc.vah, "Prev day VAH " + shortDay(from), css("--va"), LC.LineStyle.Dotted);  // named as the previous day's (15 November): the drawn profile of the same day has its own 24 rows
       line(lvc.poc, "Prev day POC " + shortDay(from), css("--poc"), LC.LineStyle.Dotted);
       line(lvc.val, "Prev day VAL " + shortDay(from), css("--va"), LC.LineStyle.Dotted);
-      if (s.signal !== "WAIT") { line(s.index_stop, "Stop", css("--down"), LC.LineStyle.Solid); line(s.index_target, "Target", css("--up"), LC.LineStyle.Solid); }
+      if (SHOW_CALLS && s.signal !== "WAIT") { line(s.index_stop, "Stop", css("--down"), LC.LineStyle.Solid); line(s.index_target, "Target", css("--up"), LC.LineStyle.Solid); }
     }
   }
 
@@ -859,6 +865,7 @@
   // on one candle: "why it is mixing up ?"): two sets each drew at the same spot; in one set the chart stacks them, one above the other
   const markSets = { shape: [], impulse: [] }; let allMarks = null;
   function drawMarks(which, marks) {
+    if (!SHOW_CALLS) marks = [];
     markSets[which] = marks;
     if (!allMarks) allMarks = LC.createSeriesMarkers(candles, []);
     allMarks.setMarkers([...markSets.shape, ...markSets.impulse].sort((a, b) => a.time - b.time));
@@ -897,7 +904,7 @@
       const up = t.side === "CE", e = at(t.entryTime), x = t.exitTime != null ? at(t.exitTime) : null, tag = L.key === "Shape" ? (t.shape === "Double" ? "DZ" : t.shape) + " " : "";
       if (e != null) marks.push({ time: e, position: up ? "belowBar" : "aboveBar", color: css(up ? "--up" : "--down"), shape: up ? "arrowUp" : "arrowDown", text: tag + t.side + " " + t.n });
       if (x != null) marks.push({ time: x, position: up ? "aboveBar" : "belowBar", color: css("--muted"), shape: up ? "arrowDown" : "arrowUp", text: (tag ? "x" + tag.trim() : "X") + t.n });
-      if (t.how === "open") shapeStops.push(candles.createPriceLine({ price: t.stop, title: L.key + " stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true }));
+      if (SHOW_CALLS && t.how === "open") shapeStops.push(candles.createPriceLine({ price: t.stop, title: L.key + " stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true }));
     }
     drawMarks("shape", marks);
   }
@@ -962,7 +969,7 @@
       const up = t.side === "CE", e = at(t.entryTime), xx = t.exitTime != null ? at(t.exitTime) : null;
       if (e != null) marks.push({ time: e, position: up ? "belowBar" : "aboveBar", color: css(up ? "--up" : "--down"), shape: up ? "arrowUp" : "arrowDown", text: "I " + t.side + " " + t.n });
       if (xx != null) marks.push({ time: xx, position: up ? "aboveBar" : "belowBar", color: css("--muted"), shape: up ? "arrowDown" : "arrowUp", text: "xI" + t.n });
-      if (t.how === "open") impStop = candles.createPriceLine({ price: t.stop, title: "Impulse stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true });
+      if (SHOW_CALLS && t.how === "open") impStop = candles.createPriceLine({ price: t.stop, title: "Impulse stop", color: css("--down"), lineWidth: 1, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true });
     }
     drawMarks("impulse", marks);
   }
