@@ -264,6 +264,10 @@ their own logic. Read this before touching the code.
   Where each day's profile stands (16 November, the owner: "why the volume is looking onto right side ? if you see the days,
   it is on left side ?"): every day's profile starts at its first candle and grows to the right, with one day shown or five; the
   one-day view keeps no room on the right for it any more (`right = false` in drawProfiles, `fitDays`).
+  VWAP (16 November, the owner: "add VWAP line on volume profile page"; "keep it unticked"): a "VWAP" tick box, off by default
+  and remembered; with it on, each day shown gets its own line from 09:15, sum((high + low + close) / 3 x volume) / sum(volume)
+  on the chart's candles with the futures volume the page already reads (`vwapOf`, `setVwap`, `updateVwap` for the live
+  candle); its value in the row above the chart. No volume: no line. No calls.
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
