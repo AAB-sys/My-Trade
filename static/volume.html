@@ -997,14 +997,30 @@
     for (const x of [w.call, w.put]) if (x) { minValue = Math.min(minValue, x.strike); maxValue = Math.max(maxValue, x.strike); }
     return { ...o, priceRange: { minValue, maxValue } };
   }
+  // The prices in view are touched only when the walls' strikes change (the box ticked or unticked, a wall moved to another
+  // strike), never on each 15 s look, and never when the prices were stretched or moved by hand (17 November, the owner: "when i
+  // am stretching the chart or expanding it is getting reset or shrinks automatically within 10 seconds"): each look used to
+  // switch the price scale back to fitting itself. A scale put by hand stays as it was put; the lines are still drawn.
+  let oiDrawn = "", oiStrikes = "";
+  function oiRescale() {
+    if (state.priceView) return;  // put by the up and down buttons: that range stays
+    const auto = candles.priceScale().options().autoScale;
+    candles.applyOptions({ autoscaleInfoProvider: (original) => oiRange(original()) });
+    if (auto) candles.priceScale().applyOptions({ autoScale: true });  // fitting itself: fit again with (or without) the walls
+  }
   function drawOi() {
-    for (const line of oiLines) { try { candles.removePriceLine(line); } catch (e) {} }
-    oiLines = [];
     const w = $("show-oi").checked && state.oi && state.oi.name === state.name ? state.oi : null;
-    if (!w) { state.oi = null; priceView(state.priceView || null); drawLegend(); return; }
-    const line = (x, title, color) => { if (x) oiLines.push(candles.createPriceLine({ price: x.strike, title: `${title} ${short(x.oi)}`, color, lineWidth: 2, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true })); };
-    line(w.call, "Call OI wall (resistance)", css("--down")); line(w.put, "Put OI wall (support)", css("--up"));
-    priceView(state.priceView || null); drawLegend();
+    const side = (x) => x ? `${x.strike}:${x.oi}` : "-", drawn = w ? `${state.name}|${side(w.call)}|${side(w.put)}` : "", strikes = w ? `${state.name}|${w.call ? w.call.strike : "-"}|${w.put ? w.put.strike : "-"}` : "";
+    if (!w) state.oi = null;
+    if (drawn !== oiDrawn) {  // the lines are drawn again only when a strike or its open interest changed
+      oiDrawn = drawn;
+      for (const line of oiLines) { try { candles.removePriceLine(line); } catch (e) {} }
+      oiLines = [];
+      const line = (x, title, color) => { if (x) oiLines.push(candles.createPriceLine({ price: x.strike, title: `${title} ${short(x.oi)}`, color, lineWidth: 2, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true })); };
+      if (w) { line(w.call, "Call OI wall (resistance)", css("--down")); line(w.put, "Put OI wall (support)", css("--up")); }
+    }
+    if (strikes !== oiStrikes) { oiStrikes = strikes; oiRescale(); }
+    drawLegend();
   }
   async function loadOi() {
     if (!$("show-oi").checked) { state.oi = null; state.oiWhy = ""; drawOi(); return; }
