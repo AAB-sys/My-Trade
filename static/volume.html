@@ -707,7 +707,7 @@
   // no room added around it (the range read from the scale already holds that room); null: the chart follows the candles again
   function priceView(range) {
     state.priceView = range;
-    candles.applyOptions({ autoscaleInfoProvider: range ? () => ({ priceRange: { minValue: range.from, maxValue: range.to } }) : (original) => original() });
+    candles.applyOptions({ autoscaleInfoProvider: range ? () => ({ priceRange: { minValue: range.from, maxValue: range.to } }) : (original) => oiRange(original()) });  // with the OI walls ticked, both walls stay in view (17 November)
     candles.priceScale().applyOptions({ autoScale: true });
     roomOnTop();
   }
@@ -912,14 +912,23 @@
     }
     return call || put ? { call, put, expiry: data.expiry, name: data.name } : null;
   }
+  // both walls in view (17 November, the owner: "i can onlly see Call OI wall where is Put OI wall"): the prices the chart shows are
+  // widened to hold the two strikes while the tick is on; with it off the chart's own range, untouched
+  function oiRange(o) {
+    const w = state.oi;
+    if (!o || !o.priceRange || !w || !$("show-oi").checked) return o;
+    let { minValue, maxValue } = o.priceRange;
+    for (const x of [w.call, w.put]) if (x) { minValue = Math.min(minValue, x.strike); maxValue = Math.max(maxValue, x.strike); }
+    return { ...o, priceRange: { minValue, maxValue } };
+  }
   function drawOi() {
     for (const line of oiLines) { try { candles.removePriceLine(line); } catch (e) {} }
     oiLines = [];
     const w = $("show-oi").checked && state.oi && state.oi.name === state.name ? state.oi : null;
-    if (!w) { state.oi = null; drawLegend(); return; }
+    if (!w) { state.oi = null; priceView(state.priceView || null); drawLegend(); return; }
     const line = (x, title, color) => { if (x) oiLines.push(candles.createPriceLine({ price: x.strike, title: `${title} ${short(x.oi)}`, color, lineWidth: 2, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true })); };
-    line(w.call, "Call OI wall", css("--down")); line(w.put, "Put OI wall", css("--up"));
-    drawLegend();
+    line(w.call, "Call OI wall (resistance)", css("--down")); line(w.put, "Put OI wall (support)", css("--up"));
+    priceView(state.priceView || null); drawLegend();
   }
   async function loadOi() {
     if (!$("show-oi").checked) { state.oi = null; drawOi(); return; }
