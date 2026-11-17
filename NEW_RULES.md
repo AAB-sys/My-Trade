@@ -264,3 +264,14 @@ The 15 saved days, 29 September to 21 October, NIFTY 50: see the figures in the 
 
 The symmetrical triangle of 21 October (both sides from one rule) was removed on 22 October evening at the owner's word and replaced the
 same night by the four triangles above, from their own documents.
+
+## The VWAP uses real volume (17 November)
+
+The owner, 17 November: "VWAP values are far away on both pages now"; "yes". The VWAP of Calls with Signals (the line, the
+VWAP stretch meter, and the VWAP Reclaim and VWAP Loss rule) now weighs each candle with the volume of the index's nearest
+futures contract, the same volume and the same sum as the Volume Profile page: on the same candle size both pages show one
+VWAP. Before, it was the plain average of the candles' typical price (no volume), which drifted from the true VWAP on days
+when the volume was uneven. The page loads the volume with the candles (`/indices/<name>/volume`, 1, 5 and 15 minute
+candles). When the day has no volume (the route failed, an older day, 30 minute candles) the VWAP is the plain average as
+before and the line is named "VWAP avg". The rule's other conditions are unchanged; only where the VWAP line sits changed,
+so a VWAP Reclaim or Loss call can fire on a different candle than the plain average gave.
