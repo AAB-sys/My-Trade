@@ -70,6 +70,42 @@ check("no volume: the flags say so, and the VWAP check is not available", any("N
 check("the candle the server makes: start time, prices, 0 for a missing futures minute",
       vppanel.candles_of([{"time": 1794541500, "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5}], {}) == [{"hm": "09:15", "o": 1.0, "h": 2.0, "l": 0.5, "c": 1.5, "v": 0.0}])
 
+# 17 November: the volume that comes late (the owner's photo after a restart: "NOT the same as the chart ... VWAP: panel none")
+from datetime import date as _date, datetime as _dt
+import dhan  # noqa: E402
+_T0 = int(_dt(2026, 11, 17, 9, 15, tzinfo=dhan.IST).timestamp())
+_bars = [{"time": _T0 + i * 60, "open": c["o"], "high": c["h"], "low": c["l"], "close": c["c"]} for i, c in enumerate(candles)]
+_vols = [[_T0 + i * 60, c["v"]] for i, c in enumerate(candles)]
+_clock = {"now": _T0 + 375 * 60 + 600}
+vppanel.time.time = lambda: _clock["now"]
+dhan.today_ist = lambda: _date(2026, 11, 17)
+dhan.intraday = lambda name, minutes: _bars
+vppanel.previous_of = lambda name, today: (prev, "2026-11-16")
+vppanel.config_for = lambda name: cfg
+def _state(volume):
+    if volume is None:
+        def refuse(name, minutes, days_back=8):
+            raise dhan.DhanError("other", "the instrument list is still being read")
+        dhan.future_volume = refuse
+    else:
+        dhan.future_volume = lambda name, minutes, days_back=8: {"contract": {"name": "X FUT", "expiry": "2026-11-23"}, "rolled": None, "bars": volume}
+    return vppanel.state("NIFTY 50")
+strip = lambda o: json.dumps({k: o[k] for k in ("label", "score", "checks", "shape", "profile", "vwap", "status_line")}, sort_keys=True, default=str)
+vppanel._engines.clear(); right = _state(_vols)
+vppanel._engines.clear(); first = _state(None)
+check("right after a restart, no volume yet: the panel says so (no VWAP)", first["vwap"] is None and first["volume_problem"])
+later = _state(_vols)
+check("the volume comes: the day is read again, and the panel is the one a full day with volume gives", strip(later) == strip(right) and later["vwap"] is not None)
+again = _state(_vols)
+check("nothing changed: no second reading (the same engine, the same output)", strip(again) == strip(right) and vppanel._engines["NIFTY 50"]["done"] == 375)
+vppanel._engines.clear(); _clock["now"] = _T0 + 200 * 60 + 5
+part = _state(_vols[:199])  # the 200th minute's candle is there, its futures volume not yet
+check("a minute whose volume has not come yet is read with none", vppanel._engines["NIFTY 50"]["fed"][199] == 0.0 and part["candles"] == 200)
+full = _state(_vols[:200])
+vppanel._engines.clear(); want = _state(_vols[:200])
+check("that minute's volume comes late: the panel is the same as if it had come in time", strip(full) == strip(want))
+check("stale: only a changed volume of a candle already fed", vppanel.stale({"fed": [1.0, 2.0]}, [{"v": 1.0}, {"v": 2.0}, {"v": 9.0}]) is False and vppanel.stale({"fed": [1.0, 0.0]}, [{"v": 1.0}, {"v": 2.0}]) is True and vppanel.stale({}, [{"v": 1.0}]) is False)
+
 # the checklist's replay of every day of a futures-volume file
 if len(sys.argv) > 1:
     days = OrderedDict()
