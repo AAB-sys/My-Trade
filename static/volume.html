@@ -171,8 +171,36 @@
   #note.warn { color: var(--ink-2); }
   #note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; padding-top: 4px; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
   #note.open { white-space: normal; }
+  /* The explanation panel (17 November, the owner's document, section 2: "a fixed-width column (about 340 px) to the right of
+     the chart", the status line large and coloured, the checks with a +1 / 0 / -1 marker, the if/then table, the levels with the
+     price's row marked, the flags in amber, the alerts in a list that scrolls, the warning always in view) */
+  #panel { flex: none; width: 340px; border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; font-size: 12.5px; background: var(--surface); }
+  #panel[hidden] { display: none; }
+  #panel .body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 10px 12px 6px; -webkit-user-select: text; user-select: text; touch-action: pan-y; }
+  #panel .status { font-size: 15px; font-weight: 600; line-height: 1.35; margin: 0 0 6px; }
+  #panel .status.bull { color: var(--up); } #panel .status.bear { color: var(--down); } #panel .status.flat { color: var(--ink-2); }
+  #panel .meta { color: var(--muted); margin-bottom: 8px; }
+  #panel h3 { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); margin: 12px 0 4px; }
+  #panel .row { display: flex; gap: 8px; padding: 2px 0; align-items: baseline; }
+  #panel .mark { flex: none; width: 24px; text-align: center; font-weight: 600; border-radius: 4px; font-variant-numeric: tabular-nums; }
+  #panel .mark.p { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
+  #panel .mark.n { color: var(--down); background: color-mix(in srgb, var(--down) 14%, transparent); }
+  #panel .mark.z { color: var(--muted); background: var(--hover); }
+  #panel .row .k { color: var(--muted); } #panel .row .t { flex: 1; min-width: 0; }
+  #panel .lv { display: grid; grid-template-columns: 1fr auto 46px; gap: 8px; padding: 1.5px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; }
+  #panel .lv .d { color: var(--muted); min-width: 44px; text-align: right; }
+  #panel .lv.now { background: var(--hover); font-weight: 600; }
+  #panel .cond { padding: 3px 0; } #panel .cond .if { color: var(--ink); } #panel .cond .then { color: var(--ink-2); }
+  #panel .flag { color: #b45309; padding: 2px 0; }
+  #panel .alerts { max-height: 132px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
+  #panel .alerts .a { padding: 2px 0; } #panel .alerts .a .tm { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+  #panel .none { color: var(--muted); }
+  #panel .warn { flex: none; padding: 6px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11.5px; }
+  @media (prefers-color-scheme: dark) { #panel .flag { color: #fbbf24; } }
+  @media (max-width: 900px) and (min-width: 601px) { #panel { width: 280px; } }
   @media (max-width: 600px) {
     #main { flex-direction: column; }
+    #panel { width: auto; border-left: 0; border-top: 1px solid var(--border); max-height: 42vh; }
     #draw { flex-direction: row; padding: 2px 8px; border-right: 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
     #draw .sep { width: 1px; height: auto; margin: 6px 4px; }
     header h1 { font-size: 15px; }
@@ -208,6 +236,9 @@
     <label><input type="checkbox" id="show-shape"> Shape signal</label>
     <!-- the Impulse MACD (15 November, the owner, with LazyBear's Pine script): off until ticked; with it off the page is as it was -->
     <label><input type="checkbox" id="show-impulse"> Impulse MACD</label>
+    <!-- the Live Volume Profile Explanation Panel (17 November, the owner's build document): off until ticked; with it off the
+         page is exactly as it was -->
+    <label><input type="checkbox" id="show-panel"> Panel</label>
   </div>
   <div id="inforow">
     <div id="info" aria-live="off"></div>
@@ -240,6 +271,7 @@
       <div id="legend" aria-live="off"></div>
       <div id="chart"></div>
     </div>
+    <aside id="panel" hidden aria-label="Volume profile explanation panel"></aside>
   </div>
   <!-- every call the page states stands BELOW the chart (15 November, the owner, with the signal lines marked: "move all the calls
        below the chart ... whatever the call page fires, move it all below the chart"): the document's Signal, the Shape signal,
@@ -286,7 +318,7 @@
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
   const params = new URLSearchParams(location.search);
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
-  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.vwap === true) document.getElementById("show-vwap").checked = true; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
+  try { const saved = JSON.parse(localStorage.getItem("volumeProfile") || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.vwap === true) document.getElementById("show-vwap").checked = true; if (saved.panel === true) document.getElementById("show-panel").checked = true; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   const $ = (id) => document.getElementById(id);
   // No calls on the page (16 November, the owner: "remove all the call tables, i dont want that, and also remove all the signals
@@ -370,7 +402,17 @@
   };
   candles.attachPrimitive(profile);
 
+  // today's thin zones as light bands across the chart, while the Panel is on (the document, section 2: "Draw today's thin zones as
+  // light shaded bands on the chart")
+  function drawZones(scope) {
+    const g = state.panel; if (!$("show-panel").checked || !g || !g.zones || !g.zones.length) return;
+    const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, w = scope.mediaSize.width;
+    ctx.save(); ctx.fillStyle = css("--muted"); ctx.globalAlpha = 0.10;
+    for (const z of g.zones) { const a = candles.priceToCoordinate(z.high), b = candles.priceToCoordinate(z.low); if (a == null || b == null) continue; ctx.fillRect(0, Math.round(a * vr), Math.round(w * hr), Math.max(1, Math.round((b - a) * vr))); }
+    ctx.restore();
+  }
   function drawProfiles(scope) {
+    drawZones(scope);
     if (!state.profiles.length) return;  // the profile is always drawn: the page is for it (the owner, 12 November: "volume profile should always be there")
     const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, paneW = scope.mediaSize.width;
     const ts = chart.timeScale(), spacing = ts.options().barSpacing, full = BARS_A_DAY[state.interval] * spacing;
@@ -649,6 +691,15 @@
   // volume there is no VWAP, and no line is drawn
   let vwapLines = [];
   function vwapOf(day) {
+    // While the Panel is on, the line is counted from the day's 1-minute candles, as the panel counts its VWAP, so the two show
+    // the same number (the document's checklist: "VWAP equals the VWAP line on the chart"). With the Panel off: as before.
+    if ($("show-panel").checked && state.fine !== state.bars && state.fine.length && state.fineVolumes.size) {
+      const from = day[0].time, step = day.length > 1 ? day[1].time - day[0].time : 300, to = day[day.length - 1].time + step, out = [];
+      let pv = 0, v = 0, k = 0; const mins = state.fine.filter(m => m.time >= from && m.time < to);
+      for (const b of day) { for (; k < mins.length && mins[k].time < b.time + step; k++) { const w = state.fineVolumes.get(mins[k].time) || 0; if (w > 0) { pv += w * (mins[k].high + mins[k].low + mins[k].close) / 3; v += w; } }
+        if (v > 0) out.push({ time: b.time + IST, value: pv / v }); }
+      if (out.length) return out;
+    }
     let pv = 0, v = 0; const out = [];
     for (const b of day) { const w = state.volumes.get(b.time) || 0; if (w > 0) { pv += w * (b.high + b.low + b.close) / 3; v += w; } if (v > 0) out.push({ time: b.time + IST, value: pv / v }); }
     return out;
@@ -1120,16 +1171,62 @@
   })();
   try { if (localStorage.getItem("volumeProfileCallsTab") === "table") showCalls("table"); } catch (e) {}
 
+  // ---------------------------------------------------------------- the explanation panel
+  // The owner's build document "Live Volume Profile Explanation Panel" (17 November). The server works it out with the document's
+  // own code (/indices/{name}/vp-panel, vppanel.py over panel/); the page only shows what comes: the status line, the score, the
+  // seven checks, the key levels, the thin zones, the if/then table, the flags, the alerts and the warning. It describes the
+  // chart so far; it states no call. Asked every 15 seconds while the box is ticked (the engine moves once a minute).
+  let panelSeq = 0;
+  const esc = (x) => String(x == null ? "" : x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  async function loadPanel() {
+    if (!$("show-panel").checked) return;
+    const seq = ++panelSeq, name = state.name;
+    try {
+      const r = await fetch(`/indices/${encodeURIComponent(name)}/vp-panel`, withTab());
+      if (r.status === 401 || seq !== panelSeq || name !== state.name) return;
+      state.panel = r.ok ? await r.json() : { problem: "HTTP " + r.status };
+    } catch (e) { if (seq !== panelSeq) return; state.panel = state.panel || { problem: "could not be loaded" }; }
+    drawPanel(); profile.requestUpdate && profile.requestUpdate();
+  }
+  function drawPanel() {
+    const box = $("panel"), on = $("show-panel").checked, g = state.panel;
+    box.hidden = !on;
+    if (!on) return;
+    const warn = `<div class="warn">${esc(g && g.warning || "Describes the chart's structure so far. Not a prediction or a buy/sell recommendation.")}</div>`;
+    if (!g) { box.innerHTML = `<div class="body"><p class="status flat">Reading the profile…</p></div>${warn}`; return; }
+    if (g.problem || g.waiting || !g.checks) { box.innerHTML = `<div class="body"><p class="status flat">${esc(g.waiting || "The panel could not be worked out")}</p>${g.problem ? `<div class="meta">${esc(g.problem)}</div>` : ""}</div>${warn}`; return; }
+    const keep = box.querySelector(".body") ? box.querySelector(".body").scrollTop : 0;
+    const tone = /bullish/i.test(g.label) ? "bull" : /bearish/i.test(g.label) ? "bear" : "flat";
+    const mark = (n) => `<span class="mark ${n > 0 ? "p" : n < 0 ? "n" : "z"}">${n > 0 ? "+" + n : n < 0 ? "−" + Math.abs(n) : "0"}</span>`;
+    let h = `<p class="status ${tone}">${esc(g.status_line)}</p>`;
+    h += `<div class="meta">${esc(g.name)} · ${esc(g.time)} · price ${num(g.price)} · score <b>${g.score > 0 ? "+" + g.score : g.score < 0 ? "−" + Math.abs(g.score) : "0"}</b> of a possible +7${g.contract ? " · volume of " + esc(g.contract.name) : ""}</div>`;
+    h += `<h3>Checks</h3>` + g.checks.map(c => `<div class="row">${mark(c.score)}<span class="t"><span class="k">${esc(c.name)}:</span> ${esc(c.result)}</span></div>`).join("");
+    // the levels, highest first, with the price's own row where it belongs
+    const lv = (g.levels || []).slice(); let placed = false, rows = "";
+    for (const l of lv) { if (!placed && l.price < g.price) { rows += `<div class="lv now"><span>Price now</span><span>${num(g.price)}</span><span class="d"></span></div>`; placed = true; }
+      const d = l.distance != null ? l.distance : l.price - g.price;
+      rows += `<div class="lv"><span>${esc(l.name)}</span><span>${num(l.price)}</span><span class="d">${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(Math.round(d))}</span></div>`; }
+    if (!placed) rows += `<div class="lv now"><span>Price now</span><span>${num(g.price)}</span><span class="d"></span></div>`;
+    h += `<h3>Key levels</h3>${rows}`;
+    h += `<h3>Thin zones</h3>` + ((g.zones || []).length ? g.zones.map(z => `<div class="row"><span class="t">${esc(z.name)}: ${num(z.low)} to ${num(z.high)}</span></div>`).join("") : `<div class="none">None now</div>`);
+    h += `<h3>If / then</h3>` + ((g.conditions || []).length ? g.conditions.map(c => `<div class="cond"><span class="if">${esc(c.if)}</span> → <span class="then">${esc(c.then)}</span></div>`).join("") : `<div class="none">Nothing to watch yet</div>`);
+    h += `<h3>Flags</h3>` + ((g.flags || []).length ? g.flags.map(f => `<div class="flag">${esc(f)}</div>`).join("") : `<div class="none">None</div>`);
+    h += `<h3>Alerts</h3><div class="alerts">` + ((g.alerts || []).length ? g.alerts.map(a => `<div class="a"><span class="tm">${esc(a.time)}</span>${esc(a.text)}</div>`).join("") : `<div class="none">None yet today</div>`) + `</div>`;
+    box.innerHTML = `<div class="body">${h}</div>${warn}`;
+    box.querySelector(".body").scrollTop = keep;
+  }
+
   // ---------------------------------------------------------------- the tool row
-  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, vwap: $("show-vwap").checked, signal: $("show-signal").checked, shape: $("show-shape").checked, impulse: $("show-impulse").checked })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem("volumeProfile", JSON.stringify({ name: state.name, interval: state.interval, days: state.days, volume: $("show-volume").checked, rsi: $("show-rsi").checked, vwap: $("show-vwap").checked, panel: $("show-panel").checked, signal: $("show-signal").checked, shape: $("show-shape").checked, impulse: $("show-impulse").checked })); } catch (e) {} };
   function press() { $("interval").value = state.interval; $("days").value = String(state.days); }
   $("interval").addEventListener("change", () => { state.interval = $("interval").value; state.bars = []; state.fine = []; save(); load(); });
   $("days").addEventListener("change", () => { state.days = Number($("days").value); save(); shownKey = state.name + state.interval + state.days; setAll(true); });
-  $("index").addEventListener("change", () => { state.signal = null; drawSignal(); setTimeout(loadSignal, 0); state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
+  $("index").addEventListener("change", () => { state.signal = null; drawSignal(); setTimeout(loadSignal, 0); state.panel = null; drawPanel(); setTimeout(loadPanel, 0); state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
   // every indicator but the profile has its switch, and the page remembers how each was left
   $("show-volume").addEventListener("change", () => { setVolume(); roomOnTop(); save(); });
   $("show-rsi").addEventListener("change", () => { dropImpulse(); setRsi(); setImpulse(); drawLegend(); save(); });  // the Impulse pane stands under the RSI's: taken off and put back so the panes keep their order
   $("show-vwap").addEventListener("change", () => { setVwap(); drawLegend(); save(); });
+  $("show-panel").addEventListener("change", () => { save(); state.panel = null; drawPanel(); if ($("show-panel").checked) loadPanel(); setVwap(); profile.requestUpdate && profile.requestUpdate(); });
   $("show-signal").addEventListener("change", () => { save(); drawSignal(); if ($("show-signal").checked) loadSignal(); });
   $("show-shape").addEventListener("change", () => { save(); rebuild(); });
   $("show-impulse").addEventListener("change", () => { save(); setImpulse(); drawImpulse(); });
@@ -1160,7 +1257,9 @@
   // the signal follows the live feed (the owner, 13 November: "it should run on live feed"): asked every 5 seconds, so a
   // candle that has just finished gives its signal within seconds, and a stop or a target touched by the live price shows at once
   setInterval(() => { if (!document.hidden) loadSignal(); }, 5000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadSignal(); } });
+  setInterval(() => { if (!document.hidden) loadPanel(); }, 15000);
+  drawPanel(); loadPanel();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadSignal(); loadPanel(); } });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
   window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });
   // The page stays where it is: whatever tries to scroll it is put back at once; the wheel with Ctrl held, a pinch on a

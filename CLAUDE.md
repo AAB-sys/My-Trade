@@ -274,6 +274,19 @@ their own logic. Read this before touching the code.
   `volume_history_once` writes each index's 1-minute candles with the futures volume Dhan still gives (the contract trading
   now, the last 120 days) to the data branch as `history/volume/<INDEX>_1min.csv`, the download's eight columns
   (`volume_file`). /health shows it under feed.volume_history. No page and no rule reads it; `lab/check_volume_history.py`.
+  The Live Volume Profile Explanation Panel (17 November, the owner's build document "Live Volume Profile Panel" with its code
+  and 26 tests): `panel/` holds the document's code (panel_engine.py, panel_profile.py, panel_config.json, panel_replay.py,
+  test_panel.py; `python -m unittest test_panel -v` in that folder: all 26 must pass after any change). `vppanel.py` feeds it
+  (today's finished 1-minute index candles with the futures volume of the same minute, 0 when missing; yesterday's levels
+  from vpsignal, the page's "Prev day" lines; one engine per index per day, fed one candle at a time, replayed after a
+  restart); `/indices/{name}/vp-panel`; on the page a "Panel" tick box, off by default: a 340 px column right of the chart
+  (under it on a phone), today's thin zones as light bands on the chart. Two things were added to the document's code, both
+  off by default so its own tests are untouched: `build_profile(like_chart=True)` (the chart's arithmetic of
+  static/volprofile.js, so the panel's POC, VAH, VAL equal the chart's: the document's arithmetic agreed with the chart at
+  only about half the moments of 18 real days) and the config key `match_chart_profile` that vppanel sets. While the Panel
+  is on, the page's VWAP line is counted from the 1-minute candles so it equals the panel's VWAP; with it off, as before.
+  Futures open interest is not fed yet (the check says "not available"). It describes; no call, no order.
+  `lab/check_vppanel.py` (and with a "Candles with volume" file: the replay of every day).
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
   (`dhan.future_history`): the candles file plus Volume and Contract, the futures contract trading now only (Dhan's list
