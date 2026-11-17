@@ -850,6 +850,7 @@
     let info = "";  // the indicators' figures: in the line above the chart, not on it
     if (state.rsi && state.rsi.has(at.time)) info += `<span><i class="line" style="background:var(--rsi)"></i><span class="k">RSI ${RSI_LENGTH}</span> <span class="v">${state.rsi.get(at.time).toFixed(2)}</span></span><span class="cut"></span>`;
     if (state.vwap && state.vwap.has(at.time)) info += `<span><i class="line" style="background:var(--vwap)"></i><span class="k">VWAP</span> <span class="v">${num(state.vwap.get(at.time))}</span></span><span class="cut"></span>`;
+    if (!state.oi && $("show-oi").checked) info += `<span><span class="k">OI walls</span> <span class="v">${state.oiWhy ? "no data: " + state.oiWhy : "reading the option chain…"}</span></span><span class="cut"></span>`;
     if (state.oi) info += `<span><i class="line" style="background:var(--down)"></i><span class="k">Call OI wall</span> <span class="v">${state.oi.call ? num(state.oi.call.strike, 0) + " (" + short(state.oi.call.oi) + ")" : "—"}</span></span><span><i class="line" style="background:var(--up)"></i><span class="k">Put OI wall</span> <span class="v">${state.oi.put ? num(state.oi.put.strike, 0) + " (" + short(state.oi.put.oi) + ")" : "—"}</span></span><span class="cut"></span>`;
     if (!state.timeOnly) info += `<span><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></span><span class="cut"></span>`;
     if (p && p.total > 0) {
@@ -1006,17 +1007,20 @@
     priceView(state.priceView || null); drawLegend();
   }
   async function loadOi() {
-    if (!$("show-oi").checked) { state.oi = null; drawOi(); return; }
+    if (!$("show-oi").checked) { state.oi = null; state.oiWhy = ""; drawOi(); return; }
     const seq = ++oiSeq, name = state.name;
     try {
       const r = await fetch(`/options/${encodeURIComponent(name)}/chain`, withTab());
-      if (seq !== oiSeq || name !== state.name || !r.ok) return;  // an answer for an older ask or another index, or Dhan gave none: the lines stay as they were
+      if (seq !== oiSeq || name !== state.name) return;  // an answer for an older ask or another index
+      // no chain, or a chain with no open interest: the lines stay as they were, and the line above the chart says why
+      // (17 November, the owner, with the box ticked and nothing drawn: "where is call OI and put OI ?")
+      if (!r.ok) { let why = "HTTP " + r.status; try { why = (await r.json()).detail || why; } catch (e) {} state.oiWhy = String(why).slice(0, 140); drawLegend(); return; }
       const w = oiWalls(await r.json());
-      if (w) { state.oi = w; drawOi(); }
-    } catch (e) {}
+      if (w) { state.oiWhy = ""; state.oi = w; drawOi(); } else { state.oiWhy = "Dhan's option chain shows no open interest now"; drawLegend(); }
+    } catch (e) { state.oiWhy = "could not reach the server"; drawLegend(); }
   }
   $("show-oi").addEventListener("change", () => { try { localStorage.setItem("volumeProfileOI", $("show-oi").checked ? "1" : "0"); } catch (e) {} loadOi(); });
-  $("index").addEventListener("change", () => { state.oi = null; setTimeout(() => { drawOi(); loadOi(); }, 0); });
+  $("index").addEventListener("change", () => { state.oi = null; state.oiWhy = ""; setTimeout(() => { drawOi(); loadOi(); }, 0); });
   setInterval(() => { if (!document.hidden) loadOi(); }, 15000);  // every 15 s, as the index page's OI chart (the owner, 17 November: "yes make it 15 seconds")
   setTimeout(loadOi, 1500);
 
