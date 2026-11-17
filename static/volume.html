@@ -195,6 +195,10 @@
   #panel .alerts { max-height: 132px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
   #panel .alerts .a { padding: 2px 0; } #panel .alerts .a .tm { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
   #panel .none { color: var(--muted); }
+  #panel .verify { padding: 4px 8px; border-radius: 6px; margin: 0 0 6px; font-weight: 600; }
+  #panel .verify.yes { color: var(--up); background: color-mix(in srgb, var(--up) 12%, transparent); }
+  #panel .verify.no { color: var(--down); background: color-mix(in srgb, var(--down) 14%, transparent); }
+  #panel .verify.wait { color: var(--muted); background: var(--hover); font-weight: 400; }
   #panel .warn { flex: none; padding: 6px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11.5px; }
   @media (prefers-color-scheme: dark) { #panel .flag { color: #fbbf24; } }
   @media (max-width: 900px) and (min-width: 601px) { #panel { width: 280px; } }
@@ -731,7 +735,7 @@
   function setAll(fit) {
     const bars = shown().flat();
     candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
-    rebuild(); setVolume(); setRsi(); setImpulse(); setVwap(); redraw();
+    rebuild(); setVolume(); setRsi(); setImpulse(); setVwap(); redraw(); drawPanel();
     // A new index, time frame or number of days: the chart shows that choice whole, its own times and its own prices. The
     // price scale is told to follow the candles again every time: after the up and down buttons, and also after the owner
     // dragged the price scale or the chart by hand (13 November: SENSEX's prices stayed on the scale when NIFTY 50 was chosen,
@@ -1175,7 +1179,7 @@
   // The owner's build document "Live Volume Profile Explanation Panel" (17 November). The server works it out with the document's
   // own code (/indices/{name}/vp-panel, vppanel.py over panel/); the page only shows what comes: the status line, the score, the
   // seven checks, the key levels, the thin zones, the if/then table, the flags, the alerts and the warning. It describes the
-  // chart so far; it states no call. Asked every 15 seconds while the box is ticked (the engine moves once a minute).
+  // chart so far; it states no call. Asked every 5 seconds while the box is ticked (the engine moves once a minute).
   let panelSeq = 0;
   const esc = (x) => String(x == null ? "" : x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   async function loadPanel() {
@@ -1187,6 +1191,28 @@
       state.panel = r.ok ? await r.json() : { problem: "HTTP " + r.status };
     } catch (e) { if (seq !== panelSeq) return; state.panel = state.panel || { problem: "could not be loaded" }; }
     drawPanel(); profile.requestUpdate && profile.requestUpdate();
+  }
+  // THE CROSS-CHECK (17 November, the owner: "charts all values and panels value should match always because buying the call or
+  // buying CE or buying PE depends on that only"): at every look the page counts the chart's own profile and VWAP again, on the
+  // same candles the panel read (today's 1-minute candles that had closed at the panel's time, with the page's own volume), and
+  // compares: POC, VAH, VAL, VWAP, and yesterday's three levels against the "Prev day" lines. The panel says in one line whether
+  // they are the same, and when they are not, which number and by how much. The chart's lines also count the candle forming now,
+  // so between two minute closes they can move before the panel does: that is said too.
+  function checkPanel(g) {
+    if (!g || !g.profile || !g.time || !g.date) return null;
+    const end = Date.parse(`${g.date}T${g.time}:00+05:30`) / 1000, dayStart = Date.parse(`${g.date}T09:15:00+05:30`) / 1000;
+    const fine = state.fine.filter(m => m.time >= dayStart && m.time + 60 <= end);
+    if (!fine.length || (state.fine === state.bars && state.interval !== "1m")) return { ok: null, text: "The chart's 1-minute candles are not loaded yet: not checked" };
+    if (fine.length !== g.candles) return { ok: null, text: `The chart holds ${fine.length} closed minutes, the panel read ${g.candles}: checked again at the next look` };
+    const have = fine.some(m => state.fineVolumes.get(m.time) > 0), p = VolProfile.build(fine, have ? state.fineVolumes : null), diff = [];
+    let pv = 0, v = 0; for (const m of fine) { const w = state.fineVolumes.get(m.time) || 0; if (w > 0) { pv += w * (m.high + m.low + m.close) / 3; v += w; } }
+    const pair = (name, a, b) => { if (a == null && b == null) return; if (a == null || b == null || Math.abs(a - b) > 0.005) diff.push(`${name}: panel ${a == null ? "none" : num(a)}, chart ${b == null ? "none" : num(b)}`); };
+    pair("POC", g.profile.poc, p.poc); pair("VAH", g.profile.vah, p.vah); pair("VAL", g.profile.val, p.val); pair("VWAP", g.vwap, v > 0 ? pv / v : null);
+    const sg = state.signal, lv = sg && sg.levels, yd = g.levels && Object.fromEntries(g.levels.map(l => [l.name, l.price]));
+    let prevSaid = "";
+    if (lv && yd && sg.levels_from === g.previous_day) { pair("Yesterday's VAH", yd["Yesterday's VAH"], lv.vah); pair("Yesterday's POC", yd["Yesterday's POC"], lv.poc); pair("Yesterday's VAL", yd["Yesterday's VAL"], lv.val); prevSaid = ", and yesterday's VAH, POC, VAL"; }
+    return diff.length ? { ok: false, text: `NOT the same as the chart at ${g.time}: ${diff.join("; ")}. The last minutes' volume may still be arriving; if this stays, do not rely on the panel.` }
+      : { ok: true, text: `Same as the chart at ${g.time}: POC, VAH, VAL, VWAP${prevSaid}` };
   }
   function drawPanel() {
     const box = $("panel"), on = $("show-panel").checked, g = state.panel;
@@ -1200,6 +1226,9 @@
     const mark = (n) => `<span class="mark ${n > 0 ? "p" : n < 0 ? "n" : "z"}">${n > 0 ? "+" + n : n < 0 ? "−" + Math.abs(n) : "0"}</span>`;
     let h = `<p class="status ${tone}">${esc(g.status_line)}</p>`;
     h += `<div class="meta">${esc(g.name)} · ${esc(g.time)} · price ${num(g.price)} · score <b>${g.score > 0 ? "+" + g.score : g.score < 0 ? "−" + Math.abs(g.score) : "0"}</b> of a possible +7${g.contract ? " · volume of " + esc(g.contract.name) : ""}</div>`;
+    const ck = checkPanel(g);
+    if (ck) h += `<div class="verify ${ck.ok === true ? "yes" : ck.ok === false ? "no" : "wait"}">${ck.ok === true ? "✓ " : ck.ok === false ? "✗ " : ""}${esc(ck.text)}</div>`;
+    h += `<div class="meta">Read at the close of the ${esc(g.time)} minute. The chart's lines also count the candle forming now, so they can move a little before the next minute closes.${g.previous_day ? ` Yesterday here is ${shortDay(g.previous_day)}${state.signal && state.signal.chart_levels ? "; after the close the chart's Prev day lines show today's levels, for the next session" : ""}.` : ""}</div>`;
     h += `<h3>Checks</h3>` + g.checks.map(c => `<div class="row">${mark(c.score)}<span class="t"><span class="k">${esc(c.name)}:</span> ${esc(c.result)}</span></div>`).join("");
     // the levels, highest first, with the price's own row where it belongs
     const lv = (g.levels || []).slice(); let placed = false, rows = "";
@@ -1257,7 +1286,7 @@
   // the signal follows the live feed (the owner, 13 November: "it should run on live feed"): asked every 5 seconds, so a
   // candle that has just finished gives its signal within seconds, and a stop or a target touched by the live price shows at once
   setInterval(() => { if (!document.hidden) loadSignal(); }, 5000);
-  setInterval(() => { if (!document.hidden) loadPanel(); }, 15000);
+  setInterval(() => { if (!document.hidden) loadPanel(); }, 5000);  // the engine moves once a minute; asked often so a closed minute shows within seconds
   drawPanel(); loadPanel();
   document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadSignal(); loadPanel(); } });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });

@@ -85,4 +85,23 @@ if len(sys.argv) > 1:
         if c[0]["hm"] == "09:15" and len(c) >= 338:
             pv = panel_engine.previous_levels(c, cfg)
     check(f"{os.path.basename(sys.argv[1])}: {done} of {len(days)} days replayed minute by minute without an error" + ("; " + "; ".join(bad[:3]) if bad else ""), not bad)
+    # the cross-check, every minute (17 November, the owner: "charts all values and panels value should match always"): the last 18
+    # days of the file, each minute: the engine's POC, VAH, VAL and VWAP (the profile fields and the levels list) against the
+    # chart's own code (volprofile.js) and the page's VWAP formula, run with node
+    js2 = """const V=require(process.argv[1]),days=JSON.parse(require('fs').readFileSync(0,'utf8')),out={};
+for(const [d,c] of Object.entries(days)){const rows=[];let pv=0,vv=0;for(let k=1;k<=c.length;k++){const x=c[k-1];if(x.v>0){pv+=x.v*(x.h+x.l+x.c)/3;vv+=x.v;}
+const s=c.slice(0,k),have=s.some(y=>y.v>0),p=V.build(s.map((y,i)=>({time:i*60,open:y.o,high:y.h,low:y.l,close:y.c})),have?new Map(s.map((y,i)=>[i*60,y.v])):null);rows.push([p.poc,p.vah,p.val,vv>0?pv/vv:null]);}out[d]=rows;}
+console.log(JSON.stringify(out));"""
+    use = OrderedDict((d, days[d]) for d in list(days)[-18:])
+    chart = json.loads(subprocess.run(["node", "-e", js2, os.path.join(ROOT, "static", "volprofile.js")], input=json.dumps(use), capture_output=True, text=True, check=True).stdout)
+    n = wrong = 0; worst = 0.0
+    for d, c in use.items():
+        eng = panel_engine.PanelEngine(cfg, None, d, 1)
+        for k in range(1, len(c) + 1):
+            o, q = eng.update(c[:k]), chart[d][k - 1]; n += 1
+            lv = {l["name"]: l["price"] for l in o["levels"]}
+            gaps = [abs(o["profile"]["poc"] - q[0]), abs(o["profile"]["vah"] - q[1]), abs(o["profile"]["val"] - q[2]), abs((o["vwap"] or 0) - (q[3] or 0))]
+            gaps += [abs(lv[nm] - q[i]) for nm, i in (("Today's POC", 0), ("Today's VAH", 1), ("Today's VAL", 2), ("VWAP", 3)) if nm in lv and q[i] is not None]
+            worst = max(worst, max(gaps)); wrong += max(gaps) > 1e-6
+    check(f"every minute of the last {len(use)} days ({n} minutes): the panel's POC, VAH, VAL and VWAP = the chart's ({wrong} different, largest gap {worst:.6f})", wrong == 0)
 print("all fine" if ok else "SOMETHING FAILED"); sys.exit(0 if ok else 1)

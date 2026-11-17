@@ -286,6 +286,11 @@ their own logic. Read this before touching the code.
   only about half the moments of 18 real days) and the config key `match_chart_profile` that vppanel sets. While the Panel
   is on, the page's VWAP line is counted from the 1-minute candles so it equals the panel's VWAP; with it off, as before.
   Futures open interest is not fed yet (the check says "not available"). It describes; no call, no order.
+  THE CROSS-CHECK (17 November, the owner: "charts all values and panels value should match always because buying the call
+  or buying CE or buying PE depends on that only"): at every look (every 5 s) the page counts the chart's own profile and
+  VWAP again on the minutes the panel read and shows one line in the panel: "Same as the chart at HH:MM" (green) or "NOT
+  the same" with the numbers (red) (`checkPanel`). The chart's lines also count the candle forming now; the panel reads
+  closed minutes only (the document's rule), and says so.
   `lab/check_vppanel.py` (and with a "Candles with volume" file: the replay of every day).
   The past volume as a file (15 November, the owner: "download the volume data from the past ... the same way you did it
   before for the candles data"): the Main Menu's Download candles capsule, File "Candles with volume" -> `/download/volume`
