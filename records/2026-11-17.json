@@ -283,8 +283,8 @@
   "index_at_entry": 25329.4,
   "premium_paid": 74.8,
   "paid_at": "2026-11-17T09:40:01+05:30",
-  "premium_now": 214.9,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 201.6,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 48.62,
   "sold": null,
   "ended": null,
@@ -385,8 +385,8 @@
   "index_at_entry": 82217.27,
   "premium_paid": 495.5,
   "paid_at": "2026-11-17T09:40:07+05:30",
-  "premium_now": 905.85,
-  "now_at": "2026-11-17T12:00:24+05:30",
+  "premium_now": 867.3,
+  "now_at": "2026-11-17T12:05:12+05:30",
   "sell_below": 322.07,
   "sold": null,
   "ended": null,
@@ -455,8 +455,8 @@
   "index_at_entry": 25358.05,
   "premium_paid": 60.9,
   "paid_at": "2026-11-17T09:45:19+05:30",
-  "premium_now": 166.5,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 155.0,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 39.59,
   "sold": null,
   "ended": null,
@@ -759,8 +759,8 @@
   "index_at_entry": 82458.59,
   "premium_paid": 472.15,
   "paid_at": "2026-11-17T10:15:43+05:30",
-  "premium_now": 759.7,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 722.55,
+  "now_at": "2026-11-17T12:05:13+05:30",
   "sell_below": 306.9,
   "sold": null,
   "ended": null,
@@ -914,8 +914,8 @@
   "index_at_entry": 25391.3,
   "premium_paid": 80.2,
   "paid_at": "2026-11-17T10:45:05+05:30",
-  "premium_now": 166.5,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 155.0,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 52.13,
   "sold": null,
   "ended": null,
@@ -945,8 +945,8 @@
   "index_at_entry": 82495.59,
   "premium_paid": 511.7,
   "paid_at": "2026-11-17T10:46:53+05:30",
-  "premium_now": 759.7,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 722.55,
+  "now_at": "2026-11-17T12:05:13+05:30",
   "sell_below": 332.61,
   "sold": null,
   "ended": null,
@@ -964,8 +964,8 @@
   "index_at_entry": 25429.3,
   "premium_paid": 66.15,
   "paid_at": "2026-11-17T11:10:04+05:30",
-  "premium_now": 124.3,
-  "now_at": "2026-11-17T12:00:24+05:30",
+  "premium_now": 112.0,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 43.0,
   "sold": null,
   "ended": null,
@@ -995,8 +995,8 @@
   "index_at_entry": 82640.74,
   "premium_paid": 457.45,
   "paid_at": "2026-11-17T11:10:11+05:30",
-  "premium_now": 623.3,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 594.0,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 297.34,
   "sold": null,
   "ended": null,
@@ -1014,8 +1014,8 @@
   "index_at_entry": 62359.05,
   "premium_paid": 556.9,
   "paid_at": "2026-11-17T11:20:08+05:30",
-  "premium_now": 564.85,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 530.5,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 361.99,
   "sold": null,
   "ended": null,
@@ -1033,8 +1033,8 @@
   "index_at_entry": 25452.1,
   "premium_paid": 58.15,
   "paid_at": "2026-11-17T11:20:43+05:30",
-  "premium_now": 83.85,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 74.45,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 37.8,
   "sold": null,
   "ended": null,
@@ -1045,6 +1045,18 @@
    "premium": 49.2,
    "at": "2026-11-17T11:23:40+05:30",
    "share": 0.15
+  },
+  "lock": {
+   "MAX": {
+    "at": "2026-11-17T12:05:05+05:30",
+    "premium": 72.95,
+    "from": "live"
+   },
+   "STEADY": {
+    "at": "2026-11-17T12:05:05+05:30",
+    "premium": 72.95,
+    "from": "live"
+   }
   }
  },
  {
@@ -1056,8 +1068,8 @@
   "index_at_entry": 25452.1,
   "premium_paid": 58.15,
   "paid_at": "2026-11-17T11:20:43+05:30",
-  "premium_now": 83.85,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 74.45,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 37.8,
   "sold": null,
   "ended": null,
@@ -1068,6 +1080,18 @@
    "premium": 49.2,
    "at": "2026-11-17T11:23:40+05:30",
    "share": 0.15
+  },
+  "lock": {
+   "MAX": {
+    "at": "2026-11-17T12:05:05+05:30",
+    "premium": 72.95,
+    "from": "live"
+   },
+   "STEADY": {
+    "at": "2026-11-17T12:05:05+05:30",
+    "premium": 72.95,
+    "from": "live"
+   }
   }
  },
  {
@@ -1127,8 +1151,8 @@
   "index_at_entry": 82727.34,
   "premium_paid": 465.6,
   "paid_at": "2026-11-17T11:45:03+05:30",
-  "premium_now": 563.1,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 533.35,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 302.64,
   "sold": null,
   "ended": null,
@@ -1146,15 +1170,27 @@
   "index_at_entry": 25454.55,
   "premium_paid": 54.7,
   "paid_at": "2026-11-17T11:45:10+05:30",
-  "premium_now": 83.85,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 74.45,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 35.55,
   "sold": null,
   "ended": null,
   "security_id": 45408,
   "premium_low": 47.8,
   "premium_low_at": "2026-11-17T11:50:57+05:30",
-  "stop15": null
+  "stop15": null,
+  "lock": {
+   "MAX": {
+    "at": "2026-11-17T12:05:05+05:30",
+    "premium": 72.95,
+    "from": "live"
+   },
+   "STEADY": {
+    "at": "2026-11-17T12:05:05+05:30",
+    "premium": 72.95,
+    "from": "live"
+   }
+  }
  },
  {
   "key": "NIFTY 50|5m|1794896100|PE|today",
@@ -1187,14 +1223,14 @@
   "index_at_entry": 25486.9,
   "premium_paid": 77.45,
   "paid_at": "2026-11-17T12:00:15+05:30",
-  "premium_now": 83.85,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 74.45,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 50.34,
   "sold": null,
   "ended": null,
   "security_id": 45408,
-  "premium_low": 77.45,
-  "premium_low_at": "2026-11-17T12:00:15+05:30",
+  "premium_low": 72.8,
+  "premium_low_at": "2026-11-17T12:05:03+05:30",
   "stop15": null
  },
  {
@@ -1206,14 +1242,14 @@
   "index_at_entry": 25486.9,
   "premium_paid": 77.45,
   "paid_at": "2026-11-17T12:00:15+05:30",
-  "premium_now": 83.85,
-  "now_at": "2026-11-17T12:00:25+05:30",
+  "premium_now": 74.45,
+  "now_at": "2026-11-17T12:05:14+05:30",
   "sell_below": 50.34,
   "sold": null,
   "ended": null,
   "security_id": 45408,
-  "premium_low": 77.45,
-  "premium_low_at": "2026-11-17T12:00:15+05:30",
+  "premium_low": 72.8,
+  "premium_low_at": "2026-11-17T12:05:03+05:30",
   "stop15": null
  }
 ]
