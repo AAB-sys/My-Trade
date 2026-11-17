@@ -435,3 +435,15 @@ branch from `main`.
   above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's
   save writes them as `indices[name]["oi_walls"]`. /health shows `feed.oi_walls`. A restart loses the looks made before it.
   No page and no rule reads them. Test: `python3 lab/check_oi_walls.py`.
+
+- ONE SET OF NUMBERS on the Volume Profile page (17 November, the owner: "Make all the values same as the chart and same on the
+  panel so they never disagree ... Match every number and keep the logic same so new numbers will work according to the logic
+  only"). The chart's own count is the one source: (1) a day's VAH, POC and VAL for the Signal box, the "Prev day" lines and the
+  panel's "yesterday" are the chart's 24-row count of that day (`vpsignal.LEVELS_LIKE_CHART`, `chart_levels_of`; the document's
+  fixed-row count stays for the hvn/lvn nodes and is the whole of it when the setting is False); (2) the panel's shape is the
+  chart's (`panel_profile.chart_shape`, a line-for-line copy of `static/vpshape.js`; `match_chart_shape`), shown at once, named as
+  the chart names it (`vppanel.chart_words`); (3) the panel's POC movement check watches the chart's POC (`match_chart_poc`). The
+  rules themselves (vp/vp_signal.py, the panel engine's checks) are unchanged: they read the new numbers. The page's check line
+  compares the shape too. Changing `static/volprofile.js` or `static/vpshape.js` means changing their Python copies in
+  `panel/panel_profile.py`, and `lab/check_vppanel.py` and `lab/check_vpsignal.py` must still pass.
+

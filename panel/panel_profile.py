@@ -152,3 +152,58 @@ def row_hi(p, i):
 
 def row_mid(p, i):
     return (row_lo(p, i) + row_hi(p, i)) / 2.0
+
+
+def chart_shape(candles, rows=30, smooth=2, second_ratio=0.60, valley_ratio=0.70, pos_hi=0.66, pos_lo=0.34):
+    """The shape the page's chart names (added 17 November 2026, the owner: "Panel show the same shape name as the chart, so
+    they never disagree"): static/vpshape.js's own count and rule, line for line. The day's range in `rows` equal rows; a
+    candle's volume goes to each row by the share of its range inside it (a candle with no volume weighs 1); the rows are
+    smoothed twice; two far-apart peaks with a valley between them are a Double Zone; else the busiest row's place in the
+    range says P (top third), B (bottom third) or D.
+    Returns {"shape": "P" | "B" | "D" | "Double", "low_poc", "high_poc" (a Double Zone's two busy prices, else None),
+    "gap_low", "gap_high" (the valley row between them, else None)}."""
+    lo = min(c["l"] for c in candles)
+    hi = max(c["h"] for c in candles)
+    step = max((hi - lo) / rows, 0.05)
+    v = [0.0] * rows
+
+    def at(price):
+        return max(0, min(rows - 1, int(math.floor((price - lo) / step))))
+
+    for c in candles:
+        w = float(c.get("v") or 0)
+        if not w > 0:
+            w = 1.0
+        r0, r1, span = at(c["l"]), at(c["h"]), c["h"] - c["l"]
+        if span <= 0:
+            v[r0] += w
+            continue
+        for r in range(r0, r1 + 1):
+            rl = lo + r * step
+            v[r] += w * max(0.0, min(c["h"], rl + step) - max(c["l"], rl)) / span
+    n, s = rows, list(v)
+    for _ in range(smooth):
+        t = list(s)
+        s = [(t[max(i - 1, 0)] + 2 * t[i] + t[min(i + 1, n - 1)]) / 4 for i in range(n)]
+    poc_v = max(s)
+    poc = s.index(poc_v)
+    min_sep = max(3, int(math.floor(n * 0.2 + 0.5)))
+    p2, p2_v = -1, 0.0
+    for i in range(n):
+        if abs(i - poc) >= min_sep:
+            cv, lv, rv = s[i], s[max(i - 1, 0)], s[min(i + 1, n - 1)]
+            if (i == 0 or cv >= lv) and (i == n - 1 or cv >= rv) and cv > p2_v:
+                p2_v, p2 = cv, i
+    kind, k = "", None
+    if p2 >= 0 and p2_v >= second_ratio * poc_v:
+        a, z = min(poc, p2), max(poc, p2)
+        k = min(range(a, z + 1), key=lambda j: s[j])
+        if s[k] <= valley_ratio * p2_v:
+            kind = "Double"
+    if not kind:
+        pos = poc / float(n - 1) if n > 1 else 0.5
+        kind = "P" if pos > pos_hi else "B" if pos < pos_lo else "D"
+    mid = lambda r: lo + (r + 0.5) * step
+    two = kind == "Double"
+    return {"shape": kind, "low_poc": mid(min(poc, p2)) if two else None, "high_poc": mid(max(poc, p2)) if two else None,
+            "gap_low": lo + k * step if two else None, "gap_high": lo + (k + 1) * step if two else None}

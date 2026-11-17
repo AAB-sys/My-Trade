@@ -34,6 +34,7 @@ def day(n=375, volume=True):
         out.append({"hm": "%02d:%02d" % ((555 + i) // 60, (555 + i) % 60), "o": o, "h": max(o, c) + 1.5, "l": min(o, c) - 1.5, "c": c, "v": float(1000 + (i * 53) % 700) if volume else 0.0})
     return out
 cfg = dict(vppanel.CFG); cfg["match_chart_profile"] = True
+cfg["match_chart_shape"] = cfg["match_chart_poc"] = True  # as the page runs it (vppanel.config_for), 17 November
 prev = {"vah": 25010.0, "poc": 24990.0, "val": 24960.0, "high": 25030.0, "low": 24940.0, "close": 24995.0}
 candles = day()
 
@@ -69,6 +70,49 @@ blind = vppanel.feed({"engine": panel_engine.PanelEngine(cfg, prev, "2026-11-16"
 check("no volume: the flags say so, and the VWAP check is not available", any("No volume received" in f for f in blind["flags"]) and blind["vwap"] is None and "not available" in blind["checks"][0]["result"])
 check("the candle the server makes: start time, prices, 0 for a missing futures minute",
       vppanel.candles_of([{"time": 1794541500, "open": 1.0, "high": 2.0, "low": 0.5, "close": 1.5}], {}) == [{"hm": "09:15", "o": 1.0, "h": 2.0, "l": 0.5, "c": 1.5, "v": 0.0}])
+
+# 17 November: the shape is the chart's (the owner: "Panel show the same shape name as the chart, so they never disagree")
+import panel_profile
+shape_js = """
+const V = require(process.argv[1]), cs = JSON.parse(require("fs").readFileSync(0, "utf8")), out = [];
+const T0 = 1794887100, bars = cs.map((c, i) => ({ time: T0 + i * 60, open: c.o, high: c.h, low: c.l, close: c.c })), W = new Map(cs.map((c, i) => [T0 + i * 60, c.v]));
+for (let k = 16; k <= bars.length; k += 7) { const q = V.read(bars.slice(0, k), W); out.push([k, q.shape, q.zoneLow, q.zoneHigh]); }
+console.log(JSON.stringify(out));
+"""
+try:
+    for label, cs in (("a made-up day", candles), ("a two-zone day", [dict(c, o=c["o"] + (180 if i >= 190 else 0), h=c["h"] + (180 if i >= 190 else 0), l=c["l"] + (180 if i >= 190 else 0), c=c["c"] + (180 if i >= 190 else 0)) for i, c in enumerate(candles)])):
+        got = json.loads(subprocess.run(["node", "-e", shape_js, os.path.join(ROOT, "static", "vpshape.js")], input=json.dumps(cs), capture_output=True, text=True, check=True).stdout)
+        bad = [k for k, shape, zl, zh in got if panel_profile.chart_shape(cs[:k])["shape"] != shape or (shape == "Double" and (abs(panel_profile.chart_shape(cs[:k])["low_poc"] - zl) > 1e-6 or abs(panel_profile.chart_shape(cs[:k])["high_poc"] - zh) > 1e-6))]
+        check(f"{label}: the shape rule in Python = the chart's (vpshape.js) at {len(got)} moments, shapes seen {sorted(set(g[1] for g in got))}", not bad)
+        eng, seen, wrong = panel_engine.PanelEngine(dict(cfg, match_chart_shape=True), prev, "2026-11-16", 1), set(), 0
+        names = {"P": "P", "B": "b", "D": "D", "Double": "double"}
+        for k in range(1, len(cs) + 1):
+            o = eng.update(cs[:k])
+            if o["shape"]["shown"] == "too_early":
+                continue
+            want = names[panel_profile.chart_shape(cs[:k])["shape"]]
+            seen.add(want); wrong += o["shape"]["shown"] != want or o["shape"]["raw"] != want
+        check(f"{label}: every minute the panel shows the chart's shape, at once (shapes {sorted(seen)})", wrong == 0 and len(seen) >= 1)
+    two = vppanel.chart_words(panel_engine.PanelEngine(dict(cfg, match_chart_shape=True), prev, "2026-11-16", 1).update(cs))
+    text = json.dumps(two, default=str)
+    check("the panel's sentences use the chart's names (no 'Double distribution', no 'b-shape')", "Double distribution" not in text and "b-shape" not in text)
+    plain = panel_engine.PanelEngine({k: v for k, v in cfg.items() if k not in ("match_chart_shape", "match_chart_poc")}, prev, "2026-11-16", 1)
+    for k in range(1, 200):
+        o2 = plain.update(candles[:k])
+    check("with the setting off the document's own shape rule runs, untouched", "chart" not in o2["shape"] and plain.cfg.get("match_chart_shape") is None)
+    # "Match every number": the POC whose movement the panel watches is the chart's own
+    pe = panel_engine.PanelEngine(dict(cfg, match_chart_shape=True, match_chart_poc=True), prev, "2026-11-16", 1)
+    off, n_mig = 0, 0
+    for k in range(1, len(candles) + 1):
+        o3 = pe.update(candles[:k])
+        if o3["migration"]:
+            n_mig += 1
+            off += abs(o3["migration"]["to"] - o3["profile"]["poc"]) > 1e-9
+    check(f"the POC movement check reads the chart's POC at every one of {n_mig} minutes", n_mig > 100 and off == 0)
+    check("and its sentence says so (no 'Busiest 5-point row')", "Busiest 5-point row" not in json.dumps(vppanel.chart_words(o3), default=str) and "Today's POC" in json.dumps(vppanel.chart_words(o3), default=str))
+except Exception as exc:  # noqa: BLE001
+    import traceback; traceback.print_exc()
+    check(f"the shape check could not run: {exc}", False)
 
 # 17 November: the volume that comes late (the owner's photo after a restart: "NOT the same as the chart ... VWAP: panel none")
 from datetime import date as _date, datetime as _dt

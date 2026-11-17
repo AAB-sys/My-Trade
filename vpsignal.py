@@ -67,6 +67,29 @@ def sessions_of(bars: list, volumes: dict) -> dict:
     return dict(sorted(days.items()))
 
 
+# One set of numbers (17 November, the owner, of yesterday's VAH 25,285 in the Signal box and the panel against 25,302 on the
+# drawn profile: "Make all the values same as the chart and same on the panel so they never disagree ... Match every number and
+# keep the logic same so new numbers will work according to the logic only"). A day's VAH, POC and VAL are now the ones the
+# chart draws for that day: its range in 24 rows, each candle's volume shared over the rows it crosses (static/volprofile.js,
+# in Python as panel/panel_profile.py's like_chart, proved equal to the page's on every minute of the saved days). Before, the
+# Signal counted them in fixed 5-point rows, so the same day had two VAHs a row or two apart. The document's rule is unchanged:
+# it reads the same three levels, and its busy and thin nodes (hvn, lvn), the session's high and low and the naked POC list's
+# rule stay the document's own. False: the document's fixed rows, as before.
+LEVELS_LIKE_CHART = True
+CHART_ROWS, CHART_VA_STEP = 24, 2  # the chart: 24 rows, the value area grown two rows at a time
+
+
+def chart_levels_of(candles: list, value_area_pct: float) -> dict:
+    """{"val", "poc", "vah"} of one session as the page's chart counts them."""
+    import sys
+    panel = str(Path(__file__).resolve().parent / "panel")
+    if panel not in sys.path:
+        sys.path.insert(0, panel)
+    import panel_profile
+    p = panel_profile.build_profile(candles, rows=CHART_ROWS, va_pct=value_area_pct, va_step=CHART_VA_STEP, like_chart=True)
+    return {"val": p["val"], "poc": p["poc"], "vah": p["vah"]}
+
+
 def prepare(days: dict, day: str, cfg: dict, fine: dict | None = None):
     """Yesterday's profile and the naked POC list as they stood before `day` opened: the document's vp_cli.prepare, with its
     note 3 (a session of fewer than about 70 candles builds no profile). "Yesterday" is the last session before `day` that
@@ -87,6 +110,8 @@ def prepare(days: dict, day: str, cfg: dict, fine: dict | None = None):
                 continue
         prev = vp_profile.build_profile(use, cfg["bin_size_pts"], cfg["value_area_pct"])
         prev["candles"] = basis
+        if LEVELS_LIKE_CHART:
+            prev.update(chart_levels_of(use, cfg["value_area_pct"]))
         naked = vp_profile.update_naked_pocs(naked, d, use, prev, cfg["naked_poc_max_age_days"])
         prev_day = d
     return prev, prev_day, naked
@@ -141,7 +166,8 @@ def day_view(days: dict, day: str, finished: list, cfg: dict, lot_size=None, pre
     if prev is None:
         view["signal"] = {"signal": "WAIT", "reason": "No earlier session with enough candles to build a profile from.", "skipped": []}
         return view
-    view["levels"] = {**{k: prev[k] for k in ("val", "poc", "vah", "hvn", "lvn", "session_low", "session_high", "uses_volume")},
+    view["levels"] = {"like_chart": LEVELS_LIKE_CHART,  # VAL, POC and VAH counted as the chart draws that day (17 November)
+                      **{k: prev[k] for k in ("val", "poc", "vah", "hvn", "lvn", "session_low", "session_high", "uses_volume")},
                       "candles": prev.get("candles", "5m"), "bin_size_pts": cfg["bin_size_pts"]}
     if not finished:
         view["signal"] = {"signal": "WAIT", "reason": "The market has not opened yet.", "skipped": []}

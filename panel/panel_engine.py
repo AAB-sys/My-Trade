@@ -5,7 +5,7 @@ shows: a status line, the checks behind it, the shape, key levels, a conditions 
 alerts and day flags. Pure rules: same input, same output. No orders are ever placed.
 """
 import json, math, os
-from panel_profile import build_profile, row_lo, row_hi
+from panel_profile import build_profile, row_lo, row_hi, chart_shape
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WARNING = "Describes the chart's structure so far. Not a prediction or a buy/sell recommendation."
@@ -266,6 +266,7 @@ class PanelEngine:
         self.last = None                      # previous output
         self.last_alert = {}                  # alert type -> minute
         self.last_poc_alert = None
+        self.mig_row = cfg["migration_row_size_pts"]
         self.oi_open = None
 
     # .............................................................. main entry
@@ -284,17 +285,33 @@ class PanelEngine:
                           like_chart=bool(cfg.get("match_chart_profile")))  # the page's own arithmetic, so panel and chart agree
         pf = build_profile(candles, row_size=cfg["migration_row_size_pts"], va_pct=cfg["va_pct"], va_step=1,
                            use_volume=p["mode"] == "volume")
-        self.poc_hist.append((now, pf["poc"]))
+        # the page's setting (17 November 2026, the owner: "Match every number"): the POC whose movement is watched is the
+        # chart's own (today's POC, the row the chart draws), and a move counts from one chart row on; off: the document's
+        # busiest fixed 5-point row, as written
+        chart_poc = bool(cfg.get("match_chart_poc"))
+        self.mig_row = p["step"] if chart_poc else cfg["migration_row_size_pts"]
+        self.poc_hist.append((now, p["poc"] if chart_poc else pf["poc"]))
 
         closes5 = five_minute_closes(candles, self.interval, cfg["session_start"])
         shape = analyse_shape(p, candles, last, now_hm, cfg, closes5)
         ib = [c for c in candles if mins(c["hm"]) < mins(cfg["ib_end"])]
         shape["ib_high"] = max(c["h"] for c in ib) if ib else None
         shape["ib_low"] = min(c["l"] for c in ib) if ib else None
+        if cfg.get("match_chart_shape") and shape["shape"] != "too_early":
+            # the page's setting (17 November 2026, the owner: "Panel show the same shape name as the chart, so they never
+            # disagree ... keep the logic same so new numbers will work according to the logic only"): the shape is the one
+            # the chart names (static/vpshape.js: P, B, D or Double Zone), read at once with no waiting; everything the
+            # document does with a shape afterwards (its check, the failing bulge, the conditions, the alerts) is unchanged
+            cs = chart_shape(candles)
+            shape.pop("double", None)
+            shape["shape"] = {"P": "P", "B": "b", "D": "D", "Double": "double"}[cs["shape"]]
+            if cs["shape"] == "Double":
+                shape["double"] = {"gap_low": cs["gap_low"], "gap_high": cs["gap_high"], "lower_poc": cs["low_poc"], "upper_poc": cs["high_poc"],
+                                   "price_side": "upper" if last > cs["gap_high"] else "lower" if last < cs["gap_low"] else "gap"}
         raw = shape["shape"]
         self.raw_shapes.append(raw)
         k = max(1, int(math.ceil(cfg["stable_minutes"] / float(self.interval))))
-        if self.shown_shape is None or raw == "too_early" or self.shown_shape == "too_early":
+        if self.shown_shape is None or raw == "too_early" or self.shown_shape == "too_early" or cfg.get("match_chart_shape"):
             self.shown_shape = raw
         elif raw != self.shown_shape and len(self.raw_shapes) >= k and all(s == raw for s in self.raw_shapes[-k:]):
             self.shown_shape = raw
@@ -341,7 +358,7 @@ class PanelEngine:
             past = [poc for t, poc in self.poc_hist if t <= now - look]
             if past:
                 d = cur - past[-1]
-                thr = max(cfg["poc_move_min_pts"], cfg["migration_row_size_pts"])
+                thr = max(cfg["poc_move_min_pts"], self.mig_row)
                 trend = "rising" if d >= thr else "falling" if d <= -thr else "steady"
                 return {"minutes": look, "from": past[-1], "to": cur, "change": d, "trend": trend}
         return None
@@ -697,7 +714,7 @@ class PanelEngine:
         poc = self.poc_hist[-1][1]
         if self.last_poc_alert is None:
             self.last_poc_alert = poc
-        elif abs(poc - self.last_poc_alert) >= 2 * cfg["migration_row_size_pts"]:
+        elif abs(poc - self.last_poc_alert) >= 2 * self.mig_row:
             add("poc_moved", "Busiest 5-point row moved %s: %s to %s" % ("up" if poc > self.last_poc_alert else "down",
                                                                  fmt(self.last_poc_alert), fmt(poc)))
             self.last_poc_alert = poc
