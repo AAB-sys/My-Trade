@@ -1,0 +1,19 @@
+NIFTY 50 2026-11-17
+09:45-11:00 P      candles 16 | close 25360 -> 25411 | POC 25348->25380 VAH 25363->25397 VAL 25317->25317 | where {"between POC and VAH":4,"above VAH":11,"between VAL and POC":1} | reached first in 30 min {"VAH":11,"POC":1,"none":4}
+11:05-11:45 D      candles 9 | close 25429 -> 25453 | POC 25373->25381 VAH 25397->25416 VAL 25316->25319 | where {"above VAH":9} | reached first in 30 min {"none":9}
+11:50-15:20 Double candles 43 | close 25456 -> 25413 | POC 25381->25458 VAH 25416->25494 VAL 25319->25369 | where {"above VAH":6,"between VAL and POC":29,"between POC and VAH":8} | reached first in 30 min {"none":18,"VAH":6,"POC":12,"VAL":7}
+by shape, which level price reached first in the next 30 min: {"P":{"VAH":11,"POC":1,"none":4},"D":{"none":9},"Double":{"none":18,"VAH":6,"POC":12,"VAL":7}}
+by where the close sat: {"between POC and VAH":{"VAH":9,"POC":3},"above VAH":{"VAH":8,"none":18},"between VAL and POC":{"POC":10,"none":13,"VAL":7}}
+NIFTY BANK 2026-11-17
+09:45-10:15 D      candles 7 | close 61932 -> 62265 | POC 61755->61781 VAH 61869->62129 VAL 61732->61683 | where {"above VAH":7} | reached first in 30 min {"none":7}
+10:20-12:30 Double candles 27 | close 62258 -> 62390 | POC 61781->62267 VAH 62185->62410 VAL 61683->61870 | where {"above VAH":2,"between VAL and POC":5,"between POC and VAH":20} | reached first in 30 min {"VAH":17,"POC":10}
+12:35-15:20 P      candles 34 | close 62379 -> 62323 | POC 62363->62363 VAH 62410->62410 VAL 61933->62124 | where {"between POC and VAH":7,"between VAL and POC":27} | reached first in 30 min {"POC":17,"none":17}
+by shape, which level price reached first in the next 30 min: {"D":{"none":7},"Double":{"VAH":17,"POC":10},"P":{"POC":17,"none":17}}
+by where the close sat: {"above VAH":{"none":7,"VAH":2},"between VAL and POC":{"POC":15,"none":17},"between POC and VAH":{"POC":12,"VAH":15}}
+SENSEX 2026-11-17
+09:45-09:45 P      candles 1 | close 82357 -> 82357 | POC 82284->82284 VAH 82354->82354 VAL 82242->82242 | where {"above VAH":1} | reached first in 30 min {"none":1}
+09:50-09:55 D      candles 2 | close 82419 -> 82401 | POC 82285->82292 VAH 82378->82377 VAL 82235->82206 | where {"above VAH":2} | reached first in 30 min {"VAH":2}
+10:00-11:55 Double candles 24 | close 82394 -> 82829 | POC 82292->82532 VAH 82411->82570 VAL 82240->82193 | where {"between POC and VAH":7,"above VAH":17} | reached first in 30 min {"VAH":10,"none":14}
+12:00-15:20 D      candles 41 | close 82836 -> 82631 | POC 82528->82535 VAH 82594->82790 VAL 82171->82387 | where {"above VAH":25,"between POC and VAH":12,"between VAL and POC":4} | reached first in 30 min {"none":20,"VAH":16,"POC":5}
+by shape, which level price reached first in the next 30 min: {"P":{"none":1},"D":{"VAH":18,"none":20,"POC":5},"Double":{"VAH":10,"none":14}}
+by where the close sat: {"above VAH":{"none":29,"VAH":16},"between POC and VAH":{"VAH":12,"POC":1,"none":6},"between VAL and POC":{"POC":4}}

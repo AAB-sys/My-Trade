@@ -1,0 +1,210 @@
+{
+ "NIFTY 50": {
+  "day": "2026-11-17",
+  "levels": {
+   "val": 25205,
+   "poc": 25222.5,
+   "vah": 25285,
+   "hvn": [
+    25222.5,
+    25262.5
+   ],
+   "lvn": [],
+   "session_low": 25172.1,
+   "session_high": 25337.6,
+   "uses_volume": true,
+   "candles": "1m",
+   "bin_size_pts": 5
+  },
+  "levels_from": "2026-11-16",
+  "naked": [
+   {
+    "date": "2026-10-29",
+    "poc": 22852.5,
+    "age": 11
+   },
+   {
+    "date": "2026-10-30",
+    "poc": 23012.5,
+    "age": 10
+   },
+   {
+    "date": "2026-11-02",
+    "poc": 23332.5,
+    "age": 9
+   },
+   {
+    "date": "2026-11-03",
+    "poc": 23657.5,
+    "age": 8
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 23912.5,
+    "age": 7
+   },
+   {
+    "date": "2026-11-06",
+    "poc": 24617.5,
+    "age": 5
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 25002.5,
+    "age": 4
+   },
+   {
+    "date": "2026-11-13",
+    "poc": 25112.5,
+    "age": 1
+   }
+  ],
+  "opened": "inside",
+  "signal": {
+   "signal": "WAIT",
+   "reason": "No valid setup today.",
+   "opened": "inside",
+   "levels": {
+    "val": 25205,
+    "poc": 25222.5,
+    "vah": 25285
+   },
+   "skipped": []
+  }
+ },
+ "NIFTY BANK": {
+  "day": "2026-11-17",
+  "levels": {
+   "val": 61300,
+   "poc": 61415.0,
+   "vah": 61570,
+   "hvn": [
+    61385.0,
+    61425.0,
+    61645.0
+   ],
+   "lvn": [],
+   "session_low": 61213.2,
+   "session_high": 61712.8,
+   "uses_volume": true,
+   "candles": "1m",
+   "bin_size_pts": 10
+  },
+  "levels_from": "2026-11-16",
+  "naked": [
+   {
+    "date": "2026-11-02",
+    "poc": 54875.0,
+    "age": 9
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 55815.0,
+    "age": 7
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 59205.0,
+    "age": 4
+   },
+   {
+    "date": "2026-11-11",
+    "poc": 60545.0,
+    "age": 3
+   },
+   {
+    "date": "2026-11-13",
+    "poc": 61025.0,
+    "age": 1
+   }
+  ],
+  "opened": "inside",
+  "signal": {
+   "signal": "WAIT",
+   "reason": "No valid setup today.",
+   "opened": "inside",
+   "levels": {
+    "val": 61300,
+    "poc": 61415.0,
+    "vah": 61570
+   },
+   "skipped": []
+  }
+ },
+ "SENSEX": {
+  "day": "2026-11-17",
+  "levels": {
+   "val": 81860,
+   "poc": 82005.0,
+   "vah": 82180,
+   "hvn": [
+    81895.0,
+    81915.0,
+    81935.0,
+    81995.0
+   ],
+   "lvn": [
+    82105.0
+   ],
+   "session_low": 81762.82,
+   "session_high": 82311.65,
+   "uses_volume": true,
+   "candles": "1m",
+   "bin_size_pts": 10
+  },
+  "levels_from": "2026-11-16",
+  "naked": [
+   {
+    "date": "2026-10-30",
+    "poc": 74395.0,
+    "age": 10
+   },
+   {
+    "date": "2026-11-02",
+    "poc": 75405.0,
+    "age": 9
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 77215.0,
+    "age": 7
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 81065.0,
+    "age": 4
+   },
+   {
+    "date": "2026-11-13",
+    "poc": 81465.0,
+    "age": 1
+   }
+  ],
+  "opened": "inside",
+  "signal": {
+   "signal": "CE",
+   "setup": "Acceptance above value",
+   "why": "2 closes in a row outside the value area",
+   "candle": "09:40",
+   "index_price": 82284.49,
+   "index_stop": 82170,
+   "index_target": 82604.49,
+   "risk_pts": 114.49,
+   "reward_pts": 320.0,
+   "reward_to_risk": 2.8,
+   "opened": "inside",
+   "skipped": [],
+   "outcome": {
+    "how": "target",
+    "at": "11:05",
+    "exit": 82604.49,
+    "points": 320.0,
+    "live": false
+   },
+   "sizing": {
+    "lots": null,
+    "note": "The lot size is not known yet (Dhan's instrument list is still being read)."
+   }
+  }
+ }
+}
