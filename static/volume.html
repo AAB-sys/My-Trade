@@ -896,7 +896,7 @@
   // indicator ?"; "yes show the screenshot first". Where the day's profile has nothing above (or below) the price, the option chain
   // still says where the writers stand: the Call OI wall is the strike at or above the index with the most Call open interest (a
   // resistance), the Put OI wall the strike at or below it with the most Put open interest (a support); on a tie the nearer strike.
-  // The nearest expiry's chain, the one the index page's OI chart reads (/options/<name>/chain), asked every 30 s while the tick is on.
+  // The nearest expiry's chain, the one the index page's OI chart reads (/options/<name>/chain), asked every 15 s while the tick is on.
   // A tick box of its own, off by default, remembered apart from the others: with it off the page asks nothing and draws nothing.
   // Two lines and two figures in the line above the chart: no call, no signal, nothing of the profile changes.
   let oiLines = [], oiSeq = 0;
@@ -942,7 +942,7 @@
   }
   $("show-oi").addEventListener("change", () => { try { localStorage.setItem("volumeProfileOI", $("show-oi").checked ? "1" : "0"); } catch (e) {} loadOi(); });
   $("index").addEventListener("change", () => { state.oi = null; setTimeout(() => { drawOi(); loadOi(); }, 0); });
-  setInterval(() => { if (!document.hidden) loadOi(); }, 30000);
+  setInterval(() => { if (!document.hidden) loadOi(); }, 15000);  // every 15 s, as the index page's OI chart (the owner, 17 November: "yes make it 15 seconds")
   setTimeout(loadOi, 1500);
 
   // ---------------------------------------------------------------- the Shape signal (static/vpshape.js)
