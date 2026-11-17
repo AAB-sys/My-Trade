@@ -690,7 +690,27 @@
     state.timeOnly = !have;
     state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); const got = $("show-shape").checked ? VpShape.read(f || d, have ? vols : null) : null; return { bars: d, profile: VolProfile.build(f || d, have ? vols : null), shape: got && got.shape }; });
     profile.requestUpdate && profile.requestUpdate();
+    drawTodayNames();
     drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable();
+  }
+  // The running day's own levels, named (17 November, the owner, of the evening picture's "Today's VAH" and "Today's VAL" tags:
+  // "why on live feed it is not showing todays VAH and todays VAL ?"): the profile's dashed VAH and VAL lines and its POC line
+  // were drawn without a name or a price tag. Now each carries a tag on the price scale, "Today's VAH", "Today's POC", "Today's
+  // VAL" (the day's date instead of "Today's" when the last day shown is not today), moving as the profile grows. Only the
+  // tags are added: the lines themselves are the profile's, as before; nothing of the count changes.
+  let todayNames = [], todayKey = "";
+  function drawTodayNames() {
+    const s = state.profiles[state.profiles.length - 1], p = s && s.profile && s.profile.total > 0 ? s.profile : null;
+    const day = p ? Math.floor((s.bars[0].time + IST) / 86400) : 0, isToday = day === Math.floor((Date.now() / 1000 + IST) / 86400);
+    const who = !p ? "" : isToday ? "Today's" : new Date(day * 86400000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    const key = p ? `${who}|${p.vah}|${p.poc}|${p.val}` : "";
+    if (key === todayKey) return;
+    todayKey = key;
+    for (const line of todayNames) { try { candles.removePriceLine(line); } catch (e) {} }
+    todayNames = [];
+    if (!p) return;
+    const tag = (price, name, color) => todayNames.push(candles.createPriceLine({ price, title: `${who} ${name}`, color, lineVisible: false, axisLabelVisible: true, lineWidth: 1 }));
+    tag(p.vah, "VAH", css("--accent")); tag(p.poc, "POC", css("--poc")); tag(p.val, "VAL", css("--accent"));
   }
   // VWAP (16 November, the owner: "add VWAP line on volume profile page"): for each day shown, the volume-weighted average price
   // from 09:15, sum(typical price x volume) / sum(volume), typical price = (high + low + close) / 3, the volume being the futures'
