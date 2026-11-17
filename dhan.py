@@ -1174,6 +1174,64 @@ def chain_table(name: str, expiry: str | None = None) -> dict:
             "fields": ["strike"] + ["ce_" + f for f in LEG_FIELDS] + ["pe_" + f for f in LEG_FIELDS], "rows": rows, "time": ch["time"]}
 
 
+# The OI walls kept for the research (17 November, the owner: "yes", to "Shall I save the biggest Call OI and Put OI strikes
+# every day, so I can test the OI walls later?"). The Call OI wall is the strike at or above the index with the most Call
+# open interest, the Put OI wall the strike at or below it with the most Put open interest (on a tie the nearer strike):
+# the same two the Volume Profile page's "OI walls" tick box draws. The server looks every quarter of an hour during the
+# session (main.oi_forever) and the day's save carries the day's looks. No page and no rule reads them.
+OI_KEEP = 5  # beside the wall itself, the five biggest strikes on its side, so a second wall can be studied later
+OI_SNAPS: dict = {}  # name -> [look, ...] of today, oldest first
+_oi_lock = threading.Lock()
+
+
+def oi_walls(table: dict) -> dict | None:
+    """One look at a chain_table: {"time", "underlying", "expiry", "pcr", "call": [strike, oi], "put": [strike, oi],
+    "calls": the OI_KEEP biggest Call strikes at or above the index, "puts": the same below}. None when the chain has no index level."""
+    under, fields = table.get("underlying"), table.get("fields") or []
+    if not under or "ce_oi" not in fields or "pe_oi" not in fields:
+        return None
+    si, ci, pi = fields.index("strike"), fields.index("ce_oi"), fields.index("pe_oi")
+    calls = [[r[si], int(r[ci])] for r in table.get("rows") or [] if r[si] >= under and (r[ci] or 0) > 0]
+    puts = [[r[si], int(r[pi])] for r in table.get("rows") or [] if r[si] <= under and (r[pi] or 0) > 0]
+    if not calls and not puts:
+        return None
+    call = max(calls, key=lambda x: (x[1], -x[0])) if calls else None  # a tie: the lower strike, nearer the index
+    put = max(puts, key=lambda x: (x[1], x[0])) if puts else None      # a tie: the higher strike, nearer the index
+    return {"time": int(time.time()), "underlying": round(float(under), 2), "expiry": table.get("expiry"), "pcr": table.get("pcr"),
+            "call": call, "put": put,
+            "calls": sorted(calls, key=lambda x: -x[1])[:OI_KEEP], "puts": sorted(puts, key=lambda x: -x[1])[:OI_KEEP]}
+
+
+def oi_look(name: str) -> dict | None:
+    """Reads the nearest expiry's chain once and keeps its walls with today's looks. Raises DhanError."""
+    look = oi_walls(chain_table(name))
+    if look is None:
+        return None
+    today = today_ist()
+    with _oi_lock:
+        kept = [x for x in OI_SNAPS.get(name, []) if datetime.fromtimestamp(x["time"], IST).date() == today]
+        kept.append(look)
+        OI_SNAPS[name] = kept
+    return look
+
+
+def oi_day(name: str, day: date) -> list:
+    """The looks kept for `name` on `day`, oldest first."""
+    with _oi_lock:
+        return [x for x in OI_SNAPS.get(name, []) if datetime.fromtimestamp(x["time"], IST).date() == day]
+
+
+def oi_report() -> dict:
+    """For /health: per index, how many looks today and the last one's time and walls."""
+    out = {}
+    with _oi_lock:
+        for name, looks in OI_SNAPS.items():
+            last = looks[-1] if looks else None
+            out[name] = {"looks": len(looks), "last": datetime.fromtimestamp(last["time"], IST).isoformat(timespec="minutes") if last else None,
+                         "call": last["call"] if last else None, "put": last["put"] if last else None}
+    return out
+
+
 def itm_strike(strikes: dict, side: str, level: float) -> float | None:
     """The owner's choice: one strike in the money. CE: the first strike below the index; PE: the first above."""
     have = [k for k, row in strikes.items() if side in row]
