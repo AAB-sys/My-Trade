@@ -429,3 +429,9 @@ branch from `main`.
   from then exits A and B are off and it ends `"trail"` at the close of a candle back past `trail.stop`, or at the day
   end. The buffers (`"fixed"` points, `"atr"` x `Rules.atrBefore`) and `place: "at"` and `lines: "middle"` are research
   settings only (lab/replay.js rows, check_rule.py jobs); lab/check.js holds the specification's test cases T1 to T11.
+
+- The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
+  chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
+  above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's
+  save writes them as `indices[name]["oi_walls"]`. /health shows `feed.oi_walls`. A restart loses the looks made before it.
+  No page and no rule reads them. Test: `python3 lab/check_oi_walls.py`.

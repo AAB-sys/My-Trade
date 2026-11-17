@@ -272,6 +272,14 @@ def build_day(day: date, complete: bool) -> dict | None:
                 indices[name]["volume"] = {"contract": got["contract"], "1m": volume}
         except Exception as exc:  # noqa: BLE001 - whatever Dhan or the list says, the candles are saved
             log.warning("record: %s: the futures' volume was not saved with the day: %s", name, getattr(exc, "message", exc))
+        # the OI walls seen through the day (17 November, the owner: "yes"): for the research only; none kept (a restart, an
+        # index without options) leaves the key out and never costs the day its candles
+        try:
+            looks = dhan.oi_day(name, day)
+            if looks:
+                indices[name]["oi_walls"] = looks
+        except Exception as exc:  # noqa: BLE001
+            log.warning("record: %s: the OI walls were not saved with the day: %s", name, exc)
     if not indices:
         if missing:
             raise RecordError("Dhan gave no candles: " + "; ".join(f"{n}: {m}" for n, m in missing.items()))

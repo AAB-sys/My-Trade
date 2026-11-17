@@ -1139,6 +1139,25 @@ async def volume_forever() -> None:
         await asyncio.sleep(VOLUME_CHECK_SECONDS)
 
 
+OI_CHECK_SECONDS = float(os.environ.get("OI_CHECK_SECONDS", "900"))
+
+
+async def oi_forever() -> None:
+    """The OI walls for the research (17 November, the owner: "yes"): every quarter of an hour during the session, one
+    option-chain read per index (the chain the OI chart reads, kept 5 s), its biggest Call OI strike above the index and
+    Put OI strike below it kept with the day (dhan.oi_look); the day's save carries them. Outside the session: nothing."""
+    await asyncio.sleep(90)
+    while True:
+        if dhan.in_session({"time": int(time.time())}) and dhan.today_ist().weekday() < 5:
+            for name in dhan.OPTION_INDICES:
+                try:
+                    await asyncio.to_thread(dhan.oi_look, name)
+                except Exception as exc:  # never a dead loop
+                    log.warning("OI walls, %s: %s", name, exc)
+                await asyncio.sleep(4)  # Dhan allows one option-chain request per 3 s
+        await asyncio.sleep(OI_CHECK_SECONDS)
+
+
 # The past futures volume, kept on GitHub for the research (16 November, the owner: "Yes, make the PR and make the study on every 5
 # day"): Dhan still gives the minute volume of the contract trading now, so once a day, outside market hours, the server writes
 # each index's 1-minute candles with that volume to the data branch, history/volume/<INDEX>_1min.csv (the same eight columns as
@@ -1238,6 +1257,7 @@ async def lifespan(app: FastAPI):
         tasks.append(asyncio.create_task(token_forever()))
         tasks.append(asyncio.create_task(volume_forever()))
         tasks.append(asyncio.create_task(volume_history_forever()))
+        tasks.append(asyncio.create_task(oi_forever()))
         tasks.append(asyncio.create_task(calls_forever()))
         tasks.append(asyncio.create_task(live_forever()))
     if SELF_URL:
@@ -1326,7 +1346,7 @@ def feed_state() -> dict:
             "tick_rate": tick_rate_report(),  # how many ticks a minute each index gets from Dhan, and the longest wait between two (12 November)
             "watch": {"setting": WATCH_SETTING, **watch_state},
             "ids": dhan.id_problem(),  # null, or what Dhan's instrument list says differs from the index ids this code uses
-            "volume_profile": {"page_file": (STATIC / "volume.html").is_file() and (STATIC / "volprofile.js").is_file(), **dhan.volume_report()}, "volume_history": VOLUME_HISTORY,  # the Volume Profile page's check (13 November)
+            "volume_profile": {"page_file": (STATIC / "volume.html").is_file() and (STATIC / "volprofile.js").is_file(), **dhan.volume_report()}, "volume_history": VOLUME_HISTORY, "oi_walls": dhan.oi_report(),  # the Volume Profile page's check (13 November)
             "option_list": dhan.list_report()}  # what Dhan's instrument list gave (9 October, SENSEX): option ids per underlying, SENSEX's expiries and rows
 
 
