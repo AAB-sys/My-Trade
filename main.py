@@ -22,6 +22,7 @@ import websockets
 import dhan
 import memwatch
 import vpsignal
+import vppanel
 import record
 from providers import INDICES, INTERVALS, LONG_INTERVALS, RANGES, DemoTicker, bucket_start, now_ist
 import rule
@@ -1437,6 +1438,21 @@ async def index_vp_signal(name: str, premium: float | None = Query(None, ge=0, l
         return {**(await asyncio.to_thread(vpsignal.state, key, premium, forming)), "problem": None}
     except Exception as exc:
         log.warning("vp signal failed for %s: %s", key, exc)
+        return {"name": key, "problem": dhan_reason(exc)}
+
+
+@app.get("/indices/{name}/vp-panel")
+async def index_vp_panel(name: str):
+    """The Live Volume Profile Explanation Panel (the owner's build document of 17 November 2026): the reading of today's
+    profile in plain words, its seven checks, the key levels, the thin zones, the if/then table, the flags and the alerts.
+    The rules are the document's own code in panel/, fed by vppanel.py. It describes; it gives no call and places no order."""
+    key = known_index(name)
+    if not (DHAN_ON and key in dhan.OPTION_SEGMENTS):
+        return {"name": key, "problem": store["dhan"]["status"]}
+    try:
+        return {**(await asyncio.to_thread(vppanel.state, key)), "problem": None}
+    except Exception as exc:
+        log.warning("vp panel failed for %s: %s", key, exc)
         return {"name": key, "problem": dhan_reason(exc)}
 
 
