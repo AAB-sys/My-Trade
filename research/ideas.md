@@ -246,3 +246,11 @@ with the shape agreeing), stop POC / middle / 2 ATR, out 15:15. 48 variants (str
 Year 1: 46 of 48 lose or are flat. Year 2: 12:30 wins well (86 calls +2,648 to +2,926, CE and PE both positive), every other time
 is small or negative. Verdict: a one-time-of-day, one-year effect; NOT on the watch list. The tendency is real (noon outside
 the value area closes outside 67-69%), but after 8 points a call it does not pay on year 1. Re-test on the volume days.
+
+## 17 Nov evening: idea 10 OUT (out of value stays out). Variants ever tried: 626
+From the growing study (grow.js, 20 volume days): above the VAH the price did not come back to it in 30 minutes 63% of the time.
+As a trade on two years (profile by time): 2 or 4 closes in a row outside the day's value area -> CE above / PE below; stop just
+inside the edge or at the POC; trail or not; target none or 2R; from 10:15 or 11:15; 1 or 2 a day. 64 variants: 0 good in year 1.
+Dropped. Lesson (third time): the edge facts are true for 30 minutes and do not pay as day trades after 8 points a call.
+- Watch list, new day 2 (17 Nov): QUIET-BREAK 2 calls -85 (1 up 1 down); NEWHIGH-TREND 2 calls -50 (0 up 2 down); DIR-1215 no call yet.
+- Also tested (questions.md R1): round numbers as turning points on 498 days: no effect.

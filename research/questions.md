@@ -40,3 +40,19 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 - So the 81% "keeps going" is true for the next 30 minutes but does not carry to a day trade after costs. Lesson: the edge event is
   short-lived; a strategy from it must be a 30-minute trade with a target, or needs a second condition (V2 POC migration, V5 value
   area vs yesterday's) to pick the days. Next: V2 and V5, then V1c (30-minute target version).
+
+## 17 Nov evening: today's questions (NIFTY turned at 25,500 at 12:13 with nothing above in the profile)
+## R1: do round numbers stop the price? (the owner at noon: "how to find the resistance from here ?"; I answered "round numbers")
+## R2: once out of the value area, does the price stay out long enough to trade? (the growing study's strongest finding)
+## V5 stays open (today 3 of 3: opened inside yesterday's value, left upward in 20 minutes, never came back).
+
+## R1 answered 17 Nov (498 days of NIFTY 50 5-minute candles, price only): NO, round numbers are not special.
+- The day's high fell within 10 points of a multiple of 100 on 97 of 498 days = 19%; by chance 20%. The day's low: 21%. Within 5
+  points: highs 9%, lows 13% (chance 10%). Multiples of 500 within 25 points: highs 9%, lows 10% (chance 10%).
+- When a new day's high reaches a hundred for the first time (228 cases): went on 105, turned 97. A new low (233): went on 114,
+  turned 97. Only the 500s (97 cases): turned 42, went on 41. A coin.
+- So today's turn at 25,500 was one day, not a pattern, and my noon answer to the owner ("round numbers work as resistance") is not
+  backed by their own data. Told the owner. What is left for open space: the option chain's OI walls (PR #260), not testable yet:
+  no OI history is saved. Idea: save the chain's biggest Call and Put OI strikes once a day so this can be tested later.
+
+## R2 answered 17 Nov (lab idea 10, two years): NO as a day trade. See ideas.md. The 63% is a 30-minute fact only.
