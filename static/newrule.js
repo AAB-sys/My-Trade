@@ -626,7 +626,7 @@
   const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more) : MORE.indices.includes(index));  // no index (the lab): only when asked
   const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines,  // the picture's points and lines (a trade's "points" is its result)
                                              lineName: s.lines.length ? s.lines[0][4] : key === "vwap" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
-  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
+  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
     if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
@@ -638,7 +638,9 @@
     const lastK = (closedCount == null ? bars.length : Math.min(closedCount, bars.length)) - 1;
     const withMore = moreOn(index, more), MP = withMore ? root.MorePat : null, moreKeys = Array.isArray(more) ? more : MORE.calls;
     const moreAtr = withMore ? MP.atrBefore((prevBars || []).concat(bars.slice(0, lastK + 1))).slice((prevBars || []).length) : null;  // the reference's ATR, as of the previous candle
-    const moreCtx = withMore && prevBars && prevBars.length ? { prev_close: prevBars[prevBars.length - 1].close } : null;
+    const hasPrev = !!(prevBars && prevBars.length);
+    // volumes (17 November): the futures volume of each candle of `bars`, for the VWAP rule's true VWAP; null: the plain average, as before
+    const moreCtx = withMore && (hasPrev || volumes) ? { ...(hasPrev ? { prev_close: prevBars[prevBars.length - 1].close } : {}), ...(volumes ? { volumes } : {}) } : null;
     for (let k = 0; k <= lastK; k++) {
       const bar = bars[k], atr = k > 0 ? atrs[k - 1] : null;
       const wedgeSigs = [];  // the wedge scanners step first, every candle (see above)

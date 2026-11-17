@@ -1869,6 +1869,7 @@
       state.candles = data.candles;
       setBars(shownBars());
       drawLevels();
+      loadSignalVolumes();  // the futures volume for the true VWAP of Calls with Signals (17 November)
       if (state.minutesKey !== minutesWant()) loadMinutes();  // the session's one-minute candles, when the page's session changed (the early exit, 19 October)
       state.pollMs = Math.max(1000, data.poll_seconds * 1000);
       status.className = "";
@@ -2216,6 +2217,33 @@
       signalMarkers.set.setMarkers(marks);
     } else if (typeof series.setMarkers === "function") series.setMarkers(marks);
   }
+  // The true VWAP (17 November, the owner: "VWAP values are far away on both pages now"; "yes"): the VWAP of Calls with Signals reads
+  // the same futures volume as the Volume Profile page (/indices/<name>/volume), so both pages show one VWAP on the same candles.
+  // Loaded with the candles while Calls with Signals is open, on 1, 5 and 15 minute candles (the sizes that route gives). With no
+  // volume for the day (the route failed, an older day, 30 minute candles) the VWAP is the plain average as before, and the line's
+  // name says so ("VWAP avg").
+  const signalVolumes = { key: "", map: new Map() };
+  async function loadSignalVolumes() {
+    const iv = state.interval, key = name + "|" + iv;
+    if (!plainChart() || !["1m", "5m", "15m"].includes(iv)) return;
+    try {
+      const r = await fetch(`/indices/${encodeURIComponent(name)}/volume?interval=${iv}`, withTab());
+      if (!r.ok) return;
+      const data = await r.json();
+      if (data.interval !== state.interval) return;
+      const map = new Map((data.bars || []).map(b => [b[0], b[1]]));
+      if (!map.size && signalVolumes.key === key) return;  // nothing new: keep what is there
+      const before = signalVolumes.key + "|" + signalVolumes.map.size + "|" + [...signalVolumes.map.values()].slice(-3).join(",");
+      signalVolumes.key = key; signalVolumes.map = map;
+      if (before !== key + "|" + map.size + "|" + [...map.values()].slice(-3).join(",")) drawLevels();
+    } catch (e) {}
+  }
+  function volumesFor(bars, closed) {  // one volume a candle of the session, or null when the day has none (every closed candle but the newest must have its volume)
+    if (signalVolumes.key !== name + "|" + state.interval || !signalVolumes.map.size || !bars.length) return null;
+    const out = bars.map(b => signalVolumes.map.get(b.time) || 0);
+    for (let i = 0; i < closed - 1; i++) if (!(out[i] > 0)) return null;
+    return closed >= 1 && out.some(v => v > 0) ? out : null;
+  }
   function signalsNow() {
     const key = currentSession();
     if (!key || key === "all" || longCandles()) return null;  // the rule always runs for the table (the owner, 21 October: "it should always be in the table"); the tick is for the chart
@@ -2226,7 +2254,8 @@
     const before = state.candles.filter(b => sessionOf(b) < key);  // the previous sessions loaded, for the ATR's warm-up
     const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
     const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
-    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd }), bars, before, closed, dayEnd };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
+    const volumes = volumesFor(bars, closed);  // the futures volume of each candle, or null (then the VWAP is the plain average, and the page says so)
+    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes }), bars, before, closed, dayEnd, volumes };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -2238,13 +2267,13 @@
     wedgeLinesKey = key;
   }
   let vwapLine = null, vwapLineKey = "";  // the VWAP itself on the Calls with Signals chart (30 October, the owner: "why VWAP stops getting calculated?"), a line series of its own
-  function setVwapLine(points) {  // points: [{ time, value }] in the chart's time, one a candle; []: the line off
-    const key = points.length ? `${points.length} ${points[0].time} ${points[points.length - 1].value}` : "";
+  function setVwapLine(points, title = "VWAP") {  // points: [{ time, value }] in the chart's time, one a candle; []: the line off
+    const key = points.length ? `${points.length} ${points[0].time} ${points[points.length - 1].value} ${points[points.length >> 1].value} ${title}` : "";
     if (key === vwapLineKey) return;
     vwapLineKey = key;
     if (!points.length) { if (vwapLine) { try { chart.removeSeries(vwapLine); } catch (e) {} } vwapLine = null; return; }
-    if (vwapLine) { try { vwapLine.setData(points); return; } catch (e) { vwapLine = null; } }
-    vwapLine = chart.addSeries(LightweightCharts.LineSeries, { color: cssVar("--vwap"), lineWidth: 2, title: "VWAP", lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null });
+    if (vwapLine) { try { vwapLine.setData(points); vwapLine.applyOptions({ title }); return; } catch (e) { vwapLine = null; } }
+    vwapLine = chart.addSeries(LightweightCharts.LineSeries, { color: cssVar("--vwap"), lineWidth: 2, title, lastValueVisible: true, priceLineVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null });
     vwapLine.setData(points);
   }
   // The VWAP stretch meter (12 November, the owner: "yes built it"; then "the numbers should be based on live feed only"): one line
@@ -2309,8 +2338,8 @@
     // reads (MorePat.vwapSeries, from the day's first candle), one point a candle through the candle forming now, while that rule's tick is
     // on and on the index it runs on. Each VWAP call's flat line stays: it is the call's level, the VWAP at its signal candle ("VWAP at call")
     const vwapOn = ticked.vwap && typeof MorePat !== "undefined" && NewRule.moreOn(name, null) && run.bars.length > 0;
-    setVwapLine(vwapOn ? MorePat.vwapSeries(run.bars).map((v, i) => ({ time: run.bars[i].time + IST_OFFSET, value: v })) : []);
-    drawVwapMeter(vwapOn && state.interval === "5m" && !run.dayEnd ? MorePat.vwapGap(run.bars, run.bars.length - 1, guideAtrs.slice(guideBase)) : null, run.bars);  // 5-minute candles only (the candles the VWAP rule reads), while the day runs
+    setVwapLine(vwapOn ? MorePat.vwapSeries(run.bars, run.volumes).map((v, i) => ({ time: run.bars[i].time + IST_OFFSET, value: v })) : [], run.volumes ? "VWAP" : "VWAP avg");
+    drawVwapMeter(vwapOn && state.interval === "5m" && !run.dayEnd ? MorePat.vwapGap(run.bars, run.bars.length - 1, guideAtrs.slice(guideBase), run.volumes) : null, run.bars);  // 5-minute candles only (the candles the VWAP rule reads), while the day runs
     const body = document.querySelector("#signals tbody");
     const rows = run.trades.slice().sort((a, b) => b.signalTime - a.signalTime).map(t => {
       const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";

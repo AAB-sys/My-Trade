@@ -58,8 +58,10 @@
     return out;
   }
   function vwapSeries(cs, volumes = null) {  // VWAP from the day's first candle; with no volumes the plain average of the typical price (not a true VWAP)
+    // with volumes (17 November, the owner: "VWAP values are far away on both pages now"): the true VWAP, the same sum the Volume Profile
+    // page draws (a candle with no volume adds nothing; before the day's first volume the candle's own typical price stands in)
     const out = []; let pv = 0.0, vv = 0.0;
-    cs.forEach((c, i) => { const vol = volumes ? volumes[i] : 1.0; pv += (c.high + c.low + c.close) / 3 * vol; vv += vol; out.push(pv / vv); });
+    cs.forEach((c, i) => { const tp = (c.high + c.low + c.close) / 3, vol = volumes ? (volumes[i] > 0 ? volumes[i] : 0) : 1.0; pv += tp * vol; vv += vol; out.push(vv > 0 ? pv / vv : tp); });
     return out;
   }
   // ---- The VWAP stretch meter (12 November, the owner, of a chart where the price had fallen far below the VWAP line: "Candle and VWAP
