@@ -33,3 +33,10 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 - As a trade (fade the wick back to the POC, stop past the wick): loses on all three indices (NIFTY 48 calls -414). With a heavy row
   outside: NIFTY -53 (12 calls), BANK +404 (11), SENSEX -318 (7): too few, mixed. Not a strategy. The useful part: a close beyond
   the edge with thin volume outside is a real break (81%). Next: test going WITH that break (V1b).
+
+## V1b answered 17 Nov morning (same 18 real-volume days): trade WITH a close beyond the edge, held to 15:15
+- No edge. NIFTY 50: any break 29 calls +54 to -138; thin row outside 20 calls -269 to -398 (worse, not better). BANK and SENSEX
+  show profit only on the CE side (the month rose); PE loses everywhere. Thin vs heavy outside does not separate winners.
+- So the 81% "keeps going" is true for the next 30 minutes but does not carry to a day trade after costs. Lesson: the edge event is
+  short-lived; a strategy from it must be a 30-minute trade with a target, or needs a second condition (V2 POC migration, V5 value
+  area vs yesterday's) to pick the days. Next: V2 and V5, then V1c (30-minute target version).

@@ -1,0 +1,44 @@
+ANY close beyond the edge | stop 25% back inside | max 2 a day
+   NIFTY 50     29 calls 31% won net     54 (2/call) days 7/11 CE 312 PE -257 best day 301
+   NIFTY BANK   31 calls 23% won net    951 (31/call) days 6/12 CE 1303 PE -352 best day 973
+   SENSEX       26 calls 31% won net   1030 (40/call) days 8/8 CE 1673 PE -643 best day 629
+THIN row outside (<25% of POC) | stop 25% back inside | max 2 a day
+   NIFTY 50     20 calls 35% won net   -269 (-13/call) days 5/9 CE -39 PE -230 best day 173
+   NIFTY BANK   18 calls 28% won net    302 (17/call) days 4/9 CE 529 PE -227 best day 973
+   SENSEX       16 calls 38% won net    821 (51/call) days 6/7 CE 1486 PE -664 best day 597
+HEAVY/medium row outside (>=25%) | stop 25% back inside | max 2 a day
+   NIFTY 50     22 calls 32% won net    330 (15/call) days 6/10 CE 333 PE -4 best day 301
+   NIFTY BANK   22 calls 14% won net   -331 (-15/call) days 3/10 CE 197 PE -528 best day 696
+   SENSEX       22 calls 27% won net   -401 (-18/call) days 6/9 CE 125 PE -526 best day 526
+ANY close beyond the edge | stop 50% back inside | max 2 a day
+   NIFTY 50     29 calls 34% won net   -138 (-5/call) days 8/10 CE -5 PE -133 best day 301
+   NIFTY BANK   27 calls 30% won net    785 (29/call) days 7/11 CE 1442 PE -657 best day 973
+   SENSEX       24 calls 33% won net    163 (7/call) days 7/9 CE 1752 PE -1588 best day 915
+THIN row outside (<25% of POC) | stop 50% back inside | max 2 a day
+   NIFTY 50     18 calls 39% won net   -398 (-22/call) days 5/9 CE -159 PE -239 best day 173
+   NIFTY BANK   16 calls 50% won net   1035 (65/call) days 6/7 CE 807 PE 228 best day 973
+   SENSEX       16 calls 38% won net    293 (18/call) days 6/7 CE 1174 PE -881 best day 490
+HEAVY/medium row outside (>=25%) | stop 50% back inside | max 2 a day
+   NIFTY 50     21 calls 38% won net    298 (14/call) days 7/9 CE 229 PE 69 best day 301
+   NIFTY BANK   21 calls 19% won net   -464 (-22/call) days 4/9 CE 325 PE -789 best day 696
+   SENSEX       20 calls 30% won net   -380 (-19/call) days 5/10 CE 1112 PE -1492 best day 915
+ANY close beyond the edge | stop at POC | max 2 a day
+   NIFTY 50     29 calls 34% won net     73 (3/call) days 8/10 CE 191 PE -119 best day 301
+   NIFTY BANK   29 calls 28% won net    273 (9/call) days 6/12 CE 946 PE -674 best day 973
+   SENSEX       24 calls 33% won net   1306 (54/call) days 8/8 CE 1804 PE -499 best day 915
+THIN row outside (<25% of POC) | stop at POC | max 2 a day
+   NIFTY 50     20 calls 35% won net   -321 (-16/call) days 5/9 CE -51 PE -270 best day 173
+   NIFTY BANK   18 calls 39% won net    682 (38/call) days 5/8 CE 585 PE 97 best day 973
+   SENSEX       16 calls 31% won net   -174 (-11/call) days 5/8 CE 599 PE -773 best day 490
+HEAVY/medium row outside (>=25%) | stop at POC | max 2 a day
+   NIFTY 50     21 calls 38% won net    313 (15/call) days 7/9 CE 265 PE 48 best day 301
+   NIFTY BANK   20 calls 20% won net   -578 (-29/call) days 4/9 CE 152 PE -730 best day 696
+   SENSEX       21 calls 33% won net    751 (36/call) days 7/8 CE 1228 PE -477 best day 915
+THIN, after 12:00 only | stop 50% | max 2
+   NIFTY 50     12 calls 33% won net   -545 (-45/call) days 3/7 CE -256 PE -290 best day 41
+   NIFTY BANK   12 calls 58% won net    678 (56/call) days 6/5 CE 1183 PE -505 best day 973
+   SENSEX        8 calls 38% won net    525 (66/call) days 3/4 CE 740 PE -215 best day 823
+THIN, before 12:00 only | stop 50% | max 2
+   NIFTY 50     11 calls 36% won net   -212 (-19/call) days 4/6 CE -93 PE -119 best day 173
+   NIFTY BANK    6 calls 50% won net    572 (95/call) days 3/3 CE -163 PE 735 best day 459
+   SENSEX       12 calls 42% won net   -255 (-21/call) days 5/7 CE 587 PE -842 best day 490
