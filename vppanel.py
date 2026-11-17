@@ -68,7 +68,18 @@ def feed(entry: dict, candles: list) -> dict:
         entry["alerts"][:0] = reversed(out["alerts"])
         entry["out"] = out
     entry["done"] = len(candles)
+    entry["fed"] = [c["v"] for c in candles]  # the volume each candle was read with (see stale)
     return entry["out"]
+
+
+def stale(entry: dict, candles: list) -> bool:
+    """True when a candle already fed now has another volume than the one it was read with. The futures' volume of a minute can
+    come after the index's candle (and right after a restart the instrument list is still being read, so the first look has no
+    volume at all): the engine had then counted those minutes with no volume, or part of it, and nothing fed it again, so the
+    panel stayed apart from the chart for the rest of the day (17 November, the owner's photo: "NOT the same as the chart at
+    15:30 ... VWAP: panel none"). The day is then read again from its first candle."""
+    fed = entry.get("fed") or []
+    return any(c["v"] != v for c, v in zip(candles, fed))
 
 
 def state(name: str) -> dict:
@@ -88,7 +99,7 @@ def state(name: str) -> dict:
     candles = candles_of(bars, volumes)
     with _locks.setdefault(name, threading.Lock()):
         entry = _engines.get(name)
-        if entry is None or entry["date"] != today or entry["done"] > len(candles) or entry["first"] != candles[0]["hm"]:
+        if entry is None or entry["date"] != today or entry["done"] > len(candles) or entry["first"] != candles[0]["hm"] or stale(entry, candles):
             prev, prev_day = previous_of(name, today)
             entry = _engines[name] = {"date": today, "engine": panel_engine.PanelEngine(config_for(name), prev, today, 1), "done": 0, "out": None,
                                       "alerts": [], "first": candles[0]["hm"], "prev_day": prev_day}
