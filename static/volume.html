@@ -235,6 +235,9 @@
     <!-- VWAP (16 November, the owner: "add VWAP line on volume profile page"; "Yes, keep it unticked"): each day's
          volume-weighted average price; off until ticked, so the chart stays as it was -->
     <label><input type="checkbox" id="show-vwap"> VWAP</label>
+    <!-- the OI walls (17 November, the owner, with the price above all of the day's volume: "how to find the resistance from here ?";
+         "yes show the screenshot first"): two lines from the option chain, off until ticked, so the chart stays as it was -->
+    <label><input type="checkbox" id="show-oi"> OI walls</label>
     <!-- the Shape signal (15 November, the owner: "Build option 1 but this user interface should not be changed at all"): off until
          ticked; with it off the page is as it was -->
     <label><input type="checkbox" id="show-shape"> Shape signal</label>
@@ -759,7 +762,7 @@
   // no room added around it (the range read from the scale already holds that room); null: the chart follows the candles again
   function priceView(range) {
     state.priceView = range;
-    candles.applyOptions({ autoscaleInfoProvider: range ? () => ({ priceRange: { minValue: range.from, maxValue: range.to } }) : (original) => original() });
+    candles.applyOptions({ autoscaleInfoProvider: range ? () => ({ priceRange: { minValue: range.from, maxValue: range.to } }) : (original) => oiRange(original()) });  // with the OI walls ticked, both walls stay in view (17 November)
     candles.priceScale().applyOptions({ autoScale: true });
     roomOnTop();
   }
@@ -827,6 +830,7 @@
     let info = "";  // the indicators' figures: in the line above the chart, not on it
     if (state.rsi && state.rsi.has(at.time)) info += `<span><i class="line" style="background:var(--rsi)"></i><span class="k">RSI ${RSI_LENGTH}</span> <span class="v">${state.rsi.get(at.time).toFixed(2)}</span></span><span class="cut"></span>`;
     if (state.vwap && state.vwap.has(at.time)) info += `<span><i class="line" style="background:var(--vwap)"></i><span class="k">VWAP</span> <span class="v">${num(state.vwap.get(at.time))}</span></span><span class="cut"></span>`;
+    if (state.oi) info += `<span><i class="line" style="background:var(--down)"></i><span class="k">Call OI wall</span> <span class="v">${state.oi.call ? num(state.oi.call.strike, 0) + " (" + short(state.oi.call.oi) + ")" : "—"}</span></span><span><i class="line" style="background:var(--up)"></i><span class="k">Put OI wall</span> <span class="v">${state.oi.put ? num(state.oi.put.strike, 0) + " (" + short(state.oi.put.oi) + ")" : "—"}</span></span><span class="cut"></span>`;
     if (!state.timeOnly) info += `<span><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></span><span class="cut"></span>`;
     if (p && p.total > 0) {
       const what = state.timeOnly ? "time" : "volume";
@@ -941,6 +945,60 @@
       if (SHOW_CALLS && s.signal !== "WAIT") { line(s.index_stop, "Stop", css("--down"), LC.LineStyle.Solid); line(s.index_target, "Target", css("--up"), LC.LineStyle.Solid); }
     }
   }
+
+  // ---------------------------------------------------------------- the OI walls (17 November)
+  // The owner, 17 November, with the price above all of the day's volume: "how to find the resistance from here ? any logic ? any
+  // indicator ?"; "yes show the screenshot first". Where the day's profile has nothing above (or below) the price, the option chain
+  // still says where the writers stand: the Call OI wall is the strike at or above the index with the most Call open interest (a
+  // resistance), the Put OI wall the strike at or below it with the most Put open interest (a support); on a tie the nearer strike.
+  // The nearest expiry's chain, the one the index page's OI chart reads (/options/<name>/chain), asked every 15 s while the tick is on.
+  // A tick box of its own, off by default, remembered apart from the others: with it off the page asks nothing and draws nothing.
+  // Two lines and two figures in the line above the chart: no call, no signal, nothing of the profile changes.
+  let oiLines = [], oiSeq = 0;
+  try { if (localStorage.getItem("volumeProfileOI") === "1") $("show-oi").checked = true; } catch (e) {}
+  function oiWalls(data) {
+    const f = data.fields || [], si = f.indexOf("strike"), ci = f.indexOf("ce_oi"), pi = f.indexOf("pe_oi"), px = data.underlying;
+    if (si < 0 || ci < 0 || pi < 0 || !(px > 0)) return null;
+    let call = null, put = null;
+    for (const r of data.rows || []) {  // the strikes rise: the first biggest Call above is the nearest, the last biggest Put below is the nearest
+      const k = r[si], c = r[ci] || 0, q = r[pi] || 0;
+      if (k >= px && c > 0 && (!call || c > call.oi)) call = { strike: k, oi: c };
+      if (k <= px && q > 0 && (!put || q >= put.oi)) put = { strike: k, oi: q };
+    }
+    return call || put ? { call, put, expiry: data.expiry, name: data.name } : null;
+  }
+  // both walls in view (17 November, the owner: "i can onlly see Call OI wall where is Put OI wall"): the prices the chart shows are
+  // widened to hold the two strikes while the tick is on; with it off the chart's own range, untouched
+  function oiRange(o) {
+    const w = state.oi;
+    if (!o || !o.priceRange || !w || !$("show-oi").checked) return o;
+    let { minValue, maxValue } = o.priceRange;
+    for (const x of [w.call, w.put]) if (x) { minValue = Math.min(minValue, x.strike); maxValue = Math.max(maxValue, x.strike); }
+    return { ...o, priceRange: { minValue, maxValue } };
+  }
+  function drawOi() {
+    for (const line of oiLines) { try { candles.removePriceLine(line); } catch (e) {} }
+    oiLines = [];
+    const w = $("show-oi").checked && state.oi && state.oi.name === state.name ? state.oi : null;
+    if (!w) { state.oi = null; priceView(state.priceView || null); drawLegend(); return; }
+    const line = (x, title, color) => { if (x) oiLines.push(candles.createPriceLine({ price: x.strike, title: `${title} ${short(x.oi)}`, color, lineWidth: 2, lineStyle: LC.LineStyle.Dashed, axisLabelVisible: true })); };
+    line(w.call, "Call OI wall (resistance)", css("--down")); line(w.put, "Put OI wall (support)", css("--up"));
+    priceView(state.priceView || null); drawLegend();
+  }
+  async function loadOi() {
+    if (!$("show-oi").checked) { state.oi = null; drawOi(); return; }
+    const seq = ++oiSeq, name = state.name;
+    try {
+      const r = await fetch(`/options/${encodeURIComponent(name)}/chain`, withTab());
+      if (seq !== oiSeq || name !== state.name || !r.ok) return;  // an answer for an older ask or another index, or Dhan gave none: the lines stay as they were
+      const w = oiWalls(await r.json());
+      if (w) { state.oi = w; drawOi(); }
+    } catch (e) {}
+  }
+  $("show-oi").addEventListener("change", () => { try { localStorage.setItem("volumeProfileOI", $("show-oi").checked ? "1" : "0"); } catch (e) {} loadOi(); });
+  $("index").addEventListener("change", () => { state.oi = null; setTimeout(() => { drawOi(); loadOi(); }, 0); });
+  setInterval(() => { if (!document.hidden) loadOi(); }, 15000);  // every 15 s, as the index page's OI chart (the owner, 17 November: "yes make it 15 seconds")
+  setTimeout(loadOi, 1500);
 
   // ---------------------------------------------------------------- the Shape signal (static/vpshape.js)
   // 15 November, the owner, with the Pine script "Volume Profile Anatomies (D / B / P / Double Zone)": "make your own volume profile
