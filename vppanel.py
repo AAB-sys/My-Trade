@@ -26,6 +26,7 @@ if str(PANEL) not in sys.path:
 import panel_engine  # noqa: E402  (the document's code, in its own folder)
 
 CFG = panel_engine.load_config(str(PANEL / "panel_config.json"))
+STABLE_MINUTES = 5      # a new shape is shown after it has held this long (18 November, the owner: "Instead of 10 minutes make it 5 minutes"; the document's own setting is 10)
 SETTLE_SECONDS = 2      # the document, section 4: "after each 1-minute candle closes, plus about 2 seconds for the feed to settle"
 _engines: dict = {}     # name -> {"date", "engine", "done": candles fed, "out": the last output, "alerts": today's, newest first}
 _locks: dict = {}
@@ -37,6 +38,7 @@ def config_for(name: str) -> dict:
     cfg["match_chart_profile"] = True
     cfg["match_chart_shape"] = True  # the shape is the chart's (17 November, the owner: "so they never disagree")
     cfg["match_chart_poc"] = True    # the POC whose movement is watched is the chart's ("Match every number")
+    cfg["stable_minutes"] = STABLE_MINUTES
     try:
         days = dhan.cached(("panel expiries", name), 6 * 3600, lambda: dhan.expiries(name))
     except Exception:  # noqa: BLE001 - the flag is a warning only; without the list the panel still reads
@@ -63,13 +65,14 @@ def previous_of(name: str, today: str):
             "close": days[prev_day][-1]["c"]}, prev_day
 
 
-CHART_WORDS = (("Double distribution", "Double Zone"), ("b-shape", "B-shape"),  # the chart's names for the two shapes it names otherwise
+CHART_WORDS = (("Double distribution", "Double Zone"),                             # the chart's name for it; "b-shape" is the same on both (18 November)
                ("Busiest 5-point row", "Today's POC"))                             # the POC watched is the chart's (match_chart_poc)
 
 
 def chart_words(x):
     """The panel's sentences with the chart's shape names (17 November, the owner: "Panel show the same shape name as the
-    chart"): the document says "Double distribution" and "b-shape" where the chart says "Double Zone" and "B-shape"."""
+    chart"): the document says "Double distribution" where the chart says "Double Zone". The b-shape is written with a small
+    b on both (18 November, the owner: "rename B-shape to b-shape, because a capital B often means a double distribution")."""
     if isinstance(x, str):
         for a, b in CHART_WORDS:
             x = x.replace(a, b)

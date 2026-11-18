@@ -154,14 +154,15 @@ def row_mid(p, i):
     return (row_lo(p, i) + row_hi(p, i)) / 2.0
 
 
-def chart_shape(candles, rows=30, smooth=2, second_ratio=0.60, valley_ratio=0.70, pos_hi=0.66, pos_lo=0.34):
+def chart_shape(candles, rows=30, smooth=2, second_ratio=0.60, valley_ratio=0.70, pos_hi=0.66, pos_lo=0.34, thin_pct=None):
     """The shape the page's chart names (added 17 November 2026, the owner: "Panel show the same shape name as the chart, so
     they never disagree"): static/vpshape.js's own count and rule, line for line. The day's range in `rows` equal rows; a
     candle's volume goes to each row by the share of its range inside it (a candle with no volume weighs 1); the rows are
     smoothed twice; two far-apart peaks with a valley between them are a Double Zone; else the busiest row's place in the
     range says P (top third), B (bottom third) or D.
     Returns {"shape": "P" | "B" | "D" | "Double", "low_poc", "high_poc" (a Double Zone's two busy prices, else None),
-    "gap_low", "gap_high" (the valley row between them, else None)}."""
+    "gap_low", "gap_high" (the valley between them: its lowest row, widened over the thin rows beside it (under thin_pct % of
+    the busiest row), as the document's find_double cuts a gap; else None)}."""
     lo = min(c["l"] for c in candles)
     hi = max(c["h"] for c in candles)
     step = max((hi - lo) / rows, 0.05)
@@ -205,5 +206,13 @@ def chart_shape(candles, rows=30, smooth=2, second_ratio=0.60, valley_ratio=0.70
         kind = "P" if pos > pos_hi else "B" if pos < pos_lo else "D"
     mid = lambda r: lo + (r + 0.5) * step
     two = kind == "Double"
+    g_lo = g_hi = k
+    if two and thin_pct:
+        a, z, top = min(poc, p2), max(poc, p2), max(v)
+        thin = [x < thin_pct / 100.0 * top for x in v]
+        while g_lo - 1 > a and thin[g_lo - 1]:
+            g_lo -= 1
+        while g_hi + 1 < z and thin[g_hi + 1]:
+            g_hi += 1
     return {"shape": kind, "low_poc": mid(min(poc, p2)) if two else None, "high_poc": mid(max(poc, p2)) if two else None,
-            "gap_low": lo + k * step if two else None, "gap_high": lo + (k + 1) * step if two else None}
+            "gap_low": lo + g_lo * step if two else None, "gap_high": lo + (g_hi + 1) * step if two else None}

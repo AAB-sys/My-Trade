@@ -300,9 +300,12 @@ class PanelEngine:
         if cfg.get("match_chart_shape") and shape["shape"] != "too_early":
             # the page's setting (17 November 2026, the owner: "Panel show the same shape name as the chart, so they never
             # disagree ... keep the logic same so new numbers will work according to the logic only"): the shape is the one
-            # the chart names (static/vpshape.js: P, B, D or Double Zone), read at once with no waiting; everything the
-            # document does with a shape afterwards (its check, the failing bulge, the conditions, the alerts) is unchanged
-            cs = chart_shape(candles)
+            # the chart names (static/vpshape.js: P, b, D or Double Zone); everything the document does with a shape
+            # afterwards is unchanged: the first minutes stay "too early", a new shape is shown only after it has held for
+            # stable_minutes (the page sets 5; 18 November: "The 10-minute smoothing should also still apply, so the label doesn't flip every
+            # minute"; the chart's own label of the running day is drawn from this shown shape, so the two cannot differ),
+            # its check, the bulge of a P or a b, the gap of a Double Zone, the conditions and the alerts
+            cs = chart_shape(candles, thin_pct=cfg["thin_row_pct"])
             shape.pop("double", None)
             shape["shape"] = {"P": "P", "B": "b", "D": "D", "Double": "double"}[cs["shape"]]
             if cs["shape"] == "Double":
@@ -311,7 +314,7 @@ class PanelEngine:
         raw = shape["shape"]
         self.raw_shapes.append(raw)
         k = max(1, int(math.ceil(cfg["stable_minutes"] / float(self.interval))))
-        if self.shown_shape is None or raw == "too_early" or self.shown_shape == "too_early" or cfg.get("match_chart_shape"):
+        if self.shown_shape is None or raw == "too_early" or self.shown_shape == "too_early":
             self.shown_shape = raw
         elif raw != self.shown_shape and len(self.raw_shapes) >= k and all(s == raw for s in self.raw_shapes[-k:]):
             self.shown_shape = raw

@@ -35,6 +35,7 @@ def day(n=375, volume=True):
     return out
 cfg = dict(vppanel.CFG); cfg["match_chart_profile"] = True
 cfg["match_chart_shape"] = cfg["match_chart_poc"] = True  # as the page runs it (vppanel.config_for), 17 November
+cfg["stable_minutes"] = vppanel.STABLE_MINUTES             # 5 minutes on the page (18 November); the document's own tests keep its 10
 prev = {"vah": 25010.0, "poc": 24990.0, "val": 24960.0, "high": 25030.0, "low": 24940.0, "close": 24995.0}
 candles = day()
 
@@ -86,16 +87,46 @@ try:
         check(f"{label}: the shape rule in Python = the chart's (vpshape.js) at {len(got)} moments, shapes seen {sorted(set(g[1] for g in got))}", not bad)
         eng, seen, wrong = panel_engine.PanelEngine(dict(cfg, match_chart_shape=True), prev, "2026-11-16", 1), set(), 0
         names = {"P": "P", "B": "b", "D": "D", "Double": "double"}
+        raws, showns, early, levels_bad, score_bad, doubles = [], [], 0, 0, 0, 0
         for k in range(1, len(cs) + 1):
-            o = eng.update(cs[:k])
-            if o["shape"]["shown"] == "too_early":
+            o = eng.update(cs[:k]); sh = o["shape"]
+            raws.append(sh["raw"]); showns.append(sh["shown"])
+            if sh["raw"] == "too_early":
+                early += 1
+                wrong += o["label"] != "Too early to read"
                 continue
             want = names[panel_profile.chart_shape(cs[:k])["shape"]]
-            seen.add(want); wrong += o["shape"]["shown"] != want or o["shape"]["raw"] != want
-        check(f"{label}: every minute the panel shows the chart's shape, at once (shapes {sorted(seen)})", wrong == 0 and len(seen) >= 1)
+            seen.add(want); wrong += sh["raw"] != want
+            # the owner's check 1 (18 November): the levels the shape's rows need are still worked out
+            if sh["shown"] == "P":
+                levels_bad += not (sh.get("bulge_low") is not None and o["profile"]["low"] <= sh["bulge_low"] <= o["profile"]["high"])
+            if sh["shown"] == "b":
+                levels_bad += not (sh.get("bulge_high") is not None and o["profile"]["low"] <= sh["bulge_high"] <= o["profile"]["high"])
+            if sh["shown"] == "double":
+                d = sh.get("double") or {}; doubles += 1
+                levels_bad += not (d.get("gap_low") is not None and d["lower_poc"] < d["upper_poc"] and d["gap_low"] < d["gap_high"] and d["lower_poc"] <= d["gap_high"] and d["upper_poc"] >= d["gap_low"])
+                # check 2: a Double Zone scores by the side of the gap the price is on
+                side = "upper" if o["price"] > d["gap_high"] else "lower" if o["price"] < d["gap_low"] else "gap"
+                got = [c["score"] for c in o["checks"] if c["name"] == "Shape"][0]
+                failing = sh.get("failing_shown")
+                score_bad += (d.get("price_side") != side) or (not failing and got != {"upper": 1, "lower": -1, "gap": 0}[side])
+        check(f"{label}: every minute the panel's reading is the chart's shape (shapes {sorted(seen)})", wrong == 0 and len(seen) >= 1)
+        check(f"{label}: check 1, the bulge of a P and a b and the gap of a Double Zone are worked out at every minute ({doubles} Double Zone minutes)", levels_bad == 0)
+        check(f"{label}: check 2, a Double Zone scores +1 above the gap, -1 below it, 0 inside it", score_bad == 0)
+        check(f"{label}: check 3, the first 15 minutes are 'Too early to read'", early == 14 and raws[13] == "too_early" and raws[14] != "too_early")
+        # check 3: a new shape is shown only after it has been read for the page's 5 minutes in a row
+        k10, hasty, flips_raw, flips_shown = vppanel.STABLE_MINUTES, 0, 0, 0
+        for t in range(15, len(raws)):
+            flips_raw += raws[t] != raws[t - 1]
+            if showns[t] != showns[t - 1] and showns[t - 1] != "too_early":
+                flips_shown += 1
+                hasty += not (showns[t] == raws[t] and all(r == raws[t] for r in raws[t - k10 + 1:t + 1]))
+        check(f"{label}: check 3, the shape shown changes only after {k10} minutes of the same reading (read {flips_raw} changes, shown {flips_shown})", hasty == 0 and flips_shown <= flips_raw)
     two = vppanel.chart_words(panel_engine.PanelEngine(dict(cfg, match_chart_shape=True), prev, "2026-11-16", 1).update(cs))
     text = json.dumps(two, default=str)
-    check("the panel's sentences use the chart's names (no 'Double distribution', no 'b-shape')", "Double distribution" not in text and "b-shape" not in text)
+    check("the panel's sentences use the chart's names ('Double Zone', never 'Double distribution'; 'b-shape' with a small b, never 'B-shape')", "Double distribution" not in text and "B-shape" not in text)
+    vp_names = open(os.path.join(ROOT, "static", "vpshape.js")).read()
+    check("the chart writes 'b-shape' with a small b too", 'B: "b-shape' in vp_names and "B-shape" not in vp_names)
     plain = panel_engine.PanelEngine({k: v for k, v in cfg.items() if k not in ("match_chart_shape", "match_chart_poc")}, prev, "2026-11-16", 1)
     for k in range(1, 200):
         o2 = plain.update(candles[:k])
