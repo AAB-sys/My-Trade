@@ -1,0 +1,40 @@
+[
+ {
+  "key": "NIFTY BANK|5m|1794973800|PE|today",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-11-23",
+  "strike": 62200.0,
+  "index_at_entry": 62178.1,
+  "premium_paid": 542.4,
+  "paid_at": "2026-11-18T09:26:26+05:30",
+  "premium_now": 553.95,
+  "now_at": "2026-11-18T09:26:45+05:30",
+  "sell_below": 352.56,
+  "sold": null,
+  "ended": null,
+  "security_id": 62482,
+  "premium_low": 535.25,
+  "premium_low_at": "2026-11-18T09:26:35+05:30",
+  "stop15": null
+ },
+ {
+  "key": "NIFTY BANK|5m|1794973800|PE|close",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-11-23",
+  "strike": 62200.0,
+  "index_at_entry": 62178.1,
+  "premium_paid": 542.4,
+  "paid_at": "2026-11-18T09:26:26+05:30",
+  "premium_now": 553.95,
+  "now_at": "2026-11-18T09:26:45+05:30",
+  "sell_below": 352.56,
+  "sold": null,
+  "ended": null,
+  "security_id": 62482,
+  "premium_low": 535.25,
+  "premium_low_at": "2026-11-18T09:26:35+05:30",
+  "stop15": null
+ }
+]
