@@ -1,0 +1,1065 @@
+{
+ "date": "2026-11-18",
+ "index": "NIFTY BANK",
+ "contract": {
+  "name": "BANKNIFTY NOV FUT",
+  "expiry": "2026-11-23"
+ },
+ "day": {
+  "open": 62204.1,
+  "high": 62363.75,
+  "low": 61765.45,
+  "close": 62038.65
+ },
+ "previous": {
+  "date": "2026-11-17",
+  "open": 61559.95,
+  "high": 62442.2,
+  "low": 61488,
+  "close": 62273.25
+ },
+ "prev": {
+  "vah": 62402.44,
+  "poc": 62303.05,
+  "val": 62044.62
+ },
+ "growing": [
+  {
+   "at": "09:45",
+   "shape": "Double",
+   "poc": 61920.14,
+   "vah": 62233.91,
+   "val": 61866.04,
+   "low": 61844.4,
+   "high": 62363.75
+  },
+  {
+   "at": "10:15",
+   "shape": "Double",
+   "poc": 62101.99,
+   "vah": 62164.32,
+   "val": 61790.38,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "10:45",
+   "shape": "D",
+   "poc": 62101.99,
+   "vah": 62214.18,
+   "val": 61890.1,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "11:15",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62189.25,
+   "val": 61865.17,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "11:45",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61915.02,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "12:15",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61915.02,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "12:45",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62288.96,
+   "val": 62014.74,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "13:15",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61964.88,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "13:45",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61915.02,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "14:15",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61915.02,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "14:45",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61915.02,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "15:15",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61915.02,
+   "low": 61765.45,
+   "high": 62363.75
+  },
+  {
+   "at": "15:30",
+   "shape": "D",
+   "poc": 62077.06,
+   "vah": 62239.1,
+   "val": 61915.02,
+   "low": 61765.45,
+   "high": 62363.75
+  }
+ ],
+ "final": {
+  "shape": "D",
+  "poc": 62077.06,
+  "vah": 62239.1,
+  "val": 61915.02,
+  "rowHeight": 19.94,
+  "busiestRows": [
+   {
+    "from": 62064.6,
+    "to": 62084.54,
+    "share": 7.1
+   },
+   {
+    "from": 62084.54,
+    "to": 62104.49,
+    "share": 6.7
+   },
+   {
+    "from": 61925,
+    "to": 61944.94,
+    "share": 6.2
+   },
+   {
+    "from": 61944.94,
+    "to": 61964.88,
+    "share": 6.1
+   },
+   {
+    "from": 62004.77,
+    "to": 62024.71,
+    "share": 5.8
+   }
+  ],
+  "totalVolume": 713280
+ },
+ "halfHours": [
+  {
+   "from": "09:15",
+   "open": 62204.1,
+   "high": 62363.75,
+   "low": 61844.4,
+   "close": 61857.9,
+   "volume": 152550
+  },
+  {
+   "from": "09:45",
+   "open": 61858.75,
+   "high": 62165.95,
+   "low": 61765.45,
+   "close": 62130.9,
+   "volume": 97350
+  },
+  {
+   "from": "10:15",
+   "open": 62135.25,
+   "high": 62192.25,
+   "low": 61977.25,
+   "close": 61977.25,
+   "volume": 40950
+  },
+  {
+   "from": "10:45",
+   "open": 61980.9,
+   "high": 62133.8,
+   "low": 61975.15,
+   "close": 62102.85,
+   "volume": 56730
+  },
+  {
+   "from": "11:15",
+   "open": 62105.55,
+   "high": 62258.85,
+   "low": 62096.9,
+   "close": 62164.05,
+   "volume": 38400
+  },
+  {
+   "from": "11:45",
+   "open": 62164.7,
+   "high": 62245.15,
+   "low": 62120.45,
+   "close": 62235.85,
+   "volume": 18810
+  },
+  {
+   "from": "12:15",
+   "open": 62240.7,
+   "high": 62301.8,
+   "low": 62006.2,
+   "close": 62027.1,
+   "volume": 73110
+  },
+  {
+   "from": "12:45",
+   "open": 62027.9,
+   "high": 62069.1,
+   "low": 61861.45,
+   "close": 61908.55,
+   "volume": 49080
+  },
+  {
+   "from": "13:15",
+   "open": 61910.45,
+   "high": 61988.9,
+   "low": 61781.85,
+   "close": 61841.15,
+   "volume": 41370
+  },
+  {
+   "from": "13:45",
+   "open": 61843.15,
+   "high": 62112.05,
+   "low": 61813,
+   "close": 62092,
+   "volume": 48870
+  },
+  {
+   "from": "14:15",
+   "open": 62095.4,
+   "high": 62135.45,
+   "low": 61985.1,
+   "close": 62031.35,
+   "volume": 36300
+  },
+  {
+   "from": "14:45",
+   "open": 62031.35,
+   "high": 62046.05,
+   "low": 61890.8,
+   "close": 61940.9,
+   "volume": 41250
+  },
+  {
+   "from": "15:15",
+   "open": 61946.5,
+   "high": 62038.65,
+   "low": 61946.5,
+   "close": 62038.65,
+   "volume": 18510
+  }
+ ],
+ "events": [
+  {
+   "time": "09:35",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62026.3,
+   "high": 62154.25,
+   "close": 62027.05,
+   "what": "BREAK down",
+   "next30": {
+    "with": 261.6,
+    "against": 112.45,
+    "closeAfter": 62104.45
+   }
+  },
+  {
+   "time": "09:45",
+   "level": "Today's VAL",
+   "price": 61866.04,
+   "low": 61765.45,
+   "high": 61919.55,
+   "close": 61899.3,
+   "what": "BREAK up",
+   "next30": {
+    "with": 266.65,
+    "against": 8.3,
+    "closeAfter": 62108.15
+   }
+  },
+  {
+   "time": "09:50",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 61891,
+   "high": 62077.45,
+   "close": 62027.25,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 10.25,
+    "against": 138.7,
+    "closeAfter": 62085.1
+   }
+  },
+  {
+   "time": "09:50",
+   "level": "Today's POC",
+   "price": 61927.49,
+   "low": 61891,
+   "high": 62077.45,
+   "close": 62027.25,
+   "what": "BREAK up",
+   "next30": {
+    "with": 138.7,
+    "against": 10.25,
+    "closeAfter": 62085.1
+   }
+  },
+  {
+   "time": "09:55",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62017,
+   "high": 62139.5,
+   "close": 62090.05,
+   "what": "BREAK up",
+   "next30": {
+    "with": 102.2,
+    "against": 49.55,
+    "closeAfter": 62152.25
+   }
+  },
+  {
+   "time": "10:05",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62040.5,
+   "high": 62104.45,
+   "close": 62104.45,
+   "what": "REJECTED (came from above, closed back above)",
+   "next30": {
+    "with": 87.8,
+    "against": 39.55,
+    "closeAfter": 62089.65
+   }
+  },
+  {
+   "time": "10:05",
+   "level": "Today's POC",
+   "price": 62101.99,
+   "low": 62040.5,
+   "high": 62104.45,
+   "close": 62104.45,
+   "what": "BREAK up",
+   "next30": {
+    "with": 87.8,
+    "against": 39.55,
+    "closeAfter": 62089.65
+   }
+  },
+  {
+   "time": "10:10",
+   "level": "Today's VAH",
+   "price": 62164.32,
+   "low": 62079.85,
+   "high": 62165.95,
+   "close": 62130.9,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 153.65,
+    "against": 61.35,
+    "closeAfter": 61977.25
+   }
+  },
+  {
+   "time": "10:20",
+   "level": "Today's POC",
+   "price": 62101.99,
+   "low": 62081,
+   "high": 62132.3,
+   "close": 62085.1,
+   "what": "BREAK down",
+   "next30": {
+    "with": 109.95,
+    "against": 107.15,
+    "closeAfter": 62089.2
+   }
+  },
+  {
+   "time": "10:25",
+   "level": "Today's VAH",
+   "price": 62164.32,
+   "low": 62073.95,
+   "high": 62192.25,
+   "close": 62152.25,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 177.1,
+    "against": 16.7,
+    "closeAfter": 62044.35
+   }
+  },
+  {
+   "time": "10:25",
+   "level": "Today's POC",
+   "price": 62101.99,
+   "low": 62073.95,
+   "high": 62192.25,
+   "close": 62152.25,
+   "what": "BREAK up",
+   "next30": {
+    "with": 16.7,
+    "against": 177.1,
+    "closeAfter": 62044.35
+   }
+  },
+  {
+   "time": "10:35",
+   "level": "Today's POC",
+   "price": 62101.99,
+   "low": 62064.9,
+   "high": 62133.85,
+   "close": 62089.65,
+   "what": "BREAK down",
+   "next30": {
+    "with": 114.5,
+    "against": 14.2,
+    "closeAfter": 62096.45
+   }
+  },
+  {
+   "time": "10:40",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 61977.25,
+   "high": 62093.5,
+   "close": 61977.25,
+   "what": "BREAK down",
+   "next30": {
+    "with": 2.1,
+    "against": 156.55,
+    "closeAfter": 62102.85
+   }
+  },
+  {
+   "time": "10:50",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62021.7,
+   "high": 62103.85,
+   "close": 62089.2,
+   "what": "BREAK up",
+   "next30": {
+    "with": 169.65,
+    "against": 62.3,
+    "closeAfter": 62189.65
+   }
+  },
+  {
+   "time": "10:50",
+   "level": "Today's POC",
+   "price": 62101.99,
+   "low": 62021.7,
+   "high": 62103.85,
+   "close": 62089.2,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 62.3,
+    "against": 169.65,
+    "closeAfter": 62189.65
+   }
+  },
+  {
+   "time": "10:55",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62026.9,
+   "high": 62102.8,
+   "close": 62044.35,
+   "what": "BREAK down",
+   "next30": {
+    "with": 6.95,
+    "against": 214.5,
+    "closeAfter": 62208.35
+   }
+  },
+  {
+   "time": "11:05",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62037.4,
+   "high": 62103.3,
+   "close": 62096.45,
+   "what": "BREAK up",
+   "next30": {
+    "with": 162.4,
+    "against": 25.15,
+    "closeAfter": 62131.1
+   }
+  },
+  {
+   "time": "11:05",
+   "level": "Today's POC",
+   "price": 62077.06,
+   "low": 62037.4,
+   "high": 62103.3,
+   "close": 62096.45,
+   "what": "BREAK up",
+   "next30": {
+    "with": 162.4,
+    "against": 25.15,
+    "closeAfter": 62131.1
+   }
+  },
+  {
+   "time": "11:20",
+   "level": "Today's VAH",
+   "price": 62189.25,
+   "low": 62156.85,
+   "high": 62258.85,
+   "close": 62189.65,
+   "what": "BREAK up",
+   "next30": {
+    "with": 54.6,
+    "against": 77.35,
+    "closeAfter": 62192.8
+   }
+  },
+  {
+   "time": "11:50",
+   "level": "Today's VAH",
+   "price": 62239.1,
+   "low": 62190.45,
+   "high": 62244.25,
+   "close": 62192.8,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 42.8,
+    "against": 109,
+    "closeAfter": 62186.3
+   }
+  },
+  {
+   "time": "12:10",
+   "level": "Today's VAH",
+   "price": 62239.1,
+   "low": 62206.4,
+   "high": 62245.15,
+   "close": 62235.85,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 229.65,
+    "against": 65.95,
+    "closeAfter": 62027.1
+   }
+  },
+  {
+   "time": "12:15",
+   "level": "Today's VAH",
+   "price": 62239.1,
+   "low": 62230.15,
+   "high": 62301.8,
+   "close": 62244.9,
+   "what": "BREAK up",
+   "next30": {
+    "with": 0.5,
+    "against": 269.95,
+    "closeAfter": 61994.35
+   }
+  },
+  {
+   "time": "12:30",
+   "level": "Today's POC",
+   "price": 62077.06,
+   "low": 62056.6,
+   "high": 62120.2,
+   "close": 62109.3,
+   "what": "REJECTED (came from above, closed back above)",
+   "next30": {
+    "with": 21.1,
+    "against": 147.4,
+    "closeAfter": 62033
+   }
+  },
+  {
+   "time": "12:40",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62006.2,
+   "high": 62096.8,
+   "close": 62027.1,
+   "what": "BREAK down",
+   "next30": {
+    "with": 165.65,
+    "against": 42,
+    "closeAfter": 61908.55
+   }
+  },
+  {
+   "time": "12:40",
+   "level": "Today's POC",
+   "price": 62077.06,
+   "low": 62006.2,
+   "high": 62096.8,
+   "close": 62027.1,
+   "what": "BREAK down",
+   "next30": {
+    "with": 165.65,
+    "against": 42,
+    "closeAfter": 61908.55
+   }
+  },
+  {
+   "time": "12:40",
+   "level": "Today's VAL",
+   "price": 62014.74,
+   "low": 62006.2,
+   "high": 62096.8,
+   "close": 62027.1,
+   "what": "REJECTED (came from above, closed back above)",
+   "next30": {
+    "with": 42,
+    "against": 165.65,
+    "closeAfter": 61908.55
+   }
+  },
+  {
+   "time": "12:45",
+   "level": "Today's VAL",
+   "price": 62014.74,
+   "low": 61974.95,
+   "high": 62032.5,
+   "close": 61994.35,
+   "what": "BREAK down",
+   "next30": {
+    "with": 132.9,
+    "against": 74.75,
+    "closeAfter": 61944.95
+   }
+  },
+  {
+   "time": "12:50",
+   "level": "Today's VAL",
+   "price": 61964.88,
+   "low": 61961.9,
+   "high": 62015.8,
+   "close": 62008.05,
+   "what": "REJECTED (came from above, closed back above)",
+   "next30": {
+    "with": 61.05,
+    "against": 146.6,
+    "closeAfter": 61894.35
+   }
+  },
+  {
+   "time": "12:55",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 61994.65,
+   "high": 62069.1,
+   "close": 62036.55,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 185.85,
+    "against": 14.95,
+    "closeAfter": 61865.2
+   }
+  },
+  {
+   "time": "13:05",
+   "level": "Today's VAL",
+   "price": 61964.88,
+   "low": 61894.2,
+   "high": 62035.5,
+   "close": 61945.5,
+   "what": "BREAK down",
+   "next30": {
+    "with": 163.65,
+    "against": 43.4,
+    "closeAfter": 61799.9
+   }
+  },
+  {
+   "time": "13:15",
+   "level": "Today's VAL",
+   "price": 61964.88,
+   "low": 61907.5,
+   "high": 61988.9,
+   "close": 61944.95,
+   "what": "REJECTED (came from below, closed back below)",
+   "next30": {
+    "with": 163.1,
+    "against": 10.2,
+    "closeAfter": 61856.45
+   }
+  },
+  {
+   "time": "13:20",
+   "level": "Today's VAL",
+   "price": 61915.02,
+   "low": 61894.35,
+   "high": 61955.15,
+   "close": 61894.35,
+   "what": "BREAK down",
+   "next30": {
+    "with": 112.5,
+    "against": 85.95,
+    "closeAfter": 61973.15
+   }
+  },
+  {
+   "time": "13:50",
+   "level": "Today's VAL",
+   "price": 61915.02,
+   "low": 61853.6,
+   "high": 61980.3,
+   "close": 61973.15,
+   "what": "BREAK up",
+   "next30": {
+    "with": 162.3,
+    "against": 65.1,
+    "closeAfter": 62053.75
+   }
+  },
+  {
+   "time": "14:00",
+   "level": "Today's VAL",
+   "price": 61915.02,
+   "low": 61911.1,
+   "high": 61982.25,
+   "close": 61916.55,
+   "what": "REJECTED (came from above, closed back above)",
+   "next30": {
+    "with": 218.9,
+    "against": 8.5,
+    "closeAfter": 62055.95
+   }
+  },
+  {
+   "time": "14:10",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 61954.95,
+   "high": 62112.05,
+   "close": 62092,
+   "what": "BREAK up",
+   "next30": {
+    "with": 43.45,
+    "against": 106.9,
+    "closeAfter": 62031.35
+   }
+  },
+  {
+   "time": "14:10",
+   "level": "Today's POC",
+   "price": 62077.06,
+   "low": 61954.95,
+   "high": 62112.05,
+   "close": 62092,
+   "what": "BREAK up",
+   "next30": {
+    "with": 43.45,
+    "against": 106.9,
+    "closeAfter": 62031.35
+   }
+  },
+  {
+   "time": "14:20",
+   "level": "Today's POC",
+   "price": 62077.06,
+   "low": 62052.55,
+   "high": 62126.3,
+   "close": 62053.75,
+   "what": "BREAK down",
+   "next30": {
+    "with": 68.65,
+    "against": 53.6,
+    "closeAfter": 62014.95
+   }
+  },
+  {
+   "time": "14:30",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 62018.65,
+   "high": 62081.35,
+   "close": 62055.95,
+   "what": "REJECTED (came from above, closed back above)",
+   "next30": {
+    "with": 19.4,
+    "against": 165.15,
+    "closeAfter": 61894
+   }
+  },
+  {
+   "time": "14:35",
+   "level": "Prev day VAL",
+   "price": 62044.62,
+   "low": 61985.1,
+   "high": 62075.35,
+   "close": 62020.55,
+   "what": "BREAK down",
+   "next30": {
+    "with": 129.75,
+    "against": 28.2,
+    "closeAfter": 61924.55
+   }
+  },
+  {
+   "time": "15:00",
+   "level": "Today's VAL",
+   "price": 61915.02,
+   "low": 61890.8,
+   "high": 61943.4,
+   "close": 61894,
+   "what": "BREAK down",
+   "next30": {
+    "with": 2.5,
+    "against": 144.65,
+    "closeAfter": 62038.65
+   }
+  },
+  {
+   "time": "15:05",
+   "level": "Today's VAL",
+   "price": 61915.02,
+   "low": 61891.5,
+   "high": 61937.65,
+   "close": 61924.55,
+   "what": "BREAK up",
+   "next30": {
+    "with": 114.1,
+    "against": 9.5,
+    "closeAfter": 62038.65
+   }
+  }
+ ],
+ "minutesVsPrevValue": {
+  "above": 0,
+  "inside": 203,
+  "below": 172
+ },
+ "minutesVsTodayFinalValue": {
+  "above": 12,
+  "inside": 321,
+  "below": 42
+ },
+ "nearestToPrevVAH": {
+  "low": 61765.45,
+  "gap": -636.99
+ },
+ "calls": [
+  {
+   "kind": "Break",
+   "n": 1,
+   "side": "PE",
+   "setup": null,
+   "signal": "13:05",
+   "entryAt": "13:10",
+   "entry": 61947.1,
+   "stop": 62074.57,
+   "shape": "D",
+   "how": "stop",
+   "exitAt": "14:10",
+   "exit": 62074.57,
+   "points": -127.47,
+   "profileThen": {
+    "vah": 62239.1,
+    "poc": 62077.06,
+    "val": 61964.88
+   },
+   "entryFrom": {
+    "vah": -292,
+    "poc": -129.96,
+    "val": -17.78
+   }
+  },
+  {
+   "kind": "Shape",
+   "n": 1,
+   "side": "PE",
+   "setup": "D-high",
+   "signal": "12:15",
+   "entryAt": "12:20",
+   "entry": 62241.85,
+   "stop": 62363.75,
+   "shape": "D",
+   "how": "time",
+   "exitAt": "15:15",
+   "exit": 61946.5,
+   "points": 295.35,
+   "profileThen": {
+    "vah": 62239.1,
+    "poc": 62077.06,
+    "val": 61915.02
+   },
+   "entryFrom": {
+    "vah": 2.75,
+    "poc": 164.79,
+    "val": 326.83
+   }
+  },
+  {
+   "kind": "Impulse",
+   "n": 1,
+   "side": "PE",
+   "setup": null,
+   "signal": "13:05",
+   "entryAt": "13:10",
+   "entry": 61947.1,
+   "stop": 62074.57,
+   "shape": "D",
+   "how": "stop",
+   "exitAt": "14:10",
+   "exit": 62074.57,
+   "points": -127.47,
+   "profileThen": {
+    "vah": 62239.1,
+    "poc": 62077.06,
+    "val": 61964.88
+   },
+   "entryFrom": {
+    "vah": -292,
+    "poc": -129.96,
+    "val": -17.78
+   }
+  }
+ ],
+ "impulseRefused": [
+  {
+   "time": "09:30",
+   "side": "PE",
+   "close": 62117.9,
+   "why": "the Impulse MACD does not agree"
+  },
+  {
+   "time": "09:35",
+   "side": "PE",
+   "close": 62027.05,
+   "why": "the Impulse MACD does not agree"
+  },
+  {
+   "time": "09:40",
+   "side": "PE",
+   "close": 61857.9,
+   "why": "the Impulse MACD does not agree"
+  },
+  {
+   "time": "11:20",
+   "side": "CE",
+   "close": 62189.65,
+   "why": "the Impulse MACD does not agree; sideways: 6 crossings of the busiest price"
+  },
+  {
+   "time": "15:00",
+   "side": "PE",
+   "close": 61894,
+   "why": "the Impulse MACD does not agree"
+  }
+ ],
+ "impulseAt": [
+  {
+   "at": "09:15",
+   "md": 119.87,
+   "signal": 149.53,
+   "colour": "orange"
+  },
+  {
+   "at": "09:45",
+   "md": 0,
+   "signal": 80.2,
+   "colour": "red"
+  },
+  {
+   "at": "10:15",
+   "md": 0,
+   "signal": 7.08,
+   "colour": "red"
+  },
+  {
+   "at": "10:45",
+   "md": -14.26,
+   "signal": -2.24,
+   "colour": "red"
+  },
+  {
+   "at": "11:15",
+   "md": -20.93,
+   "signal": -17.5,
+   "colour": "green"
+  },
+  {
+   "at": "11:45",
+   "md": 0,
+   "signal": -9.91,
+   "colour": "lime"
+  },
+  {
+   "at": "12:15",
+   "md": 0,
+   "signal": 0,
+   "colour": "lime"
+  },
+  {
+   "at": "12:45",
+   "md": 0,
+   "signal": 0,
+   "colour": "red"
+  },
+  {
+   "at": "13:15",
+   "md": -41.84,
+   "signal": -11.75,
+   "colour": "red"
+  },
+  {
+   "at": "13:45",
+   "md": -113.72,
+   "signal": -66.93,
+   "colour": "red"
+  },
+  {
+   "at": "14:15",
+   "md": -81.49,
+   "signal": -102.68,
+   "colour": "green"
+  },
+  {
+   "at": "14:45",
+   "md": -41.99,
+   "signal": -67.57,
+   "colour": "green"
+  },
+  {
+   "at": "15:15",
+   "md": -53.99,
+   "signal": -47.01,
+   "colour": "red"
+  }
+ ]
+}

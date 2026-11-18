@@ -1,0 +1,20 @@
+NIFTY 50 2026-11-18
+09:45-10:00 Double candles 4 | close 25244 -> 25302 | POC 25295->25295 VAH 25375->25360 VAL 25260->25245 | where {"below VAL":1,"between VAL and POC":2,"between POC and VAH":1} | reached first in 30 min {"VAL":1,"POC":3}
+10:05-10:35 D      candles 7 | close 25305 -> 25245 | POC 25295->25295 VAH 25360->25329 VAL 25245->25229 | where {"between POC and VAH":1,"between VAL and POC":6} | reached first in 30 min {"POC":1,"VAL":6}
+10:40-11:20 Double candles 9 | close 25222 -> 25266 | POC 25295->25241 VAH 25314->25306 VAL 25214->25222 | where {"between VAL and POC":5,"between POC and VAH":4} | reached first in 30 min {"none":3,"POC":5,"VAL":1}
+11:25-13:00 B      candles 20 | close 25279 -> 25182 | POC 25241->25238 VAH 25306->25317 VAL 25222->25215 | where {"between POC and VAH":9,"between VAL and POC":3,"below VAL":8} | reached first in 30 min {"POC":12,"none":8}
+13:05-13:15 D      candles 3 | close 25163 -> 25186 | POC 25240->25240 VAH 25308->25308 VAL 25173->25173 | where {"below VAL":2,"between VAL and POC":1} | reached first in 30 min {"VAL":3}
+13:20-14:45 Double candles 18 | close 25179 -> 25238 | POC 25240->25240 VAH 25308->25308 VAL 25173->25173 | where {"between VAL and POC":8,"below VAL":4,"between POC and VAH":6} | reached first in 30 min {"VAL":6,"POC":11,"none":1}
+14:50-15:20 D      candles 7 | close 25236 -> 25220 | POC 25240->25240 VAH 25308->25266 VAL 25173->25152 | where {"between VAL and POC":7} | reached first in 30 min {"none":7}
+by shape, which level price reached first in the next 30 min: {"Double":{"VAL":8,"POC":19,"none":4},"D":{"POC":1,"VAL":9,"none":7},"B":{"POC":12,"none":8}}
+by where the close sat: {"below VAL":{"VAL":7,"none":8},"between VAL and POC":{"POC":12,"VAL":10,"none":10},"between POC and VAH":{"POC":20,"none":1}}
+NIFTY BANK 2026-11-18
+09:45-10:25 Double candles 9 | close 61899 -> 62152 | POC 61927->62102 VAH 62189->62264 VAL 61765->61890 | where {"between VAL and POC":3,"between POC and VAH":6} | reached first in 30 min {"POC":7,"none":1,"VAH":1}
+10:30-15:20 D      candles 59 | close 62127 -> 61947 | POC 62102->62077 VAH 62264->62239 VAL 61890->61915 | where {"between POC and VAH":22,"between VAL and POC":28,"below VAL":9} | reached first in 30 min {"POC":18,"VAH":13,"VAL":24,"none":4}
+by shape, which level price reached first in the next 30 min: {"Double":{"POC":7,"none":1,"VAH":1},"D":{"POC":18,"VAH":13,"VAL":24,"none":4}}
+by where the close sat: {"between VAL and POC":{"POC":12,"VAL":15,"none":4},"between POC and VAH":{"none":1,"VAH":14,"POC":13},"below VAL":{"VAL":9}}
+SENSEX 2026-11-18
+09:45-14:55 Double candles 63 | close 82105 -> 82040 | POC 82167->82097 VAH 82429->82313 VAL 82055->81880 | where {"between VAL and POC":42,"between POC and VAH":8,"below VAL":13} | reached first in 30 min {"POC":30,"VAL":25,"none":8}
+15:00-15:20 D      candles 5 | close 81973 -> 82030 | POC 82097->82030 VAH 82313->82313 VAL 81880->81880 | where {"between VAL and POC":3,"between POC and VAH":2} | reached first in 30 min {"none":5}
+by shape, which level price reached first in the next 30 min: {"Double":{"POC":30,"VAL":25,"none":8},"D":{"none":5}}
+by where the close sat: {"between VAL and POC":{"POC":22,"VAL":13,"none":10},"between POC and VAH":{"POC":8,"none":2},"below VAL":{"VAL":12,"none":1}}

@@ -4,6 +4,7 @@
 // by volume. The same questions are asked of two years of NIFTY 50 5-minute candles with no volume (strat/all5m.csv, counted by time).
 // node vpday/grow.js [lastDate]   -> text on stdout, vpday/grow.json
 "use strict";
+const RL = require(__dirname + "/levels.js").R;  // the chart's own levels (18 November: one set of numbers)
 const fs = require("fs"), S = require("path").resolve(__dirname, ".."), V = require(S + "/swingtree/static/vpshape.js");
 const hm = V.hm, LAST = process.argv[2] || "9999";
 const tally = () => ({}), add = (T, k, v) => { const t = T[k] = T[k] || { n: 0 }; t[v] = (t[v] || 0) + 1; t.n++; };
@@ -42,7 +43,7 @@ function study(days, useVol, T, todayKey) {
         const from = pc < L ? "from below" : "from above", mv = firstMove(after(k, 1800), L, D), res = mv === "none" || mv === "both" ? mv : (mv === "up") === (pc < L) ? "went through" : "turned";
         A("d yesterday's level, first touch", res); A("d yesterday's " + lv.toUpperCase() + " " + from, res); }
       if (k < 6) { continue; }
-      const p = V.read(fine.filter(m => m.time < b5[k].time + 300), W);  // the day's profile through candle k
+      const p = RL(fine.filter(m => m.time < b5[k].time + 300), W);  // the day's profile through candle k
       if (pBefore && t >= "10:00" && t <= "14:45") {
         const q = pBefore, nx = after(k, 1800);
         for (const [side, L, sgn] of [["VAH", q.vah, 1], ["VAL", q.val, -1]]) {
@@ -69,12 +70,12 @@ function study(days, useVol, T, todayKey) {
     }
     // (b) the noon rule
     const am = fine.filter(m => hm(m.time) < "12:00");
-    if (am.length) { const pn = V.read(am, W), c12 = am[am.length - 1].close, cl = fine[fine.length - 1].close, w = place(c12, pn), out = w === "above VAH" || w === "below VAL";
+    if (am.length) { const pn = RL(am, W), c12 = am[am.length - 1].close, cl = fine[fine.length - 1].close, w = place(c12, pn), out = w === "above VAH" || w === "below VAL";
       const dir = cl > c12 ? "up" : cl < c12 ? "down" : "flat", wc = place(cl, pn);
       A("b noon " + (out ? "OUTSIDE the value area" : "inside the value area") + ": the close", out ? (wc === w ? "outside, same side" : wc === "above VAH" || wc === "below VAL" ? "outside, other side" : "back inside") : (wc === "above VAH" || wc === "below VAL" ? "outside" : "inside"));
       if (out) A("b noon outside: the afternoon", (dir === "up") === (w === "above VAH") ? "went further" : "came back");
       A("b noon shape " + pn.shape + ": the afternoon", dir); }
-    prevP = V.read(fine, W);
+    prevP = RL(fine, W);
   }
   return ks;
 }
