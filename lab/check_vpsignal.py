@@ -42,6 +42,9 @@ with tempfile.TemporaryDirectory() as tmp:
     cfg = dict(vpsignal.CFG)  # the command line reads bin_size_pts: the same number here
     same, signals, levels_same = 0, 0, 0
     names = list(days)
+    # 17 November: yesterday's VAH, POC and VAL are the chart's (vpsignal.LEVELS_LIKE_CHART). First the proof that the rule
+    # itself is untouched: with the setting off, everything is the document's command line's, field for field, as before.
+    vpsignal.LEVELS_LIKE_CHART = False
     for day in names[1:]:
         theirs = json.loads(subprocess.run([sys.executable, "vp_cli.py", "signal", path, day], cwd=VP, capture_output=True, text=True).stdout)
         view = vpsignal.day_view(days, day, days[day], cfg)
@@ -53,6 +56,30 @@ with tempfile.TemporaryDirectory() as tmp:
             [p for p in lv["naked_pocs"] if p["date"] != view["levels_from"]] == view["naked"]
     check("the signal of every day is the document's command line's, field for field", (same, signals > 5), (len(names) - 1, True))
     check("the levels and the naked POC list of every day are the command line's", levels_same, len(names) - 1)
+    # then the setting on, as the page runs: the three levels are the chart's, and the signal is the document's own
+    # find_signal read with them: the same rule, the new numbers
+    vpsignal.LEVELS_LIKE_CHART = True
+    sys.path.insert(0, os.path.join(ROOT, "panel"))
+    import panel_profile
+    chart_ok, rule_ok, moved = 0, 0, 0
+    for day in names[1:]:
+        view = vpsignal.day_view(days, day, days[day], cfg)
+        prev_day = view["levels_from"]
+        p = panel_profile.build_profile(days[prev_day], rows=24, va_pct=cfg["value_area_pct"], va_step=2, like_chart=True)
+        chart_ok += all(view["levels"][k] == p[k] for k in ("val", "poc", "vah"))
+        prev, _d, naked = vpsignal.prepare(days, day, cfg)
+        want = vpsignal.vp_signal.find_signal(days[day], prev, cfg, naked)
+        mine = {k: v for k, v in view["signal"].items() if k not in ("outcome", "sizing", "reason")}
+        rule_ok += mine == {k: v for k, v in want.items() if k != "reason"}
+        vpsignal.LEVELS_LIKE_CHART = False
+        old = vpsignal.day_view(days, day, days[day], cfg)["levels"]
+        vpsignal.LEVELS_LIKE_CHART = True
+        moved += any(old[k] != view["levels"][k] for k in ("val", "poc", "vah"))
+        same_rest = all(old[k] == view["levels"][k] for k in ("hvn", "lvn", "session_low", "session_high", "uses_volume"))
+        chart_ok += 0 if same_rest else -1
+    check("as the page runs: yesterday's VAH, POC and VAL of every day are the chart's (24 rows), the nodes and the day's high and low the document's", chart_ok, len(names) - 1)
+    check("and the signal of every day is the document's own rule read with those levels", rule_ok, len(names) - 1)
+    check("the two counts do differ on these days (so the test means something)", moved > 0, True)
 
 # the exit: a CE at 100 with the stop at 90 and the target at 120
 sig = {"signal": "CE", "candle": "10:00", "index_price": 100.0, "index_stop": 90.0, "index_target": 120.0, "risk_pts": 10.0}
@@ -130,7 +157,11 @@ check("with the day's 1-minute candles the profile is built from them, and says 
 check("minutes that repeat their 5-minute candle give the same levels: one calculation, whatever the candle size", [p1[k] for k in ("val", "poc", "vah")], [p5[k] for k in ("val", "poc", "vah")])
 real = {d: [dict(c, h=c["h"] - (i % 5) * 0.4, l=c["l"] + (i % 5) * 0.4) for i, c in enumerate(m)] for d, m in fine.items()}
 pr = vpsignal.prepare(week, "2026-11-16", C, real)[0]
-check("real 1-minute candles (narrower than their 5-minute candle) keep the document's rows: every level on the 5-point grid", [pr["val"] % 5, pr["vah"] % 5, (pr["poc"] - 2.5) % 5], [0.0, 0.0, 0.0])
+check("real 1-minute candles (narrower than their 5-minute candle): the levels are the chart's count of those minutes (17 November)", [pr[k] for k in ("val", "poc", "vah")], [vpsignal.chart_levels_of(real["2026-11-13"], C["value_area_pct"])[k] for k in ("val", "poc", "vah")])
+vpsignal.LEVELS_LIKE_CHART = False
+pr0 = vpsignal.prepare(week, "2026-11-16", C, real)[0]
+vpsignal.LEVELS_LIKE_CHART = True
+check("with the setting off they keep the document's rows: every level on the 5-point grid", [pr0["val"] % 5, pr0["vah"] % 5, (pr0["poc"] - 2.5) % 5], [0.0, 0.0, 0.0])
 short_fine = dict(fine); short_fine["2026-11-13"] = fine["2026-11-13"][:200]
 check("a day with too few 1-minute candles (under 350) is built from its 5-minute candles, not skipped", (vpsignal.prepare(week, "2026-11-16", C, short_fine)[0]["candles"], vpsignal.prepare(week, "2026-11-16", C, short_fine)[1]), ("5m", "2026-11-13"))
 v = vpsignal.day_view(week, "2026-11-16", [], C, fine=fine)

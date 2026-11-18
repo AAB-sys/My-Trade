@@ -35,6 +35,8 @@ def config_for(name: str) -> dict:
     """The document's settings, with the page's profile arithmetic and the index's option expiry days as its expiry flag."""
     cfg = dict(CFG)
     cfg["match_chart_profile"] = True
+    cfg["match_chart_shape"] = True  # the shape is the chart's (17 November, the owner: "so they never disagree")
+    cfg["match_chart_poc"] = True    # the POC whose movement is watched is the chart's ("Match every number")
     try:
         days = dhan.cached(("panel expiries", name), 6 * 3600, lambda: dhan.expiries(name))
     except Exception:  # noqa: BLE001 - the flag is a warning only; without the list the panel still reads
@@ -61,10 +63,28 @@ def previous_of(name: str, today: str):
             "close": days[prev_day][-1]["c"]}, prev_day
 
 
+CHART_WORDS = (("Double distribution", "Double Zone"), ("b-shape", "B-shape"),  # the chart's names for the two shapes it names otherwise
+               ("Busiest 5-point row", "Today's POC"))                             # the POC watched is the chart's (match_chart_poc)
+
+
+def chart_words(x):
+    """The panel's sentences with the chart's shape names (17 November, the owner: "Panel show the same shape name as the
+    chart"): the document says "Double distribution" and "b-shape" where the chart says "Double Zone" and "B-shape"."""
+    if isinstance(x, str):
+        for a, b in CHART_WORDS:
+            x = x.replace(a, b)
+        return x
+    if isinstance(x, dict):
+        return {k: chart_words(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return type(x)(chart_words(v) for v in x)
+    return x
+
+
 def feed(entry: dict, candles: list) -> dict:
     """Every candle not yet fed goes through the engine, one update each, oldest first; the alerts are kept for the day."""
     for i in range(entry["done"], len(candles)):
-        out = entry["engine"].update(candles[:i + 1])
+        out = chart_words(entry["engine"].update(candles[:i + 1]))
         entry["alerts"][:0] = reversed(out["alerts"])
         entry["out"] = out
     entry["done"] = len(candles)

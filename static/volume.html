@@ -928,7 +928,7 @@
     }
     let second = "";
     if (lv) {
-      second += `<span><span class="k">Previous trading day's levels (${shortDay(g.levels_from)}: ${lv.candles === "1m" ? "1-minute" : "5-minute"} candles, ${lv.uses_volume ? "futures volume" : "time only, no volume"}, ${lv.bin_size_pts}-point rows):</span> <span class="k">VAL</span> <span class="v">${num(lv.val)}</span> <span class="k">POC</span> <span class="v">${num(lv.poc)}</span> <span class="k">VAH</span> <span class="v">${num(lv.vah)}</span></span>`;
+      second += `<span><span class="k">Previous trading day's levels (${shortDay(g.levels_from)}: ${lv.candles === "1m" ? "1-minute" : "5-minute"} candles, ${lv.uses_volume ? "futures volume" : "time only, no volume"}, ${lv.like_chart ? "the same count as the chart's profile" : lv.bin_size_pts + "-point rows"}):</span> <span class="k">VAL</span> <span class="v">${num(lv.val)}</span> <span class="k">POC</span> <span class="v">${num(lv.poc)}</span> <span class="k">VAH</span> <span class="v">${num(lv.vah)}</span></span>`;
       second += `<span><span class="k">${shortDay(g.day)} opened</span> <span class="v">${g.opened ? OPENED[g.opened] : "not yet"}</span></span>`;
       second += `<span><span class="k">Read up to the candle of</span> <span class="v">${g.last_candle || "—"}</span><span class="k">${g.live ? ", exits on the live price" : ""}</span></span>`;
     second += `<span><span class="k">Naked POCs:</span> <span class="v">${g.naked && g.naked.length ? g.naked.map(p => num(p.poc) + " (" + shortDay(p.date) + ")").join(", ") : "none"}</span></span>`;
@@ -1306,11 +1306,19 @@
     let pv = 0, v = 0; for (const m of fine) { const w = state.fineVolumes.get(m.time) || 0; if (w > 0) { pv += w * (m.high + m.low + m.close) / 3; v += w; } }
     const pair = (name, a, b) => { if (a == null && b == null) return; if (a == null || b == null || Math.abs(a - b) > 0.005) diff.push(`${name}: panel ${a == null ? "none" : num(a)}, chart ${b == null ? "none" : num(b)}`); };
     pair("POC", g.profile.poc, p.poc); pair("VAH", g.profile.vah, p.vah); pair("VAL", g.profile.val, p.val); pair("VWAP", g.vwap, v > 0 ? pv / v : null);
+    // the shape too (17 November, the owner: "Panel show the same shape name as the chart, so they never disagree"): the chart's
+    // own rule (vpshape.js) on the same minutes against the panel's; not compared in the panel's first minutes ("Too early")
+    let shapeSaid = "";
+    const mine = g.shape && g.shape.shown, SHAPE = { P: "P-shape", b: "B-shape", D: "D-shape", double: "Double Zone" };
+    if (mine && mine !== "too_early" && typeof VpShape !== "undefined") {
+      const got = VpShape.read(fine, have ? state.fineVolumes : null), theirs = got && { P: "P", B: "b", D: "D", Double: "double" }[got.shape];
+      if (theirs !== mine) diff.push(`shape: panel ${SHAPE[mine] || mine}, chart ${SHAPE[theirs] || "none"}`); else shapeSaid = ", the shape";
+    }
     const sg = state.signal, lv = sg && sg.levels, yd = g.levels && Object.fromEntries(g.levels.map(l => [l.name, l.price]));
     let prevSaid = "";
     if (lv && yd && sg.levels_from === g.previous_day) { pair("Yesterday's VAH", yd["Yesterday's VAH"], lv.vah); pair("Yesterday's POC", yd["Yesterday's POC"], lv.poc); pair("Yesterday's VAL", yd["Yesterday's VAL"], lv.val); prevSaid = ", and yesterday's VAH, POC, VAL"; }
     return diff.length ? { ok: false, text: `NOT the same as the chart at ${g.time}: ${diff.join("; ")}. The last minutes' volume may still be arriving; if this stays, do not rely on the panel.` }
-      : { ok: true, text: `Same as the chart at ${g.time}: POC, VAH, VAL, VWAP${prevSaid}` };
+      : { ok: true, text: `Same as the chart at ${g.time}: POC, VAH, VAL, VWAP${shapeSaid}${prevSaid}` };
   }
   function drawPanel() {
     const box = $("panel"), on = $("show-panel").checked, g = state.panel;
