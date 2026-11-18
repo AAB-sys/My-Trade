@@ -430,6 +430,14 @@ branch from `main`.
   end. The buffers (`"fixed"` points, `"atr"` x `Rules.atrBefore`) and `place: "at"` and `lines: "middle"` are research
   settings only (lab/replay.js rows, check_rule.py jobs); lab/check.js holds the specification's test cases T1 to T11.
 
+- AAA_V1 (19 November, the owner: "there is a page called trade plan ... make a replica of it, dont keep any rules on the new chart, and
+  make a chart format same as volume profile page chart. Name it AAA_V1"; "move it to after OI chart capsule"; "whatever changes will
+  go into it will start with the PR as AAA_V1 starting with this PR"): a work family of its own, pull requests titled "AAA_V1_".
+  The last capsule on every index page (`static/detail.html`: `tab-aaa`, `showAaa`, `aaa-box`). Open: the index page's own chart and
+  its Chart, Time frame, Levels and Session rows make room for the Volume Profile page's chart of that index, an inner page
+  (`static/volume.html?index=<name>&embed=aaa`: no title row, no index box, and no Signal, Shape signal, Impulse MACD or Panel box;
+  its settings kept apart as `volumeProfileAAA`); under the capsules the Trade Plan's table, empty. It has NO rule and fires no
+  call until the owner gives it one; no other page's rule reads or writes it.
 - The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
   chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
   above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's
