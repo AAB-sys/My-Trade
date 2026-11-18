@@ -412,7 +412,7 @@
   // The running day's shape name is the panel's shown shape (18 November, the owner: "The simplest fix is to drive the chart's
   // shape label from the panel's output"; "First 15 minutes stay 'Too early to read'. The 10-minute smoothing should also still
   // apply, so the label doesn't flip every minute"): the panel reads the shape with the chart's own rule and shows a new one
-  // only after it has held for ten minutes, and the chart's label of today is drawn from that, so the two cannot differ. No
+  // only after it has held for five minutes (the owner, 18 November: "Instead of 10 minutes make it 5 minutes"), and the chart's label of today is drawn from that, so the two cannot differ. No
   // label while the panel says "too early". The days before, and today when the panel has not answered: the chart's own
   // reading, as before.
   function shownShape(s, lastDay) {
@@ -1321,7 +1321,7 @@
     // the shape too (17 November, the owner: "Panel show the same shape name as the chart, so they never disagree"): the chart's
     // own rule (vpshape.js) on the same minutes against the panel's; not compared in the panel's first minutes ("Too early")
     let shapeSaid = "";
-    // the panel's reading of this minute (raw) against the chart's rule on the same minutes; the name shown waits ten minutes
+    // the panel's reading of this minute (raw) against the chart's rule on the same minutes; the name shown waits five minutes
     const mine = g.shape && g.shape.raw, SHAPE = { P: "P-shape", b: "b-shape", D: "D-shape", double: "Double Zone" };
     if (mine && mine !== "too_early" && typeof VpShape !== "undefined") {
       const got = VpShape.read(fine, have ? state.fineVolumes : null), theirs = got && { P: "P", B: "b", D: "D", Double: "double" }[got.shape];

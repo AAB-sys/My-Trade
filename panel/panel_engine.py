@@ -302,7 +302,7 @@ class PanelEngine:
             # disagree ... keep the logic same so new numbers will work according to the logic only"): the shape is the one
             # the chart names (static/vpshape.js: P, b, D or Double Zone); everything the document does with a shape
             # afterwards is unchanged: the first minutes stay "too early", a new shape is shown only after it has held for
-            # stable_minutes (18 November: "The 10-minute smoothing should also still apply, so the label doesn't flip every
+            # stable_minutes (the page sets 5; 18 November: "The 10-minute smoothing should also still apply, so the label doesn't flip every
             # minute"; the chart's own label of the running day is drawn from this shown shape, so the two cannot differ),
             # its check, the bulge of a P or a b, the gap of a Double Zone, the conditions and the alerts
             cs = chart_shape(candles, thin_pct=cfg["thin_row_pct"])

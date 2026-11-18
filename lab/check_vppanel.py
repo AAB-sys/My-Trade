@@ -35,6 +35,7 @@ def day(n=375, volume=True):
     return out
 cfg = dict(vppanel.CFG); cfg["match_chart_profile"] = True
 cfg["match_chart_shape"] = cfg["match_chart_poc"] = True  # as the page runs it (vppanel.config_for), 17 November
+cfg["stable_minutes"] = vppanel.STABLE_MINUTES             # 5 minutes on the page (18 November); the document's own tests keep its 10
 prev = {"vah": 25010.0, "poc": 24990.0, "val": 24960.0, "high": 25030.0, "low": 24940.0, "close": 24995.0}
 candles = day()
 
@@ -113,14 +114,14 @@ try:
         check(f"{label}: check 1, the bulge of a P and a b and the gap of a Double Zone are worked out at every minute ({doubles} Double Zone minutes)", levels_bad == 0)
         check(f"{label}: check 2, a Double Zone scores +1 above the gap, -1 below it, 0 inside it", score_bad == 0)
         check(f"{label}: check 3, the first 15 minutes are 'Too early to read'", early == 14 and raws[13] == "too_early" and raws[14] != "too_early")
-        # check 3: a new shape is shown only after it has been read for 10 minutes in a row
-        k10, hasty, flips_raw, flips_shown = 10, 0, 0, 0
+        # check 3: a new shape is shown only after it has been read for the page's 5 minutes in a row
+        k10, hasty, flips_raw, flips_shown = vppanel.STABLE_MINUTES, 0, 0, 0
         for t in range(15, len(raws)):
             flips_raw += raws[t] != raws[t - 1]
             if showns[t] != showns[t - 1] and showns[t - 1] != "too_early":
                 flips_shown += 1
                 hasty += not (showns[t] == raws[t] and all(r == raws[t] for r in raws[t - k10 + 1:t + 1]))
-        check(f"{label}: check 3, the shape shown changes only after 10 minutes of the same reading (read {flips_raw} changes, shown {flips_shown})", hasty == 0 and flips_shown <= flips_raw)
+        check(f"{label}: check 3, the shape shown changes only after {k10} minutes of the same reading (read {flips_raw} changes, shown {flips_shown})", hasty == 0 and flips_shown <= flips_raw)
     two = vppanel.chart_words(panel_engine.PanelEngine(dict(cfg, match_chart_shape=True), prev, "2026-11-16", 1).update(cs))
     text = json.dumps(two, default=str)
     check("the panel's sentences use the chart's names ('Double Zone', never 'Double distribution'; 'b-shape' with a small b, never 'B-shape')", "Double distribution" not in text and "B-shape" not in text)

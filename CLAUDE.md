@@ -442,7 +442,7 @@ branch from `main`.
   panel's "yesterday" are the chart's 24-row count of that day (`vpsignal.LEVELS_LIKE_CHART`, `chart_levels_of`; the document's
   fixed-row count stays for the hvn/lvn nodes and is the whole of it when the setting is False); (2) the panel's shape is read with the
   chart's rule (`panel_profile.chart_shape`, a line-for-line copy of `static/vpshape.js`; `match_chart_shape`); the document's
-  first 15 minutes of "Too early to read" and its 10-minute rule (a new shape is shown only after it has held ten minutes) stay,
+  first 15 minutes of "Too early to read" and its waiting rule (a new shape is shown only after it has held; `vppanel.STABLE_MINUTES`, 5 on the page by the owner's word, 10 in the document) stay,
   and the chart's label of the running day is drawn from the panel's shown shape (`shownShape` in `static/volume.html`: the page
   asks `/vp-panel` while Shape signal or Panel is ticked), so the two cannot differ (18 November: "drive the chart's shape label
   from the panel's output"); "Double Zone" is the chart's name (`vppanel.chart_words`) and the b-shape is written with a small b
