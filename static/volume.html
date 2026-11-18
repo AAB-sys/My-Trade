@@ -9,6 +9,7 @@
 <script src="/static/volprofile.js"></script>
 <script src="/static/vpshape.js"></script>
 <script src="/static/impulse.js"></script>
+<script src="/static/fvg.js"></script>
 <!-- The Volume Profile page (12 November, the owner: "build a new page with header name as volume profile ... the chart format
      which dhan uses for pc and mobile"). A page of its own: it reads the index's candles and the futures' volume, draws them,
      and decides nothing. Paper calls and Calls with Signals are not read here and do not read this page. The chart is drawn
@@ -238,6 +239,9 @@
     <!-- the OI walls (17 November, the owner, with the price above all of the day's volume: "how to find the resistance from here ?";
          "yes show the screenshot first"): two lines from the option chain, off until ticked, so the chart stays as it was -->
     <label><input type="checkbox" id="show-oi"> OI walls</label>
+    <!-- the fair value gaps (19 November, the owner: "can you mark FVG on the live candles ?"): bands on the chart, off until
+         ticked, so the chart stays as it was. A marking only: no call, no signal -->
+    <label><input type="checkbox" id="show-fvg"> FVG</label>
     <!-- the Shape signal (15 November, the owner: "Build option 1 but this user interface should not be changed at all"): off until
          ticked; with it off the page is as it was -->
     <label><input type="checkbox" id="show-shape"> Shape signal</label>
@@ -429,8 +433,29 @@
     for (const z of g.zones) { const a = candles.priceToCoordinate(z.high), b = candles.priceToCoordinate(z.low); if (a == null || b == null) continue; ctx.fillRect(0, Math.round(a * vr), Math.round(w * hr), Math.max(1, Math.round((b - a) * vr))); }
     ctx.restore();
   }
+  // The fair value gaps (static/fvg.js), while FVG is ticked: a band from the gap's first candle to the candle that filled it,
+  // or to the right edge while it is open. Green: a bullish gap; red: a bearish one. Drawn under the candles and the profile.
+  function drawFvg(scope) {
+    if (!$("show-fvg").checked || !state.fvg || !state.fvg.length) return;
+    const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, paneW = scope.mediaSize.width, ts = chart.timeScale(), half = ts.options().barSpacing / 2;
+    ctx.save();
+    for (const g of state.fvg) {
+      const xa = ts.timeToCoordinate(g.from + IST), ya = candles.priceToCoordinate(g.top), yb = candles.priceToCoordinate(g.bottom); if (xa == null || ya == null || yb == null) continue;
+      const xe = g.filled != null ? ts.timeToCoordinate(g.filled + IST) : null, x0 = xa - half, x1 = xe != null ? xe + half : paneW;
+      if (x1 <= 0 || x0 >= paneW) continue;
+      const X = Math.round(Math.max(x0, 0) * hr), W = Math.max(1, Math.round(Math.min(x1, paneW) * hr) - X), Y = Math.round(ya * vr), H = Math.max(1, Math.round((yb - ya) * vr));
+      ctx.fillStyle = css(g.side === "bull" ? "--up" : "--down"); ctx.globalAlpha = g.filled != null ? 0.08 : 0.18; ctx.fillRect(X, Y, W, H);
+      ctx.globalAlpha = g.filled != null ? 0.25 : 0.6; ctx.fillRect(X, Y, W, Math.max(1, Math.round(vr))); ctx.fillRect(X, Y + H - Math.max(1, Math.round(vr)), W, Math.max(1, Math.round(vr)));
+    }
+    ctx.restore();
+  }
+  function setFvg() {
+    if (!$("show-fvg").checked) { state.fvg = null; return; }
+    const bars = shown().flat(), sec = SECONDS[state.interval], now = Date.now() / 1000;
+    state.fvg = Fvg.find(bars, bars.filter(b => b.time + sec <= now).length);
+  }
   function drawProfiles(scope) {
-    drawZones(scope);
+    drawZones(scope); drawFvg(scope);
     if (!state.profiles.length) return;  // the profile is always drawn: the page is for it (the owner, 12 November: "volume profile should always be there")
     const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, paneW = scope.mediaSize.width;
     const ts = chart.timeScale(), spacing = ts.options().barSpacing, full = BARS_A_DAY[state.interval] * spacing;
@@ -700,6 +725,7 @@
     const vols = useFine ? state.fineVolumes : state.volumes;
     const have = [...vols.values()].some(v => v > 0);
     state.timeOnly = !have;
+    setFvg();
     state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); const got = $("show-shape").checked ? VpShape.read(f || d, have ? vols : null) : null; return { bars: d, profile: VolProfile.build(f || d, have ? vols : null), shape: got && got.shape }; });
     profile.requestUpdate && profile.requestUpdate();
     drawTodayNames();
@@ -862,6 +888,9 @@
     let info = "";  // the indicators' figures: in the line above the chart, not on it
     if (state.rsi && state.rsi.has(at.time)) info += `<span><i class="line" style="background:var(--rsi)"></i><span class="k">RSI ${RSI_LENGTH}</span> <span class="v">${state.rsi.get(at.time).toFixed(2)}</span></span><span class="cut"></span>`;
     if (state.vwap && state.vwap.has(at.time)) info += `<span><i class="line" style="background:var(--vwap)"></i><span class="k">VWAP</span> <span class="v">${num(state.vwap.get(at.time))}</span></span><span class="cut"></span>`;
+    if (state.fvg) { const today = bars.length ? Math.floor((bars[bars.length - 1].time + IST) / 86400) : 0, mine = state.fvg.filter(g => Math.floor((g.at + IST) / 86400) === today), open = state.fvg.filter(g => g.filled == null);
+      const near = open.length ? open.reduce((a, g) => Math.min(Math.abs(g.top - at.close), Math.abs(g.bottom - at.close)) < Math.min(Math.abs(a.top - at.close), Math.abs(a.bottom - at.close)) ? g : a) : null;
+      info += `<span><span class="k">FVG (marking only)</span> <span class="v">${open.length} open${near ? ", nearest " + num(near.bottom) + " – " + num(near.top) : ""} · ${mine.length} today</span></span><span class="cut"></span>`; }
     if (!state.oi && $("show-oi").checked) info += `<span><span class="k">OI walls</span> <span class="v">${state.oiWhy ? "no data: " + state.oiWhy : "reading the option chain…"}</span></span><span class="cut"></span>`;
     if (state.oi) info += `<span><i class="line" style="background:var(--down)"></i><span class="k">Call OI wall</span> <span class="v">${state.oi.call ? num(state.oi.call.strike, 0) + " (" + short(state.oi.call.oi) + ")" : "—"}</span></span><span><i class="line" style="background:var(--up)"></i><span class="k">Put OI wall</span> <span class="v">${state.oi.put ? num(state.oi.put.strike, 0) + " (" + short(state.oi.put.oi) + ")" : "—"}</span></span><span class="cut"></span>`;
     if (!state.timeOnly) info += `<span><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></span><span class="cut"></span>`;
@@ -987,6 +1016,8 @@
   // The nearest expiry's chain, the one the index page's OI chart reads (/options/<name>/chain), asked every 15 s while the tick is on.
   // A tick box of its own, off by default, remembered apart from the others: with it off the page asks nothing and draws nothing.
   // Two lines and two figures in the line above the chart: no call, no signal, nothing of the profile changes.
+  try { if (localStorage.getItem("volumeProfileFVG") === "1") $("show-fvg").checked = true; } catch (e) {}
+  $("show-fvg").addEventListener("change", () => { try { localStorage.setItem("volumeProfileFVG", $("show-fvg").checked ? "1" : "0"); } catch (e) {} setFvg(); profile.requestUpdate && profile.requestUpdate(); drawLegend(); });
   let oiLines = [], oiSeq = 0;
   try { if (localStorage.getItem("volumeProfileOI") === "1") $("show-oi").checked = true; } catch (e) {}
   function oiWalls(data) {

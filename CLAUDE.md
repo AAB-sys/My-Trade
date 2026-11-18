@@ -430,6 +430,11 @@ branch from `main`.
   end. The buffers (`"fixed"` points, `"atr"` x `Rules.atrBefore`) and `place: "at"` and `lines: "middle"` are research
   settings only (lab/replay.js rows, check_rule.py jobs); lab/check.js holds the specification's test cases T1 to T11.
 
+- The fair value gaps on the Volume Profile page (19 November, the owner: "can you mark FVG on the live candles ?"): `static/fvg.js`,
+  drawn by `static/volume.html` while the tick box "FVG" is on (OFF until ticked, remembered as `volumeProfileFVG`). Three closed
+  candles of one session: candle 3's low above candle 1's high (bullish) or its high below candle 1's low (bearish); gaps under
+  0.04% of the price are left out; a band runs to the candle that fills the gap, or to the right edge while it is open. A marking
+  only, no call: on 499 days of NIFTY 50 a return to a gap bounced 45% and went through 47%. `lab/check_fvg.js` (11 checks).
 - The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
   chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
   above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's
