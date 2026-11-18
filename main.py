@@ -1106,7 +1106,7 @@ async def token_forever() -> None:
     The owner does not look after the saving (6 October), and the token is the one thing only they can renew."""
     while True:
         try:
-            store["dhan"]["token"] = await asyncio.to_thread(dhan.token_check)
+            store["dhan"]["token"] = await asyncio.to_thread(dhan.token_report)  # the check, and the server's own token when it is due (19 November)
             if not store["dhan"]["token"]["ok"]:
                 log.warning("Dhan token: %s", store["dhan"]["token"]["problem"])
             try:

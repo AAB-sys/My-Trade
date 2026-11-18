@@ -50,8 +50,14 @@ jobs:
           warn = None
           if token:
               print("token:", json.dumps(token))
+              own = token.get("own") or {}
+              own_works = bool(own.get("on")) and not own.get("problem") and not own.get("stopped")  # the server makes its own token each morning (19 November)
+              if own.get("on"):
+                  print("the server's own token:", "on, the last one made at " + str(own.get("made_at")) if own_works else "on, but: " + str(own.get("problem")))
               if not token.get("ok"):
                   warn = f"Dhan refuses the token: {token.get('problem')}. Paste a fresh DHAN_ACCESS_TOKEN into Render's Environment page."
+                  if own.get("on"):
+                      warn += f" The server could not make its own: {own.get('problem')}."
               elif token.get("valid_till"):
                   try:
                       till = datetime.fromisoformat(token["valid_till"])
@@ -59,7 +65,9 @@ jobs:
                       while nxt.weekday() >= 5: nxt += timedelta(days=1)
                       close = nxt.replace(hour=15, minute=40, second=0, microsecond=0)
                       print(f"The token is valid till {till.strftime('%d %b %H:%M')} IST.")
-                      if till < close:
+                      if till < close and own_works:
+                          print("It ends before the next trading day's close; the server makes a new one itself that morning (08:00 to 09:10 IST).")
+                      elif till < close:
                           warn = f"The token expires at {till.strftime('%d %b %H:%M')} IST, before the next trading day's close ({close.strftime('%d %b %H:%M')}). Paste a fresh DHAN_ACCESS_TOKEN into Render's Environment page before then, or that day will not be saved."
                   except ValueError:
                       print("The token's validity could not be read:", token["valid_till"])
