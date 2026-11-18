@@ -439,7 +439,9 @@ branch from `main`.
   its settings kept apart as `volumeProfileAAA`); under the capsules the Trade Plan's table, empty. The chart is clean (19 November,
   the owner: "remove every logic from this chart ... i want only candles and above that i want previous day close high low", then
   "i just want the volumes on this page for all 3 indexes, rest you can remove"): candles, the volume bars always on, three lines
-  (Prev day High, Close, Low, from the summary; `drawPrevDay`, kept in view), no tick box, no volume rows, no VAH, POC, VAL. It has NO rule and fires no
+  (Prev day High, Close, Low, from the summary; `drawPrevDay`, kept in view), no tick box, no volume rows, no VAH, POC, VAL.
+  The zoom and move buttons stand under the chart at its right end (`#navrow`), and under the previous day's figures a second row
+  gives the running day's high and low, counted from its candles on every tick ("should be changed as per the live feed"). It has NO rule and fires no
   call until the owner gives it one; no other page's rule reads or writes it.
 - The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
   chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
