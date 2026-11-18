@@ -200,7 +200,7 @@
   #panel .verify.no { color: var(--down); background: color-mix(in srgb, var(--down) 14%, transparent); }
   #panel .verify.wait { color: var(--muted); background: var(--hover); font-weight: 400; }
   #panel .warn { flex: none; padding: 6px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11.5px; }
-  body.embed > header, body.embed #index, body.embed #index + .sep { display: none; }  /* AAA_V1: the chart alone, inside the index page */
+  body.embed > header, body.embed #index, body.embed #tools .sep, body.embed #note { display: none; }  /* AAA_V1: the chart alone, inside the index page */
   @media (prefers-color-scheme: dark) { #panel .flag { color: #fbbf24; } }
   @media (max-width: 900px) and (min-width: 601px) { #panel { width: 280px; } }
   @media (max-width: 600px) {
@@ -335,7 +335,14 @@
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   if (EMBED) {
     document.body.classList.add("embed");
-    for (const id of ["show-signal", "show-shape", "show-impulse", "show-panel"]) { const box = document.getElementById(id); box.checked = false; box.closest("label").style.display = "none"; }
+    // 19 November, the owner, with AAA_V1 live: "remove every logic from this chart, just keep it as clean as possible, i want only
+    // candles and above that i want previous day close high low": every tick box goes and stays off (the rules' four, and Volume,
+    // RSI, VWAP, OI walls); no volume rows, no VAH, POC, VAL (drawProfiles, drawTodayNames); the candles, and three lines:
+    // the previous day's high, low and close (drawPrevDay), with their figures in the line above the chart
+    for (const id of ["show-signal", "show-shape", "show-impulse", "show-panel", "show-volume", "show-rsi", "show-vwap", "show-oi"]) { const box = document.getElementById(id); box.checked = false; box.closest("label").style.display = "none"; }
+    // then: "i want to keep the volumes on this page ... i just want the volumes on this page for all 3 indexes, rest you can remove":
+    // the volume bars under the candles are always on here (no tick box), with the candle's volume in the line above the chart
+    document.getElementById("show-volume").checked = true;
   }
   const $ = (id) => document.getElementById(id);
   // No calls on the page (16 November, the owner: "remove all the call tables, i dont want that, and also remove all the signals
@@ -440,6 +447,7 @@
     ctx.restore();
   }
   function drawProfiles(scope) {
+    if (EMBED) return;  // AAA_V1: candles only
     drawZones(scope);
     if (!state.profiles.length) return;  // the profile is always drawn: the page is for it (the owner, 12 November: "volume profile should always be there")
     const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, paneW = scope.mediaSize.width;
@@ -721,7 +729,27 @@
   // VAL" (the day's date instead of "Today's" when the last day shown is not today), moving as the profile grows. Only the
   // tags are added: the lines themselves are the profile's, as before; nothing of the count changes.
   let todayNames = [], todayKey = "";
+  // AAA_V1's three lines (19 November): the previous day's high, low and close, as the index page's "Previous session" box gives
+  // them (the server's summary); where it has none, from the day before on the chart. Kept in view with the candles (oiRange).
+  let prevLines = [], prevKey = "";
+  function prevDay() {
+    const m = state.summary || {}, days = VolProfile.sessions(state.bars), d = days.length > 1 ? days[days.length - 2] : null;
+    const high = m.previous_high != null ? m.previous_high : d ? Math.max(...d.map(b => b.high)) : null, low = m.previous_low != null ? m.previous_low : d ? Math.min(...d.map(b => b.low)) : null, close = m.previous_close != null ? m.previous_close : d ? d[d.length - 1].close : null;
+    return high != null && low != null && close != null ? { high, low, close } : null;
+  }
+  function drawPrevDay() {
+    const p = state.prevDay = prevDay(), key = p ? `${p.high}|${p.low}|${p.close}` : "";
+    if (key === prevKey) return;
+    prevKey = key;
+    for (const line of prevLines) { try { candles.removePriceLine(line); } catch (e) {} }
+    prevLines = [];
+    if (!p) return;
+    const line = (price, title, color) => prevLines.push(candles.createPriceLine({ price, title, color, lineVisible: true, lineStyle: LightweightCharts.LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true }));
+    line(p.high, "Prev day High", css("--up")); line(p.close, "Prev day Close", css("--ink-2")); line(p.low, "Prev day Low", css("--down"));
+    candles.applyOptions({ autoscaleInfoProvider: (original) => oiRange(original()) });
+  }
   function drawTodayNames() {
+    if (EMBED) { drawPrevDay(); return; }
     const s = state.profiles[state.profiles.length - 1], p = s && s.profile && s.profile.total > 0 ? s.profile : null;
     const day = p ? Math.floor((s.bars[0].time + IST) / 86400) : 0, isToday = day === Math.floor((Date.now() / 1000 + IST) / 86400);
     const who = !p ? "" : isToday ? "Today's" : new Date(day * 86400000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
@@ -870,6 +898,7 @@
     const f = (label, x) => `<span><span class="k">${label}</span> <span class="v ${tone}">${num(x)}</span></span>`;
     let html = `<div class="row"><span class="sym">${state.name}</span><span class="k">${state.interval} · ${dayOf(at.time)} ${hhmm(at.time)}</span>${f("O", at.open)}${f("H", at.high)}${f("L", at.low)}${f("C", at.close)}<span class="v ${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : "−"}${num(Math.abs(ch))} (${(ch / before * 100 >= 0 ? "+" : "−") + Math.abs(ch / before * 100).toFixed(2)}%)</span></div>`;
     let info = "";  // the indicators' figures: in the line above the chart, not on it
+    const clean = !EMBED ? null : !state.prevDay ? "" : `<span><span class="k">Prev day High</span> <span class="v">${num(state.prevDay.high)}</span></span><span class="cut"></span><span><span class="k">Prev day Low</span> <span class="v">${num(state.prevDay.low)}</span></span><span class="cut"></span><span><span class="k">Prev day Close</span> <span class="v">${num(state.prevDay.close)}</span></span><span class="cut"></span>`;
     if (state.rsi && state.rsi.has(at.time)) info += `<span><i class="line" style="background:var(--rsi)"></i><span class="k">RSI ${RSI_LENGTH}</span> <span class="v">${state.rsi.get(at.time).toFixed(2)}</span></span><span class="cut"></span>`;
     if (state.vwap && state.vwap.has(at.time)) info += `<span><i class="line" style="background:var(--vwap)"></i><span class="k">VWAP</span> <span class="v">${num(state.vwap.get(at.time))}</span></span><span class="cut"></span>`;
     if (!state.oi && $("show-oi").checked) info += `<span><span class="k">OI walls</span> <span class="v">${state.oiWhy ? "no data: " + state.oiWhy : "reading the option chain…"}</span></span><span class="cut"></span>`;
@@ -883,6 +912,7 @@
         if (r && r.total > 0) info += `<span class="cut"></span><span><span class="k">At ${num(r.price)} – ${num(r.price + p.step)}</span> <span class="v">${state.timeOnly ? (r.total / p.total * 100).toFixed(1) + "% of the day's time" : short(r.total) + " (" + (r.total / p.total * 100).toFixed(1) + "% of the day)"}</span></span><span><i style="background:var(--vp-up)"></i><span class="k">rising candles</span> <span class="v">${Math.round(r.up / r.total * 100)}%</span></span><span><i style="background:var(--vp-down)"></i><span class="k">falling</span> <span class="v">${Math.round(r.down / r.total * 100)}%</span></span><span class="cut"></span>`;
       }
     }
+    if (clean != null) info = clean + (state.timeOnly || v == null ? "" : `<span><span class="k">Volume${state.contract ? " (" + state.contract.name + ")" : ""}</span> <span class="v">${short(v)}</span></span><span class="cut"></span>`);  // AAA_V1: the previous day's three figures and the candle's volume
     $("info").innerHTML = info.replace(/<span class="cut"><\/span>$/, "");
     $("legend").innerHTML = html;
   }
@@ -998,7 +1028,7 @@
   // A tick box of its own, off by default, remembered apart from the others: with it off the page asks nothing and draws nothing.
   // Two lines and two figures in the line above the chart: no call, no signal, nothing of the profile changes.
   let oiLines = [], oiSeq = 0;
-  try { if (localStorage.getItem("volumeProfileOI") === "1") $("show-oi").checked = true; } catch (e) {}
+  try { if (!EMBED && localStorage.getItem("volumeProfileOI") === "1") $("show-oi").checked = true; } catch (e) {}
   function oiWalls(data) {
     const f = data.fields || [], si = f.indexOf("strike"), ci = f.indexOf("ce_oi"), pi = f.indexOf("pe_oi"), px = data.underlying;
     if (si < 0 || ci < 0 || pi < 0 || !(px > 0)) return null;
@@ -1013,7 +1043,8 @@
   // both walls in view (17 November, the owner: "i can onlly see Call OI wall where is Put OI wall"): the prices the chart shows are
   // widened to hold the two strikes while the tick is on; with it off the chart's own range, untouched
   function oiRange(o) {
-    const w = state.oi;
+    const w = state.oi, pd = EMBED ? state.prevDay : null;
+    if (o && o.priceRange && pd) return { ...o, priceRange: { minValue: Math.min(o.priceRange.minValue, pd.low), maxValue: Math.max(o.priceRange.maxValue, pd.high) } };  // AAA_V1: the previous day's three lines stay in view
     if (!o || !o.priceRange || !w || !$("show-oi").checked) return o;
     let { minValue, maxValue } = o.priceRange;
     for (const x of [w.call, w.put]) if (x) { minValue = Math.min(minValue, x.strike); maxValue = Math.max(maxValue, x.strike); }
