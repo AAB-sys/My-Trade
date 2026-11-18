@@ -443,6 +443,13 @@ branch from `main`.
   The zoom and move buttons stand under the chart at its right end (`#navrow`), and under the previous day's figures a second row
   gives the running day's high and low, counted from its candles on every tick ("should be changed as per the live feed"). It has NO rule and fires no
   call until the owner gives it one; no other page's rule reads or writes it.
+- The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
+  `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
+  (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
+  morning 08:00 to 09:10 IST when the token in use ends before that day's close (`renew_due`, from `main.token_forever` through
+  `dhan.token_report`), and at once when Dhan refuses the token in use (`dhan.call`). In memory only; at most 3 failed tries a
+  day, 10 minutes apart; the pasted `DHAN_ACCESS_TOKEN` keeps working and is the fallback. Without the two settings nothing
+  changes. `/health` shows `token.own` (no secret). `lab/check_own_token.py` (32 checks, a stand-in for Dhan on the machine).
 - The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
   chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
   above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's

@@ -9,13 +9,22 @@ the repo:
     DHAN_CLIENT_ID      the account's client id (a number)
     DHAN_ACCESS_TOKEN   the access token from the Dhan website; it lasts 24 hours
 
+and, only when the owner wants the server to make its own token each morning (19 November; see "The server's own token" below):
+
+    DHAN_PIN            the account's 6-digit PIN
+    DHAN_TOTP_SECRET    the key Dhan shows once at "Setup TOTP" (the letters and digits under the QR code)
+
 Only data endpoints are called here. Nothing in this file can place an order.
 """
+import base64
 import csv
+import hashlib
+import hmac
 import json
 import logging
 import os
 import re
+import struct
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone
@@ -55,12 +64,140 @@ class DhanError(Exception):
 
 
 def settings() -> tuple[str, str]:
-    return os.environ.get("DHAN_CLIENT_ID", "").strip(), os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+    """The client id and the token in use: the server's own token when it has made one (see below), else the pasted one."""
+    return os.environ.get("DHAN_CLIENT_ID", "").strip(), _own["token"] or os.environ.get("DHAN_ACCESS_TOKEN", "").strip()
+
+
+# The server's own token (19 November 2026, the owner: "what about TOTP option on Dhan ?", "yes, build it"). Until now the one
+# thing only the owner could do was paste a fresh 24-hour token into the host's settings each morning; a forgotten morning is a
+# day not saved. Dhan's API makes a token from the client id, the account's PIN and the 6-digit code of the moment (TOTP, the
+# code an authenticator app shows), with no browser: POST https://auth.dhan.co/app/generateAccessToken?dhanClientId=..&pin=..&totp=..
+# With DHAN_PIN and DHAN_TOTP_SECRET set, the server asks for a token itself: each morning between 08:00 and 09:10 IST when the
+# token in use will not last until that day's close, and at once when Dhan refuses the token in use.
+#   - Without the two settings nothing here runs: the pasted token works as it always did.
+#   - The token made is kept in memory only (never on disk, never in the repo, never in a log or on a page). A restart loses
+#     it and makes one again.
+#   - A pasted token that Dhan accepts is used as it is; the server makes its own only when it needs one.
+#   - A refusal is never repeated blindly: after a failed try the next waits 10 minutes, and after RENEW_MAX_FAILS failed
+#     tries in one day the server stops asking until the next day, a restart, or a try asked for by hand (a wrong PIN tried
+#     over and over could lock the account). The pasted token still works meanwhile, and /health says what Dhan answered.
+#   - The PIN, the key and the code are sent to Dhan's own address only, and are never part of an error text.
+AUTH_BASE = os.environ.get("DHAN_AUTH_BASE", "https://auth.dhan.co")  # overridden only by tests
+RENEW_WAIT_SECONDS = float(os.environ.get("DHAN_RENEW_WAIT_SECONDS", "600"))
+RENEW_MAX_FAILS = int(os.environ.get("DHAN_RENEW_MAX_FAILS", "3"))
+_own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "tries": 0}
+_own_lock = threading.Lock()
+
+
+class _NoSecrets(logging.Filter):
+    """The token request carries the PIN and the code in its address: no log line may ever show that address."""
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            return "generateAccessToken" not in record.getMessage()
+        except Exception:  # noqa: BLE001 - a line that cannot be read is not written
+            return False
+
+
+for _name in ("httpx", "httpcore"):
+    logging.getLogger(_name).addFilter(_NoSecrets())
+
+
+def totp_settings() -> tuple[str, str]:
+    return os.environ.get("DHAN_PIN", "").strip(), "".join(os.environ.get("DHAN_TOTP_SECRET", "").split()).upper()
+
+
+def totp_on() -> bool:
+    pin, key = totp_settings()
+    return bool(pin and key and os.environ.get("DHAN_CLIENT_ID", "").strip())
+
+
+def totp_code(key: str, at: float | None = None, digits: int = 6, step: int = 30) -> str:
+    """The 6-digit code of the moment (RFC 6238, SHA-1, 30 seconds: what an authenticator app shows) from the base32 key."""
+    raw = base64.b32decode(key + "=" * (-len(key) % 8), casefold=True)
+    counter = struct.pack(">Q", int((time.time() if at is None else at) // step))
+    mac = hmac.new(raw, counter, hashlib.sha1).digest()
+    at_byte = mac[-1] & 0x0F
+    number = struct.unpack(">I", mac[at_byte:at_byte + 4])[0] & 0x7FFFFFFF
+    return str(number % (10 ** digits)).zfill(digits)
+
+
+def own_report() -> dict:
+    """What /health may say about the server's own token: no secret, only whether it is on, in use, when made, and why not."""
+    return {"on": totp_on(), "in_use": bool(_own["token"]), "made_at": _own["made_at"], "problem": _own["problem"],
+            "failed_tries": _own["fails"], "stopped": _own["fails"] >= RENEW_MAX_FAILS}
+
+
+def renew_token(why: str, by_hand: bool = False) -> bool:
+    """Asks Dhan for a token with the PIN and the code of the moment. True when one was made and is now in use.
+    Never raises; the reason of a failure is kept for /health (own_report), with no secret in it."""
+    if not totp_on():
+        return False
+    with _own_lock:
+        now = time.time()
+        today = datetime.now(IST).date().isoformat()
+        if _own["fail_day"] != today:  # a new day: the count of failed tries starts again (at most RENEW_MAX_FAILS a day)
+            _own["fail_day"], _own["fails"] = today, 0
+        if not by_hand and (_own["fails"] >= RENEW_MAX_FAILS or (_own["last_try"] and now - _own["last_try"] < RENEW_WAIT_SECONDS)):
+            return False
+        client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
+        pin, key = totp_settings()
+        _own["last_try"], _own["tries"] = now, _own["tries"] + 1
+        try:
+            code = totp_code(key)
+        except Exception:  # noqa: BLE001 - a key that is not base32: say so, never the key
+            _own["fails"] += 1
+            _own["problem"] = "DHAN_TOTP_SECRET is not a valid key (it should be the letters A-Z and digits 2-7 Dhan shows at Setup TOTP)"
+            log.warning("Dhan own token: %s", _own["problem"])
+            return False
+        try:
+            response = httpx.post(AUTH_BASE + "/app/generateAccessToken", params={"dhanClientId": client_id, "pin": pin, "totp": code}, timeout=20)
+        except httpx.HTTPError as exc:
+            _own["problem"] = f"could not reach Dhan's login address ({type(exc).__name__})"  # the exception's own text holds the address: not used
+            log.warning("Dhan own token (%s): %s", why, _own["problem"])
+            return False  # the network, not a refusal: not counted against the tries
+        try:
+            body = response.json() if response.content else {}
+        except ValueError:
+            body = {}
+        inner = body.get("data") if isinstance(body, dict) and isinstance(body.get("data"), dict) else {}
+        token = ""
+        if isinstance(body, dict):
+            token = str(body.get("accessToken") or body.get("access_token") or inner.get("accessToken") or inner.get("access_token") or "").strip()
+        if response.status_code == 200 and token:
+            _own.update(token=token, made_at=datetime.now(IST).isoformat(timespec="seconds"), problem=None, fails=0)
+            log.warning("Dhan own token: a new token was made (%s)", why)
+            return True
+        said = ""
+        if isinstance(body, dict):
+            said = str(body.get("errorMessage") or body.get("message") or body.get("remarks") or body.get("error") or inner.get("message") or "")
+        said = re.sub(r"\d{4,}", "…", said)[:160]  # no long number of Dhan's answer is repeated (a PIN, a code, an id)
+        _own["fails"] += 1
+        _own["problem"] = f"Dhan did not give a token (HTTP {response.status_code}{': ' + said if said else ''})" + (
+            f"; stopped for today after {_own['fails']} failed tries" if _own["fails"] >= RENEW_MAX_FAILS else "")
+        log.warning("Dhan own token (%s): %s", why, _own["problem"])
+        return False
+
+
+def renew_due(check: dict, now: datetime | None = None) -> str | None:
+    """Why a token should be made now, or None. `check` is token_check()'s answer for the token in use."""
+    if not totp_on():
+        return None
+    now = now or datetime.now(IST)
+    if not check.get("ok"):
+        problem = str(check.get("problem") or "")
+        return "the token in use was refused" if ("refused" in problem or "not both set" in problem) else None
+    try:
+        till = datetime.fromisoformat(str(check.get("valid_till")))
+    except ValueError:
+        return None
+    if (8, 0) <= (now.hour, now.minute) <= (9, 10) and till < now.replace(hour=15, minute=45, second=0, microsecond=0):
+        return "the morning's renewal: the token in use ends before today's close"
+    return None
 
 
 def configured() -> bool:
     client_id, token = settings()
-    return bool(client_id and token)
+    return bool(client_id and (token or totp_on()))  # a pasted token, or the means to make one (19 November)
 
 
 # Dhan allows one market-feed request a second (ltp, ohlc, quote) and asks for a gap between option-chain
@@ -104,7 +241,26 @@ def _got_through() -> None:
 
 
 def call(method: str, path: str, payload: dict | None = None) -> dict:
-    """One request to Dhan; raises DhanError with a plain reason when it refuses."""
+    """One request to Dhan; raises DhanError with a plain reason when it refuses. When the token is refused (or none is
+    set) and the server may make its own (DHAN_PIN and DHAN_TOTP_SECRET), it makes one and asks once more."""
+    try:
+        return _call(method, path, payload)
+    except DhanError as exc:
+        if exc.kind not in ("token", "config") or not totp_on():
+            raise
+        if _own["token"] and exc.kind == "token":
+            _own["token"] = ""  # the server's own token was refused: back to the pasted one, then a new one
+            try:
+                return _call(method, path, payload)
+            except DhanError as again:
+                if again.kind not in ("token", "config"):
+                    raise
+        if not renew_token("Dhan refused the token in use"):
+            raise
+        return _call(method, path, payload)
+
+
+def _call(method: str, path: str, payload: dict | None = None) -> dict:
     client_id, token = settings()
     if not (client_id and token):
         raise DhanError("config", "DHAN_CLIENT_ID and DHAN_ACCESS_TOKEN are not both set")
@@ -181,6 +337,18 @@ def token_check() -> dict:
             continue
     return {"ok": True, "valid_till": valid_till or (raw or None), "checked_at": now, "problem": None,
             "plan": plan_of(who, settings()[0])}
+
+
+def token_report() -> dict:
+    """token_check(), then the morning's renewal when it is due (renew_due), then what /health shows: the check of the token
+    in use, with "own" (own_report) beside it when the server may make its own token."""
+    check = token_check()
+    why = renew_due(check)
+    if why and renew_token(why):
+        check = token_check()
+    if totp_on() or _own["tries"]:
+        check["own"] = own_report()
+    return check
 
 
 def expiries(name: str) -> list[str]:
