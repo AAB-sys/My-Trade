@@ -23,7 +23,7 @@ function runDay(d, mk, o) {
       if (open) continue; }
     if (k + 1 >= b.length || b[k + 1].hm >= "15:00" || n >= (o.max || 99)) continue;
     const s = sig(k); if (!s) continue; const entry = b[k + 1].open, dir = s.side === "CE" ? 1 : -1, risk = dir * (entry - s.stop); if (!(risk > 3)) continue;
-    open = { side: s.side, dir, entry, stop: s.stop, target: o.rr ? entry + dir * o.rr * risk : null, trail: o.trail || 0, hm: b[k + 1].hm, d }; n++;
+    open = { side: s.side, dir, entry, stop: s.stop, target: s.target != null ? s.target : o.rr ? entry + dir * o.rr * risk : null, trail: o.trail || 0, hm: b[k + 1].hm, d }; n++;
   }
   if (open) { open.pts = open.dir * (b[b.length - 1].close - open.entry); out.push(open); }
   return out;
@@ -87,6 +87,22 @@ FAM.out = { grid: { from: ["10:15", "11:15"], n: [2, 4], stop: ["edge", "poc"], 
     const q = va[k - o.n];
     if (up && !(b[k - o.n].close > q.vah)) return { side: "CE", stop: o.stop === "poc" ? p.poc : p.vah - 0.5 * a };
     if (dn && !(b[k - o.n].close < q.val)) return { side: "PE", stop: o.stop === "poc" ? p.poc : p.val + 0.5 * a }; return null; }; } };
+// 11. (18 Nov) THE GAP AGAINST YESTERDAY'S VALUE AREA, from gapq.js (498 days: an open outside yesterday's value area that is not
+// back at the edge by 10:15 closes outside 86-92%; one that is back at the edge in the first hour reaches yesterday's POC ~70%).
+// mode "fill": the open is outside yesterday's value area (by time); the first close back inside it before `until` -> trade to
+// yesterday's POC (CE from below, PE from above), stop past the day's extreme so far. mode "go": the edge is untouched until `until`
+// -> go with the gap at that time, stop at the edge (or yesterday's POC), out 15:15.
+const yva = {}; dates.forEach((d, i) => { if (i) yva[d] = vaOf(byDay[dates[i - 1]], byDay[dates[i - 1]].length); });
+const dayOf = new WeakMap(); for (const d of dates) dayOf.set(byDay[d], d);
+FAM.gap = { grid: { mode: ["fill", "go"], until: ["09:45", "10:15", "11:15"], stop: ["near", "far"], rr: [0, 1.5], buf: [0, 0.5], minGap: [0, 0.15] }, mk: (b, c, o) => { const y = yva[dayOf.get(b)]; if (!y || !c.adr) return null;
+  const op = b[0].open, sgn = op > y.vah ? 1 : op < y.val ? -1 : 0; if (!sgn) return null; const edge = sgn > 0 ? y.vah : y.val; if (Math.abs(op - edge) < o.minGap * c.adr) return null;
+  const kU = idx(b, o.until) - 1; let done = false;
+  return (k) => { if (done) return null; const x = b[k], a = c.atr[k];
+    if (o.mode === "fill") { if (k > kU) return null; if (!(sgn > 0 ? x.close < edge : x.close > edge)) return null; done = true;
+      if (Math.abs(y.poc - x.close) < 2 * COST) return null; let ext = sgn > 0 ? -Infinity : Infinity; for (let i = 0; i <= k; i++) ext = sgn > 0 ? Math.max(ext, b[i].high) : Math.min(ext, b[i].low);
+      const stop = o.stop === "far" ? ext + sgn * o.buf * a : x.close + sgn * (1 + o.buf) * a; return { side: sgn > 0 ? "PE" : "CE", stop, target: o.rr ? null : y.poc }; }
+    if (k !== kU) return null; done = true; for (let i = 0; i <= k; i++) if (sgn > 0 ? b[i].low <= edge : b[i].high >= edge) return null;
+    return { side: sgn > 0 ? "CE" : "PE", stop: o.stop === "near" ? edge - sgn * o.buf * a : y.poc }; }; } };
 const grid = (g) => Object.entries(g).reduce((acc, [k, vs]) => acc.flatMap(a => vs.map(v => ({ ...a, [k]: v }))), [{}]);
 // the two research years are fixed (16 Nov: a split by the middle moved with every new day and changed year 1); days after 9 Nov 2026 are forward days only
 const Y1 = dates.slice(11).filter(d => d <= "2025-11-10"), Y2 = dates.filter(d => d > "2025-11-10" && d <= "2026-11-09");

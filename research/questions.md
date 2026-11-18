@@ -56,3 +56,19 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
   no OI history is saved. Idea: save the chain's biggest Call and Put OI strikes once a day so this can be tested later.
 
 ## R2 answered 17 Nov (lab idea 10, two years): NO as a day trade. See ideas.md. The 63% is a 30-minute fact only.
+
+## 18 Nov evening: today's questions (NIFTY opened below yesterday's VAL, never came back to it, slid 180 points, closed on its POC)
+## G1: when the day opens outside yesterday's value area, does it stay out? Is there a time after which it is decided?
+## G2 (open): a wick through today's VAH/VAL that closes back inside came back 63% (270 cases): as a 30-minute trade with a small target (V1c)?
+## G3 (open): price outside the value area at noon: the afternoon came back 69% on the volume days (29 cases), 47% on two years. Watch as days are added.
+## O1 (open, needs days): do the saved OI walls (from 18 Nov) stop the price? Day 1: NIFTY walls 750+ points away, no test possible.
+
+## G1 answered 18 Nov (498 days of NIFTY 50 5-minute candles, yesterday's value area counted by time; strat/gapq.js)
+- The day opened outside yesterday's value area on 330 of 498 days (above 174, below 156).
+- It closed outside on the same side 70% (above) and 76% (below). An open inside closes anywhere (30% inside).
+- The first hour decides: back at the edge in the first hour 47-49% of the time; never all day 39-40%; after 10:15 only 12-14%.
+- Edge untouched until 10:15 (171 days): closed outside on the same side 86% (above) and 92% (below); touched the edge later only 22-26%.
+- BUT from 10:15 to the close the price went further only 53-60%: staying out is not the same as moving on. Today: stayed below, 10:15 -> close fell 60 points.
+- Back at the edge in the first hour (159 days): reached yesterday's POC that day 69-72%.
+- As trades (lab idea 11, ideas.md): neither part pays after 8 points a call.
+- Use for the page: a fact for the eyes, not a call: "opened below yesterday's value and not back by 10:15 -> yesterday's VAL is the day's ceiling about 4 days in 5".

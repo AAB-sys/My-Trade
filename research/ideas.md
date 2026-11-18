@@ -254,3 +254,16 @@ inside the edge or at the POC; trail or not; target none or 2R; from 10:15 or 11
 Dropped. Lesson (third time): the edge facts are true for 30 minutes and do not pay as day trades after 8 points a call.
 - Watch list, new day 2 (17 Nov): QUIET-BREAK 2 calls -85 (1 up 1 down); NEWHIGH-TREND 2 calls -50 (0 up 2 down); DIR-1215 no call yet.
 - Also tested (questions.md R1): round numbers as turning points on 498 days: no effect.
+
+## 18 Nov evening: idea 11 GAP (the open against yesterday's value area). Variants ever tried: 722
+From question G1 (gapq.js). Two modes, 96 variants (strat/gapnb.txt shows all, both years, year 2 by halves):
+- "go": open outside yesterday's value area and the edge untouched until 09:45 / 10:15 / 11:15 -> go with the gap, stop at the edge
+  or yesterday's POC, target none or 1.5R, out 15:15. Best: 09:45, stop at the edge, 1.5R: Y1 70 calls +495, Y2 102 calls +462
+  (CE +145, PE +317), but year 2's halves are +1,142 and -680, and every "go" variant loses in the second half of year 2.
+  From 10:15 or 11:15 year 1 loses. 6 good in year 1, 2 held in year 2, 0 pass the halves test. NOT on the watch list.
+- "fill": open outside, a close back inside before the time -> trade to yesterday's POC, stop past the day's extreme or 1 ATR:
+  loses in both years in almost every variant (22 to 50 calls a year).
+Lesson (fourth time): the value-area facts are strong as facts (86-92% stays out) and weak as day trades; the edge is where price
+does NOT go, which does not say where it goes. Next: use such facts as a FILTER on a strategy that already works (for example
+NEWHIGH-TREND or DIR-1215 only on days that opened outside yesterday's value and stayed out), not as an entry.
+- Watch list, new day 3 (18 Nov): QUIET-BREAK 3 calls -47 (2 up 1 down); NEWHIGH-TREND 3 calls -63 (0 up 3 down); DIR-1215 no call yet.
