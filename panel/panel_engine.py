@@ -311,6 +311,12 @@ class PanelEngine:
             if cs["shape"] == "Double":
                 shape["double"] = {"gap_low": cs["gap_low"], "gap_high": cs["gap_high"], "lower_poc": cs["low_poc"], "upper_poc": cs["high_poc"],
                                    "price_side": "upper" if last > cs["gap_high"] else "lower" if last < cs["gap_low"] else "gap"}
+            # a D whose volume sits mostly in one half (18 November 2026, the owner asked "is it really a D shape?" of a day
+            # with 77% of its volume in the lower half): one more sentence in the Shape check. Words only: the shape, its
+            # score and everything read from it stay as they are (tested: renaming such a D to b or P made the calls worse)
+            lean, share = cfg.get("d_lean_pct"), cs["low_half"]
+            if lean and cs["shape"] == "D" and max(share, 1 - share) * 100 >= lean:
+                shape["d_lean"] = {"side": "bottom" if share >= 0.5 else "top", "pct": int(round(max(share, 1 - share) * 100))}
         raw = shape["shape"]
         self.raw_shapes.append(raw)
         k = max(1, int(math.ceil(cfg["stable_minutes"] / float(self.interval))))
@@ -423,6 +429,10 @@ class PanelEngine:
             testing = ("%s: price testing below the bulge (%s), not yet failing" % (SHAPE_NAMES[s], fmt(shape["bulge_low"])), 0)
         if not failing and s in ("b", "leaning_b") and shape.get("bulge_high") is not None and last > shape["bulge_high"]:
             testing = ("%s: price testing above the bulge (%s), not yet failing" % (SHAPE_NAMES[s], fmt(shape["bulge_high"])), 0)
+        dl = shape.get("d_lean")
+        if s == "D" and shape.get("raw") == "D" and dl:
+            shape_txt = ("D-shape, but leaning to the %s: %d%% of the volume is in the %s half of the day's range"
+                         % (dl["side"], dl["pct"], "lower" if dl["side"] == "bottom" else "upper"), 0)
         if failing and s in fail_txt:
             shape_txt = fail_txt[s]
         elif testing:

@@ -27,6 +27,7 @@ import panel_engine  # noqa: E402  (the document's code, in its own folder)
 
 CFG = panel_engine.load_config(str(PANEL / "panel_config.json"))
 STABLE_MINUTES = 5      # a new shape is shown after it has held this long (18 November, the owner: "Instead of 10 minutes make it 5 minutes"; the document's own setting is 10)
+D_LEAN_PCT = 75         # a D-shape with this share of its volume in one half of the range gets "but leaning to the bottom / top" in its Shape check: words only, the shape and the score stay (18 November, the owner: "is it really a D shape ?")
 SETTLE_SECONDS = 2      # the document, section 4: "after each 1-minute candle closes, plus about 2 seconds for the feed to settle"
 _engines: dict = {}     # name -> {"date", "engine", "done": candles fed, "out": the last output, "alerts": today's, newest first}
 _locks: dict = {}
@@ -39,6 +40,7 @@ def config_for(name: str) -> dict:
     cfg["match_chart_shape"] = True  # the shape is the chart's (17 November, the owner: "so they never disagree")
     cfg["match_chart_poc"] = True    # the POC whose movement is watched is the chart's ("Match every number")
     cfg["stable_minutes"] = STABLE_MINUTES
+    cfg["d_lean_pct"] = D_LEAN_PCT
     try:
         days = dhan.cached(("panel expiries", name), 6 * 3600, lambda: dhan.expiries(name))
     except Exception:  # noqa: BLE001 - the flag is a warning only; without the list the panel still reads

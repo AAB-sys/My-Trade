@@ -162,7 +162,8 @@ def chart_shape(candles, rows=30, smooth=2, second_ratio=0.60, valley_ratio=0.70
     range says P (top third), B (bottom third) or D.
     Returns {"shape": "P" | "B" | "D" | "Double", "low_poc", "high_poc" (a Double Zone's two busy prices, else None),
     "gap_low", "gap_high" (the valley between them: its lowest row, widened over the thin rows beside it (under thin_pct % of
-    the busiest row), as the document's find_double cuts a gap; else None)}."""
+    the busiest row), as the document's find_double cuts a gap; else None),
+    "low_half": the share of the volume in the lower half of the range, 0 to 1}."""
     lo = min(c["l"] for c in candles)
     hi = max(c["h"] for c in candles)
     step = max((hi - lo) / rows, 0.05)
@@ -214,5 +215,8 @@ def chart_shape(candles, rows=30, smooth=2, second_ratio=0.60, valley_ratio=0.70
             g_lo -= 1
         while g_hi + 1 < z and thin[g_hi + 1]:
             g_hi += 1
+    total = sum(v)
+    low_half = sum(v[i] for i in range(n) if i < n / 2.0) / total if total > 0 else 0.5
     return {"shape": kind, "low_poc": mid(min(poc, p2)) if two else None, "high_poc": mid(max(poc, p2)) if two else None,
-            "gap_low": lo + g_lo * step if two else None, "gap_high": lo + (g_hi + 1) * step if two else None}
+            "gap_low": lo + g_lo * step if two else None, "gap_high": lo + (g_hi + 1) * step if two else None,
+            "low_half": low_half}  # the share of the day's volume in the lower half of its range (18 November: the D that leans)

@@ -7,7 +7,7 @@
   4. before 09:30 the reading is "Too early to read"; without volume the flags say so and VWAP is "not available".
 python3 lab/check_vppanel.py            and, for the checklist's replay of every day of a futures-volume file:
 python3 lab/check_vppanel.py <Candles with volume .csv>"""
-import csv, json, os, subprocess, sys, unittest
+import csv, json, math, os, subprocess, sys, unittest
 from collections import OrderedDict
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
@@ -182,6 +182,39 @@ check("that minute's volume comes late: the panel is the same as if it had come 
 check("stale: only a changed volume of a candle already fed", vppanel.stale({"fed": [1.0, 2.0]}, [{"v": 1.0}, {"v": 2.0}, {"v": 9.0}]) is False and vppanel.stale({"fed": [1.0, 0.0]}, [{"v": 1.0}, {"v": 2.0}]) is True and vppanel.stale({}, [{"v": 1.0}]) is False)
 
 # the checklist's replay of every day of a futures-volume file
+# 6 (18 November): a D-shape with most of its volume in one half says so, in words only
+def lean_day(center=25110.0, amp=20.0):
+    out = []
+    for i in range(375):
+        if i < 30:
+            c = 25250.0 - i * 4.0                                   # a thin fall from the top of the range
+        elif 200 <= i < 215:
+            c = center - (i - 199) * 5.5                            # a short thin dip to the day's low
+        elif 215 <= i < 230:
+            c = center - (230 - i) * 5.5
+        else:
+            c = center + amp * math.sin(i / 9.0) * abs(math.sin(i / 9.0))
+        o = out[-1]["c"] if out else c + 2
+        out.append({"hm": "%02d:%02d" % ((555 + i) // 60, (555 + i) % 60), "o": o, "h": max(o, c) + 1.5, "l": min(o, c) - 1.5, "c": c,
+                    "v": 300.0 if (i < 30 or 200 <= i < 230) else 1500.0})
+    return out
+ld = lean_day(); cs = panel_profile.chart_shape(ld)
+check("the test day is a D by the chart's rule with 75%% or more of its volume in the lower half (%s, %.0f%%)" % (cs["shape"], 100 * cs["low_half"]), cs["shape"] == "D" and cs["low_half"] >= 0.75)
+with_l = panel_engine.PanelEngine(dict(cfg, d_lean_pct=vppanel.D_LEAN_PCT), prev, "2026-11-16", 1).update(ld)
+without = panel_engine.PanelEngine(cfg, prev, "2026-11-16", 1).update(ld)
+sh = lambda o: [c for c in o["checks"] if c["name"] == "Shape"][0]
+check("its Shape check says 'D-shape, but leaning to the bottom' with the share", sh(with_l)["result"].startswith("D-shape, but leaning to the bottom: %d%% of the volume" % round(100 * cs["low_half"])))
+check("the shape, the score, the label and the status line are untouched by it", with_l["shape"]["shown"] == without["shape"]["shown"] == "D" and sh(with_l)["score"] == sh(without)["score"] == 0 and with_l["score"] == without["score"] and with_l["label"] == without["label"] and with_l["status_line"] == without["status_line"])
+def strip(o):
+    o = json.loads(json.dumps(o, default=str)); o["shape"].pop("d_lean", None)
+    for c in o["checks"]:
+        if c["name"] == "Shape": c["result"] = ""
+    return json.dumps(o, sort_keys=True)
+check("nothing else in the panel's output differs", strip(with_l) == strip(without))
+normal = panel_engine.PanelEngine(dict(cfg, d_lean_pct=vppanel.D_LEAN_PCT), prev, "2026-11-16", 1).update(candles)
+check("a day that does not lean keeps its sentence", "leaning to the" not in sh(normal)["result"] and "d_lean" not in normal["shape"])
+check("the page's setting carries it (config_for)", vppanel.D_LEAN_PCT == 75 and 'cfg["d_lean_pct"] = D_LEAN_PCT' in open(os.path.join(ROOT, "vppanel.py")).read())
+
 if len(sys.argv) > 1:
     days = OrderedDict()
     for r in csv.DictReader(open(sys.argv[1])):
