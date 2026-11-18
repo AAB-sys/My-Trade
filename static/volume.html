@@ -203,7 +203,10 @@
   body.embed > header, body.embed #index, body.embed #tools .sep, body.embed #note { display: none; }
   body.embed #navrow { display: flex; justify-content: flex-end; border-top: 1px solid var(--border); flex: none; min-height: 30px; }
   body.embed #inforow #info { display: block; padding: 3px 12px; }  /* two rows of figures: the previous day's, then today's */
-  body.embed #info .r { display: flex; gap: 0 14px; align-items: center; min-height: 22px; }  /* AAA_V1: the chart alone, inside the index page */
+  body.embed #info .r { display: flex; gap: 0 14px; align-items: center; min-height: 22px; }
+  :root { --prev-day: #d97706; }  /* amber: the previous day's readings in AAA_V1 */
+  body.embed #info .prev .k, body.embed #info .prev .v { color: var(--prev-day); font-weight: 600; }
+  @media (prefers-color-scheme: dark) { :root { --prev-day: #fbbf24; } }  /* AAA_V1: the chart alone, inside the index page */
   @media (prefers-color-scheme: dark) { #panel .flag { color: #fbbf24; } }
   @media (max-width: 900px) and (min-width: 601px) { #panel { width: 280px; } }
   @media (max-width: 600px) {
@@ -751,7 +754,10 @@
     prevLines = [];
     if (!p) return;
     const line = (price, title, color) => prevLines.push(candles.createPriceLine({ price, title, color, lineVisible: true, lineStyle: LightweightCharts.LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true }));
-    line(p.high, "Prev day High", css("--up")); line(p.close, "Prev day Close", css("--ink-2")); line(p.low, "Prev day Low", css("--down"));
+    // every reading of the previous day in amber (19 November, the owner: "mark yesterdays every reading in amber color"): its
+    // three lines with their labels here, and its three figures in the line above the chart
+    const amber = css("--prev-day");
+    line(p.high, "Prev day High", amber); line(p.close, "Prev day Close", amber); line(p.low, "Prev day Low", amber);
     candles.applyOptions({ autoscaleInfoProvider: (original) => oiRange(original()) });
   }
   function drawTodayNames() {
@@ -913,7 +919,8 @@
       const cell = (k, x) => `<span><span class="k">${k}</span> <span class="v">${x}</span></span>`, cut = `<span class="cut"></span>`, pd = state.prevDay;
       const last = days[days.length - 1], hi = Math.max(...last.map(b => b.high)), lo = Math.min(...last.map(b => b.low));
       const dn = Math.floor((last[0].time + IST) / 86400), who = dn === Math.floor((Date.now() / 1000 + IST) / 86400) ? "Today's" : new Date(dn * 86400000).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
-      const one = [pd ? cell("Prev day High", num(pd.high)) : "", pd ? cell("Prev day Low", num(pd.low)) : "", pd ? cell("Prev day Close", num(pd.close)) : "", state.timeOnly || v == null ? "" : cell("Volume" + (state.contract ? " (" + state.contract.name + ")" : ""), short(v))].filter(Boolean).join(cut);
+      const prev = (k, x) => `<span class="prev"><span class="k">${k}</span> <span class="v">${x}</span></span>`;
+      const one = [pd ? prev("Prev day High", num(pd.high)) : "", pd ? prev("Prev day Low", num(pd.low)) : "", pd ? prev("Prev day Close", num(pd.close)) : "", state.timeOnly || v == null ? "" : cell("Volume" + (state.contract ? " (" + state.contract.name + ")" : ""), short(v))].filter(Boolean).join(cut);
       clean = `<div class="r">${one}</div><div class="r">${cell(who + " High", num(hi))}${cut}${cell(who + " Low", num(lo))}</div>`;
     }
     if (!state.oi && $("show-oi").checked) info += `<span><span class="k">OI walls</span> <span class="v">${state.oiWhy ? "no data: " + state.oiWhy : "reading the option chain…"}</span></span><span class="cut"></span>`;
