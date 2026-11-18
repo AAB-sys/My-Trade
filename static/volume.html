@@ -1394,7 +1394,7 @@
   function keepAlive() {
     if (parked) return;
     const ws = liveWs = new WebSocket(wsUrl());
-    ws.onmessage = (event) => { const data = JSON.parse(event.data); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; if (data.tick) applyTick(data.tick); };
+    ws.onmessage = (event) => { const data = JSON.parse(event.data); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; if (data.tick) { lastTickAt = Date.now(); kickWait = KICK_FIRST; applyTick(data.tick); } };
     ws.onclose = () => { if (parked || ws !== liveWs) return; beat(); setTimeout(keepAlive, 3000); };
     ws.onerror = () => ws.close();
   }
@@ -1407,7 +1407,36 @@
   setInterval(() => { if (!document.hidden) loadSignal(); }, 5000);
   setInterval(() => { if (!document.hidden) loadPanel(); }, 5000);  // the engine moves once a minute; asked often so a closed minute shows within seconds
   drawPanel(); loadPanel();
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) { load(); loadSignal(); loadPanel(); } });
+  // Back on the page (18 November, the owner, on the phone: "if i switch from another to this screen on mobile, chart freezes for
+  // 10 seconds and it starts running again. It should not happen"). On a phone the live connection dies without saying so while
+  // another app is in front, and the browser needs many seconds to notice; the price stood still until it did. As the index
+  // page does since 29 October: the moment the page is shown again in market hours with no live price in the last 3 seconds,
+  // the old connection is dropped without waiting and a new one opened at once, and everything is fetched again at once. The
+  // same when the phone comes back online, and whenever the price is silent for 10 seconds in market hours while the page is
+  // in front (then 20, 40, 60 seconds: the server or Dhan may be the quiet one).
+  const KICK_FIRST = 10000;
+  let lastTickAt = 0, lastKick = 0, kickWait = KICK_FIRST;
+  const tickHours = () => { const s = Date.now() / 1000 + IST, day = new Date(s * 1000).getUTCDay(), sec = ((s % 86400) + 86400) % 86400; return day >= 1 && day <= 5 && sec >= 9 * 3600 && sec < 15 * 3600 + 45 * 60; };  // as the server: 09:00 to 15:45 IST, Monday to Friday
+  function reconnectNow() {
+    if (parked) return;
+    lastKick = Date.now();
+    const old = liveWs;
+    keepAlive();  // liveWs is the new connection from here: the old one's close no longer reconnects
+    if (old) { old.onmessage = null; if (old.readyState <= WebSocket.OPEN) old.close(); }
+    load(); loadSignal(); loadPanel(); loadOi();
+  }
+  setInterval(() => {
+    if (parked || document.hidden || !tickHours()) return;
+    if (Date.now() - Math.max(lastTickAt, lastKick) < kickWait) return;
+    kickWait = Math.min(kickWait * 2, 60000);
+    reconnectNow();
+  }, 2000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || parked) return;
+    if (tickHours() && (Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
+    else { load(); loadSignal(); loadPanel(); }
+  });
+  window.addEventListener("online", () => { kickWait = KICK_FIRST; reconnectNow(); });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
   window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });
   // The page stays where it is: whatever tries to scroll it is put back at once; the wheel with Ctrl held, a pinch on a
