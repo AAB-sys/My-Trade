@@ -63,13 +63,14 @@ def previous_of(name: str, today: str):
             "close": days[prev_day][-1]["c"]}, prev_day
 
 
-CHART_WORDS = (("Double distribution", "Double Zone"), ("b-shape", "B-shape"),  # the chart's names for the two shapes it names otherwise
+CHART_WORDS = (("Double distribution", "Double Zone"),                             # the chart's name for it; "b-shape" is the same on both (18 November)
                ("Busiest 5-point row", "Today's POC"))                             # the POC watched is the chart's (match_chart_poc)
 
 
 def chart_words(x):
     """The panel's sentences with the chart's shape names (17 November, the owner: "Panel show the same shape name as the
-    chart"): the document says "Double distribution" and "b-shape" where the chart says "Double Zone" and "B-shape"."""
+    chart"): the document says "Double distribution" where the chart says "Double Zone". The b-shape is written with a small
+    b on both (18 November, the owner: "rename B-shape to b-shape, because a capital B often means a double distribution")."""
     if isinstance(x, str):
         for a, b in CHART_WORDS:
             x = x.replace(a, b)

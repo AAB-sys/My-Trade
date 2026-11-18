@@ -440,9 +440,13 @@ branch from `main`.
   panel so they never disagree ... Match every number and keep the logic same so new numbers will work according to the logic
   only"). The chart's own count is the one source: (1) a day's VAH, POC and VAL for the Signal box, the "Prev day" lines and the
   panel's "yesterday" are the chart's 24-row count of that day (`vpsignal.LEVELS_LIKE_CHART`, `chart_levels_of`; the document's
-  fixed-row count stays for the hvn/lvn nodes and is the whole of it when the setting is False); (2) the panel's shape is the
-  chart's (`panel_profile.chart_shape`, a line-for-line copy of `static/vpshape.js`; `match_chart_shape`), shown at once, named as
-  the chart names it (`vppanel.chart_words`); (3) the panel's POC movement check watches the chart's POC (`match_chart_poc`). The
+  fixed-row count stays for the hvn/lvn nodes and is the whole of it when the setting is False); (2) the panel's shape is read with the
+  chart's rule (`panel_profile.chart_shape`, a line-for-line copy of `static/vpshape.js`; `match_chart_shape`); the document's
+  first 15 minutes of "Too early to read" and its 10-minute rule (a new shape is shown only after it has held ten minutes) stay,
+  and the chart's label of the running day is drawn from the panel's shown shape (`shownShape` in `static/volume.html`: the page
+  asks `/vp-panel` while Shape signal or Panel is ticked), so the two cannot differ (18 November: "drive the chart's shape label
+  from the panel's output"); "Double Zone" is the chart's name (`vppanel.chart_words`) and the b-shape is written with a small b
+  on both; (3) the panel's POC movement check watches the chart's POC (`match_chart_poc`). The
   rules themselves (vp/vp_signal.py, the panel engine's checks) are unchanged: they read the new numbers. The page's check line
   compares the shape too. Changing `static/volprofile.js` or `static/vpshape.js` means changing their Python copies in
   `panel/panel_profile.py`, and `lab/check_vppanel.py` and `lab/check_vpsignal.py` must still pass.

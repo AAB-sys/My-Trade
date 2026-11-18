@@ -23,7 +23,7 @@
   const CFG = { rows: 30, va: 0.70, smooth: 2, secondRatio: 0.60, valleyRatio: 0.70, posHi: 0.66, posLo: 0.34,
                 from: "12:10", to: "13:30", exit: "15:15", minBars: 12,
                 shapeFrom: "10:15", shapeTo: "14:30" };  // the shape-wise calls' window
-  const NAMES = { D: "D-shape (balanced)", B: "B-shape (busy at the bottom)", P: "P-shape (busy at the top)", Double: "Double Zone (two busy areas)" };
+  const NAMES = { D: "D-shape (balanced)", B: "b-shape (busy at the bottom)", P: "P-shape (busy at the top)", Double: "Double Zone (two busy areas)" };
   const IST = 19800;
   const hm = (t) => { const s = ((t + IST) % 86400 + 86400) % 86400; return String(Math.floor(s / 3600)).padStart(2, "0") + ":" + String(Math.floor(s % 3600 / 60)).padStart(2, "0"); };
   const weigher = (weights) => weights == null ? null : (weights instanceof Map ? (t) => weights.get(t) : (t) => weights[t]);

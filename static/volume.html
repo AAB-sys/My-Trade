@@ -409,6 +409,17 @@
   };
   candles.attachPrimitive(profile);
 
+  // The running day's shape name is the panel's shown shape (18 November, the owner: "The simplest fix is to drive the chart's
+  // shape label from the panel's output"; "First 15 minutes stay 'Too early to read'. The 10-minute smoothing should also still
+  // apply, so the label doesn't flip every minute"): the panel reads the shape with the chart's own rule and shows a new one
+  // only after it has held for ten minutes, and the chart's label of today is drawn from that, so the two cannot differ. No
+  // label while the panel says "too early". The days before, and today when the panel has not answered: the chart's own
+  // reading, as before.
+  function shownShape(s, lastDay) {
+    const g = state.panel, sh = g && g.shape && g.shape.shown;
+    if (!lastDay || !sh || g.name !== state.name || g.date !== new Date((s.bars[0].time + IST) * 1000).toISOString().slice(0, 10)) return s.shape;
+    return sh === "too_early" ? null : ({ P: "P", b: "B", D: "D", double: "Double" })[sh] || s.shape;
+  }
   // today's thin zones as light bands across the chart, while the Panel is on (the document, section 2: "Draw today's thin zones as
   // light shaded bands on the chart")
   function drawZones(scope) {
@@ -455,10 +466,11 @@
       };
       line(p.poc, cPoc, [], 1.5);
       line(p.vah, cVa, [4, 4], 1); line(p.val, cVa, [4, 4], 1);
-      if (s.shape && (right || x0 >= 0)) {  // the shape's name above the day's profile, only while "Shape signal" is ticked (15 November)
+      const named = s.shape && shownShape(s, lastDay);
+      if (named && (right || x0 >= 0)) {  // the shape's name above the day's profile, only while "Shape signal" is ticked (15 November)
         const top = p.rows[p.rows.length - 1], y = candles.priceToCoordinate(top.price + p.step);
         if (y != null) { ctx.save(); ctx.font = `600 ${Math.round(11 * vr)}px -apple-system, "Segoe UI", Roboto, sans-serif`; ctx.fillStyle = css("--ink-2"); ctx.textBaseline = "bottom"; ctx.textAlign = right ? "right" : "left";
-          ctx.fillText(VpShape.NAMES[s.shape].split(" (")[0], Math.round((right ? edge : Math.max(0, x0) + 2) * hr), Math.round((y - 4) * vr)); ctx.restore(); }
+          ctx.fillText(VpShape.NAMES[named].split(" (")[0], Math.round((right ? edge : Math.max(0, x0) + 2) * hr), Math.round((y - 4) * vr)); ctx.restore(); }
       }
     });
   }
@@ -1281,7 +1293,7 @@
   let panelSeq = 0;
   const esc = (x) => String(x == null ? "" : x).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   async function loadPanel() {
-    if (!$("show-panel").checked) return;
+    if (!$("show-panel").checked && !$("show-shape").checked) return;  // the Shape signal's label of today is the panel's shown shape (18 November)
     const seq = ++panelSeq, name = state.name;
     try {
       const r = await fetch(`/indices/${encodeURIComponent(name)}/vp-panel`, withTab());
@@ -1309,7 +1321,8 @@
     // the shape too (17 November, the owner: "Panel show the same shape name as the chart, so they never disagree"): the chart's
     // own rule (vpshape.js) on the same minutes against the panel's; not compared in the panel's first minutes ("Too early")
     let shapeSaid = "";
-    const mine = g.shape && g.shape.shown, SHAPE = { P: "P-shape", b: "B-shape", D: "D-shape", double: "Double Zone" };
+    // the panel's reading of this minute (raw) against the chart's rule on the same minutes; the name shown waits ten minutes
+    const mine = g.shape && g.shape.raw, SHAPE = { P: "P-shape", b: "b-shape", D: "D-shape", double: "Double Zone" };
     if (mine && mine !== "too_early" && typeof VpShape !== "undefined") {
       const got = VpShape.read(fine, have ? state.fineVolumes : null), theirs = got && { P: "P", B: "b", D: "D", Double: "double" }[got.shape];
       if (theirs !== mine) diff.push(`shape: panel ${SHAPE[mine] || mine}, chart ${SHAPE[theirs] || "none"}`); else shapeSaid = ", the shape";
@@ -1361,9 +1374,9 @@
   $("show-volume").addEventListener("change", () => { setVolume(); roomOnTop(); save(); });
   $("show-rsi").addEventListener("change", () => { dropImpulse(); setRsi(); setImpulse(); drawLegend(); save(); });  // the Impulse pane stands under the RSI's: taken off and put back so the panes keep their order
   $("show-vwap").addEventListener("change", () => { setVwap(); drawLegend(); save(); });
-  $("show-panel").addEventListener("change", () => { save(); state.panel = null; drawPanel(); if ($("show-panel").checked) loadPanel(); setVwap(); profile.requestUpdate && profile.requestUpdate(); });
+  $("show-panel").addEventListener("change", () => { save(); drawPanel(); loadPanel(); setVwap(); profile.requestUpdate && profile.requestUpdate(); });  // the panel's last answer is kept: today's shape label is drawn from it (18 November)
   $("show-signal").addEventListener("change", () => { save(); drawSignal(); if ($("show-signal").checked) loadSignal(); });
-  $("show-shape").addEventListener("change", () => { save(); rebuild(); });
+  $("show-shape").addEventListener("change", () => { save(); rebuild(); loadPanel(); });
   $("show-impulse").addEventListener("change", () => { save(); setImpulse(); drawImpulse(); });
   loadDrawings();
   press();
