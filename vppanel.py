@@ -128,4 +128,8 @@ def state(name: str) -> dict:
                                       "alerts": [], "first": candles[0]["hm"], "prev_day": prev_day}
         out = feed(entry, candles)
         return {**base, **out, "alerts": entry["alerts"][:60], "previous_day": entry["prev_day"], "contract": contract, "volume_problem": volume_problem,
-                "candles": len(candles)}
+                "candles": len(candles),
+                # the futures volume the panel read, so the page can tell "the newest minute's volume has not reached both
+                # sides yet" from a real difference (18 November, the owner's photo: a red "NOT the same ... VWAP: panel
+                # 25,311.03, chart 25,311.03" while the last minute's volume was still arriving)
+                "volume_sum": sum(c["v"] for c in candles), "volume_minutes": sum(1 for c in candles if c["v"] > 0)}

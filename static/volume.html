@@ -1314,9 +1314,16 @@
     const fine = state.fine.filter(m => m.time >= dayStart && m.time + 60 <= end);
     if (!fine.length || (state.fine === state.bars && state.interval !== "1m")) return { ok: null, text: "The chart's 1-minute candles are not loaded yet: not checked" };
     if (fine.length !== g.candles) return { ok: null, text: `The chart holds ${fine.length} closed minutes, the panel read ${g.candles}: checked again at the next look` };
+    // The same volume on both sides first (18 November, the owner's photo, in market hours: "NOT the same as the chart at 09:43:
+    // VWAP: panel 25,311.03, chart 25,311.03"): the futures volume of the newest minute comes some seconds after its candle and
+    // can still grow, and the page and the server ask for it at their own moments, so for a few seconds one side holds a little
+    // more of it. That is not a fault of either: the comparison waits (a grey line) until both hold the same volume for these
+    // minutes, and only then a difference is a real one (the red line).
+    let mySum = 0; for (const m of fine) mySum += state.fineVolumes.get(m.time) || 0;
+    if (g.volume_sum != null && Math.abs(mySum - g.volume_sum) > 0.5) return { ok: null, text: `The newest minute's futures volume is still arriving (the panel read ${num(g.volume_sum, 0)}, the chart holds ${num(mySum, 0)}): compared again in a few seconds` };
     const have = fine.some(m => state.fineVolumes.get(m.time) > 0), p = VolProfile.build(fine, have ? state.fineVolumes : null), diff = [];
     let pv = 0, v = 0; for (const m of fine) { const w = state.fineVolumes.get(m.time) || 0; if (w > 0) { pv += w * (m.high + m.low + m.close) / 3; v += w; } }
-    const pair = (name, a, b) => { if (a == null && b == null) return; if (a == null || b == null || Math.abs(a - b) > 0.005) diff.push(`${name}: panel ${a == null ? "none" : num(a)}, chart ${b == null ? "none" : num(b)}`); };
+    const pair = (name, a, b) => { if (a == null && b == null) return; if (a == null || b == null || Math.abs(a - b) > 0.005) { const d = a != null && b != null && num(a) === num(b) ? 4 : 2; diff.push(`${name}: panel ${a == null ? "none" : num(a, d)}, chart ${b == null ? "none" : num(b, d)}`); } };
     pair("POC", g.profile.poc, p.poc); pair("VAH", g.profile.vah, p.vah); pair("VAL", g.profile.val, p.val); pair("VWAP", g.vwap, v > 0 ? pv / v : null);
     // the shape too (17 November, the owner: "Panel show the same shape name as the chart, so they never disagree"): the chart's
     // own rule (vpshape.js) on the same minutes against the panel's; not compared in the panel's first minutes ("Too early")
@@ -1330,7 +1337,7 @@
     const sg = state.signal, lv = sg && sg.levels, yd = g.levels && Object.fromEntries(g.levels.map(l => [l.name, l.price]));
     let prevSaid = "";
     if (lv && yd && sg.levels_from === g.previous_day) { pair("Yesterday's VAH", yd["Yesterday's VAH"], lv.vah); pair("Yesterday's POC", yd["Yesterday's POC"], lv.poc); pair("Yesterday's VAL", yd["Yesterday's VAL"], lv.val); prevSaid = ", and yesterday's VAH, POC, VAL"; }
-    return diff.length ? { ok: false, text: `NOT the same as the chart at ${g.time}: ${diff.join("; ")}. The last minutes' volume may still be arriving; if this stays, do not rely on the panel.` }
+    return diff.length ? { ok: false, text: `NOT the same as the chart at ${g.time}: ${diff.join("; ")}. Both sides read the same volume, so this is a real difference: do not rely on the panel, and tell ULTROAN.` }
       : { ok: true, text: `Same as the chart at ${g.time}: POC, VAH, VAL, VWAP${shapeSaid}${prevSaid}` };
   }
   function drawPanel() {
