@@ -311,12 +311,16 @@ class PanelEngine:
             if cs["shape"] == "Double":
                 shape["double"] = {"gap_low": cs["gap_low"], "gap_high": cs["gap_high"], "lower_poc": cs["low_poc"], "upper_poc": cs["high_poc"],
                                    "price_side": "upper" if last > cs["gap_high"] else "lower" if last < cs["gap_low"] else "gap"}
-            # a D whose volume sits mostly in one half (18 November 2026, the owner asked "is it really a D shape?" of a day
-            # with 77% of its volume in the lower half): one more sentence in the Shape check. Words only: the shape, its
-            # score and everything read from it stay as they are (tested: renaming such a D to b or P made the calls worse)
+            # where the day's volume sits, said for every shape (18 November 2026, the owner asked "is it really a D shape?"
+            # of a day with 77% of its volume in the lower half, then: "it has to be for every shape"): one more piece of the
+            # Shape check's sentence. Words only: the shape, its score and everything read from it stay as they are (tested:
+            # renaming a leaning D to b or P made the calls worse)
             lean, share = cfg.get("d_lean_pct"), cs["low_half"]
-            if lean and cs["shape"] == "D" and max(share, 1 - share) * 100 >= lean:
-                shape["d_lean"] = {"side": "bottom" if share >= 0.5 else "top", "pct": int(round(max(share, 1 - share) * 100))}
+            if lean:
+                low = int(round(share * 100))
+                shape["half"] = {"low_pct": low, "high_pct": 100 - low}
+                if cs["shape"] == "D" and max(share, 1 - share) * 100 >= lean:
+                    shape["d_lean"] = {"side": "bottom" if share >= 0.5 else "top", "pct": max(low, 100 - low)}
         raw = shape["shape"]
         self.raw_shapes.append(raw)
         k = max(1, int(math.ceil(cfg["stable_minutes"] / float(self.interval))))
@@ -431,12 +435,15 @@ class PanelEngine:
             testing = ("%s: price testing above the bulge (%s), not yet failing" % (SHAPE_NAMES[s], fmt(shape["bulge_high"])), 0)
         dl = shape.get("d_lean")
         if s == "D" and shape.get("raw") == "D" and dl:
-            shape_txt = ("D-shape, but leaning to the %s: %d%% of the volume is in the %s half of the day's range"
-                         % (dl["side"], dl["pct"], "lower" if dl["side"] == "bottom" else "upper"), 0)
+            shape_txt = ("D-shape, but leaning to the %s" % dl["side"], 0)
         if failing and s in fail_txt:
             shape_txt = fail_txt[s]
         elif testing:
             shape_txt = testing
+        hf = shape.get("half")
+        if hf and s != "too_early":
+            shape_txt = ("%s. Volume: %d%% in the lower half of the day's range, %d%% in the upper half"
+                         % (shape_txt[0], hf["low_pct"], hf["high_pct"]), shape_txt[1])
         out.append(("Shape",) + shape_txt)
 
         tv = self._today

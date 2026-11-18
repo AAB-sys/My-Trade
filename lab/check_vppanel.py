@@ -203,16 +203,20 @@ check("the test day is a D by the chart's rule with 75%% or more of its volume i
 with_l = panel_engine.PanelEngine(dict(cfg, d_lean_pct=vppanel.D_LEAN_PCT), prev, "2026-11-16", 1).update(ld)
 without = panel_engine.PanelEngine(cfg, prev, "2026-11-16", 1).update(ld)
 sh = lambda o: [c for c in o["checks"] if c["name"] == "Shape"][0]
-check("its Shape check says 'D-shape, but leaning to the bottom' with the share", sh(with_l)["result"].startswith("D-shape, but leaning to the bottom: %d%% of the volume" % round(100 * cs["low_half"])))
+low = round(100 * cs["low_half"])
+check("its Shape check says 'D-shape, but leaning to the bottom' and the split", sh(with_l)["result"] == "D-shape, but leaning to the bottom. Volume: %d%% in the lower half of the day's range, %d%% in the upper half" % (low, 100 - low))
 check("the shape, the score, the label and the status line are untouched by it", with_l["shape"]["shown"] == without["shape"]["shown"] == "D" and sh(with_l)["score"] == sh(without)["score"] == 0 and with_l["score"] == without["score"] and with_l["label"] == without["label"] and with_l["status_line"] == without["status_line"])
 def strip(o):
-    o = json.loads(json.dumps(o, default=str)); o["shape"].pop("d_lean", None)
+    o = json.loads(json.dumps(o, default=str)); o["shape"].pop("d_lean", None); o["shape"].pop("half", None)
     for c in o["checks"]:
         if c["name"] == "Shape": c["result"] = ""
     return json.dumps(o, sort_keys=True)
 check("nothing else in the panel's output differs", strip(with_l) == strip(without))
 normal = panel_engine.PanelEngine(dict(cfg, d_lean_pct=vppanel.D_LEAN_PCT), prev, "2026-11-16", 1).update(candles)
-check("a day that does not lean keeps its sentence", "leaning to the" not in sh(normal)["result"] and "d_lean" not in normal["shape"])
+plain_n = panel_engine.PanelEngine(cfg, prev, "2026-11-16", 1).update(candles)
+check("every other shape keeps its own sentence and gets the split after it", "leaning to the" not in sh(normal)["result"] and sh(normal)["result"].startswith(sh(plain_n)["result"] + ". Volume: ") and sh(normal)["score"] == sh(plain_n)["score"] and strip(normal) == strip(plain_n))
+early = panel_engine.PanelEngine(dict(cfg, d_lean_pct=vppanel.D_LEAN_PCT), prev, "2026-11-16", 1).update(candles[:10])
+check("before the first shape there is no split ('Too early to read a shape')", sh(early)["result"] == "Too early to read a shape")
 check("the page's setting carries it (config_for)", vppanel.D_LEAN_PCT == 75 and 'cfg["d_lean_pct"] = D_LEAN_PCT' in open(os.path.join(ROOT, "vppanel.py")).read())
 
 if len(sys.argv) > 1:
