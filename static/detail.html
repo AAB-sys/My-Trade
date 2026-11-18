@@ -251,7 +251,15 @@
   .pill:hover { border-color: var(--ink-2); }
   .pill.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
   #panel-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 10px; }  /* four pills since 30 October: on a phone they go to two lines */
-  #panels[data-panel="chain"] #paper-box, #panels[data-panel="signals"] #paper-box { display: none; }
+  #panels[data-panel="chain"] #paper-box, #panels[data-panel="signals"] #paper-box, #panels[data-panel="aaa"] #paper-box { display: none; }
+  /* AAA_V1 (19 November): the Volume Profile page's chart in place of this page's own chart and its Chart, Time frame, Levels and
+     Session rows, which that chart carries itself; the Trade Plan's box and table under the capsules, empty */
+  main.aaa > .controls.levels, main.aaa > .chart-wrap, main.aaa > #redraw-note, main.aaa > #rule-signal { display: none !important; }
+  #aaa-chart { margin: 0 0 14px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  #aaa-chart iframe { display: block; width: 100%; height: min(78vh, 760px); min-height: 480px; border: 0; }
+  #aaa-note { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; } #aaa-note b { color: var(--ink); } #aaa-key { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  #aaa { width: 100%; border-collapse: collapse; font-size: 13px; } #aaa th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  #aaa td.aaa-none { color: var(--muted); padding: 14px 0; }
   /* The OI chart: Dhan's option chain, its rows and columns (17 October). The header stays while the table scrolls both ways;
      the columns can be dragged into any order */
   #chain-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin: 0 0 10px; font-size: 13px; }
@@ -449,6 +457,9 @@
     </div>
   </div>
   <p id="redraw-note" hidden></p>
+  <!-- AAA_V1's chart: the Volume Profile page's own chart of this index (static/volume.html?embed=aaa), with no rule box on it;
+       loaded when the capsule is opened, taken away when it is closed -->
+  <div id="aaa-chart" hidden></div>
 
   <!-- 17 October, the owner: two pills in the Main Menu's format, "Paper calls" opens the paper calls table, "Open OI chart" the OI chart -->
   <!-- 21 October, the owner: a third pill, "Calls with Signals", after Paper calls: the same calls table, with no rule on it yet
@@ -460,6 +471,10 @@
     <button class="pill" id="tab-plan" type="button">Trade Plan</button>
     <button class="pill" id="tab-signals" type="button">Calls with Signals</button>
     <button class="pill" id="tab-chain" type="button">Open OI chart</button>
+    <!-- 19 November, the owner: "there is a page called trade plan ... make a replica of it, dont keep any rules on the new chart, and
+         make a chart format same as volume profile page chart. Name it AAA_V1": the Trade Plan's place and table with no rule on it,
+         and the Volume Profile page's chart in place of this page's own while it is open; then "move it to after OI chart capsule" -->
+    <button class="pill" id="tab-aaa" type="button">AAA_V1</button>
   </div>
   <div id="panels" data-panel="calls">
   <section id="paper-box" aria-label="Paper calls" hidden>
@@ -473,6 +488,17 @@
       <table id="paper">
         <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th><th>Profit Lock</th><th>Trade Plan</th><th>Plan reason</th><th>Builder</th><th>Builder rules</th></tr></thead>
         <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- AAA_V1 (19 November): the Trade Plan's box and table, with no rule: no call is fired here until the owner gives it a rule -->
+  <section id="aaa-box" aria-label="AAA_V1" hidden>
+    <div id="aaa-note"><b>AAA_V1</b> · <span id="aaa-name"></span> · no rule on this page yet: no calls<div id="aaa-key">The chart above is the Volume Profile page's chart, with no rule on it.</div></div>
+    <div class="scroll">
+      <table id="aaa">
+        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th>Premium Paid -> Now</th><th>Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
+        <tbody><tr><td colspan="9" class="aaa-none">No calls: AAA_V1 has no rule yet.</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -2148,11 +2174,26 @@
     } finally { chain.loading = false; }
   }
   let wasSignals = false;  // which marks the time axis carries now (SignalsAxis)
+  // AAA_V1 (19 November): open -> this page's own chart and its rows make room for the Volume Profile page's chart of this index
+  // (an inner page, static/volume.html?embed=aaa, which shows no rule box); closed -> that chart is taken away (its live
+  // connection with it) and this page's own is back. No rule of any page reads or writes anything here.
+  function showAaa(on) {
+    const frameBox = document.getElementById("aaa-chart");
+    document.querySelector("main").classList.toggle("aaa", on);
+    frameBox.hidden = !on; document.getElementById("aaa-box").hidden = !on;
+    if (on && !frameBox.firstChild) {
+      const f = document.createElement("iframe"); f.title = "AAA_V1 chart: " + name; f.src = "/volume-profile?index=" + encodeURIComponent(name) + "&embed=aaa" + (TAB ? "#t=" + encodeURIComponent(TAB) : "");
+      frameBox.appendChild(f); document.getElementById("aaa-name").textContent = name;
+    }
+    if (!on && frameBox.firstChild) frameBox.textContent = "";
+  }
   function showPanel(which) {
     try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
     document.getElementById("panels").dataset.panel = which;
     document.getElementById("tab-calls").classList.toggle("on", which === "calls");
     document.getElementById("tab-plan").classList.toggle("on", which === "plan");
+    document.getElementById("tab-aaa").classList.toggle("on", which === "aaa");
+    showAaa(which === "aaa");
     document.getElementById("tab-signals").classList.toggle("on", which === "signals");
     document.getElementById("tab-chain").classList.toggle("on", which === "chain");
     document.getElementById("chain-box").hidden = which !== "chain";
@@ -2171,10 +2212,11 @@
   }
   document.getElementById("tab-calls").addEventListener("click", () => showPanel("calls"));
   document.getElementById("tab-plan").addEventListener("click", () => showPanel("plan"));
+  document.getElementById("tab-aaa").addEventListener("click", () => showPanel("aaa"));
   document.getElementById("tab-signals").addEventListener("click", () => showPanel("signals"));
   document.getElementById("tab-chain").addEventListener("click", () => showPanel("chain"));
   document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; try { sessionStorage.setItem("chainExpiry", chain.expiry); } catch (err) {} chain.data = null; drawChain(); loadChain(); });
-  try { const was = sessionStorage.getItem("panel"); if (was === "chain" || was === "signals" || was === "plan") showPanel(was); } catch (e) {}  // the panel open before the reload: open again
+  try { const was = sessionStorage.getItem("panel"); if (was === "chain" || was === "signals" || was === "plan" || was === "aaa") showPanel(was); } catch (e) {}  // the panel open before the reload: open again
   setInterval(loadChain, 5000);  // every 5 s (the owner, 21 October: "why OI chart is not getting updated every 5 seconds?"); 15 s until then
   (() => {  // Settings > Change layout (17 October, the owner: "click on setting button, it will open change layout pop up and it would have
     // check boxes of all the column headers. If i untick the check box that column will be removed from that OI chart table")
