@@ -441,7 +441,10 @@ branch from `main`.
   "i just want the volumes on this page for all 3 indexes, rest you can remove"): candles, the volume bars always on, three lines
   (Prev day High, Close, Low, from the summary; `drawPrevDay`, kept in view), no tick box, no volume rows, no VAH, POC, VAL.
   The zoom and move buttons stand under the chart at its right end (`#navrow`), and under the previous day's figures a second row
-  gives the running day's high and low, counted from its candles on every tick ("should be changed as per the live feed"). It has NO rule and fires no
+  gives the running day's high and low, counted from its candles on every tick ("should be changed as per the live feed").
+  The index page's Previous session, Today and 52 weeks boxes are not shown while AAA_V1 is open ("remove this ... from AAA_V1 page
+  only"), and every reading of the previous day is amber: its three figures and its three lines ("mark yesterdays every reading
+  in amber color"; `--prev-day`). It has NO rule and fires no
   call until the owner gives it one; no other page's rule reads or writes it.
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself

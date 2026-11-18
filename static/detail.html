@@ -255,6 +255,7 @@
   /* AAA_V1 (19 November): the Volume Profile page's chart in place of this page's own chart and its Chart, Time frame, Levels and
      Session rows, which that chart carries itself; the Trade Plan's box and table under the capsules, empty */
   main.aaa > .controls.levels, main.aaa > .chart-wrap, main.aaa > #redraw-note, main.aaa > #rule-signal { display: none !important; }
+  main.aaa > #summary { display: none; }  /* 19 November, the owner, with the three boxes marked on AAA_V1: "remove this": the Previous session, Today and 52 weeks boxes are not shown while AAA_V1 is open (its chart carries the previous day's and today's figures) */
   #aaa-chart { margin: 0 0 14px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
   #aaa-chart iframe { display: block; width: 100%; height: min(78vh, 760px); min-height: 480px; border: 0; }
   #aaa-note { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; } #aaa-note b { color: var(--ink); } #aaa-key { font-size: 12px; color: var(--muted); margin-top: 2px; }
