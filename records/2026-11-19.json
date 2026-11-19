@@ -1,0 +1,21 @@
+[
+ {
+  "key": "SENSEX|5m|1795059900|PE|prev",
+  "index": "SENSEX",
+  "side": "PE",
+  "expiry": "2026-11-19",
+  "strike": 81900.0,
+  "index_at_entry": 81878.64,
+  "premium_paid": 210.65,
+  "paid_at": "2026-11-19T09:21:29+05:30",
+  "premium_now": 215.95,
+  "now_at": "2026-11-19T09:21:50+05:30",
+  "sell_below": 136.92,
+  "sold": null,
+  "ended": null,
+  "security_id": 822012,
+  "premium_low": 197.0,
+  "premium_low_at": "2026-11-19T09:21:33+05:30",
+  "stop15": null
+ }
+]
