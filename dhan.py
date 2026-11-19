@@ -360,7 +360,15 @@ def token_report() -> dict:
         check = token_check()
     if totp_on() or _own["tries"]:
         check["own"] = own_report()
+    _own["reported"] = time.time()
     return check
+
+
+def report_stale() -> bool:
+    """True when the server tried to make its own token after the last token_report: what /health holds is then out of date
+    (19 November: a token made at 08:44 was still shown as "refused" until the half-hourly check at 09:04, and the owner was
+    asked to paste one for nothing). /health then takes a new report at once."""
+    return _own["last_try"] > _own.get("reported", 0.0)
 
 
 def expiries(name: str) -> list[str]:

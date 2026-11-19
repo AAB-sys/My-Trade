@@ -131,6 +131,12 @@ fresh(); slept.clear(); _Clock.shift = (10 - time.time() % 30) % 30 - 30 if (10 
 dhan.renew_token("test"); _Clock.shift = 0.0
 check("in the middle of the code's 30 seconds: no waiting", slept == [])
 
+# 7c. what /health shows is never older than the last try
+fresh(); state["good"] = set(); r = dhan.token_report()
+check("after a report nothing is stale", not dhan.report_stale())
+state["good"] = set(); dhan._own["token"] = ""; dhan._own["last_try"] = 0.0; dhan.profile()
+check("a token made after the report: the report is stale, so /health takes a new one", dhan.report_stale() and (dhan.token_report()["own"]["in_use"]) and not dhan.report_stale())
+
 # 8. the morning's renewal
 IST = dhan.IST; at = lambda h, m: datetime(2026, 11, 19, h, m, tzinfo=IST)
 ok_till = lambda s: {"ok": True, "valid_till": s, "problem": None}

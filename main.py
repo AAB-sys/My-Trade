@@ -1328,6 +1328,11 @@ def health():
     """Open, for the host's checks and for the wake-up workflow (.github/workflows/wake.yml), which reads the token's
     state and, after the close, whether the day was saved (under "save"; the daily save was off from 15 to 21 October).
     No secret in here: dates, and a problem said in plain words."""
+    if DHAN_ON and dhan.report_stale():  # the server made (or failed to make) its own token since the last check: show it now, not in half an hour
+        try:
+            store["dhan"]["token"] = await asyncio.to_thread(dhan.token_report)
+        except Exception:  # noqa: BLE001 - the health answer must come whatever Dhan does
+            pass
     return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "save": record.summary(), "memory_mb": memory_mb(),
             "memory": memwatch.summary(),  # where the memory goes (9 October): threads, the allocator, the most numerous objects, the biggest jumps
             "feed": feed_state(), "keep_awake": {k: v for k, v in keep_awake_state.items() if k != "url"} | {"on": bool(SELF_URL)}}
