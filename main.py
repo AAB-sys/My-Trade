@@ -1330,7 +1330,7 @@ def health():
     No secret in here: dates, and a problem said in plain words."""
     if DHAN_ON and dhan.report_stale():  # the server made (or failed to make) its own token since the last check: show it now, not in half an hour
         try:
-            store["dhan"]["token"] = await asyncio.to_thread(dhan.token_report)
+            store["dhan"]["token"] = dhan.token_report()
         except Exception:  # noqa: BLE001 - the health answer must come whatever Dhan does
             pass
     return {"status": "ok", "commit": COMMIT, "dhan": DHAN_ON, "token": store["dhan"]["token"], "save": record.summary(), "memory_mb": memory_mb(),
