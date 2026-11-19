@@ -458,6 +458,11 @@ branch from `main`.
   index page's title, and in the Volume Profile page's index box and legend (`static/volume.html`). `GET /expiry-today` (main.py)
   says which, from Dhan's own expiry list of each index (`dhan.expiries`, the list the Panel's expiry flag reads, asked at most
   once in six hours). The pages ask when they open and every 30 minutes. A mark only: links, values and rules are unchanged.
+- The Panel's key levels are LIVE (19 November, the owner, on a fast open: "there is a difference on every value"): the panel is
+  read once a minute, the chart moves every second, so the list (`panelLevels`, `panelLive`, `tickPanel` in `static/volume.html`)
+  shows the chart's own numbers of the moment: the price, the day's high and low, today's VAH, POC and VAL, VWAP; distances from
+  the live price; sorted again on every tick. Yesterday's levels, the reading, the score, the checks and the alerts stay the
+  panel's minute reading. Only what the list shows: no rule, level or signal is counted differently.
 - The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
   chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
   above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's
