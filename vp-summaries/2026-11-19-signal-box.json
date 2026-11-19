@@ -1,0 +1,279 @@
+{
+ "NIFTY 50": {
+  "day": "2026-11-19",
+  "levels": {
+   "like_chart": true,
+   "val": 25152.175,
+   "poc": 25219.6125,
+   "vah": 25266.3,
+   "hvn": [
+    25157.5,
+    25177.5,
+    25227.5
+   ],
+   "lvn": [],
+   "session_low": 25141.8,
+   "session_high": 25390.8,
+   "uses_volume": true,
+   "candles": "1m",
+   "bin_size_pts": 5
+  },
+  "levels_from": "2026-11-18",
+  "naked": [
+   {
+    "date": "2026-10-29",
+    "poc": 22853.858333333334,
+    "age": 13
+   },
+   {
+    "date": "2026-10-30",
+    "poc": 23095.9125,
+    "age": 12
+   },
+   {
+    "date": "2026-11-02",
+    "poc": 23328.794791666667,
+    "age": 11
+   },
+   {
+    "date": "2026-11-03",
+    "poc": 23694.665625,
+    "age": 10
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 23911.015625,
+    "age": 9
+   },
+   {
+    "date": "2026-11-05",
+    "poc": 24373.108333333334,
+    "age": 8
+   },
+   {
+    "date": "2026-11-06",
+    "poc": 24615.53125,
+    "age": 7
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 24935.847916666666,
+    "age": 6
+   },
+   {
+    "date": "2026-11-13",
+    "poc": 25114.384375,
+    "age": 3
+   },
+   {
+    "date": "2026-11-17",
+    "poc": 25408.705208333333,
+    "age": 1
+   }
+  ],
+  "opened": "inside",
+  "signal": {
+   "signal": "CE",
+   "setup": "Acceptance above value",
+   "why": "2 closes in a row outside the value area",
+   "candle": "10:00",
+   "index_price": 25266.55,
+   "index_stop": 25256.3,
+   "index_target": 25408.71,
+   "risk_pts": 10.25,
+   "reward_pts": 142.16,
+   "reward_to_risk": 13.87,
+   "opened": "inside",
+   "skipped": [
+    "09:30 Acceptance below value: reward-to-risk too small",
+    "09:50 Rejection at value-area high: reward-to-risk too small"
+   ],
+   "outcome": {
+    "how": "stop",
+    "at": "10:25",
+    "exit": 25256.3,
+    "points": -10.25,
+    "live": false
+   },
+   "sizing": {
+    "lots": null,
+    "note": "The lot size is not known yet (Dhan's instrument list is still being read)."
+   }
+  }
+ },
+ "NIFTY BANK": {
+  "day": "2026-11-19",
+  "levels": {
+   "like_chart": true,
+   "val": 61915.024999999994,
+   "poc": 62077.06458333333,
+   "vah": 62239.104166666664,
+   "hvn": [
+    61935.0,
+    62035.0,
+    62075.0
+   ],
+   "lvn": [],
+   "session_low": 61765.45,
+   "session_high": 62363.75,
+   "uses_volume": true,
+   "candles": "1m",
+   "bin_size_pts": 10
+  },
+  "levels_from": "2026-11-18",
+  "naked": [
+   {
+    "date": "2026-10-29",
+    "poc": 54572.290625,
+    "age": 13
+   },
+   {
+    "date": "2026-11-02",
+    "poc": 54881.89270833333,
+    "age": 11
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 55607.084375000006,
+    "age": 9
+   },
+   {
+    "date": "2026-11-06",
+    "poc": 57872.425,
+    "age": 7
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 59219.6125,
+    "age": 6
+   },
+   {
+    "date": "2026-11-13",
+    "poc": 61008.05,
+    "age": 3
+   },
+   {
+    "date": "2026-11-16",
+    "poc": 61410.958333333336,
+    "age": 2
+   }
+  ],
+  "opened": "inside",
+  "signal": {
+   "signal": "CE",
+   "setup": "Acceptance above value",
+   "why": "2 closes in a row outside the value area",
+   "candle": "09:45",
+   "index_price": 62335.95,
+   "index_stop": 62229.1,
+   "index_target": 62660.03,
+   "risk_pts": 106.85,
+   "reward_pts": 324.08,
+   "reward_to_risk": 3.03,
+   "opened": "inside",
+   "skipped": [],
+   "outcome": {
+    "how": "target",
+    "at": "12:35",
+    "exit": 62660.03,
+    "points": 324.08,
+    "live": false
+   },
+   "sizing": {
+    "lots": null,
+    "note": "The lot size is not known yet (Dhan's instrument list is still being read)."
+   }
+  }
+ },
+ "SENSEX": {
+  "day": "2026-11-19",
+  "levels": {
+   "like_chart": true,
+   "val": 81880.27,
+   "poc": 82029.97,
+   "vah": 82312.73666666666,
+   "hvn": [
+    81965.0,
+    82035.0,
+    82085.0,
+    82155.0,
+    82175.0
+   ],
+   "lvn": [],
+   "session_low": 81780.47,
+   "session_high": 82578.87,
+   "uses_volume": true,
+   "candles": "1m",
+   "bin_size_pts": 10
+  },
+  "levels_from": "2026-11-18",
+  "naked": [
+   {
+    "date": "2026-10-29",
+    "poc": 73817.56791666667,
+    "age": 13
+   },
+   {
+    "date": "2026-10-30",
+    "poc": 74673.78166666666,
+    "age": 12
+   },
+   {
+    "date": "2026-11-02",
+    "poc": 75409.89375,
+    "age": 11
+   },
+   {
+    "date": "2026-11-03",
+    "poc": 76494.21395833333,
+    "age": 10
+   },
+   {
+    "date": "2026-11-04",
+    "poc": 77214.72562499999,
+    "age": 9
+   },
+   {
+    "date": "2026-11-06",
+    "poc": 79751.61520833334,
+    "age": 7
+   },
+   {
+    "date": "2026-11-09",
+    "poc": 80809.76208333333,
+    "age": 6
+   },
+   {
+    "date": "2026-11-13",
+    "poc": 81473.36249999999,
+    "age": 3
+   }
+  ],
+  "opened": "inside",
+  "signal": {
+   "signal": "PE",
+   "setup": "Acceptance below value",
+   "why": "2 closes in a row outside the value area",
+   "candle": "09:25",
+   "index_price": 81735.86,
+   "index_stop": 81890.27,
+   "index_target": 81473.36,
+   "risk_pts": 154.41,
+   "reward_pts": 262.5,
+   "reward_to_risk": 1.7,
+   "opened": "inside",
+   "skipped": [],
+   "outcome": {
+    "how": "stop",
+    "at": "09:35",
+    "exit": 81890.27,
+    "points": -154.41,
+    "live": false
+   },
+   "sizing": {
+    "lots": null,
+    "note": "The lot size is not known yet (Dhan's instrument list is still being read)."
+   }
+  }
+ }
+}
