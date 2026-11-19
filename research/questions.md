@@ -72,3 +72,13 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 - Back at the edge in the first hour (159 days): reached yesterday's POC that day 69-72%.
 - As trades (lab idea 11, ideas.md): neither part pays after 8 points a call.
 - Use for the page: a fact for the eyes, not a call: "opened below yesterday's value and not back by 10:15 -> yesterday's VAL is the day's ceiling about 4 days in 5".
+
+## T1 answered 19 Nov (498 days of NIFTY 50 5-minute candles, yesterday's value area by time; strat/insq.js). Asked because today opened inside yesterday's value, closed above its VAH at 09:45 and never looked back.
+- The day opened inside yesterday's value area on 166 days. On 132 of them a 5-minute candle closed outside it before 10:15 (68 above, 64 below).
+- After that first close outside, the day closed outside on the same side only 59% (above) and 64% (below); 72-73% of those days had a later close back inside at some time.
+- From the break to the day's close the price went further 57-58% of the time, about 20 points on average: not enough after 8 points a call.
+- So today (no return at all, +250 points) was the rarer kind. An open inside that breaks out is much weaker than an open outside that stays out (G1: 86-92%).
+- Use for the page: a fact for the eyes: "opened inside yesterday's value and broke out early: expect a visit back inside about 7 days in 10".
+
+## P1 (open, from 19 Nov's growing study): in a P shape, a price between the VAL and the POC goes back up to the POC 53% and down to the VAL 19% (273 candles on 22 volume days; two years 47% / 34%). Re-answer as days are added; test as a filter, not an entry.
+## S1 (open, 19 Nov): the Volume Profile page's sideways guard ("5 crossings of the busiest price") refused CE closes for 2 hours on a trend-up day. How often does that guard block a day that then trends? Needs the volume days; count from 20 Nov.

@@ -267,3 +267,20 @@ Lesson (fourth time): the value-area facts are strong as facts (86-92% stays out
 does NOT go, which does not say where it goes. Next: use such facts as a FILTER on a strategy that already works (for example
 NEWHIGH-TREND or DIR-1215 only on days that opened outside yesterday's value and stayed out), not as an entry.
 - Watch list, new day 3 (18 Nov): QUIET-BREAK 3 calls -47 (2 up 1 down); NEWHIGH-TREND 3 calls -63 (0 up 3 down); DIR-1215 no call yet.
+
+## 19 Nov evening: idea 12 VA-FILTER (yesterday's value area as a filter on NEWHIGH and DIR). Variants ever tried: 782
+From 18 Nov's lesson. The entry and stop are the base family's; the filter only chooses the calls: "open" (the day opened outside
+yesterday's value area and the call goes the gap's way), "stay" (the same, and yesterday's edge is still untouched at the signal),
+"side" (the signal candle closes outside yesterday's value area and the call goes that way). 60 variants (strat/vafnb.txt shows all,
+both years, year 2 by halves, and the unfiltered base beside each): NEWHIGH 24, DIR 36.
+- NEWHIGH n 12 + "stay": 4 of 4 pass every test (trail 3.5 or 5, averages agreeing or not). Best kept as found: n 12, trail 5, max 3,
+  averages agreeing: Y1 56 calls +562 (28 up 28 down, +366 without the best day, CE +284 PE +278); Y2 73 calls +1,217 (43/30,
+  +855 without the best, halves +1,004 / +213, CE +125 PE +1,092). The same NEWHIGH without the filter: Y1 +502 on 245 calls,
+  Y2 +1,343 on 269 calls: the filter keeps about a quarter of the calls and most of the points (per call +10 / +17 against +2 / +5).
+- Warnings: with n 24 the "stay" filter loses in year 1 (-177, -370) though it wins in year 2; year 1 has only 56 calls; in year 2
+  the PE side carries it; 782 variants tried so far, so luck is possible. The watch list's new days decide.
+- DIR + any filter: 0 pass (too few calls with "open"/"stay"; "side" fails the second half of year 2). Dropped.
+- 12 good in year 1, 11 held in year 2, 6 pass the halves test (all NEWHIGH n 12).
+JOINED THE WATCH LIST: NEWHIGH-STAY {n 12, trail 5, max 3, trend 1, from 09:45, filter stay}, found 2026-11-19; its new days start 20 Nov.
+- Watch list, new day 4 (19 Nov): QUIET-BREAK 3 calls -47 (2 up 1 down); NEWHIGH-TREND 4 calls +116 (1 up 3 down; today +179); DIR-1215 no call yet.
+- Also answered (questions.md T1): an open inside yesterday's value that breaks out early closes outside only 59-64%.
