@@ -453,6 +453,11 @@ branch from `main`.
   `dhan.token_report`), and at once when Dhan refuses the token in use (`dhan.call`). In memory only; at most 3 failed tries a
   day, 10 minutes apart; the pasted `DHAN_ACCESS_TOKEN` keeps working and is the fallback. Without the two settings nothing
   changes. `/health` shows `token.own` (no secret). `lab/check_own_token.py` (32 checks, a stand-in for Dhan on the machine).
+- The (E) mark (19 November, the owner: "for the expiry of any index, please mark as (E) in front of every index"): on the day an
+  index's options expire its name is written "(E) NIFTY 50" in the Index menus (`static/index.html`, `static/detail.html`), as the
+  index page's title, and in the Volume Profile page's index box and legend (`static/volume.html`). `GET /expiry-today` (main.py)
+  says which, from Dhan's own expiry list of each index (`dhan.expiries`, the list the Panel's expiry flag reads, asked at most
+  once in six hours). The pages ask when they open and every 30 minutes. A mark only: links, values and rules are unchanged.
 - The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
   chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
   above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's

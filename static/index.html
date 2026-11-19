@@ -191,6 +191,13 @@
 </main>
 
 <script>
+  // The (E) mark (19 November, the owner: "for the expiry of any index, please mark as (E) in front of every index"): an index whose
+  // options expire today is written "(E) NIFTY 50" wherever its name stands. The server says which (/expiry-today, from Dhan's
+  // own expiry lists); asked when the page opens and every 30 minutes; without an answer the plain names stay.
+  const expiryToday = {};
+  const withE = (ix) => (expiryToday[ix] ? "(E) " : "") + ix;
+  const loadExpiry = async () => { try { const r = await fetch("/expiry-today", withTab()); if (r.ok) Object.assign(expiryToday, (await r.json()).expiry || {}); } catch (e) {} };
+  setTimeout(loadExpiry, 0); setInterval(loadExpiry, 30 * 60 * 1000);
   const PINNED = ["NIFTY 50", "NIFTY BANK", "SENSEX"];  // the top row, in this order (owner's ask, 7 October)
   const RECONNECT_MS = 3000;
   const BEAT_MS = 15000;  // how often this page reports in (the server allows twice that)
@@ -341,7 +348,7 @@
     const fill = () => menu.replaceChildren(...PINNED.map(name => {
       const a = document.createElement("a");
       a.href = "/index/" + encodeURIComponent(name) + "#t=" + encodeURIComponent(TAB); a.target = "_blank"; a.rel = "noopener";
-      a.setAttribute("role", "menuitem"); a.textContent = name; a.title = "Open " + name + " details in a new tab";
+      a.setAttribute("role", "menuitem"); a.textContent = withE(name); a.title = "Open " + name + " details in a new tab" + (expiryToday[name] ? " (its options expire today)" : "");
       return a;
     }));
     const show = (on) => { if (on) fill(); menu.hidden = !on; pick.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };

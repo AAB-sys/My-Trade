@@ -1532,6 +1532,14 @@
     tr.querySelector("td.pl").replaceWith(fresh.children[0]);  // the profit or loss in rupees moves with the premium
   }
 
+  // The (E) mark (19 November, the owner: "for the expiry of any index, please mark as (E) in front of every index"): an index whose
+  // options expire today is written "(E) NIFTY 50" wherever its name stands. The server says which (/expiry-today, from Dhan's
+  // own expiry lists); asked when the page opens and every 30 minutes; without an answer the plain names stay.
+  const expiryToday = {};
+  const withE = (ix) => (expiryToday[ix] ? "(E) " : "") + ix;
+  const onExpiry = [() => { const h = document.getElementById("name"); h.textContent = withE(name); h.title = expiryToday[name] ? name + ": its options expire today" : ""; }];
+  const loadExpiry = async () => { try { const r = await fetch("/expiry-today", withTab()); if (r.ok) { Object.assign(expiryToday, (await r.json()).expiry || {}); onExpiry.forEach(f => f()); } } catch (e) {} };
+  setTimeout(loadExpiry, 0); setInterval(loadExpiry, 30 * 60 * 1000);
   const DHAN_INDICES = ["NIFTY 50", "NIFTY BANK", "SENSEX"];  // the indices whose options the server follows (dhan.OPTION_INDICES; SENSEX's on the BSE since 8 October)
   // The Dhan line shows only when something needs the owner's attention; on a normal day it stays out of sight.
   function drawFeedNote() {
@@ -2044,11 +2052,12 @@
   // note is in this tab's sessionStorage, so the next page is still logged in and keeps the open panel)
   (() => {
     const pick = document.getElementById("pick"), btn = document.getElementById("pick-btn"), menu = document.getElementById("pick-menu");
-    menu.replaceChildren(...DHAN_INDICES.map(ix => {
+    const fill = () => menu.replaceChildren(...DHAN_INDICES.map(ix => {
       const a = document.createElement("a");
-      a.href = "/index/" + encodeURIComponent(ix); a.setAttribute("role", "menuitem"); a.textContent = ix; a.title = "Open " + ix;
+      a.href = "/index/" + encodeURIComponent(ix); a.setAttribute("role", "menuitem"); a.textContent = withE(ix); a.title = "Open " + ix + (expiryToday[ix] ? " (its options expire today)" : "");
       return a;
     }));
+    fill(); onExpiry.push(fill);
     const show = (on) => { menu.hidden = !on; pick.classList.toggle("open", on); btn.setAttribute("aria-expanded", on ? "true" : "false"); };
     btn.addEventListener("click", () => show(!pick.classList.contains("open")));
     document.addEventListener("click", (e) => { if (!pick.contains(e.target)) show(false); });  // a click elsewhere closes it
