@@ -1517,7 +1517,7 @@
   // the old connection is dropped without waiting and a new one opened at once, and everything is fetched again at once. The
   // same when the phone comes back online, and whenever the price is silent for 10 seconds in market hours while the page is
   // in front (then 20, 40, 60 seconds: the server or Dhan may be the quiet one).
-  const KICK_FIRST = 10000;
+  const KICK_FIRST = 5000;
   let lastTickAt = 0, lastKick = 0, kickWait = KICK_FIRST;
   const tickHours = () => { const s = Date.now() / 1000 + IST, day = new Date(s * 1000).getUTCDay(), sec = ((s % 86400) + 86400) % 86400; return day >= 1 && day <= 5 && sec >= 9 * 3600 && sec < 15 * 3600 + 45 * 60; };  // as the server: 09:00 to 15:45 IST, Monday to Friday
   function reconnectNow() {
@@ -1534,9 +1534,17 @@
     kickWait = Math.min(kickWait * 2, 60000);
     reconnectNow();
   }, 2000);
+  // 19 November, the owner again, on the phone and the computer: "it is still taking time to reload while switching from one
+  // page to my trade page ... about 10 seconds". As the page wakes, the browser hands it the prices that were waiting, so the
+  // last price looks fresh although the connection behind it is dead; the page then trusted it and stood still until the
+  // 10-second watch. So: away for AWAY_SECONDS or more = a fresh connection at once, whatever the last price's age; and the
+  // watch itself asks after 5 silent seconds, not 10 (in market hours a price comes every second).
+  const AWAY_SECONDS = 4; let hiddenAt = 0;
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden || parked) return;
-    if (tickHours() && (Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (parked) return;
+    const away = hiddenAt ? (Date.now() - hiddenAt) / 1000 : 0; hiddenAt = 0;
+    if (tickHours() && (away >= AWAY_SECONDS || Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
     else { load(); loadSignal(); loadPanel(); }
   });
   window.addEventListener("online", () => { kickWait = KICK_FIRST; reconnectNow(); });
