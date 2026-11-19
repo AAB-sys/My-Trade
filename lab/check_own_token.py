@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 CLIENT, PIN, KEY, PASTED = "1100123456", "482913", "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", "pasted-token-aaaa"
-state = {"good": set(), "made": 0, "asked": 0, "seen": [], "refuse_pin": False, "down": False}
+state = {"good": set(), "made": 0, "asked": 0, "seen": [], "refuse_pin": False, "down": False, "late_code": 0}
 
 
 class Dhan(BaseHTTPRequestHandler):
@@ -21,8 +21,10 @@ class Dhan(BaseHTTPRequestHandler):
         state["asked"] += 1; state["seen"].append(q)
         import dhan
         codes = {dhan.totp_code(KEY, time.time() + d) for d in (-30, 0, 30)}
+        if state["late_code"] > 0:  # as Dhan answered on 19 November to a code sent as it changed: HTTP 200 and these words
+            state["late_code"] -= 1; return self.answer(200, {"status": "error", "message": "Invalid TOTP"})
         if state["refuse_pin"] or q.get("pin") != PIN or q.get("dhanClientId") != CLIENT or q.get("totp") not in codes:
-            return self.answer(401, {"status": "error", "message": f"Invalid PIN or TOTP for {q.get('dhanClientId')}"})
+            return self.answer(401, {"status": "error", "message": f"Invalid PIN for {q.get('dhanClientId')}"})
         state["made"] += 1; token = f"own-token-{state['made']:04d}-zzzz"; state["good"].add(token)
         self.answer(200, {"dhanClientId": CLIENT, "dhanClientName": "TEST", "accessToken": token, "expiryTime": "2026-11-20T08:30:00.000"})
     def do_GET(self):
@@ -39,6 +41,17 @@ for k in ("DHAN_PIN", "DHAN_TOTP_SECRET"): os.environ.pop(k, None)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 logs = io.StringIO(); logging.basicConfig(level=logging.DEBUG, stream=logs, force=True)
 import dhan  # noqa: E402
+slept = []
+class _Clock:  # dhan's own view of time: sleeping costs nothing here, and the place in the code's 30 seconds can be set
+    shift = 0.0
+    @staticmethod
+    def time(): return time.time() + _Clock.shift
+    @staticmethod
+    def monotonic(): return time.monotonic()
+    @staticmethod
+    def sleep(s): slept.append(round(s, 1)); _Clock.shift += s if _Clock.jump else 0
+    jump = False
+dhan.time = _Clock
 
 bad = 0
 def check(what, cond):
@@ -105,6 +118,18 @@ dhan.AUTH_BASE = saved
 fresh(); os.environ["DHAN_TOTP_SECRET"] = "not a key 1890!"
 check("a key that is not a key: said plainly, the key itself not shown", not dhan.renew_token("test") and "not a valid key" in dhan.own_report()["problem"] and "1890" not in dhan.own_report()["problem"])
 os.environ["DHAN_TOTP_SECRET"] = KEY
+
+# 7b. the code of the moment and its change (19 November: "Invalid TOTP" to a try sent 3 seconds before the change)
+fresh(); state["good"] = set(); state["late_code"] = 1; slept.clear(); n = state["asked"]
+check("Dhan says 'Invalid TOTP' once: the try waits for the next code and asks again, with success, and no failed try is counted", dhan.renew_token("test") and state["asked"] == n + 2 and len(slept) == 1 and 0 < slept[0] <= 30.5 and dhan.own_report()["failed_tries"] == 0)
+fresh(); state["late_code"] = 2; slept.clear(); n = state["asked"]
+check("'Invalid TOTP' twice: one failed try, Dhan asked twice and no more", not dhan.renew_token("test") and state["asked"] == n + 2 and dhan.own_report()["failed_tries"] == 1 and "Invalid TOTP" in dhan.own_report()["problem"])
+fresh(); state["late_code"] = 0; slept.clear(); _Clock.jump = True; _Clock.shift = (27 - time.time() % 30) % 30  # 3 seconds before the code changes
+ok = dhan.renew_token("test"); _Clock.jump = False; _Clock.shift = 0.0
+check("3 seconds before the code changes: the try waits for the next code first (about 3.5 s), then asks once", len(slept) == 1 and 3 <= slept[0] <= 4.1)
+fresh(); slept.clear(); _Clock.shift = (10 - time.time() % 30) % 30 - 30 if (10 - time.time() % 30) % 30 > 15 else (10 - time.time() % 30) % 30
+dhan.renew_token("test"); _Clock.shift = 0.0
+check("in the middle of the code's 30 seconds: no waiting", slept == [])
 
 # 8. the morning's renewal
 IST = dhan.IST; at = lambda h, m: datetime(2026, 11, 19, h, m, tzinfo=IST)
