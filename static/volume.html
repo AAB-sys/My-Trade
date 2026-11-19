@@ -361,6 +361,14 @@
   const SHOW_CALLS = false;
   if (![...$("index").options].some(o => o.value === state.name)) state.name = "NIFTY 50";
   $("index").value = state.name;
+  // The (E) mark (19 November, the owner: "for the expiry of any index, please mark as (E) in front of every index"): an index whose
+  // options expire today is written "(E) NIFTY 50" wherever its name stands. The server says which (/expiry-today, from Dhan's
+  // own expiry lists); asked when the page opens and every 30 minutes; without an answer the plain names stay.
+  const expiryToday = {};
+  const withE = (ix) => (expiryToday[ix] ? "(E) " : "") + ix;
+  for (const o of $("index").options) o.value = o.textContent;  // the name stays the box's value; only what is written changes
+  const loadExpiry = async () => { try { const r = await fetch("/expiry-today", withTab()); if (r.ok) { Object.assign(expiryToday, (await r.json()).expiry || {}); for (const o of $("index").options) o.textContent = withE(o.value); drawLegend(); } } catch (e) {} };
+  setTimeout(loadExpiry, 0); setInterval(loadExpiry, 30 * 60 * 1000);
 
   // The login's "tab" note and this page's id, as the other pages keep them
   let TAB = "";
@@ -908,7 +916,7 @@
     const day = state.profiles.find(s => s.bars.includes(at)) || state.profiles[state.profiles.length - 1], p = day && day.profile;
     const v = state.volumes.get(at.time);
     const f = (label, x) => `<span><span class="k">${label}</span> <span class="v ${tone}">${num(x)}</span></span>`;
-    let html = `<div class="row"><span class="sym">${state.name}</span><span class="k">${state.interval} · ${dayOf(at.time)} ${hhmm(at.time)}</span>${f("O", at.open)}${f("H", at.high)}${f("L", at.low)}${f("C", at.close)}<span class="v ${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : "−"}${num(Math.abs(ch))} (${(ch / before * 100 >= 0 ? "+" : "−") + Math.abs(ch / before * 100).toFixed(2)}%)</span></div>`;
+    let html = `<div class="row"><span class="sym">${withE(state.name)}</span><span class="k">${state.interval} · ${dayOf(at.time)} ${hhmm(at.time)}</span>${f("O", at.open)}${f("H", at.high)}${f("L", at.low)}${f("C", at.close)}<span class="v ${ch >= 0 ? "up" : "down"}">${ch >= 0 ? "+" : "−"}${num(Math.abs(ch))} (${(ch / before * 100 >= 0 ? "+" : "−") + Math.abs(ch / before * 100).toFixed(2)}%)</span></div>`;
     let info = "";  // the indicators' figures: in the line above the chart, not on it
     // AAA_V1's two rows of figures: the previous day's high, low and close with the candle's volume, and under them the running
     // day's high and low (the owner: "add the boxes for current days high low below the previous days high low boxes ... should be

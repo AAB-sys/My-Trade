@@ -1567,6 +1567,28 @@ async def options_state(name: str):
             "sell_share": dhan.SELL_SHARE, "records": dhan.records_for(key)}
 
 
+# The (E) mark (19 November 2026, the owner: "for the expiry of any index, please mark as (E) in front of every index"): which of
+# the indices has its options expiring today, from Dhan's own list of each index's expiry dates (the list the Panel's expiry flag
+# reads; asked at most once in six hours an index). An index whose list held today once keeps the mark for the rest of that day,
+# as Dhan may drop the date from the list after the close. None for an index whose list could not be read: no mark, no guess.
+_expiry_seen: dict = {}  # (index, date) that an expiry list held
+
+
+@app.get("/expiry-today")
+async def expiry_today():
+    today = dhan.today_ist().isoformat()
+    out = {}
+    for name in (dhan.OPTION_INDICES if DHAN_ON else ()):
+        try:
+            days = await asyncio.to_thread(dhan.cached, ("panel expiries", name), 6 * 3600, lambda n=name: dhan.expiries(n))
+        except Exception:  # noqa: BLE001 - a mark only: without the list the pages show the plain names
+            days = None
+        if days and today in days:
+            _expiry_seen[(name, today)] = True
+        out[name] = True if _expiry_seen.get((name, today)) else (None if days is None else False)
+    return {"date": today, "expiry": out}
+
+
 @app.get("/options/{name}/chain")
 async def options_chain(name: str, expiry: str | None = None):
     """The OI chart's data (17 October): Dhan's option chain of the index, one expiry, every strike with both legs' figures
