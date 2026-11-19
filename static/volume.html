@@ -190,6 +190,7 @@
   #panel .lv { display: grid; grid-template-columns: 1fr auto 46px; gap: 8px; padding: 1.5px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; }
   #panel .lv .d { color: var(--muted); min-width: 44px; text-align: right; }
   #panel .lv.now { background: var(--hover); font-weight: 600; }
+  #panel h3 .livetag { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--up); margin-left: 6px; }
   #panel .cond { padding: 3px 0; } #panel .cond .if { color: var(--ink); } #panel .cond .then { color: var(--ink-2); }
   #panel .flag { color: #b45309; padding: 2px 0; }
   #panel .alerts { max-height: 132px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
@@ -738,7 +739,7 @@
     state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); const got = $("show-shape").checked ? VpShape.read(f || d, have ? vols : null) : null; return { bars: d, profile: VolProfile.build(f || d, have ? vols : null), shape: got && got.shape }; });
     profile.requestUpdate && profile.requestUpdate();
     drawTodayNames();
-    drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable();
+    drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable(); tickPanel();
   }
   // The running day's own levels, named (17 November, the owner, of the evening picture's "Today's VAH" and "Today's VAL" tags:
   // "why on live feed it is not showing todays VAH and todays VAL ?"): the profile's dashed VAH and VAL lines and its POC line
@@ -1411,6 +1412,35 @@
     return diff.length ? { ok: false, text: `NOT the same as the chart at ${g.time}: ${diff.join("; ")}. Both sides read the same volume, so this is a real difference: do not rely on the panel, and tell ULTROAN.` }
       : { ok: true, text: `Same as the chart at ${g.time}: POC, VAH, VAL, VWAP${shapeSaid}${prevSaid}` };
   }
+  // The Panel's key levels, LIVE (19 November 2026, the owner, on a fast open with the Panel's VWAP and price a minute behind the
+  // chart's: "there is a difference on every value"): the panel is read once a minute, the chart moves every second. So the
+  // list takes the numbers the chart itself holds at this moment: the price, the day's high and low, today's VAH, POC and VAL
+  // (the drawn profile's), and VWAP (counted as the chart's line is); the distances are counted from the live price; the list
+  // is sorted again. Yesterday's levels are the panel's (they do not move in the day). The reading, the score, the checks and
+  // the alerts stay the panel's, read at the close of each minute. Written again on every tick.
+  function panelLive(g) {
+    const s = state.profiles[state.profiles.length - 1];
+    if (!g || !s || !s.bars.length || g.name !== state.name || g.date !== new Date((s.bars[0].time + IST) * 1000).toISOString().slice(0, 10)) return null;
+    const day = s.bars, p = s.profile && s.profile.total > 0 ? s.profile : null, vw = state.timeOnly ? [] : vwapOf(day);
+    return { price: day[day.length - 1].close, "Day high": Math.max(...day.map(b => b.high)), "Day low": Math.min(...day.map(b => b.low)),
+             "Today's VAH": p ? p.vah : null, "Today's POC": p ? p.poc : null, "Today's VAL": p ? p.val : null, "VWAP": vw.length ? vw[vw.length - 1].value : null };
+  }
+  function panelLevels(g) {
+    const live = panelLive(g), price = live ? live.price : g.price;
+    const lv = (g.levels || []).map(l => ({ name: l.name, price: live && live[l.name] != null ? live[l.name] : l.price, distance: live ? null : l.distance })).sort((a, b) => b.price - a.price);
+    let placed = false, rows = "";
+    const now = `<div class="lv now"><span>Price now</span><span>${num(price)}</span><span class="d"></span></div>`;
+    for (const l of lv) { if (!placed && l.price < price) { rows += now; placed = true; }
+      const d = l.distance != null ? l.distance : l.price - price;
+      rows += `<div class="lv"><span>${esc(l.name)}</span><span>${num(l.price)}</span><span class="d">${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(Math.round(d))}</span></div>`; }
+    if (!placed) rows += now;
+    const tag = $("panel-live"); if (tag) tag.textContent = live ? "live, as on the chart" : "";
+    return rows;
+  }
+  function tickPanel() {  // on every tick: the list alone, so the rest of the panel (and its scroll place) stays
+    const el = $("panel-levels"), g = state.panel; if (!el || !$("show-panel").checked || !g || !g.checks) return;
+    const rows = panelLevels(g); if (el.dataset.rows !== rows) { el.innerHTML = rows; el.dataset.rows = rows; }
+  }
   function drawPanel() {
     const box = $("panel"), on = $("show-panel").checked, g = state.panel;
     box.hidden = !on;
@@ -1425,21 +1455,16 @@
     h += `<div class="meta">${esc(g.name)} · ${esc(g.time)} · price ${num(g.price)} · score <b>${g.score > 0 ? "+" + g.score : g.score < 0 ? "−" + Math.abs(g.score) : "0"}</b> of a possible +7${g.contract ? " · volume of " + esc(g.contract.name) : ""}</div>`;
     const ck = checkPanel(g);
     if (ck) h += `<div class="verify ${ck.ok === true ? "yes" : ck.ok === false ? "no" : "wait"}">${ck.ok === true ? "✓ " : ck.ok === false ? "✗ " : ""}${esc(ck.text)}</div>`;
-    h += `<div class="meta">Read at the close of the ${esc(g.time)} minute. The chart's lines also count the candle forming now, so they can move a little before the next minute closes.${g.previous_day ? ` Yesterday here is ${shortDay(g.previous_day)}${state.signal && state.signal.chart_levels ? "; after the close the chart's Prev day lines show today's levels, for the next session" : ""}.` : ""}</div>`;
+    h += `<div class="meta">The reading, the score, the checks and the alerts are read at the close of the ${esc(g.time)} minute. The key levels below are live: the same numbers as the chart, every second.${g.previous_day ? ` Yesterday here is ${shortDay(g.previous_day)}${state.signal && state.signal.chart_levels ? "; after the close the chart's Prev day lines show today's levels, for the next session" : ""}.` : ""}</div>`;
     h += `<h3>Checks</h3>` + g.checks.map(c => `<div class="row">${mark(c.score)}<span class="t"><span class="k">${esc(c.name)}:</span> ${esc(c.result)}</span></div>`).join("");
-    // the levels, highest first, with the price's own row where it belongs
-    const lv = (g.levels || []).slice(); let placed = false, rows = "";
-    for (const l of lv) { if (!placed && l.price < g.price) { rows += `<div class="lv now"><span>Price now</span><span>${num(g.price)}</span><span class="d"></span></div>`; placed = true; }
-      const d = l.distance != null ? l.distance : l.price - g.price;
-      rows += `<div class="lv"><span>${esc(l.name)}</span><span>${num(l.price)}</span><span class="d">${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(Math.round(d))}</span></div>`; }
-    if (!placed) rows += `<div class="lv now"><span>Price now</span><span>${num(g.price)}</span><span class="d"></span></div>`;
-    h += `<h3>Key levels</h3>${rows}`;
+    h += `<h3>Key levels <span class="livetag" id="panel-live"></span></h3><div id="panel-levels">${panelLevels(g)}</div>`;
     h += `<h3>Thin zones</h3>` + ((g.zones || []).length ? g.zones.map(z => `<div class="row"><span class="t">${esc(z.name)}: ${num(z.low)} to ${num(z.high)}</span></div>`).join("") : `<div class="none">None now</div>`);
     h += `<h3>If / then</h3>` + ((g.conditions || []).length ? g.conditions.map(c => `<div class="cond"><span class="if">${esc(c.if)}</span> → <span class="then">${esc(c.then)}</span></div>`).join("") : `<div class="none">Nothing to watch yet</div>`);
     h += `<h3>Flags</h3>` + ((g.flags || []).length ? g.flags.map(f => `<div class="flag">${esc(f)}</div>`).join("") : `<div class="none">None</div>`);
     h += `<h3>Alerts</h3><div class="alerts">` + ((g.alerts || []).length ? g.alerts.map(a => `<div class="a"><span class="tm">${esc(a.time)}</span>${esc(a.text)}</div>`).join("") : `<div class="none">None yet today</div>`) + `</div>`;
     box.innerHTML = `<div class="body">${h}</div>${warn}`;
     box.querySelector(".body").scrollTop = keep;
+    tickPanel();
   }
 
   // ---------------------------------------------------------------- the tool row
