@@ -9,6 +9,7 @@
 <script src="/static/volprofile.js"></script>
 <script src="/static/vpshape.js"></script>
 <script src="/static/impulse.js"></script>
+<script src="/static/vptool.js"></script>
 <!-- The Volume Profile page (12 November, the owner: "build a new page with header name as volume profile ... the chart format
      which dhan uses for pc and mobile"). A page of its own: it reads the index's candles and the futures' volume, draws them,
      and decides nothing. Paper calls and Calls with Signals are not read here and do not read this page. The chart is drawn
@@ -337,6 +338,11 @@
   // with ?embed=aaa. Then it is the chart alone: no title row, no index box (the index page's index), and none of the rule
   // boxes (Signal, Shape signal, Impulse MACD, Panel), which stay off. Its settings are kept apart, so this page's own stay as they are.
   const EMBED = params.get("embed") === "aaa", STORE = EMBED ? "volumeProfileAAA" : "volumeProfile";
+  // AAA_V1's own two drawing tools, the Fixed range volume profile and the Anchored volume profile (20 November, the owner, with
+  // the tool marked on a chart and a build document: "it should go to the AAA_V1 page. No logic change for all other pages at
+  // all"): static/vptool.js, put on the chart further down, and only when this page is AAA_V1's chart. On the Volume Profile
+  // page itself vpTool stays null, and every line below that names it does nothing.
+  let vpTool = null;
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
   try { const saved = JSON.parse(localStorage.getItem(STORE) || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.vwap === true) document.getElementById("show-vwap").checked = true; if (saved.panel === true) document.getElementById("show-panel").checked = true; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
@@ -426,7 +432,7 @@
     candles.applyOptions({ upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: up, wickDownColor: down });
     setVolume();
     if (rsi) rsi.applyOptions({ color: css("--rsi") });
-    profile.requestUpdate && profile.requestUpdate(); redraw();
+    profile.requestUpdate && profile.requestUpdate(); redraw(); if (vpTool) vpTool.redraw();
   }
 
   // ---------------------------------------------------------------- the profile, drawn behind the candles
@@ -557,12 +563,12 @@
   const KINDS = ["line", "hline", "vline", "box", "fib", "text"];
   const FIB = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
   const drawKey = () => "volumeProfileDrawings:" + state.name;
-  function loadDrawings() { draw.items = []; draw.picked = -1; draw.first = null; try { const saved = JSON.parse(localStorage.getItem(drawKey()) || "[]"); if (Array.isArray(saved)) draw.items = saved.filter(d => d && KINDS.includes(d.kind)); } catch (e) {} drawButtons(); redraw(); }
+  function loadDrawings() { if (vpTool) vpTool.load(); draw.items = []; draw.picked = -1; draw.first = null; try { const saved = JSON.parse(localStorage.getItem(drawKey()) || "[]"); if (Array.isArray(saved)) draw.items = saved.filter(d => d && KINDS.includes(d.kind)); } catch (e) {} drawButtons(); redraw(); }
   function saveDrawings() { try { localStorage.setItem(drawKey(), JSON.stringify(draw.items)); } catch (e) {} drawButtons(); }
   const redraw = () => drawings.requestUpdate && drawings.requestUpdate();
   function drawButtons() {
     document.querySelectorAll("#draw button[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === draw.tool)));
-    $("draw-delete").disabled = $("draw-clear").disabled = !draw.items.length && !draw.first;
+    $("draw-delete").disabled = $("draw-clear").disabled = !draw.items.length && !draw.first && !(vpTool && vpTool.count());
     $("wrap").classList.toggle("drawing", !!draw.tool);
   }
   // a time to its place along the candles shown (a candle's number, with a fraction between two candles and beyond the ends), and back
@@ -655,12 +661,13 @@
     if (!e.isPrimary) return;
     downAt = { x: e.clientX, y: e.clientY, t: Date.now() };
     const at = !draw.tool && inPane(e), held = at && grab(at.x, at.y);
-    if (!held) return;
+    if (!held) { if (at && vpTool && vpTool.down(at, e)) holdChart(true); return; }  // AAA_V1: a volume profile under the pointer is held instead
     const place = chart.timeScale().coordinateToLogical(at.x), price = candles.coordinateToPrice(at.y);
     draw.drag = { ...held, place, price, from: JSON.parse(JSON.stringify(draw.items[held.i])), moved: false };
     holdChart(true);
   }, true);
   window.addEventListener("pointermove", (e) => {
+    if (vpTool && vpTool.dragging()) { if (e.isPrimary) vpTool.move(e, e.clientX - $("chart").getBoundingClientRect().left); return; }
     const g = draw.drag; if (!g || !e.isPrimary) return;
     if (!g.moved && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) <= 8) return;
     const r = $("chart").getBoundingClientRect(), x = e.clientX - r.left, y = Math.max(0, Math.min(paneSize.h, e.clientY - r.top));
@@ -674,7 +681,7 @@
     else d[g.part] = { time: timeOf(place), price: round(price) };
     redraw();
   });
-  const drop = () => { const g = draw.drag; if (!g) return false; draw.drag = null; holdChart(false); $("wrap").classList.remove("moving"); if (g.moved) saveDrawings(); return g.moved; };
+  const drop = () => { if (vpTool && vpTool.dragging()) { const moved = vpTool.up(); holdChart(false); return moved; } const g = draw.drag; if (!g) return false; draw.drag = null; holdChart(false); $("wrap").classList.remove("moving"); if (g.moved) saveDrawings(); return g.moved; };
   $("chart").addEventListener("pointerup", (e) => {  // a finger's tap gives no "click" on the chart, so the tap is read from the pointer going down and up
     const from = downAt; downAt = null;
     if (drop()) return;  // a drawing was carried: not a tap
@@ -685,6 +692,7 @@
   window.addEventListener("pointercancel", () => { downAt = null; drop(); });
   function tapped(at) {
     if (!at) return;
+    if (vpTool && vpTool.place(at, draw.tool)) return;  // AAA_V1: a tap with one of the two volume profile tools chosen
     const p = { time: at.time, price: Math.round(at.price * 100) / 100 };
     if (draw.tool === "hline" || draw.tool === "vline") { draw.items.push(draw.tool === "hline" ? { kind: "hline", price: p.price } : { kind: "vline", time: p.time }); setTool(""); saveDrawings(); redraw(); return; }
     if (draw.tool === "text") { const text = (prompt("Note:") || "").trim().slice(0, 80); if (text) { draw.items.push({ kind: "text", a: p, text }); saveDrawings(); } setTool(""); redraw(); return; }
@@ -694,14 +702,15 @@
     }
     let hit = -1;  // the pointer: the drawing under the tap is picked (the newest first), a tap elsewhere lets go
     for (let i = draw.items.length - 1; i >= 0 && hit < 0; i--) { const sh = shape(draw.items[i], paneSize.w, paneSize.h); if (sh && near(sh, at.x, at.y)) hit = i; }
+    if (vpTool) vpTool.select(hit < 0 ? at : null);  // AAA_V1: no drawing under the tap: the volume profile there is picked
     if (hit !== draw.picked) { draw.picked = hit; drawButtons(); redraw(); }
   }
-  function setTool(tool) { draw.tool = tool; draw.first = null; draw.hover = null; if (tool) draw.picked = -1; drawButtons(); redraw(); }
+  function setTool(tool) { draw.tool = tool; draw.first = null; draw.hover = null; if (tool) draw.picked = -1; if (vpTool) vpTool.toolChanged(tool); drawButtons(); redraw(); }
   $("draw").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b || b.disabled) return;
     if (b.dataset.tool != null) setTool(b.dataset.tool === draw.tool ? "" : b.dataset.tool);
     else if (b.id === "draw-delete") deleteOne();
-    else if (b.id === "draw-clear") { draw.items = []; draw.picked = -1; setTool(""); saveDrawings(); redraw(); }
+    else if (b.id === "draw-clear") { draw.items = []; draw.picked = -1; if (vpTool) vpTool.clear(); setTool(""); saveDrawings(); redraw(); }
   });
   // The bin always deletes something when there is something (13 November, the owner, with a photo of a half-drawn line and
   // the question box: "when i press delete and when i press cross bar it should be deleted or erased, which is not happening"):
@@ -709,7 +718,8 @@
   // last one drawn. The cross removes everything at once, a half-made drawing too, without a question. Both put the pointer back.
   function deleteOne() {
     if (draw.first) { setTool(""); return; }
-    if (!draw.items.length) return;
+    if (vpTool && draw.picked < 0 && vpTool.deleteSelected()) { drawButtons(); return; }  // AAA_V1: the picked volume profile, or one half placed
+    if (!draw.items.length) { if (vpTool && vpTool.deleteLast()) drawButtons(); return; }
     draw.items.splice(draw.picked >= 0 ? draw.picked : draw.items.length - 1, 1); draw.picked = -1; setTool(""); saveDrawings(); redraw();
   }
   document.addEventListener("keydown", (e) => {
@@ -728,6 +738,13 @@
     const days = VolProfile.sessions(state.bars);
     return days.slice(-Math.max(state.days, DAYS_BACK + 1));
   }
+  // AAA_V1 only: the two volume profile tools (see vpTool at the top). They read the candles shown and their volume, and the
+  // 1-minute candles under them; they draw on this chart and nowhere else, and are kept apart from the page's other drawings.
+  if (EMBED && window.VpTool && VpTool.attach) vpTool = VpTool.attach({
+    chart, series: candles, IST, wrap: $("wrap"), toolbar: $("draw"), name: () => state.name, interval: () => state.interval,
+    bars: () => shown().flat(), volumes: () => state.volumes, fine: () => state.fine !== state.bars ? state.fine : null, fineVolumes: () => state.fineVolumes,
+    xOf, yOf, placeOf, timeOf, pointAt, num, short, css, holdChart, setTool, changed: drawButtons,
+  });
   function rebuild() {
     // the count is made from each day's 1-minute candles and their volume, whatever candle size is shown; where those
     // are missing, from the candles shown
@@ -740,6 +757,7 @@
     profile.requestUpdate && profile.requestUpdate();
     drawTodayNames();
     drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable(); tickPanel();
+    if (vpTool) vpTool.refresh();  // AAA_V1: the volume profiles drawn by hand are counted again from the candles and volume now
   }
   // The running day's own levels, named (17 November, the owner, of the evening picture's "Today's VAH" and "Today's VAL" tags:
   // "why on live feed it is not showing todays VAH and todays VAL ?"): the profile's dashed VAH and VAL lines and its POC line

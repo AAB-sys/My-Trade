@@ -446,6 +446,19 @@ branch from `main`.
   only"), and every reading of the previous day is amber: its three figures and its three lines ("mark yesterdays every reading
   in amber color"; `--prev-day`). It has NO rule and fires no
   call until the owner gives it one; no other page's rule reads or writes it.
+  Its two drawing tools (20 November, the owner, with the tool marked on a chart and the build document "AAA_V1 Volume Profile
+  Tool Logic": "it should go to the AAA_V1 page. No logic change for all other pages at all"): the Fixed range volume profile (two
+  taps: the first and the last candle) and the Anchored volume profile (one tap: from that candle to the latest), in
+  `static/vptool.js`. Its first half is the document's Python module rule for rule (`selectRange`, `pickLowerTf`, `buildSource`,
+  `rowsLayout`, `pointOfControl`, `valueArea`, `compute`, `histogramBars`), with five faults put right, each marked there; the
+  same rules stand in `lab/vptool_ref.py`, and `python3 lab/check_vptool.py` proves the two agree (rows, POC, value area,
+  developing lines, drawn lengths). Its second half (`attach`) is the tool on the chart: the two buttons in the drawing bar, the
+  box, rows and lines drawn behind the candles, the handles, the small bar over a picked profile (settings, lock, hide, delete)
+  and the settings box (Inputs, Style, Coordinates, Visibility; every setting of the document's section 3). It counts from the
+  1-minute candles with the futures' volume under any candle size; with no volume at all it shows time at each price and says
+  so. Profiles are kept per index in this browser (`aaaVolumeProfileTools:<name>`), apart from the page's other drawings.
+  `static/volume.html` names it only through `vpTool`, which is null unless the page is AAA_V1's chart (`embed=aaa`), so the
+  Volume Profile page itself is as it was. The tool reads; it is no rule and gives no call.
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
