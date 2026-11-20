@@ -250,6 +250,52 @@ days than it won and rested on three days, so it did not pass the bar. `lab/vwap
 
 **Not built:** nothing of the document is left out; the rules run on NIFTY 50 only, as the document covers.
 
+## Engulfing (strict) replaces Engulfing (20 November): NIFTY 50
+
+The owner, 20 November, after the daily Calls with Signals round: "look into the engulfing rule on NIFTY 50, this is really causing
+the problem"; "engulfing rule is causing more damage in case of money, is there any change required?"; then "yes, build the engulfing
+strict and replace the old one", and of a new rule's tick: "unticked means keep it out of the table too".
+
+**The rule** (`static/morepat.js`, `engulfing_strict`, not in the owner's reference): the document's Engulfing with its own setting
+raised and two checks added. (a) The fall before it (a rise, for the PE side) is at least 2.0 x ATR (the document: 1.5). (b) The second
+candle closes at or past the first candle's high (CE: the green candle closes at or above the red candle's high, covering the whole red
+candle, not only its body; PE: the red candle closes at or below the green candle's low). (c) The signal candle starts before 14:00
+(candle 57 of the day), so the call enters by 14:00 at the latest. Everything else is the document's: the body of at least 0.5 x ATR,
+the look-back of 8 candles, the level L (the pattern's low; PE: its high), no pattern target (the 1 ATR guide shows), the page's exits
+(Rule 1, then the trail), the gates. The table says "Rule:- Bullish Engulfing (strict)" or "Bearish Engulfing (strict)".
+
+**On the page**: the document's Engulfing gives no call any more (`NewRule.MORE.calls` no longer lists it) and is gone from Settings,
+the chart and the signal log. "Engulfing (strict)" stands in its place in the Settings list, **unticked by default**, and it is the
+only rule whose tick decides its calls (`NewRule.MORE.optIn`, `NewRule.moreCalls(ticked)`): unticked, it gives no call, draws nothing
+and holds up no other rule's call (the engine does not run it); ticked, its calls join the table and the chart like any other rule's,
+in the old Engulfing's place in the list. The signal log under the table lists its signals either way; unticked they say "no call:
+unticked in Settings". The other 24 rules are unchanged (their calls in the table, ticked or not). The reference's own list
+(`MorePat.ORDER`) still holds the document's 14, so `lab/morepat_check.js` still checks the port against the reference;
+`MorePat.PAGE_ORDER` is the page's 14 (the strict rule in the old one's place), `MorePat.ALL_ORDER` every rule (a replay may still ask
+for the old one with `more: [...]`).
+
+**Why** (NIFTY 50, the owner's two years of 5-minute candles from 11 November 2024 to 9 November 2026 and the saved days to 20 November:
+501 days; the page's engine as it runs, every rule, one trade at a time, index points; "after costs" takes 8 points a call; the VWAP
+of the older days is the plain average, as they have no volume). After costs Engulfing was the rule that lost the most: 417 calls,
+-2,137 points (year 1 -815, year 2 -1,321, the 36 saved days -260); a win averaged +24.9 after costs, a loss -29.5. The 81 calls that
+ended by a close back across the pattern's low lost 38.6 points each. Of 72 stricter versions built from the rule's own checks (the
+body, the fall, the close past the other candle, the time), 69 lost less than the page in both years. Taking Engulfing out alone saves
+less (+386 points after costs over the two years) because the slots it frees go to other rules that also lose. The page's NIFTY 50
+calls, after costs, against the page as it was:
+
+| | Engulfing calls | Engulfing's own, after costs | All calls, two years | Year 1 | Year 2 | 36 saved days |
+| --- | --- | --- | --- | --- | --- | --- |
+| Engulfing out (Engulfing (strict) unticked) | 0 | 0 | +386 | +222 | +164 | +142 |
+| Engulfing (strict) ticked | 258 | -636 | +1,097 | +500 | +597 | +195 |
+
+The strict version was the best of the 72 on these same days, so the true gain is likely smaller: chosen on the first year alone, the
+stricter versions still gained in the second (+47 to +325). Engulfing (strict) still loses after costs, and all the page's rules
+together still lose about 10,300 points after costs over the two years with it ticked: it closes the biggest leak, it does not make
+the page pay. Also seen: after an Engulfing signal the index went the call's way about half the time (47% after an hour, 716
+signals), so buying the opposite side is no fix either; calls against the day's move did worse (39 to 45% after an hour) than calls
+with it (52%), but taking Engulfing only with the day's move gained in year 1 and lost 271 points in year 2, so it was not built.
+`lab/newrule-check.js` S1 to S7 hold the rule's cases and the swap.
+
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,

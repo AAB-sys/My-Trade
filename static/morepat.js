@@ -5,6 +5,8 @@
 // (flip: every price becomes minus the price), the signal turned back (unflip). lab/morepat_check.js proves this file gives the
 // reference's answers: its 113 test scans, its 14 examples, the 4 real days of the document and 400 random days, signal for signal.
 // Nothing of the Paper calls page or of newrule.js is used here; the page hands the paper exits (Rule 1 and the trail) in as a function.
+// One rule here is NOT the reference's: engulfing_strict (20 November, the owner's choice), which replaces Engulfing on the page; it is
+// kept out of ORDER, so the reference's 14 and their checks are untouched (PAGE_ORDER: the page's list; ALL_ORDER: every rule).
 (function (root) {
   "use strict";
   // ---- shared parts (the reference's BEGIN SHARED)
@@ -308,6 +310,19 @@
     if (!fellInto(cs, i, atr, c)) return null;                               // 4. it came after a fall
     return makeSignal("CE", Math.min(prev.low, now.low), k, { points: [[k - 1, prev.low, "red"], [k, now.high, "green covers it"]] });
   }
+  // Engulfing (strict) (20 November, the owner: "yes, build the engulfing strict and replace the old one"): NOT in the reference.
+  // The document's engulfing above, with its own settings raised and two checks added, from the study of the saved NIFTY 50 candles
+  // (two years and the saved days, NEW_RULES.md): (a) the fall before it at least 2.0 x ATR (the document: 1.5; cfg prior_move_atr),
+  // (b) the green candle closes at or above the red candle's HIGH (it covers the whole red candle, not only its body),
+  // (c) the signal candle starts before 14:00 (candle 57 of the day; cfg before_candle), so the call enters by 14:00 at the latest.
+  // The PE side is the same rule on the flipped chart, as every rule here (a red candle closing at or below the green candle's low)
+  function engulfingStrict(cs, k, atr, c) {
+    if (k >= c.before_candle) return null;                                   // (c) before 14:00
+    const s = engulfing(cs, k, atr, c);                                      // the document's four checks, with prior_move_atr 2.0 (a)
+    if (!s) return null;
+    if (!(cs[k].close >= cs[k - 1].high)) return null;                       // (b) it closes above the red candle's high
+    return s;
+  }
   function hammer(cs, k, atr, c) {
     const h = c.confirm ? k - 1 : k;                                         // the hammer candle (confirm: the candle after must close above it)
     if (h < 1) return null;
@@ -359,11 +374,15 @@
     orb: { fn: orb, names: ["Opening Range Breakout (up)", "Opening Range Breakout (down)"], cfg: { or_candles: 3, until: 18, min_range_atr: 0.5, max_range_atr: 3.0, gap_atr: 1.0, min_room_atr: 0.5 } },
     gap: { fn: gap, names: ["Gap day: break up", "Gap day: break down"], cfg: { or_candles: 3, until: 18, min_range_atr: 0.5, max_range_atr: 3.0, gap_atr: 1.0, min_room_atr: 0.5 } },
     engulfing: { fn: engulfing, names: ["Bullish Engulfing", "Bearish Engulfing"], cfg: { body_atr: 0.5, prior_move_atr: 1.5, lookback: 8 } },
+    engulfing_strict: { fn: engulfingStrict, names: ["Bullish Engulfing (strict)", "Bearish Engulfing (strict)"], cfg: { body_atr: 0.5, prior_move_atr: 2.0, lookback: 8, before_candle: 57 } },  // 20 November: not in the reference (see above)
     hammer: { fn: hammer, names: ["Hammer", "Shooting Star"], cfg: { range_atr: 0.8, wick_mult: 2.0, upper_max: 0.15, prior_move_atr: 1.5, lookback: 8, confirm: true } },
     doji: { fn: doji, names: ["Doji reversal (up)", "Doji reversal (down)"], cfg: { body_frac: 0.1, range_atr: 0.5, prior_move_atr: 1.5, lookback: 8 } },
     vwap: { fn: vwap, names: ["VWAP reclaim", "VWAP loss"], cfg: { look: 6, need_below: 5, body_atr: 0.3 } },
   };
-  const ORDER = Object.keys(RULES);  // when two rules give the same side on one candle, the one earlier in this list is the label used
+  const ORDER = Object.keys(RULES).filter(key => key !== "engulfing_strict");  // the reference's 14, in its order: when two rules give the same side on one candle, the one earlier in this list is the label used
+  // 20 November: Engulfing (strict) replaces the document's Engulfing on the page, in its place in the list. PAGE_ORDER: the page's 14
+  // (the signal log, the chart's ticks); ALL_ORDER: every rule here in order (the engine walks it, so a replay may still ask for the old one)
+  const PAGE_ORDER = ORDER.map(key => key === "engulfing" ? "engulfing_strict" : key), ALL_ORDER = Object.keys(RULES);
   const settingsFor = (rule, over = null) => ({ ...COMMON, ...RULES[rule].cfg, ...(over || {}) });
   const LOOKBACK = 30;  // how many candles back we look to see if the same pattern already signalled
   const sameIdent = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -415,12 +434,12 @@
   // over; manage(t, bar, j, atr, lastK, dayEnd): the page's paper exits (Rule 1 and the trail), or null for none.
   // Per signal: the entry (the next candle's open), the best and worst move in the next 12 candles from the entry in the side's
   // direction (points and ATR), the move at 12 candles and at the day's close, and the paper result with the page's exits
-  function dayLog({ bars, prevBars = [], closedCount = null, dayEnd = false, manage = null, first = 2, last = 65 }) {
+  function dayLog({ bars, prevBars = [], closedCount = null, dayEnd = false, manage = null, first = 2, last = 65, rules = null }) {  // rules: the keys to log (the page: PAGE_ORDER); null: the reference's 14
     const lastK = (closedCount == null ? bars.length : Math.min(closedCount, bars.length)) - 1;
     if (lastK < 0) return { signals: [], rows: [], summary: { signals: 0, ok: 0, byRule: {}, often: [], okPoints: 0 }, atr: [] };
     const closed = bars.slice(0, lastK + 1), all = (prevBars || []).concat(closed), atrAll = atrBefore(all), atr = atrAll.slice(all.length - closed.length);
     const ctx = prevBars && prevBars.length ? { prev_close: prevBars[prevBars.length - 1].close } : null;
-    const signals = runDay(closed, atr, ctx, null, null, first, last);
+    const signals = runDay(closed, atr, ctx, rules, null, first, last);
     const rows = signals.map(s => {
       const k = s.signal_candle, d = s.side === "CE" ? 1 : -1, entryBar = bars[k + 1] || null, a = atr[k];
       const r = { key: s.key, rule: s.rule, side: s.side, status: s.status, k, signalTime: closed[k].time, level: s.level, close: closed[k].close, atr: a, target: s.target, note: s.note, points: s.points, lines: s.lines,
@@ -442,5 +461,5 @@
     const ok = rows.filter(r => r.status === "ok");
     return { signals, rows, atr, summary: { signals: rows.length, ok: ok.length, byRule, often: Object.keys(byRule).filter(key => byRule[key] > 5), okPoints: round2(ok.reduce((sum, r) => sum + (r.paper || 0), 0)) } };
   }
-  root.MorePat = { COMMON, RULES, ORDER, LOOKBACK, candle, atrBefore, flip, flipCtx, swingHighs, swingLows, lineValue, zigzag, vwapSeries, VWAP_FAR_FROM, VWAP_AWAY_FROM, vwapGap, swapWords, unflipSignal, makeSignal, settingsFor, detect, markStatus, runDay, slot, dayLog, round2 };
+  root.MorePat = { COMMON, RULES, ORDER, PAGE_ORDER, ALL_ORDER, LOOKBACK, candle, atrBefore, flip, flipCtx, swingHighs, swingLows, lineValue, zigzag, vwapSeries, VWAP_FAR_FROM, VWAP_AWAY_FROM, vwapGap, swapWords, unflipSignal, makeSignal, settingsFor, detect, markStatus, runDay, slot, dayLog, round2 };
 })(typeof window !== "undefined" ? window : globalThis);
