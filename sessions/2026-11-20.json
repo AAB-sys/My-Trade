@@ -1,7 +1,7 @@
 {
  "date": "2026-11-20",
- "saved_at": "2026-11-20T15:30:41+05:30",
- "complete": false,
+ "saved_at": "2026-11-20T15:40:23+05:30",
+ "complete": true,
  "indices": {
   "NIFTY 50": {
    "candles": {
