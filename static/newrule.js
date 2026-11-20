@@ -615,16 +615,16 @@
                   "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg.db || DB.table), detectDoubleBottom(bars, k, "PE", atr, cfg.db || DB.table)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
                   "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)],
-                  // Double Top (strict) (20 November, the owner: "yes, build it for NIFTY BANK only"): the double top with its two tops at
-                  // least 7 candles apart (DT_STRICT; the document: 5), everything else the same (Buy PE). On NIFTY BANK only, in the old
-                  // Double Top's place, and only while ticked (rulesFor, RULE_OPT_IN)
+                  // Double Top (strict) (20 November, the owner: "yes, build it for NIFTY BANK only", then "add it for all three indices"):
+                  // the double top with its two tops at least 7 candles apart (DT_STRICT; the document: 5), everything else the same (Buy PE).
+                  // On NIFTY 50, NIFTY BANK and SENSEX, in the old Double Top's place, and only while ticked (rulesFor, RULE_OPT_IN)
                   "double top (strict)": (bars, k, atr, cfg) => { const s = detectEntry(bars, k, "PE", atr, { ...cfg, ...DT_STRICT }); return [s ? { ...s, rule: "double top (strict)" } : null]; } };
   const DT_STRICT = { minGap: 7 };  // the tops at least 7 candles (35 minutes) apart
   // The page's list of rules, in order (runDay's default), and the opt-in rules that take an old rule's place on some indices: unticked,
   // the new rule is left out (no calls, nothing drawn, it holds up no other rule's call); ticked, it stands where the old rule stood.
-  // The owner, 20 November: "unticked means keep it out of the table too"; Double Top (strict): "build it for NIFTY BANK only"
+  // The owner, 20 November: "unticked means keep it out of the table too"; Double Top (strict): "add it for all three indices"
   const RULE_LIST = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"];
-  const RULE_OPT_IN = { "double top (strict)": { replaces: "double top", indices: ["NIFTY BANK"] } };
+  const RULE_OPT_IN = { "double top (strict)": { replaces: "double top", indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
   const rulesFor = (index, ticked) => RULE_LIST.flatMap(rule => {  // ticked: a Set of the opt-in rules whose tick is on
     const opt = Object.keys(RULE_OPT_IN).find(key => RULE_OPT_IN[key].replaces === rule && RULE_OPT_IN[key].indices.includes(index));
     return !opt ? [rule] : ticked && ticked.has(opt) ? [opt] : [];

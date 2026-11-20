@@ -669,8 +669,8 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   console.log("New Rule Chart: Engulfing (strict) replaces Engulfing on the page; unticked it gives no call, ticked it fills the table (S6, S7)");
 }
 
-// ---- Double Top (strict) (20 November, the owner: "yes, build it for NIFTY BANK only"): the double top with its two tops at least
-// 7 candles apart (the document: 5), on NIFTY BANK only, in the Double Top's place, and only while ticked (unticked: out of the table)
+// ---- Double Top (strict) (20 November, the owner: "yes, build it for NIFTY BANK only", then "add it for all three indices"): the double
+// top with its two tops at least 7 candles apart (the document: 5), on all three indices in the Double Top's place, and only while ticked
 {
   assert(N.DT_STRICT.minGap === 7 && N.DT.minGap === 5, "D1: the strict rule asks 7 candles between the tops; the page's Double Top keeps 5");
   // the documents' E1 (tops on candles 7 and 17, 10 apart) gives the strict call too, at the same entry; tops 10 apart fail a gap of 11
@@ -682,13 +682,18 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   const close5 = peD.slice(0, 8).concat(peD.slice(13)).map((b, i) => ({ ...b, time: t0 + i * 300 }));
   const old5 = N.runDay({ bars: close5, atrFixed: ATR, rules: ["double top"] }).trades, strict5 = N.runDay({ bars: close5, atrFixed: ATR, rules: ["double top (strict)"] }).trades;
   assert(old5.length === 1 && old5[0].t2 - old5[0].t1 === 5 && strict5.length === 0, "D2: tops 5 apart: the Double Top calls, the strict one does not: " + JSON.stringify([old5.map(t => [t.t1, t.t2]), strict5.length]));
-  // the page's list: NIFTY BANK has the strict rule in the Double Top's place only while ticked; NIFTY 50 and SENSEX keep the Double Top
+  // the page's list: on each of the three indices the strict rule takes the Double Top's place only while ticked; an index not listed
+  // (none on the page today) keeps the plain list
   const on = new Set(["double top (strict)"]), off = new Set();
-  assert(JSON.stringify(N.rulesFor("NIFTY BANK", on)) === JSON.stringify(["double top (strict)"].concat(N.RULE_LIST.slice(1))), "D3: NIFTY BANK ticked: the strict rule first, the rest unchanged");
-  assert(JSON.stringify(N.rulesFor("NIFTY BANK", off)) === JSON.stringify(N.RULE_LIST.slice(1)) && JSON.stringify(N.rulesFor("NIFTY BANK", null)) === JSON.stringify(N.RULE_LIST.slice(1)), "D3: NIFTY BANK unticked: no Double Top of either kind");
-  for (const ix of ["NIFTY 50", "SENSEX"]) assert(JSON.stringify(N.rulesFor(ix, on)) === JSON.stringify(N.RULE_LIST) && JSON.stringify(N.rulesFor(ix, off)) === JSON.stringify(N.RULE_LIST), `D3: ${ix} keeps the Double Top, ticked or not`);
-  // the engine on NIFTY BANK: unticked, no double top call; ticked, the strict call
-  const nbOff = N.runDay({ bars: peD, atrFixed: ATR, index: "NIFTY BANK", rules: N.rulesFor("NIFTY BANK", off) }).trades, nbOn = N.runDay({ bars: peD, atrFixed: ATR, index: "NIFTY BANK", rules: N.rulesFor("NIFTY BANK", on) }).trades;
-  assert(!nbOff.some(t => /double top/.test(t.rule)) && nbOn.some(t => t.rule === "double top (strict)" && t.entry === 90.8), "D4: NIFTY BANK: unticked no Double Top call, ticked the strict call");
-  console.log("New Rule Chart: Double Top (strict): tops 7 candles apart, on NIFTY BANK only in the Double Top's place, only while ticked (D1 to D4)");
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    assert(JSON.stringify(N.rulesFor(ix, on)) === JSON.stringify(["double top (strict)"].concat(N.RULE_LIST.slice(1))), `D3: ${ix} ticked: the strict rule first, the rest unchanged`);
+    assert(JSON.stringify(N.rulesFor(ix, off)) === JSON.stringify(N.RULE_LIST.slice(1)) && JSON.stringify(N.rulesFor(ix, null)) === JSON.stringify(N.RULE_LIST.slice(1)), `D3: ${ix} unticked: no Double Top of either kind`);
+  }
+  assert(JSON.stringify(N.rulesFor("SOME OTHER INDEX", on)) === JSON.stringify(N.RULE_LIST), "D3: an index not listed keeps the Double Top");
+  // the engine on each index: unticked, no double top call; ticked, the strict call
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    const off1 = N.runDay({ bars: peD, atrFixed: ATR, index: ix, rules: N.rulesFor(ix, off), more: false }).trades, on1 = N.runDay({ bars: peD, atrFixed: ATR, index: ix, rules: N.rulesFor(ix, on), more: false }).trades;
+    assert(!off1.some(t => /double top/.test(t.rule)) && on1.some(t => t.rule === "double top (strict)" && t.entry === 90.8), `D4: ${ix}: unticked no Double Top call, ticked the strict call`);
+  }
+  console.log("New Rule Chart: Double Top (strict): tops 7 candles apart, on all three indices in the Double Top's place, only while ticked (D1 to D4)");
 }
