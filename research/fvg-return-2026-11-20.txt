@@ -1,0 +1,46 @@
+days 500 (2024-11-11 to 2026-11-19), gaps 7987, 16.0 a day; up 3988, down 3999
+ALL                                gaps  7987 | back to the middle same day  79% | filled same day  74% | to the middle within 30 min  61% | never back  21% | half of the returns within 10 min
+
+BY SIZE (against the 5-minute ATR)
+1 tiny (< 0.25 ATR)                gaps  3697 | back to the middle same day  84% | filled same day  82% | to the middle within 30 min  68% | never back  16% | half of the returns within 10 min
+2 small (0.25-0.5 ATR)             gaps  2123 | back to the middle same day  79% | filled same day  75% | to the middle within 30 min  60% | never back  21% | half of the returns within 10 min
+3 medium (0.5-1 ATR)               gaps  1621 | back to the middle same day  74% | filled same day  65% | to the middle within 30 min  53% | never back  26% | half of the returns within 15 min
+4 big (> 1 ATR)                    gaps   546 | back to the middle same day  64% | filled same day  51% | to the middle within 30 min  39% | never back  36% | half of the returns within 20 min
+
+BY TIME OF DAY the gap was made
+1 before 10:30                     gaps  1586 | back to the middle same day  84% | filled same day  81% | to the middle within 30 min  59% | never back  16% | half of the returns within 15 min
+2 10:30-12:30                      gaps  2728 | back to the middle same day  85% | filled same day  81% | to the middle within 30 min  62% | never back  15% | half of the returns within 10 min
+3 12:30-14:00                      gaps  1869 | back to the middle same day  82% | filled same day  78% | to the middle within 30 min  63% | never back  18% | half of the returns within 10 min
+4 after 14:00                      gaps  1804 | back to the middle same day  63% | filled same day  56% | to the middle within 30 min  58% | never back  37% | half of the returns within 10 min
+
+BY KIND OF DAY (known only at the close)
+in between                         gaps  2777 | back to the middle same day  80% | filled same day  76% | to the middle within 30 min  62% | never back  20% | half of the returns within 10 min
+sideways day                       gaps  2127 | back to the middle same day  83% | filled same day  79% | to the middle within 30 min  62% | never back  17% | half of the returns within 15 min
+trend day                          gaps  3083 | back to the middle same day  75% | filled same day  70% | to the middle within 30 min  60% | never back  25% | half of the returns within 10 min
+
+BY THE PUSH: made a new day high/low or not (known at once)
+inside the day's range             gaps  5140 | back to the middle same day  80% | filled same day  76% | to the middle within 30 min  64% | never back  20% | half of the returns within 10 min
+new day high/low                   gaps  2847 | back to the middle same day  77% | filled same day  72% | to the middle within 30 min  57% | never back  23% | half of the returns within 15 min
+
+GAP POINTS THE WAY THE DAY ENDED (hindsight)
+against the day                    gaps  3117 | back to the middle same day  90% | filled same day  88% | to the middle within 30 min  70% | never back  10% | half of the returns within 10 min
+with the day                       gaps  4870 | back to the middle same day  72% | filled same day  66% | to the middle within 30 min  56% | never back  28% | half of the returns within 10 min
+
+ONLY medium and big gaps made before 14:00:
+all                                gaps  1592 | back to the middle same day  78% | filled same day  70% | to the middle within 30 min  50% | never back  22% | half of the returns within 20 min
+
+ by the push
+inside the day's range             gaps   803 | back to the middle same day  79% | filled same day  70% | to the middle within 30 min  54% | never back  21% | half of the returns within 15 min
+new day high/low                   gaps   789 | back to the middle same day  76% | filled same day  69% | to the middle within 30 min  46% | never back  24% | half of the returns within 25 min
+
+ by kind of day
+in between                         gaps   572 | back to the middle same day  79% | filled same day  72% | to the middle within 30 min  52% | never back  21% | half of the returns within 20 min
+sideways day                       gaps   434 | back to the middle same day  85% | filled same day  76% | to the middle within 30 min  50% | never back  15% | half of the returns within 25 min
+trend day                          gaps   586 | back to the middle same day  71% | filled same day  62% | to the middle within 30 min  47% | never back  29% | half of the returns within 20 min
+
+BY SIZE IN POINTS
+0 to 5 points                      gaps  3419 | back to the middle same day  84% | filled same day  82% | to the middle within 30 min  69% | never back  16% | half of the returns within 10 min
+5 to 10 points                     gaps  1956 | back to the middle same day  79% | filled same day  75% | to the middle within 30 min  60% | never back  21% | half of the returns within 10 min
+10 to 20 points                    gaps  1664 | back to the middle same day  75% | filled same day  67% | to the middle within 30 min  56% | never back  25% | half of the returns within 15 min
+20 to 40 points                    gaps   768 | back to the middle same day  68% | filled same day  59% | to the middle within 30 min  45% | never back  32% | half of the returns within 20 min
+40 to more points                  gaps   180 | back to the middle same day  62% | filled same day  48% | to the middle within 30 min  36% | never back  38% | half of the returns within 25 min
