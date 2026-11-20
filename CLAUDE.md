@@ -197,6 +197,14 @@ their own logic. Read this before touching the code.
   Rule 1 (the reclaim, the retouch, the day end), then the ATR trail (the stop half an ATR behind the best close, 22 October evening). The page runs it under
   Calls with Signals (`drawSignals`). Described in `NEW_RULES.md`, apart from LOGIC.md. `lab/newrule-check.js` runs every case the
   documents give. PRs for it are named "New Rule Chart_".
+  The daily round (20 November, the owner: "I have created you to refine that page on daily basis"): each weekday at 16:20 IST the
+  day's saved candles are replayed through Calls with Signals and reported in the chat; report and propose only, nothing built
+  until the owner says yes. A yes goes in as one "New Rule Chart_" PR, the new rule in the Settings popup under its new name,
+  UNTICKED by default, and "unticked means keep it out of the table too" (`NewRule.MORE.optIn`, `moreCalls`): unticked, the engine
+  does not run it. The rules already on the page keep their calls in the table ticked or not. The first: Engulfing (strict)
+  (`morepat.js` `engulfing_strict`: a fall of 2.0 ATR, the close past the other candle's high or low, the signal before 14:00)
+  replaced the document's Engulfing on 20 November (`MorePat.PAGE_ORDER`; `MorePat.ORDER` stays the reference's 14 for
+  `lab/morepat_check.js`); NEW_RULES.md has the numbers.
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
