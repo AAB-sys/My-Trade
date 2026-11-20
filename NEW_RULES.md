@@ -296,6 +296,41 @@ signals), so buying the opposite side is no fix either; calls against the day's 
 with it (52%), but taking Engulfing only with the day's move gained in year 1 and lost 271 points in year 2, so it was not built.
 `lab/newrule-check.js` S1 to S7 hold the rule's cases and the swap.
 
+## Double Top (strict) replaces the Double Top (20 November): all three indices
+
+The owner, 20 November: "look into the double top rule on NIFTY BANK"; "yes, build it for NIFTY BANK only"; then, told that the test
+helped NIFTY 50 and SENSEX too, "add it for all three indices".
+
+**The rule** (`static/newrule.js`, `RULES["double top (strict)"]`, `DT_STRICT`): the Double Top of the "Trading Rules
+Specification" as the page runs it (Buy PE, swing size 2, the neckline break by 0.25 x ATR, Rule 1 and the trail), with one change:
+the two tops at least **7 candles** (35 minutes) apart, not 5. The table says "Rule:- Double Top (strict)".
+
+**On the page** (`NewRule.rulesFor`, `RULE_OPT_IN`): on NIFTY 50, NIFTY BANK and SENSEX the old Double Top gives no call; "Double Top
+(strict)" stands in its place in the Settings list, **unticked by default**: unticked, the engine does not run it (no call, nothing
+drawn, it holds up no other rule's call); ticked, its calls fill the table in the Double Top's place in the list.
+
+**Why** (index points before costs, the page's engine as it runs, every rule, one trade at a time). NIFTY BANK: 59 days, 26 August to
+20 November (the 36 saved days and the days before them rebuilt from `history/volume/NIFTYBANK_1min.csv`; on the 36 days both have,
+the rebuilt 5-minute candles equal the saved ones, 2,700 of 2,700). The Double Top gave 17 calls, 7 won, +497, carried by two calls
+(1 September +372, 9 September +283); from October 9 calls lost 258, six of them sold within one to three candles by a close back above
+the neckline. Seventeen calls are too few to tune on, so every change was tested on NIFTY BANK, on SENSEX (57 days, rebuilt the same
+way from its 1-minute file, 1,425 of 1,425 candles equal to the saved ones) and on NIFTY 50 (the two years and the saved days, 501
+days), and only a change that helped all three was kept. Against the page as it was:
+
+| | Double Top calls | Ticked (the strict rule) | Unticked (no Double Top) |
+| --- | --- | --- | --- |
+| NIFTY BANK, 59 days | 17 to 11 | +136 (26 August to 30 September +19, October and November +117) | -177 |
+| SENSEX, 57 days | 6 to 3 | +32 | -117 |
+| NIFTY 50, 501 days | 54 to 39 | +279; after 8 a call year 1 +50, year 2 +230 | +89; after 8 a call year 1 +158, year 2 +4 |
+
+On NIFTY BANK it takes out 6 Double Top calls (5 lost, 1 won: -167 together); two other calls come in for -31. On SENSEX it takes out
+one loser (-70) and one winner (+37); a third (+121) stays as the Double Bottom call of the same candle. On NIFTY 50 the strict Double
+Top still loses a little (39 calls, -77). Tried and not built: a break of the neckline by 0.5 x ATR (NIFTY BANK +207, NIFTY 50 better,
+SENSEX -92), 0.6 and 0.75 x ATR (SENSEX worse), 1.0 x ATR, tops within 0.3 ATR, a neckline 2.0 ATR deep, a rise of 3.0 ATR into the
+first top, the documents' swing size of 3, the signal within 10 candles of the second top, and no Double Top at all. The gains on
+NIFTY BANK and SENSEX rest on a handful of calls: thin, to be watched by the daily round. `lab/newrule-check.js` D1 to D4 hold the
+rule's cases and the swap.
+
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,

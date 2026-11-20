@@ -204,7 +204,8 @@ their own logic. Read this before touching the code.
   does not run it. The rules already on the page keep their calls in the table ticked or not. The first: Engulfing (strict)
   (`morepat.js` `engulfing_strict`: a fall of 2.0 ATR, the close past the other candle's high or low, the signal before 14:00)
   replaced the document's Engulfing on 20 November (`MorePat.PAGE_ORDER`; `MorePat.ORDER` stays the reference's 14 for
-  `lab/morepat_check.js`); NEW_RULES.md has the numbers.
+  `lab/morepat_check.js`); NEW_RULES.md has the numbers. The second: Double Top (strict) (the tops at least 7 candles apart,
+  `DT_STRICT`) replaced the Double Top on all three indices on 20 November (`NewRule.rulesFor`, `RULE_OPT_IN`).
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
