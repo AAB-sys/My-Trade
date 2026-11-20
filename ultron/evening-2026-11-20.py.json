@@ -1,0 +1,49 @@
+{
+ "paper": {
+  "NIFTY 50": {
+   "calls": 15,
+   "won": 6,
+   "pts": 80.75,
+   "rs": 4790,
+   "ce_pts": 219.75,
+   "pe_pts": -139.0
+  },
+  "NIFTY BANK": {
+   "calls": 12,
+   "won": 7,
+   "pts": 1952.05,
+   "rs": 44535,
+   "ce_pts": 2478.35,
+   "pe_pts": -526.3
+  },
+  "SENSEX": {
+   "calls": 15,
+   "won": 5,
+   "pts": -10.28,
+   "rs": 779,
+   "ce_pts": 323.07,
+   "pe_pts": -333.35
+  }
+ },
+ "plan": {
+  "calls": 3,
+  "won": 1,
+  "points": 33.95,
+  "after_8": 9.95,
+  "rupees": 2402,
+  "list": [
+   "20 11 CE 78.8",
+   "20 12 CE -8.5",
+   "20 12 CE -36.35"
+  ],
+  "left_out": {
+   "calls": 12,
+   "after_8": -49.2
+  }
+ },
+ "lock_rows": 13,
+ "lc_take": {
+  "calls": 9,
+  "pts": -96.65
+ }
+}

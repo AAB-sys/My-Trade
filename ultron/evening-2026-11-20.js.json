@@ -1,0 +1,38 @@
+{
+ "signals": {
+  "NIFTY 50": {
+   "calls": 4,
+   "won": 2,
+   "pts": 44.4,
+   "list": [
+    "10:55 Bearish Engulfing PE trail 5.5",
+    "11:55 rising wedge CE trail 85.3",
+    "12:40 Bearish Engulfing PE trail -21",
+    "14:00 Bearish Engulfing PE reclaim -25.4"
+   ]
+  },
+  "NIFTY BANK": {
+   "calls": 2,
+   "won": 1,
+   "pts": 547.75,
+   "list": [
+    "11:50 rising wedge CE trail 594.6",
+    "14:10 triple top CE trail -46.85"
+   ]
+  },
+  "SENSEX": {
+   "calls": 1,
+   "won": 1,
+   "pts": 14.11,
+   "list": [
+    "14:05 double bottom CE trail 14.11"
+   ]
+  }
+ },
+ "db": {
+  "table": 0,
+  "shadow": 0,
+  "shadowOnly": 0,
+  "shadowOnlyPoints": 0
+ }
+}

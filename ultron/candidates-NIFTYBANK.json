@@ -1,0 +1,22 @@
+{
+ "note": "as above",
+ "index": "NIFTY BANK",
+ "list": [
+  {
+   "rule": "small candle + calm days",
+   "found": "2026-11-16"
+  },
+  {
+   "rule": "red + small candle",
+   "found": "2026-11-13"
+  },
+  {
+   "rule": "normal day so far + Fri",
+   "found": "2026-11-09"
+  },
+  {
+   "rule": "near line + 3rd call",
+   "found": "2026-11-17"
+  }
+ ]
+}

@@ -1,0 +1,155 @@
+{
+ "note": "ULTROAN daily ledger: one entry per trading day. The ledger of 29 Sep to 19 Nov (18 entries) was lost when the work folder was reset on the night of 19 Nov; its daily numbers remain in the saved sessions and can be recomputed. From 20 Nov the ledger is also saved on GitHub (branch claude/ultroan-research, ultron/).",
+ "carried": {
+  "as_of": "2026-11-19",
+  "trade_plan_forward": "14 days, 28 calls, +803 after 8 a call, 7 up 5 down",
+  "allrules_pass_rows": "VP Shape calls SENSEX +2898 / 12 days (15 calls, 9 up 3 down, +2001 without the best day); Paper every CE SENSEX +4630 / 14 days; VP Shape calls NIFTY 50 +942 / 28 days (16 up 12 down); Trade Plan rule +1211 / 28 days (16 up 12 down); Paper every call SENSEX +2608 / 14",
+  "builder": "NIFTY 50: 6 survivors, 27 on watch, only the plan's own rule READY; NIFTY BANK 3 survivors, 4 on watch; PE 0 survivors",
+  "lab_watch_list": "QUIET-BREAK, NEWHIGH-TREND, DIR-1215 (found 13 Nov), NEWHIGH-STAY (found 19 Nov)"
+ },
+ "days": [
+  {
+   "date": "2026-11-20",
+   "note": "A second trend-up day. Scripts rebuilt today: wf/evening.py, wf/evening.js, wf/hourly2.js, vpday/day.js, watch.js, chart.js, strat/mkcsv.js. STILL TO REBUILD: wf/build_rules.js (the rule builder and its leaderboards), wf/research.js (allrules.json), wf/shadow5f.js, wf/morepat_day.js, wf/plan_cross.js, the Impulse MACD day score, vpday/sig.py, the test copy (test/sigbox).",
+   "paper": {
+    "NIFTY 50": {
+     "calls": 15,
+     "won": 6,
+     "pts": 80.75,
+     "rs": 4790,
+     "ce_pts": 219.75,
+     "pe_pts": -139.0
+    },
+    "NIFTY BANK": {
+     "calls": 12,
+     "won": 7,
+     "pts": 1952.05,
+     "rs": 44535,
+     "ce_pts": 2478.35,
+     "pe_pts": -526.3
+    },
+    "SENSEX": {
+     "calls": 15,
+     "won": 5,
+     "pts": -10.28,
+     "rs": 779,
+     "ce_pts": 323.07,
+     "pe_pts": -333.35
+    }
+   },
+   "paper_note": "5-minute rows with levels 'close', parallel rows included as the CSV gives them; someone also used the 1-minute time frame today (38 extra rows, not counted)",
+   "lock_rows": 13,
+   "lc_take": {
+    "calls": 9,
+    "pts": -96.65
+   },
+   "signals": {
+    "NIFTY 50": {
+     "calls": 4,
+     "won": 2,
+     "pts": 44.4,
+     "list": [
+      "10:55 Bearish Engulfing PE trail 5.5",
+      "11:55 rising wedge CE trail 85.3",
+      "12:40 Bearish Engulfing PE trail -21",
+      "14:00 Bearish Engulfing PE reclaim -25.4"
+     ]
+    },
+    "NIFTY BANK": {
+     "calls": 2,
+     "won": 1,
+     "pts": 547.75,
+     "list": [
+      "11:50 rising wedge CE trail 594.6",
+      "14:10 triple top CE trail -46.85"
+     ]
+    },
+    "SENSEX": {
+     "calls": 1,
+     "won": 1,
+     "pts": 14.11,
+     "list": [
+      "14:05 double bottom CE trail 14.11"
+     ]
+    }
+   },
+   "db": {
+    "table": 0,
+    "shadow": 0,
+    "shadowOnly": 0,
+    "shadowOnlyPoints": 0
+   },
+   "trade_plan": {
+    "rule": "green + after 12:00",
+    "calls": 3,
+    "won": 1,
+    "points": 33.95,
+    "after_8": 9.95,
+    "rupees": 2402,
+    "left_out": "12 calls, -49.2 after charges",
+    "forward": "15 days, 31 calls, +813 after 8 a call, 8 up 5 down: holding"
+   },
+   "volume_profile": {
+    "NIFTY 50": {
+     "final": "Double",
+     "break": [
+      [
+       "CE",
+       "12:10",
+       135
+      ]
+     ],
+     "shape": [
+      [
+       "CE",
+       "P",
+       "11:25",
+       240.15
+      ]
+     ]
+    },
+    "NIFTY BANK": {
+     "final": "P",
+     "break": [
+      [
+       "CE",
+       "12:10",
+       638.45
+      ]
+     ],
+     "shape": [
+      [
+       "CE",
+       "P",
+       "13:50",
+       220
+      ]
+     ]
+    },
+    "SENSEX": {
+     "final": "Double",
+     "break": [
+      [
+       "CE",
+       "12:10",
+       475.34
+      ]
+     ],
+     "shape": [
+      [
+       "CE",
+       "P",
+       "11:00",
+       878.87
+      ]
+     ]
+    }
+   },
+   "volume_profile_note": "Impulse MACD calls and the Signal box not scored today (scripts to rebuild)",
+   "builder": "not run today (script lost); the candidates' found-on dates are saved in candidates-*.json",
+   "allrules": "not rebuilt today; by hand: VP Shape calls SENSEX +870.87 today -> 13 days, 16 calls, +3768, 10 up 3 down",
+   "fvg": "the owner asked how often a gap is revisited: 500 days, 7,987 gaps, 74% filled the same day; 20-40 points 59%; big gap on a trend day with the day 31%; still open after 60 min -> 45% (fvg/fvg3b.txt)",
+   "prs_open": "#279 back on the page fast: waiting for the owner's merge; branch claude/totp-window ready, no PR yet; offered (no answer yet): the alerts list showing every POC move"
+  }
+ ]
+}

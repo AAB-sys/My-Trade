@@ -1,0 +1,141 @@
+{
+ "note": "Rebuilt 20 Nov from the 19 Nov builder report after the work folder was lost. The found-on dates are the originals and must never change. The forward scores are to be recomputed when wf/build_rules.js is rebuilt.",
+ "index": "NIFTY 50",
+ "list": [
+  {
+   "rule": "green + after 12:00",
+   "found": "2026-10-29",
+   "note": "THE TRADE PLAN'S RULE"
+  },
+  {
+   "rule": "CE + above the close",
+   "found": "2026-10-30",
+   "note": ""
+  },
+  {
+   "rule": "CE + far line",
+   "found": "2026-11-02",
+   "note": ""
+  },
+  {
+   "rule": "above the close + calm days",
+   "found": "2026-10-29",
+   "note": ""
+  },
+  {
+   "rule": "far line + green",
+   "found": "2026-11-02",
+   "note": ""
+  },
+  {
+   "rule": "last call open + calm days",
+   "found": "2026-11-02",
+   "note": ""
+  },
+  {
+   "rule": "above the close + near the day's high",
+   "found": "2026-11-02",
+   "note": ""
+  },
+  {
+   "rule": "with the move + calm days",
+   "found": "2026-10-30",
+   "note": ""
+  },
+  {
+   "rule": "above the close + green",
+   "found": "2026-11-02",
+   "note": ""
+  },
+  {
+   "rule": "wide day so far + calm days",
+   "found": "2026-10-30",
+   "note": ""
+  },
+  {
+   "rule": "big green + with the move",
+   "found": "2026-11-04",
+   "note": ""
+  },
+  {
+   "rule": "above the close + big green",
+   "found": "2026-11-04",
+   "note": ""
+  },
+  {
+   "rule": "13 + near line",
+   "found": "2026-10-30",
+   "note": ""
+  },
+  {
+   "rule": "13 + fell",
+   "found": "2026-11-11",
+   "note": ""
+  },
+  {
+   "rule": "rose a lot + calm days",
+   "found": "2026-11-09",
+   "note": ""
+  },
+  {
+   "rule": "with the move + flat open",
+   "found": "2026-11-17",
+   "note": ""
+  },
+  {
+   "rule": "flat open + Tue",
+   "found": "2026-11-17",
+   "note": ""
+  },
+  {
+   "rule": "green + wild days",
+   "found": "2026-11-11",
+   "note": ""
+  },
+  {
+   "rule": "above the close + rose a lot",
+   "found": "2026-11-16",
+   "note": ""
+  },
+  {
+   "rule": "CE + after 12:00",
+   "found": "2026-11-13",
+   "note": ""
+  },
+  {
+   "rule": "big green + gap up",
+   "found": "2026-11-09",
+   "note": ""
+  },
+  {
+   "rule": "normal candle + after 12:00",
+   "found": "2026-11-02",
+   "note": ""
+  },
+  {
+   "rule": "near line + fell",
+   "found": "2026-10-29",
+   "note": ""
+  },
+  {
+   "rule": "calm days + after 12:00",
+   "found": "2026-11-09",
+   "note": ""
+  },
+  {
+   "rule": "green + gap up",
+   "found": "2026-11-02",
+   "note": ""
+  },
+  {
+   "rule": "9 + above the close",
+   "found": "2026-10-29",
+   "note": ""
+  },
+  {
+   "rule": "Wed + after 12:00",
+   "found": "2026-10-29",
+   "note": ""
+  }
+ ]
+}
