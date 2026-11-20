@@ -103,6 +103,24 @@ FAM.gap = { grid: { mode: ["fill", "go"], until: ["09:45", "10:15", "11:15"], st
       const stop = o.stop === "far" ? ext + sgn * o.buf * a : x.close + sgn * (1 + o.buf) * a; return { side: sgn > 0 ? "PE" : "CE", stop, target: o.rr ? null : y.poc }; }
     if (k !== kU) return null; done = true; for (let i = 0; i <= k; i++) if (sgn > 0 ? b[i].low <= edge : b[i].high >= edge) return null;
     return { side: sgn > 0 ? "CE" : "PE", stop: o.stop === "near" ? edge - sgn * o.buf * a : y.poc }; }; } };
+// 12. (19 Nov) YESTERDAY'S VALUE AREA AS A FILTER on two families that already hold. The entry and the stop are the base family's;
+// the filter only says which calls to take: "open": the day opened outside yesterday's value area and the call goes the gap's way;
+// "stay": the same and yesterday's edge is still untouched at the signal; "side": the signal candle closes outside yesterday's value area and the call goes that way.
+const vaFilter = (b, y, o) => { const op = b[0].open, g = op > y.vah ? 1 : op < y.val ? -1 : 0; return (k, s) => { const dir = s.side === "CE" ? 1 : -1;
+  if (o.f === "side") return b[k].close > y.vah ? dir > 0 : b[k].close < y.val ? dir < 0 : false; if (!g || dir !== g) return false; if (o.f === "open") return true;
+  const edge = g > 0 ? y.vah : y.val; for (let i = 0; i <= k; i++) if (g > 0 ? b[i].low <= edge : b[i].high >= edge) return false; return true; }; };
+const withVa = (base, fix) => (b, c, o) => { const y = yva[dayOf.get(b)]; if (!y) return null; const inner = FAM[base].mk(b, c, { ...fix, ...o }); if (!inner) return null; const ok = vaFilter(b, y, o); return (k) => { const s = inner(k); return s && ok(k, s) ? s : null; }; };
+FAM.donva = { grid: { n: [12, 24], trail: [3.5, 5], max: [3], trend: [0, 1], from: ["09:45"], f: ["open", "stay", "side"] }, mk: withVa("don", {}) };
+FAM.dirva = { grid: { at: ["11:15", "12:15", "13:15"], move: [0.3, 0.5], stop: [0.25, 0.4], f: ["open", "stay", "side"] }, mk: withVa("dir", { gapWith: 0 }) };
+// 13. (20 Nov) THE FAIR VALUE GAP THAT STAYS OPEN, from the owner's question and fvg/fvg3.js (500 days: 74% of gaps fill the same day, but a
+// big gap pointing the day's way fills only 31%, and half of all returns come within 10-20 minutes). Three candles: candle 1's high below
+// candle 3's low (up) or the mirror. Take only a gap of at least `rel` ATR; wait `wait` candles: if no candle has gone back to the gap's
+// middle, go with the gap (CE after an up gap) at that candle's close; stop at the gap's far side (or its middle); out 15:15 or a following stop.
+FAM.fvg = { grid: { rel: [0.5, 1], wait: [0, 2, 4], stop: ["far", "mid"], trail: [0, 4], ext: [0, 1], max: [1, 2] }, mk: (b, c, o) => { const G = [];
+  return (k) => { if (k >= 2 && b[k].hm >= "09:30") { const a = b[k - 2], x = b[k]; let up = 0, lo, hi; if (a.high < x.low) { up = 1; lo = a.high; hi = x.low; } else if (a.low > x.high) { up = -1; lo = x.high; hi = a.low; }
+      if (up && (hi - lo) >= o.rel * c.atr[k]) { let H = -Infinity, L = Infinity; for (let i = 0; i <= k; i++) { H = Math.max(H, b[i].high); L = Math.min(L, b[i].low); } if (!o.ext || (up > 0 ? Math.max(b[k].high, b[k - 1].high) >= H : Math.min(b[k].low, b[k - 1].low) <= L)) G.push({ up, lo, hi, k, dead: false }); } }
+    if (b[k].hm > "14:00") return null; for (const g of G) { if (g.dead) continue; const mid = (g.lo + g.hi) / 2; if (k > g.k && (g.up > 0 ? b[k].low <= mid : b[k].high >= mid)) { g.dead = true; continue; }
+      if (k === g.k + o.wait) { g.dead = true; return { side: g.up > 0 ? "CE" : "PE", stop: o.stop === "far" ? (g.up > 0 ? g.lo : g.hi) : mid }; } } return null; }; } };
 const grid = (g) => Object.entries(g).reduce((acc, [k, vs]) => acc.flatMap(a => vs.map(v => ({ ...a, [k]: v }))), [{}]);
 // the two research years are fixed (16 Nov: a split by the middle moved with every new day and changed year 1); days after 9 Nov 2026 are forward days only
 const Y1 = dates.slice(11).filter(d => d <= "2025-11-10"), Y2 = dates.filter(d => d > "2025-11-10" && d <= "2026-11-09");

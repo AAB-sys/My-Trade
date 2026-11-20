@@ -1,0 +1,114 @@
+{
+ "note": "The watch list: each strategy fixed as found; scored only on the days after its found-on date. Rebuilt 20 Nov from ideas.md after the work folder was lost; settings and found-on dates are the originals.",
+ "list": [
+  {
+   "id": "QUIET-BREAK",
+   "fam": "quiet",
+   "o": {
+    "small": 0.8,
+    "min": 15,
+    "rr": 0,
+    "stopAt": "far"
+   },
+   "found": "2026-11-13",
+   "words": "yesterday's range under 0.8 of the usual; the first 15 minutes' break; stop at the far side; out 15:15",
+   "forward": {
+    "days": 5,
+    "to": "2026-11-20",
+    "n": 3,
+    "won": 2,
+    "net": -47,
+    "up": 2,
+    "dn": 1,
+    "best": 43,
+    "ce": -85,
+    "pe": 38
+   },
+   "ready": false,
+   "bad": false
+  },
+  {
+   "id": "NEWHIGH-TREND",
+   "fam": "don",
+   "o": {
+    "n": 12,
+    "trail": 5,
+    "max": 3,
+    "trend": 1,
+    "from": "09:45"
+   },
+   "found": "2026-11-13",
+   "words": "close above the last 12 candles' high (CE) / below the low (PE) with the averages agreeing; stop follows 5 ATR; max 3 a day",
+   "forward": {
+    "days": 5,
+    "to": "2026-11-20",
+    "n": 5,
+    "won": 2,
+    "net": 338,
+    "up": 2,
+    "dn": 3,
+    "best": 222,
+    "ce": 351,
+    "pe": -13
+   },
+   "ready": false,
+   "bad": false
+  },
+  {
+   "id": "DIR-1215",
+   "fam": "dir",
+   "o": {
+    "at": "12:15",
+    "move": 0.3,
+    "stop": 0.25,
+    "gapWith": 1
+   },
+   "found": "2026-11-13",
+   "words": "at 12:15, the day has moved 0.3 of the usual range the same way as the opening gap: go with it; stop 0.25 of the range; out 15:15",
+   "forward": {
+    "days": 5,
+    "to": "2026-11-20",
+    "n": 0,
+    "won": 0,
+    "net": 0,
+    "up": 0,
+    "dn": 0,
+    "best": 0,
+    "ce": 0,
+    "pe": 0
+   },
+   "ready": false,
+   "bad": false
+  },
+  {
+   "id": "NEWHIGH-STAY",
+   "fam": "donva",
+   "o": {
+    "n": 12,
+    "trail": 5,
+    "max": 3,
+    "trend": 1,
+    "from": "09:45",
+    "f": "stay"
+   },
+   "found": "2026-11-19",
+   "words": "NEWHIGH-TREND's call, taken only when the day opened outside yesterday's value area, the call goes the gap's way, and yesterday's edge is still untouched",
+   "asFound": "Y1 56 calls +562; Y2 73 calls +1217 (halves +1004 / +213; CE +125 PE +1092)",
+   "forward": {
+    "days": 1,
+    "to": "2026-11-20",
+    "n": 0,
+    "won": 0,
+    "net": 0,
+    "up": 0,
+    "dn": 0,
+    "best": 0,
+    "ce": 0,
+    "pe": 0
+   },
+   "ready": false,
+   "bad": false
+  }
+ ],
+ "updated": "2026-11-20T11:14:17.052Z"
+}

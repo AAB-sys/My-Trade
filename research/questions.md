@@ -82,3 +82,15 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 
 ## P1 (open, from 19 Nov's growing study): in a P shape, a price between the VAL and the POC goes back up to the POC 53% and down to the VAL 19% (273 candles on 22 volume days; two years 47% / 34%). Re-answer as days are added; test as a filter, not an entry.
 ## S1 (open, 19 Nov): the Volume Profile page's sideways guard ("5 crossings of the busiest price") refused CE closes for 2 hours on a trend-up day. How often does that guard block a day that then trends? Needs the volume days; count from 20 Nov.
+
+## F1 answered 20 Nov (asked by the owner: "at what condition it comes back FVG?"). 500 days of NIFTY 50 5-minute candles, 7,987 three-candle gaps (fvg/fvg3.js; research/fvg-return-2026-11-20.txt)
+- 74% of gaps are filled the same day; 79% get back to the gap's middle. So "gaps get filled" is mostly true, for small gaps.
+- Size: under 5 points 82% filled; 10-20 points 67%; 20-40 points 59%; over 40 points 48%.
+- Time: made before 14:00 about 80% filled; after 14:00 56%.
+- Kind of day (known at the close): sideways 79%, trend 70%; a big gap (over 1 ATR) on a trend day pointing the day's way 31% (158 cases).
+- Fast or not at all: half of the returns come within 10-20 minutes; a gap still open after 60 minutes is filled later that day only 45% (1,978 cases).
+- Today (a trend-up day): the three gaps of 11:50-12:20 (14, 28, 23 points) stayed open to the close.
+- As a trade (lab idea 13): going with a big gap that stays open does not pay after 8 points a call.
+
+## D1 (open, 20 Nov): a Double Zone made by a step up (the POC jumps to the upper zone, as today on NIFTY 50 and SENSEX after 13:05): does the upper zone hold as the floor to the close? Count on the volume days.
+## P2 (open, 20 Nov): the P-shape Shape call won 5 of 5 on the two trend days (19 and 20 Nov). Is a P call after 11:00 with the price above yesterday's VAH better than P calls in general? Volume days only; few cases, grow it.

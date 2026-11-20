@@ -284,3 +284,16 @@ both years, year 2 by halves, and the unfiltered base beside each): NEWHIGH 24, 
 JOINED THE WATCH LIST: NEWHIGH-STAY {n 12, trail 5, max 3, trend 1, from 09:45, filter stay}, found 2026-11-19; its new days start 20 Nov.
 - Watch list, new day 4 (19 Nov): QUIET-BREAK 3 calls -47 (2 up 1 down); NEWHIGH-TREND 4 calls +116 (1 up 3 down; today +179); DIR-1215 no call yet.
 - Also answered (questions.md T1): an open inside yesterday's value that breaks out early closes outside only 59-64%.
+
+## 20 Nov evening: idea 13 FVG-OPEN (the fair value gap that stays open). Variants ever tried: 878
+From the owner's question and F1 (questions.md): a big gap that the price does not come back to. A gap of at least 0.5 or 1 ATR; wait 0, 2 or
+4 candles; if no candle has gone back to the gap's middle, go with the gap; stop at the gap's far side or its middle; out 15:15 or a
+stop that follows 4 ATR; only gaps that made a new day high/low, or any; 1 or 2 a day. 96 variants (strat/fvgnb.txt).
+Result: 1 of 96 is positive in year 1, 23 in year 2, 0 in both. The best in year 2 (1 ATR, wait 4, new high/low, following stop: +97 to +203
+on about 47 calls) loses in year 1 (-274 to -464). Dropped.
+Lesson (fifth time): a true fact about where the price does NOT go back to is not an entry. The gap facts stay as facts for the eyes
+(questions.md F1): "small gap before 14:00 on a sideways day: expect a fill; big gap with the trend, or one still open after an hour: do not wait for it".
+- Watch list, new days to 20 Nov: QUIET-BREAK 5 days, 3 calls, -47 (2 up 1 down); NEWHIGH-TREND 5 days, 5 calls, +338 (2 up 3 down; +222 today);
+  DIR-1215 5 days, no call yet; NEWHIGH-STAY 1 day, no call (today opened inside yesterday's value).
+- Note: the work folder was lost on the night of 19 Nov. lab.js was restored from GitHub (18 Nov) and idea 12 put back; the lab gives the same
+  numbers as on 19 Nov. watchlist.json was rebuilt with the original settings and found-on dates. Friday's check on NIFTY BANK and SENSEX was not run this week.

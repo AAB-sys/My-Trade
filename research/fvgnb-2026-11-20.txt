@@ -1,0 +1,10 @@
+variants 96 net>0 in Y1 1 in Y2 23 in both 0
+{rel:1,wait:4,stop:far,trail:4,ext:1,max:2}                Y1 74 -274 (23/47) CE 132 PE -405 | Y2 48 97 (16/30) CE -197 PE 294
+{rel:1,wait:4,stop:far,trail:4,ext:1,max:1}                Y1 70 -464 (22/48) CE -197 PE -267 | Y2 46 203 (16/30) CE -91 PE 294
+{rel:1,wait:4,stop:mid,trail:4,ext:1,max:2}                Y1 74 -454 (21/49) CE 332 PE -787 | Y2 48 35 (14/31) CE -35 PE 70
+{rel:1,wait:4,stop:mid,trail:4,ext:1,max:1}                Y1 70 -695 (18/52) CE 4 PE -699 | Y2 45 160 (14/31) CE 66 PE 93
+{rel:1,wait:0,stop:mid,trail:4,ext:1,max:2}                Y1 106 50 (31/62) CE 441 PE -391 | Y2 83 -617 (19/57) CE -714 PE 97
+{rel:1,wait:0,stop:far,trail:4,ext:1,max:2}                Y1 104 -390 (36/57) CE 94 PE -484 | Y2 81 -213 (26/50) CE -1090 PE 877
+{rel:0.5,wait:2,stop:mid,trail:0,ext:0,max:1}              Y1 198 -3071 (41/157) CE -1680 PE -1391 | Y2 219 -1089 (55/164) CE -279 PE -810
+{rel:0.5,wait:0,stop:far,trail:0,ext:0,max:2}              Y1 339 -2280 (77/141) CE -1801 PE -479 | Y2 368 -2205 (82/155) CE -1346 PE -858
+{rel:0.5,wait:0,stop:far,trail:4,ext:0,max:2}              Y1 353 -2630 (76/142) CE -1696 PE -934 | Y2 374 -2661 (80/157) CE -1613 PE -1047
