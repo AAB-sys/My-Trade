@@ -10,6 +10,7 @@
 <script src="/static/vpshape.js"></script>
 <script src="/static/impulse.js"></script>
 <script src="/static/vptool.js"></script>
+<script src="/static/fvg.js"></script>
 <!-- The Volume Profile page (12 November, the owner: "build a new page with header name as volume profile ... the chart format
      which dhan uses for pc and mobile"). A page of its own: it reads the index's candles and the futures' volume, draws them,
      and decides nothing. Paper calls and Calls with Signals are not read here and do not read this page. The chart is drawn
@@ -343,6 +344,10 @@
   // all"): static/vptool.js, put on the chart further down, and only when this page is AAA_V1's chart. On the Volume Profile
   // page itself vpTool stays null, and every line below that names it does nothing.
   let vpTool = null;
+  // AAA_V1's fair value gaps (20 November, the owner, with a build document and its module: "it is for AAA_V1, no changes
+  // required on other pages at all"): static/fvg.js, put on the chart further down, and only when this page is AAA_V1's chart.
+  // An "FVG" tick box, off until ticked. On the Volume Profile page itself fvgTool stays null and nothing below that names it runs.
+  let fvgTool = null;
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
   try { const saved = JSON.parse(localStorage.getItem(STORE) || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.vwap === true) document.getElementById("show-vwap").checked = true; if (saved.panel === true) document.getElementById("show-panel").checked = true; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
@@ -745,6 +750,10 @@
     bars: () => shown().flat(), volumes: () => state.volumes, fine: () => state.fine !== state.bars ? state.fine : null, fineVolumes: () => state.fineVolumes,
     xOf, yOf, placeOf, timeOf, pointAt, num, short, css, holdChart, setTool, changed: drawButtons,
   });
+  if (EMBED && window.Fvg && Fvg.attach) fvgTool = Fvg.attach({
+    chart, series: candles, IST, tools: $("tools"), infoRow: $("inforow"), name: () => state.name, interval: () => state.interval,
+    bars: () => shown().flat(), fine: () => state.fine, num, css, now: () => Date.now() / 1000,
+  });
   function rebuild() {
     // the count is made from each day's 1-minute candles and their volume, whatever candle size is shown; where those
     // are missing, from the candles shown
@@ -758,6 +767,7 @@
     drawTodayNames();
     drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable(); tickPanel();
     if (vpTool) vpTool.refresh();  // AAA_V1: the volume profiles drawn by hand are counted again from the candles and volume now
+    if (fvgTool) fvgTool.refresh();  // AAA_V1: the fair value gaps are read again from the day's finished candles
   }
   // The running day's own levels, named (17 November, the owner, of the evening picture's "Today's VAH" and "Today's VAL" tags:
   // "why on live feed it is not showing todays VAH and todays VAL ?"): the profile's dashed VAH and VAL lines and its POC line

@@ -459,6 +459,19 @@ branch from `main`.
   so. Profiles are kept per index in this browser (`aaaVolumeProfileTools:<name>`), apart from the page's other drawings.
   `static/volume.html` names it only through `vpTool`, which is null unless the page is AAA_V1's chart (`embed=aaa`), so the
   Volume Profile page itself is as it was. The tool reads; it is no rule and gives no call.
+  Its fair value gaps (20 November, the owner, with the build document "AAA_V1 FVG Live chart logic" and its module
+  `panel_fvg.py`: "it is for AAA_V1, no changes required on other pages at all. go through the logic carefully and build it in
+  proper way"; then: "it will impact on the buy CE or buy PE heavily"): `static/fvg.js`. Its first half is the owner's module
+  rule for rule (`resample`, `Tracker`: a gap only when candle 3 has closed, today's candles back to back, the size filter,
+  active, touched, half, filled, inverted, the retiring), with four faults put right (a bigger candle built over a hole in the
+  1-minute candles; a finished candle the feed revises; half-to-even rounding in the words; "0 = no limit" by accident). The
+  same rules stand in `lab/fvg_ref.py`, and `python3 lab/check_fvg.py` proves the two agree. Its second half puts them on the
+  chart: an "FVG" tick box in AAA_V1's top row, OFF until ticked, with a gear for every setting of the document; boxes under
+  the candles from candle 1 to the right edge, shrunk to the unfilled part, fainter once touched, a dashed 50% line; and a row
+  of words above the chart (open gaps, the nearest bullish gap below and bearish gap above the price, the day's alerts). Only
+  the last day's FINISHED candles are read (a later candle has come, or a minute has passed since its end), afresh each time.
+  It gives no call and no CE or PE: the document's own evidence says a gap is a map, not a signal. `static/volume.html` names
+  it only through `fvgTool`, null unless the page is AAA_V1's chart, so the Volume Profile page is as it was.
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
