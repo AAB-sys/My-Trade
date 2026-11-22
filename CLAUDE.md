@@ -211,7 +211,17 @@ their own logic. Read this before touching the code.
   `moreCalls(ticked, index)`; not on NIFTY BANK, where it lost: the owner's choice). The fourth: Doji Reversal (strict) (`morepat.js`
   `doji_strict`: the doji at least 1.0 ATR tall) replaced the Doji rule on NIFTY 50 on 22 November (`MORE.optIn`). Since 22 November
   each index page keeps its own Settings ticks (`signalsIndicators:<index>`, started from the shared `signalsIndicators`; the owner:
-  "do not share the tick across the 3 pages"), and the grey note in that list is gone. Settings > Strategies (22 November, the
+  "do not share the tick across the 3 pages"), and the grey note in that list is gone.
+  The fifth is not a stricter rule but a new one, NEWHIGH-TREND / NEWLOW-TREND (22 November, the owner: "built it for the PE as well
+  like NEWLOW-Trend", "built it for nifty bank and sensex as well and add the indicator in the settings for all 3 indices"): `morepat.js`
+  `trend_break` (stands after the 14 in `MorePat.PAGE_ORDER`, kept out of `ORDER`): Buy CE on a close above the highest high of the 12
+  candles before it with the 20 average above the 50 (EMAs of the closes, carried from the previous sessions through `ctx.prev_bars`),
+  Buy PE on the mirror, the signal candle 10:15 to 14:00. It is the one rule with its own exit: the stop starts 5 ATR behind the signal
+  close and trails 5 ATR behind the best close (`stop0`, `trail` in the signal; `stopAt`, `trailAtr` on the trade, which starts on
+  stage 2), so it can stay with a trend; every other call keeps Rule 1 and the half-ATR trail. Opt-in (`MORE.optIn`), on all three
+  indices (`MORE.alsoOn`); only its calls are drawn, not the signals a call already open held back. Because it holds a call open for
+  hours, ticked it holds up the other rules' calls (one trade at a time). NEW_RULES.md has the numbers.
+  Settings > Strategies (22 November, the
   owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first
   close past the day's high or low by 0.25 ATR). A ticked strategy runs ON ITS OWN (`runDay` with `rules: strategiesFor(...)`, `more:
