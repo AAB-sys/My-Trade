@@ -441,3 +441,47 @@ when the volume was uneven. The page loads the volume with the candles (`/indice
 candles). When the day has no volume (the route failed, an older day, 30 minute candles) the VWAP is the plain average as
 before and the line is named "VWAP avg". The rule's other conditions are unchanged; only where the VWAP line sits changed,
 so a VWAP Reclaim or Loss call can fire on a different candle than the plain average gave.
+
+## NEWHIGH-TREND / NEWLOW-TREND: a rule that rides a trend (22 November): all three indices
+
+The owner, 22 November, shown Friday's rally (13:30 to 14:20) that no rule had called: "built it for the PE as well like
+NEWLOW-Trend", "built it for nifty bank and sensex as well and add the indicator in the settings for all 3 indices". The rule is
+from the ULTROAN strategy study (found 13 November, on the owner's NIFTY 50 candles, `NEWHIGH-TREND`); it is not in the owner's
+documents and not in the reference.
+
+**The rule** (`static/morepat.js`, `trend_break`): **Buy CE** (NEWHIGH-TREND) when a 5-minute candle **closes above the highest
+high of the 12 candles before it** while the **20-candle average is above the 50-candle one** (EMAs of the closes, carried over from
+the previous sessions); **Buy PE** (NEWLOW-TREND) is the same on the chart turned upside down: a close below the lowest low of the
+12 candles before it, the 20 below the 50. The signal candle starts at 10:15 (12 candles of the day) to 14:00; the entry is the
+next candle's open, inside the page's 09:30 to 14:45 window. Every candle that qualifies is a signal; one trade at a time.
+
+**Its own exit**: Rule 1 would sell on the first close back across the 12-candle high, which ends a trend call in a candle or two.
+So this rule alone carries its own exit: the stop starts **5 x ATR behind the signal candle's close** and, once a candle has closed
+in profit, follows the best close **5 x ATR behind**, never back; sold at the close of the first candle that closes past it, or at
+the day's last candle. The table says "Rule:- NEWHIGH-TREND" (or NEWLOW-TREND) and "its own exit"; there is no 1 ATR guide.
+
+**On the page**: Settings lists "NEWHIGH / NEWLOW Trend (Buy CE / Buy PE)", **unticked by default**, on NIFTY 50, NIFTY BANK and
+SENSEX (`NewRule.MORE.optIn`, `alsoOn`); unticked, it gives no call and holds up nothing; ticked, its calls fill the table. Only its
+calls are drawn on the chart (with the 12-candle high as its line), not the many signals a call already open held back (they stay in
+the signal log, NIFTY 50). **Ticked it holds up the other rules' calls**: its call is often open for hours, and one trade is open at
+a time.
+
+**Numbers** (the page's engine as it runs, the rule on its own, index points, 8 points off each call; the candles of NIFTY 50 are the
+owner's two years and the saved days, 498 days; NIFTY BANK and SENSEX only the days since late August, rebuilt from
+`history/volume/NIFTYBANK_1min.csv` and `SENSEX_1min.csv` and the saved days, 55 and 52 days):
+
+| | Calls | Won | Net | Halves | Buy CE | Buy PE |
+| --- | --- | --- | --- | --- | --- | --- |
+| NIFTY 50, 498 days | 526 | 244 | +780 | -318 / +1,098 | -258 | +1,038 |
+| NIFTY BANK, 55 days | 62 | 30 | +530 | -2,257 / +2,787 | +2,719 | -2,188 |
+| SENSEX, 52 days | 57 | 30 | +2,227 | -120 / +2,347 | +2,046 | +181 |
+
+The ULTROAN study had NIFTY 50 at +502 (year 1) and +1,343 (year 2) with stops filled at the stop price during the candle; the page
+sells at the close of the candle that closes past the stop, which costs points: that is the +780 here. The side that pays differs by
+index (NIFTY 50: the Buy PE; NIFTY BANK and SENSEX: the Buy CE), and NIFTY BANK and SENSEX have two to three months of days, with a
+losing first half on both: thin, to be watched. With the rest of the page's rules running beside it and the tick on, the page's net
+moved +3,859 (NIFTY 50), -1,745 (NIFTY BANK) and +1,358 (SENSEX); the NIFTY 50 gain is mostly the other rules' losing calls held back
+by this rule's open call (its own calls inside that run: 378, -411). Friday 20 November, ticked: Buy CE at 10:45 on all three
+indices, held to the close: NIFTY 50 +246 points, NIFTY BANK +1,268, SENSEX +720 (before costs).
+
+`lab/newrule-check.js` T1 to T8 hold the rule's cases, the three indices and the exit.
