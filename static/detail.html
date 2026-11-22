@@ -2376,7 +2376,8 @@
     // the strategies ticked under Settings > Strategies run ON THEIR OWN (22 November): their calls go to "Call logs from strategy", never into the table above
     const strategies = NewRule.strategiesFor ? NewRule.strategiesFor(name, state.strategies || new Set()) : [];
     const stratTrades = NewRule.runStrategies({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes }, strategies);  // each strategy on its own: ticking one never takes a call from another
-    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) }), bars, before, closed, dayEnd, volumes, strategies, stratTrades };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
+    // runPage (22 November): an add-on rule ticked (NEWHIGH-TREND) runs on its own and only adds calls; the page's rules as they always ran
+    return { ...(NewRule.runPage || NewRule.runDay)({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) }), bars, before, closed, dayEnd, volumes, strategies, stratTrades };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {

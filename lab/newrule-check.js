@@ -905,3 +905,40 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(t2 && t2.how === "trail" && t2.stop > t2.stopAt && t2.exit < t2.stop && t2.points > 0, "T8: after a long rise the stop has trailed up and the call is sold at the first close below it, in profit: " + JSON.stringify(t2 && { how: t2.how, stop: t2.stop, stopAt: t2.stopAt, exit: t2.exit, points: t2.points }));
   console.log("New Rule Chart: NEWHIGH-TREND / NEWLOW-TREND: a close past the last 12 candles' high (low) with the averages agreeing, its own 5 ATR stop and trail, opt-in on all three indices (T1 to T8)");
 }
+
+// ---- K: nothing new takes an existing call away (22 November, the owner: "new inndicator or rules or strategies should not remove old fired
+// call or signals which are fired already becasue of the existing 24 signals on the chart. it should always be there on the chart ... no change
+// in the exisitng calls logic and no change in already fired signals ... It should be for all 3 indices"). On 16 real saved days of all three
+// indices (lab/keep_days.json): every add-on rule (NewRule.MORE.addOn) and every strategy, ticked over every set of the page's own ticks
+// tried, leaves every call of the page's rules exactly as it was, and adds only its own calls, the same as it gives alone
+{
+  const fs = require("fs"), K = JSON.parse(fs.readFileSync(path.join(__dirname, "keep_days.json"))).days;
+  const bars = (rows) => rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close }));
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const pageTicks = [[], ["engulfing_strict", "vwap_strict", "doji_strict", "double top (strict)"], ["double top (strict)"], ["engulfing_strict"]];
+  let checked = 0, kept = 0, added = 0;
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    K.forEach((d, i) => {
+      if (i < 4) return;  // four saved days before, for the ATR and the averages, as the page loads them
+      const day = bars(d.indices[ix]), before = K.slice(i - 4, i).flatMap(x => bars(x.indices[ix])), seed = N.atrSeries(before).slice(-1)[0];
+      const opts = { bars: day, index: ix, prevBars: before, atrSeed: seed, closedCount: day.length, dayEnd: true };
+      for (const base of pageTicks) {
+        const run = (ticked) => N.runPage({ ...opts, more: N.moreCalls(ticked, ix), rules: N.rulesFor(ix, ticked) }).trades;
+        const old = run(new Set(base));
+        for (const key of N.MORE.addOn.filter(k => N.ruleOn(k, ix))) {
+          const now = run(new Set(base.concat([key]))), alone = N.runDay({ ...opts, rules: [], more: [key], dbShadow: false }).trades;
+          const mine = now.filter(t => t.rule === key), others = now.filter(t => t.rule !== key || !N.MORE.addOn.includes(t.rule));
+          assert(old.every(t => now.some(u => same(u, t))), `K1: ${ix} ${d.date}, ticks [${base}] + ${key}: a call of the page's rules changed or vanished`);
+          assert(same(others.filter(t => t.rule !== key), old) && same(mine, alone), `K1: ${ix} ${d.date}, ticks [${base}] + ${key}: the page's calls must be exactly the old ones and ${key} only its own`);
+          checked++; kept += old.length; added += mine.length;
+        }
+      }
+      // K2: the strategies never touch the page's calls (they run apart) and each gives the same calls whichever others are ticked
+      const all = Object.keys(N.STRATEGIES).filter(k => N.STRATEGIES[k].indices.includes(ix));
+      const together = N.runStrategies(opts, all);
+      for (const key of all) assert(same(together.filter(t => t.rule === key), N.runStrategies(opts, [key])), `K2: ${ix} ${d.date}: ${key} gives other calls when the other strategies are ticked`);
+    });
+  }
+  assert(checked > 0 && kept > 0, "K: the saved days gave nothing to check");
+  console.log(`New Rule Chart: nothing new takes an existing call away: on 16 saved days of all three indices, ${checked} runs with an add-on rule ticked kept every one of the page's ${kept} calls and added ${added} of their own; each strategy the same alone or with the others (K1, K2)`);
+}

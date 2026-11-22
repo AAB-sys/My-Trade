@@ -700,9 +700,23 @@
                  // on NIFTY BANK, "NIFTY 50 and SENSEX"): the rules that also run on other indices than MORE.indices, each alone there (the
                  // other 13 stay NIFTY 50 only)
                  // 22 November (the owner: "built it for nifty bank and sensex as well"): NEWHIGH-TREND / NEWLOW-TREND runs on all three indices, opt-in
-                 alsoOn: { vwap_strict: ["SENSEX"], trend_break: ["NIFTY BANK", "SENSEX"] } };
+                 alsoOn: { vwap_strict: ["SENSEX"], trend_break: ["NIFTY BANK", "SENSEX"] },
+                 // 22 November (the owner: "new inndicator or rules or strategies should not remove old fired call or signals which are fired
+                 // already becasue of the existing 24 signals on the chart ... no change in the exisitng calls logic and no change in already fired
+                 // signals"): the rules that run ON THEIR OWN and only ADD calls (runPage): NEWHIGH-TREND held one call open for hours and, one
+                 // call at a time, took 40 to 65% of the other rules' calls away on all three indices
+                 addOn: ["trend_break"] };
   const ruleOn = (key, index) => MORE.indices.includes(index) || (MORE.alsoOn[key] || []).includes(index);  // does this rule run on this index
   // the page's call list for an index: the rules above and the opt-in rules ticked (a Set of keys), those that run on the index only
+  // the page's run (22 November): the page's rules as they always ran, in one pass (their logic unchanged), then each add-on rule ticked in
+  // a run of its own, its calls added: a call of the page's rules is the same whether an add-on rule is ticked or not
+  function runPage(opts) {
+    const more = Array.isArray(opts.more) ? opts.more : null, add = more ? more.filter(key => MORE.addOn.includes(key)) : [];
+    if (!add.length) return runDay(opts);
+    const main = runDay({ ...opts, more: more.filter(key => !MORE.addOn.includes(key)) });
+    const added = add.flatMap(key => runDay({ ...opts, rules: [], more: [key], dbShadow: false }).trades);
+    return { ...main, trades: main.trades.concat(added).sort((a, b) => a.signalTime - b.signalTime), added };
+  }
   const moreCalls = (ticked, index = null) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key))).filter(key => index == null || ruleOn(key, index));
   const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more)
     : MORE.indices.includes(index) || (Array.isArray(more) && more.some(key => (MORE.alsoOn[key] || []).includes(index))));  // no index (the lab): only when asked
@@ -754,5 +768,5 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, runPage, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
