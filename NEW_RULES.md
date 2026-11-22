@@ -352,8 +352,8 @@ has the strict rule in the old one's place.
 **SENSEX, not NIFTY BANK** (the owner, 22 November: "Is it applied on Nifty bank and sensex chart ? if no then do that as well";
 then, shown the numbers below, "NIFTY 50 and SENSEX"): the strict VWAP rule runs on SENSEX too, alone of the 14 (`NewRule.MORE.alsoOn`,
 `ruleOn`, `moreCalls(ticked, index)`; `runDay` runs on an index only the rules that run there), with SENSEX's own futures volume when
-every closed candle has it, else the plain average. NIFTY BANK runs none of the 14. The Settings ticks are kept once for the three
-index pages, so one tick turns it on for NIFTY 50 and SENSEX together. Unticked, nothing changes on SENSEX, call for call. Ticked,
+every closed candle has it, else the plain average. NIFTY BANK runs none of the 14. Until 22 November the Settings ticks were one set
+for the three index pages (one tick turned it on for NIFTY 50 and SENSEX together); since then each page keeps its own (below). Unticked, nothing changes on SENSEX, call for call. Ticked,
 on their days (57 and 59; the futures volume from `history/volume/SENSEX_1min.csv` and `NIFTYBANK_1min.csv`, complete on 4 and 31 of
 the days: SENSEX futures trade thinly, so its VWAP is mostly the plain average, live too), after 8 points a call against the page as
 it was: **SENSEX +609** (31 calls; first half -123, second half +732) and NIFTY BANK -777 (29 calls, 10 won; first half +253,
@@ -379,6 +379,42 @@ Each of the two checks helped alone in both years and on the volume days (8 of 8
 +49), and 7, 8 or 9 candles in a row all helped. Tried and not built: at most 1, 2 or 3 earlier crosses of the VWAP that day (lost on
 the volume days), the reclaim side only, 6 of 6, clearing the VWAP by 0.5 ATR, at most 1 ATR past it. The strict rule still loses
 after costs (-569, mostly the Buy PE side). `lab/newrule-check.js` V1 to V6 hold the rule's cases and the swap.
+
+## Doji Reversal (strict) replaces the Doji rule (22 November): NIFTY 50; each index page keeps its own ticks
+
+The owner, 22 November, of the next rule on the ranking: "test in on Nifty Bank and Sensex now"; then "yes, build it for NIFTY 50
+only, and do not share the tick across the 3 pages"; and of the grey note between the 12 rules and the 14 in the Settings list
+"remove the red marked box ... no need of that messgae text".
+
+**The rule** (`static/morepat.js`, `doji_strict`): the document's Doji Reversal, the same function, with one of its own checks
+stricter: the doji candle at least **1.0 x ATR** from high to low (the document: 0.5). The body at most 10% of its range, the fall
+(rise) of 1.5 ATR within 8 candles, the next candle closing past the doji, the level (the doji's low; PE: its high), no pattern target
+(the 1 ATR guide), Rule 1 and the trail are unchanged. The table says "Doji reversal up (strict)" or "Doji reversal down (strict)".
+
+**On the page**: NIFTY 50 only (the 14 run there). The document's Doji gives no call any more; "Doji Reversal (strict)" stands in
+its place in the Settings list, unticked by default (`NewRule.MORE.optIn`): unticked, no Doji call; ticked, its calls fill the
+table. NIFTY BANK and SENSEX: no Doji call, ticked or not, call for call as before.
+
+**Each index page keeps its own ticks** (`detail.html`: the key `signalsIndicators:<index>`): a tick on one page leaves the other two
+as they were. The first time a page opens after 22 November it starts from the ticks shared until then (`signalsIndicators`, no
+longer written), then goes its own way. The grey note in the Settings list is gone.
+
+**Why** (index points, the page as it opens, every rule, one trade at a time; after costs: 8 points a call). NIFTY 50, 501 days: the
+Doji gave 159 calls (the strict rules unticked), +100 before costs, -1,172 after, both years negative; the 31 calls sold by a close
+back across the doji lost 37 points each; dojis 0.5 to 1 ATR tall lost in both years, those of 1 ATR and more made money in both.
+Against the page as it was:
+
+| | Doji calls | Doji's own, after costs | All calls, after costs |
+| --- | --- | --- | --- |
+| Strict ticked, NIFTY 50, 501 days | 159 to 31 | -1,172 to +34 | +960 (year 1 +656, year 2 +304; all 9 quarters) |
+| Strict ticked, NIFTY 50, 60 volume days | 20 to 4 | | +52 |
+| Unticked (no Doji call), NIFTY 50, 501 days | 0 | | +727 (year 1 +479, year 2 +248) |
+
+0.75, 1.0 and 1.25 ATR were each better than the page in all 9 quarters. Also tried: a fall of 4 ATR (+1,076, 24 calls), 1 ATR with a
+fall of 3 (+1,057, 16 calls), a thinner body or a longer look-back (lost in year 2). On NIFTY BANK and SENSEX, where the Doji does not
+run, adding it was tested and not built: NIFTY BANK, 59 days, the strict Doji -306 (4 calls; the document's +16, halves +590 and
+-574); SENSEX, 57 days, the strict Doji +156 from 7 calls (second half -35; 0.75 ATR -520, 1.25 ATR +313): too thin and unsteady.
+`lab/newrule-check.js` J1 to J6 hold the rule's cases and the swap.
 
 ## On the page
 

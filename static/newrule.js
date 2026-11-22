@@ -641,8 +641,10 @@
   // 22 November (the owner: "yes, build it"): the same for VWAP Reclaim and Loss: the document's rule gives no call any more; VWAP Reclaim and
   // Loss (strict) (morepat.js vwap_strict: all of the last 8 candles on the other side of the VWAP, the body 0.5 x ATR) takes its place, opt-in
   const MORE = { indices: ["NIFTY 50"],  // where the 14 run
-                 calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer", "doji"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
-                 optIn: ["engulfing_strict", "vwap_strict"],  // rules that give calls only while ticked on the page
+                 calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
+                 // 22 November (the owner: "yes, build it for NIFTY 50 only"): the document's Doji Reversal gives no call any more either; Doji
+                 // Reversal (strict) (morepat.js doji_strict: the doji at least 1.0 x ATR tall) takes its place, opt-in, NIFTY 50 only
+                 optIn: ["engulfing_strict", "vwap_strict", "doji_strict"],  // rules that give calls only while ticked on the page
                  // 22 November (the owner: "Is it applied on Nifty bank and sensex chart ? if no then do that as well", then, shown that it lost
                  // on NIFTY BANK, "NIFTY 50 and SENSEX"): the rules that also run on other indices than MORE.indices, each alone there (the
                  // other 13 stay NIFTY 50 only)

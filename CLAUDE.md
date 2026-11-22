@@ -208,7 +208,10 @@ their own logic. Read this before touching the code.
   `DT_STRICT`) replaced the Double Top on all three indices on 20 November (`NewRule.rulesFor`, `RULE_OPT_IN`). The third: VWAP Reclaim and Loss (strict)
   (`morepat.js` `vwap_strict`: all of the last 8 candles past the VWAP, the body 0.5 ATR; the VWAP line untouched) replaced the VWAP
   rule on NIFTY 50 on 22 November (`MORE.optIn`), and runs on SENSEX too, alone of the 14 (`MORE.alsoOn`, `ruleOn`,
-  `moreCalls(ticked, index)`; not on NIFTY BANK, where it lost: the owner's choice); the Settings ticks are one set for the three index pages.
+  `moreCalls(ticked, index)`; not on NIFTY BANK, where it lost: the owner's choice). The fourth: Doji Reversal (strict) (`morepat.js`
+  `doji_strict`: the doji at least 1.0 ATR tall) replaced the Doji rule on NIFTY 50 on 22 November (`MORE.optIn`). Since 22 November
+  each index page keeps its own Settings ticks (`signalsIndicators:<index>`, started from the shared `signalsIndicators`; the owner:
+  "do not share the tick across the 3 pages"), and the grey note in that list is gone.
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
