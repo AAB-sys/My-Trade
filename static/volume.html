@@ -360,7 +360,11 @@
     for (const id of ["show-signal", "show-shape", "show-impulse", "show-panel", "show-volume", "show-rsi", "show-vwap", "show-oi"]) { const box = document.getElementById(id); box.checked = false; box.closest("label").style.display = "none"; }
     // then: "i want to keep the volumes on this page ... i just want the volumes on this page for all 3 indexes, rest you can remove":
     // the volume bars under the candles are always on here (no tick box), with the candle's volume in the line above the chart
-    document.getElementById("show-volume").checked = true;
+    // 22 November, the owner, with the volume bars marked on AAA_V1: "remove the volumes from the chart and put the check box above after
+    // the FVG settings button as Volume. Once it is ticked then only it should be visible on chart, once it is unticked it should be
+    // gone": the bars are OFF until the Volume box is ticked; the box (moved after the FVG gear further down) is remembered apart
+    // from the page's other settings, so a browser that had the old always-on bars starts with them off
+    try { document.getElementById("show-volume").checked = localStorage.getItem("aaaVolume") === "1"; } catch (e) {}
     // then, with the buttons marked: "bring this exactly to the bottom where it is red boxed": the zoom and move buttons stand in a
     // row of their own under the chart, at its right end
     { const row = document.createElement("div"); row.id = "navrow"; document.getElementById("main").after(row); row.appendChild(document.getElementById("nav")); }
@@ -754,6 +758,7 @@
     chart, series: candles, IST, tools: $("tools"), infoRow: $("inforow"), name: () => state.name, interval: () => state.interval,
     bars: () => shown().flat(), fine: () => state.fine, num, css, now: () => Date.now() / 1000,
   });
+  if (EMBED) { const volumeBox = $("show-volume").closest("label"); volumeBox.style.display = ""; $("tools").appendChild(volumeBox); }  // AAA_V1: the Volume tick box stands last in the top row, after the FVG gear
   function rebuild() {
     // the count is made from each day's 1-minute candles and their volume, whatever candle size is shown; where those
     // are missing, from the candles shown
@@ -1502,7 +1507,7 @@
   $("days").addEventListener("change", () => { state.days = Number($("days").value); save(); shownKey = state.name + state.interval + state.days; setAll(true); });
   $("index").addEventListener("change", () => { state.signal = null; drawSignal(); setTimeout(loadSignal, 0); state.panel = null; drawPanel(); setTimeout(loadPanel, 0); state.name = $("index").value; state.bars = []; state.fine = []; loadDrawings(); save(); load(); reconnect(); });
   // every indicator but the profile has its switch, and the page remembers how each was left
-  $("show-volume").addEventListener("change", () => { setVolume(); roomOnTop(); save(); });
+  $("show-volume").addEventListener("change", () => { setVolume(); roomOnTop(); save(); if (EMBED) try { localStorage.setItem("aaaVolume", $("show-volume").checked ? "1" : "0"); } catch (e) {} });
   $("show-rsi").addEventListener("change", () => { dropImpulse(); setRsi(); setImpulse(); drawLegend(); save(); });  // the Impulse pane stands under the RSI's: taken off and put back so the panes keep their order
   $("show-vwap").addEventListener("change", () => { setVwap(); drawLegend(); save(); });
   $("show-panel").addEventListener("change", () => { save(); drawPanel(); loadPanel(); setVwap(); profile.requestUpdate && profile.requestUpdate(); });  // the panel's last answer is kept: today's shape label is drawn from it (18 November)
