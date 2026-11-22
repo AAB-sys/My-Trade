@@ -61,6 +61,7 @@ def check(what, cond):
     bad += not cond
     print(("ok    " if cond else "WRONG ") + what)
 def fresh():
+    (dhan._retry["timer"].cancel() if dhan._retry["timer"] is not None else None); dhan._retry["timer"] = None
     dhan._own.update(token="", made_at=None, problem=None, fails=0, fail_day=None, last_try=0.0, tries=0, wait=None, limited=0)
 
 # 1. the code of the moment: RFC 6238's own test values (SHA-1, the key "12345678901234567890"), six digits
@@ -122,9 +123,10 @@ check("a key that is not a key: said plainly, the key itself not shown", not dha
 os.environ["DHAN_TOTP_SECRET"] = KEY
 
 # 7b. the code of the moment and its change (19 November: "Invalid TOTP" to a try sent 3 seconds before the change)
-fresh(); state["good"] = set(); state["late_code"] = 1; slept.clear(); n = state["asked"]
+# (these two checks are placed in the middle of the code's 30 seconds first: at the very end of a code the try also waits for the edge, which another check below tests; without this they failed one run in about six)
+fresh(); state["good"] = set(); state["late_code"] = 1; slept.clear(); n = state["asked"]; _Clock.shift = (12 - time.time() % 30) % 30
 check("Dhan says 'Invalid TOTP' once: the try waits for the next code and asks again, with success, and no failed try is counted", dhan.renew_token("test") and state["asked"] == n + 2 and len(slept) == 1 and 0 < slept[0] <= 30.5 and dhan.own_report()["failed_tries"] == 0)
-fresh(); state["late_code"] = 2; slept.clear(); n = state["asked"]
+fresh(); state["late_code"] = 2; slept.clear(); n = state["asked"]; _Clock.shift = (12 - time.time() % 30) % 30
 check("'Invalid TOTP' twice: one failed try, Dhan asked twice and no more", not dhan.renew_token("test") and state["asked"] == n + 2 and dhan.own_report()["failed_tries"] == 1 and "Invalid TOTP" in dhan.own_report()["problem"])
 fresh(); state["late_code"] = 0; slept.clear(); _Clock.jump = True; _Clock.shift = (27 - time.time() % 30) % 30  # 3 seconds before the code changes
 ok = dhan.renew_token("test"); _Clock.jump = False; _Clock.shift = 0.0
@@ -138,12 +140,12 @@ check("in the middle of the code's 30 seconds: no waiting", slept == [])
 fresh(); state["good"] = set(); state["rate"] = 1; n = state["asked"]
 check("Dhan says 'once every 2 minutes': no token, and NOT counted as a failed try", not dhan.renew_token("test") and state["asked"] == n + 1 and dhan.own_report()["failed_tries"] == 0)
 check("the report says what Dhan answered and that it asks again in about 2 minutes", "once every 2 minutes" in dhan.own_report()["problem"] and "again in about 2 minutes" in dhan.own_report()["problem"])
-check("a second try at once is not sent to Dhan (130 seconds between such tries)", not dhan.renew_token("test") and state["asked"] == n + 1)
-dhan._own["last_try"] = time.time() - 125
-check("125 seconds after: still waiting", not dhan.renew_token("test") and state["asked"] == n + 1)
-dhan._own["last_try"] = time.time() - 135
-check("135 seconds after: it asks again, and now a token is made (not 10 minutes)", dhan.renew_token("test") and state["asked"] == n + 2 and dhan.own_report()["problem"] is None and dhan._own["wait"] is None)
-fresh(); state["good"] = set(); state["rate"] = 1; dhan.renew_token("test"); state["refuse_pin"] = True; dhan._own["last_try"] = time.time() - 135; n = state["asked"]
+check("a second try at once is not sent to Dhan (125 seconds between such tries)", not dhan.renew_token("test") and state["asked"] == n + 1)
+dhan._own["last_try"] = time.time() - 120
+check("120 seconds after: still waiting", not dhan.renew_token("test") and state["asked"] == n + 1)
+dhan._own["last_try"] = time.time() - 130
+check("130 seconds after: it asks again, and now a token is made (not 10 minutes)", dhan.renew_token("test") and state["asked"] == n + 2 and dhan.own_report()["problem"] is None and dhan._own["wait"] is None)
+fresh(); state["good"] = set(); state["rate"] = 1; dhan.renew_token("test"); state["refuse_pin"] = True; dhan._own["last_try"] = time.time() - 130; n = state["asked"]
 check("after the rate limit a wrong PIN is a failed try, and then the wait is 10 minutes again", not dhan.renew_token("test") and dhan.own_report()["failed_tries"] == 1 and dhan._own["wait"] is None)
 dhan._own["last_try"] = time.time() - 300; n2 = state["asked"]; dhan.renew_token("test")
 check("300 seconds after a wrong PIN: not asked (10 minutes)", state["asked"] == n2)
@@ -153,6 +155,28 @@ for _ in range(14):
     dhan._own["last_try"] = time.time() - 3600; dhan.renew_token("test")
 check(f"{dhan.RATE_MAX} such answers in a day stop it, as failed tries do", state["asked"] == n + dhan.RATE_MAX and dhan.own_report()["stopped"])
 state["rate"] = 0; fresh()
+
+# 7e. the retries run on a timer of their own (23 November, the owner: "ready within max 2 minutes"): after Dhan's rate limit at 125 s, after a refused code at 60 s
+fresh(); state["good"] = set(); state["rate"] = 1; n = state["asked"]; dhan.renew_token("test"); tm = dhan._retry["timer"]
+check("the rate limit sets a timer of 126 seconds (125 + 1), once, a daemon thread", tm is not None and tm.is_alive() and tm.interval == dhan.RATE_WAIT_SECONDS + 1 and tm.daemon)
+dhan.renew_token("test"); check("a second answer while it waits does not pile up timers", dhan._retry["timer"] is tm)
+dhan._own["last_try"] = time.time() - 130; tm.function()
+check("when the timer fires the token is made, with no poll needed", dhan._own["token"] != "" and dhan._own["problem"] is None and state["asked"] == n + 2)
+fresh(); state["good"] = set(); state["late_code"] = 2; n = state["asked"]; dhan.renew_token("test"); tm = dhan._retry["timer"]
+check("a refused code (twice): a failed try, a wait of 60 seconds and a timer of 61", dhan.own_report()["failed_tries"] == 1 and dhan._own["wait"] == dhan.TOTP_WAIT_SECONDS and tm is not None and tm.interval == dhan.TOTP_WAIT_SECONDS + 1 and "again in about 60 seconds" in dhan.own_report()["problem"])
+asked = state["asked"]; dhan._own["last_try"] = time.time() - 30; dhan.renew_token("test")
+check("30 seconds after a refused code: not asked again", state["asked"] == asked)
+dhan._own["last_try"] = time.time() - 65; tm.function()
+check("65 seconds after: the timer asks again and a token is made", dhan._own["token"] != "" and dhan._own["fails"] == 0)
+fresh(); state["good"] = set(); state["refuse_pin"] = True; dhan.renew_token("test")
+check("a wrong PIN: no timer and the wait stays 10 minutes (it could lock the account)", dhan._retry["timer"] is None and dhan._own["wait"] is None and dhan.own_report()["failed_tries"] == 1)
+state["refuse_pin"] = False
+fresh(); state["good"] = set(); state["late_code"] = 99
+for _ in range(5):
+    dhan._own["last_try"] = time.time() - 3600; dhan.renew_token("test")
+asked = state["asked"]; tm = dhan._retry["timer"]; dhan._own["last_try"] = time.time() - 3600; tm.function() if tm is not None else None
+check(f"refused codes stop after {dhan.RENEW_MAX_FAILS} failed tries, as before; a timer still waiting asks Dhan nothing", dhan.own_report()["stopped"] and dhan.own_report()["failed_tries"] == dhan.RENEW_MAX_FAILS and state["asked"] == asked)
+state["late_code"] = 0; fresh()
 
 # 7c. what /health shows is never older than the last try
 fresh(); state["good"] = set(); r = dhan.token_report()
