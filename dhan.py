@@ -85,6 +85,7 @@ def settings() -> tuple[str, str]:
 AUTH_BASE = os.environ.get("DHAN_AUTH_BASE", "https://auth.dhan.co")  # overridden only by tests
 RENEW_WAIT_SECONDS = float(os.environ.get("DHAN_RENEW_WAIT_SECONDS", "600"))
 RENEW_MAX_FAILS = int(os.environ.get("DHAN_RENEW_MAX_FAILS", "3"))
+TOTP_EDGE_SECONDS = float(os.environ.get("DHAN_TOTP_EDGE_SECONDS", "6"))  # no code is made this close to its change
 _own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "tries": 0}
 _own_lock = threading.Lock()
 
@@ -142,31 +143,42 @@ def renew_token(why: str, by_hand: bool = False) -> bool:
         client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
         pin, key = totp_settings()
         _own["last_try"], _own["tries"] = now, _own["tries"] + 1
-        try:
-            code = totp_code(key)
-        except Exception:  # noqa: BLE001 - a key that is not base32: say so, never the key
-            _own["fails"] += 1
-            _own["problem"] = "DHAN_TOTP_SECRET is not a valid key (it should be the letters A-Z and digits 2-7 Dhan shows at Setup TOTP)"
-            log.warning("Dhan own token: %s", _own["problem"])
-            return False
-        try:
-            response = httpx.post(AUTH_BASE + "/app/generateAccessToken", params={"dhanClientId": client_id, "pin": pin, "totp": code}, timeout=20)
-        except httpx.HTTPError as exc:
-            _own["problem"] = f"could not reach Dhan's login address ({type(exc).__name__})"  # the exception's own text holds the address: not used
-            log.warning("Dhan own token (%s): %s", why, _own["problem"])
-            return False  # the network, not a refusal: not counted against the tries
-        try:
-            body = response.json() if response.content else {}
-        except ValueError:
-            body = {}
-        inner = body.get("data") if isinstance(body, dict) and isinstance(body.get("data"), dict) else {}
-        token = ""
-        if isinstance(body, dict):
-            token = str(body.get("accessToken") or body.get("access_token") or inner.get("accessToken") or inner.get("access_token") or "").strip()
-        if response.status_code == 200 and token:
-            _own.update(token=token, made_at=datetime.now(IST).isoformat(timespec="seconds"), problem=None, fails=0)
-            log.warning("Dhan own token: a new token was made (%s)", why)
-            return True
+        # The code changes every 30 seconds and Dhan takes only the code of the moment (19 November: a try sent 3 seconds
+        # before the change was answered "Invalid TOTP", 27 minutes after one that worked). So no code is made in the last
+        # TOTP_EDGE_SECONDS of its 30 seconds: the try waits for the next code. And when Dhan still says the code is invalid,
+        # the try waits for the next code once more and asks again, before it counts as a failed try.
+        response, body, inner, token = None, {}, {}, ""
+        for attempt in (1, 2):
+            left = 30 - time.time() % 30
+            if left < TOTP_EDGE_SECONDS or attempt == 2:
+                time.sleep(left + 0.5)
+            try:
+                code = totp_code(key)
+            except Exception:  # noqa: BLE001 - a key that is not base32: say so, never the key
+                _own["fails"] += 1
+                _own["problem"] = "DHAN_TOTP_SECRET is not a valid key (it should be the letters A-Z and digits 2-7 Dhan shows at Setup TOTP)"
+                log.warning("Dhan own token: %s", _own["problem"])
+                return False
+            try:
+                response = httpx.post(AUTH_BASE + "/app/generateAccessToken", params={"dhanClientId": client_id, "pin": pin, "totp": code}, timeout=20)
+            except httpx.HTTPError as exc:
+                _own["problem"] = f"could not reach Dhan's login address ({type(exc).__name__})"  # the exception's own text holds the address: not used
+                log.warning("Dhan own token (%s): %s", why, _own["problem"])
+                return False  # the network, not a refusal: not counted against the tries
+            try:
+                body = response.json() if response.content else {}
+            except ValueError:
+                body = {}
+            inner = body.get("data") if isinstance(body, dict) and isinstance(body.get("data"), dict) else {}
+            token = ""
+            if isinstance(body, dict):
+                token = str(body.get("accessToken") or body.get("access_token") or inner.get("accessToken") or inner.get("access_token") or "").strip()
+            if response.status_code == 200 and token:
+                _own.update(token=token, made_at=datetime.now(IST).isoformat(timespec="seconds"), problem=None, fails=0)
+                log.warning("Dhan own token: a new token was made (%s)", why)
+                return True
+            if "totp" not in json.dumps(body).lower():
+                break  # not about the code: asking again with the next code would not help
         said = ""
         if isinstance(body, dict):
             said = str(body.get("errorMessage") or body.get("message") or body.get("remarks") or body.get("error") or inner.get("message") or "")
@@ -348,7 +360,15 @@ def token_report() -> dict:
         check = token_check()
     if totp_on() or _own["tries"]:
         check["own"] = own_report()
+    _own["reported"] = time.time()
     return check
+
+
+def report_stale() -> bool:
+    """True when the server tried to make its own token after the last token_report: what /health holds is then out of date
+    (19 November: a token made at 08:44 was still shown as "refused" until the half-hourly check at 09:04, and the owner was
+    asked to paste one for nothing). /health then takes a new report at once."""
+    return _own["last_try"] > _own.get("reported", 0.0)
 
 
 def expiries(name: str) -> list[str]:
