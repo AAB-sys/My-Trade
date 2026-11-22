@@ -673,8 +673,13 @@
   // keeps its own ticks). They run ON THEIR OWN, apart from the page's rules (the owner: "any new call fired by strategy if that strategy is
   // ticked then create new table give the name to the table as Call logs from startegy"): runDay with rules: strategiesFor(...) and
   // more: false, its own one call at a time; the page's table and its calls are the same whether a strategy is ticked or not
-  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] }, "midday box": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };  // in this order: a candle both call the same way is Day Break's
+  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] }, "midday box": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
   const strategiesFor = (index, ticked) => Object.keys(STRATEGIES).filter(key => ticked && ticked.has(key) && STRATEGIES[key].indices.includes(index));
+  // each ticked strategy runs ON ITS OWN, one run per strategy (22 November, the owner: "it should not remove or delete any old fired call
+  // or signals from the chart whatever it may b. New rule or strategy should fire additional signals along with the old signals"): a
+  // strategy's calls are the same whichever others are ticked; their calls side by side, the earliest signal first
+  const runStrategies = (opts, strategies) => (strategies || []).flatMap(name => runDay({ ...opts, rules: [name], more: false, dbShadow: false }).trades)
+    .sort((a, b) => a.signalTime - b.signalTime || (a.rule < b.rule ? -1 : 1));
   // The 14 more patterns (the owner's "More Chart Patterns and Rules" document; static/morepat.js; 30 October: "make their behaviour same
   // like the earlier 11 signals"): on NIFTY 50 (MORE.indices) their signals join the other rules' on every closed candle, after them in
   // the list (the rule earlier in the list wins a candle that two rules call the same way; opposite ways: nothing, as before), under the
@@ -749,5 +754,5 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -838,12 +838,26 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(t5.length === 1 && t5[0].side === "PE" && t5[0].L === 96 && t5[0].kind === "box bottom broken", "M5: the Buy PE side mirrors it (the stop at the box's bottom)");
   for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
     assert(N.strategiesFor(ix, new Set()).length === 0 && JSON.stringify(N.strategiesFor(ix, new Set(["midday box"]))) === '["midday box"]', `M6: ${ix}: offered, and only while ticked`);
-    assert(JSON.stringify(N.strategiesFor(ix, new Set(["midday box", "day break"]))) === '["day break","midday box"]', `M6: ${ix}: with Day Break, Day Break first`);
+    assert(JSON.stringify(N.strategiesFor(ix, new Set(["midday box", "day break"]))) === '["day break","midday box"]', `M6: ${ix}: both offered when both are ticked`);
     assert(JSON.stringify(N.rulesFor(ix, new Set(["midday box"]))) === JSON.stringify(N.rulesFor(ix, new Set())), `M6: ${ix}: the page's own rules are the same ticked or not`);
     const own = N.runDay({ bars: mk(up), atrFixed: 10, index: ix, rules: N.strategiesFor(ix, new Set(["midday box"])), more: false }).trades;
     assert(own.length === 1 && own[0].rule === "midday box", `M6: ${ix}: run on its own, Midday Box gives its call`);
   }
-  console.log("New Rule Chart: Strategies > Midday Box: the box of 11:30 to 12:55, from 13:00 to 14:40 the first close past it by 0.1 ATR, once per side per day, off until ticked, on all three indices (M1 to M6)");
+  // M7 (22 November, the owner: "it should not remove or delete any old fired call or signals ... New rule or strategy should fire additional
+  // signals along with the old signals"): each strategy runs on its own; a Midday Box call open never takes Day Break's call away
+  const both = flat(27, 100, 5).concat(Array.from({ length: 18 }, () => [101, 103, 99, 101]),
+    [[101, 105, 100.5, 104.5], [104.5, 109, 104, 108.5], [108.5, 112, 108, 111.5], [111.5, 115, 111, 114.5], [114.5, 118, 114, 117.5]]);  // 13:00 box CE (104.5 > 103 + 1), 13:05 Day Break CE (108.5 > 105 + 2.5)
+  const onePass = run(both, ["day break", "midday box"]), alone = run(both, ["day break"]);
+  const ownRuns = N.runStrategies({ bars: mk(both), atrFixed: 10 }, N.strategiesFor("NIFTY 50", new Set(["day break", "midday box"])));
+  assert(alone.length === 1 && alone[0].rule === "day break" && !onePass.some(t => t.rule === "day break"), "M7: the test day: in one pass the open box call would hold Day Break's call back");
+  const dbOwn = ownRuns.filter(t => t.rule === "day break");
+  assert(ownRuns.length === 2 && ownRuns.some(t => t.rule === "midday box") && dbOwn.length === 1 && JSON.stringify(dbOwn[0]) === JSON.stringify(alone[0]),
+         "M7: run on their own both calls stand, and Day Break's call is exactly the one it gives alone: " + JSON.stringify(ownRuns.map(t => [t.rule, t.side, t.signalCandle])));
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    const a = N.runStrategies({ bars: mk(both), atrFixed: 10, index: ix }, N.strategiesFor(ix, new Set(["day break"]))), b = N.runStrategies({ bars: mk(both), atrFixed: 10, index: ix }, N.strategiesFor(ix, new Set(["day break", "midday box"])));
+    assert(a.every(t => b.some(u => JSON.stringify(u) === JSON.stringify(t))) && b.length === a.length + 1, `M7: ${ix}: ticking Midday Box keeps every Day Break call and adds its own`);
+  }
+  console.log("New Rule Chart: Strategies > Midday Box: the box of 11:30 to 12:55, from 13:00 to 14:40 the first close past it by 0.1 ATR, once per side per day, off until ticked, on all three indices; each strategy on its own, adding calls, never taking one away (M1 to M7)");
 }
 
 // ---- NEWHIGH-TREND / NEWLOW-TREND (22 November, the owner: "built it for the PE as well like NEWLOW-Trend", "built it for nifty bank and sensex as

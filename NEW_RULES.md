@@ -430,8 +430,8 @@ Unticked, the engine does not run it.
 
 **Call logs from strategy** (the owner, 22 November: "any new call fired by startegy if that strategy is ticked then create new table
 give the name to the table as Call logs from startegy. Add options to scroll up and down on the table . keep the heade row as fixed row
-for the new table"): a strategy ticked runs ON ITS OWN (`runDay` with `rules: NewRule.strategiesFor(index, ticked)`, `more: false`), one
-call at a time among the strategies, and its calls go to a table of their own under the calls table, never into it: the calls table is the
+for the new table"): a strategy ticked runs ON ITS OWN (`runDay` with `rules: [that strategy]`, `more: false`, one run per strategy since
+22 November: `NewRule.runStrategies`), so a strategy never takes a call from another, and its calls go to a table of their own under the calls table, never into it: the calls table is the
 same ticked or not. The table "Call logs from strategy" (`#stratlog`, `strategyLogRows`, `drawStratLog` in `static/detail.html`) shows
 every strategy call of the days the page holds (the last five sessions, each run as the page runs a day), the newest first: Time (the
 signal candle), Strategy, Call (CE/PE), Call Entry (with the time in), Call Exit (with the time out; an open call: the price now), Total
@@ -477,7 +477,10 @@ least 0.1 x ATR is a Buy CE, the first close below its bottom by 0.1 x ATR a Buy
 candle's open, the page's last entry at 14:45). The level, and the stop, is the box edge broken; once per side per day; the page's exits (a
 close back inside the box, the retouch, the half-ATR trail, the day end); no pattern target (the 1 ATR guide). Ticked, the chart draws the
 box's top and bottom, dashed and named ("box top", "box bottom"), once the 12:55 candle has closed; a call's own line stands on its edge.
-With Day Break also ticked the two run in one pass, one call at a time, Day Break first on a candle both call the same way.
+Each strategy runs on its own (`NewRule.runStrategies`, one run per strategy; the owner, 22 November: "it should not remove or delete any old
+fired call or signals from the chart whatever it may b. New rule or strategy should fire additional signals along with the old signals"):
+with Day Break also ticked, every Day Break call stays and the Midday Box calls are added beside them; the calls table and every mark and
+line on the chart stay as they were (checked on all three pages, every mark and line, unticked against ticked).
 
 **How it was found** (the page's parts only: the day's candles, the ATR, the buffer, the window, the page's exits). Six ideas were run
 through the engine on NIFTY 50 (503 days), NIFTY 50 with volume (60), NIFTY BANK (60) and SENSEX (57): the failed break of the day's high
@@ -495,8 +498,8 @@ to 0.15 ATR is positive in every half on every index. Run on its own, as the pag
 
 78 to 89% of its calls went at least 0.25 ATR the right way; the price ran 1.4 to 1.9 ATR in the call's favour against 0.7 to 0.8 against;
 a winning call keeps 43 to 55% of its best move; the average win is about 2.5 times the average loss. About 40% of its calls fall on a
-candle that also makes a new day high or low. With Day Break in one pass the totals were NIFTY 50 +1,894 (two years), +661 (60 days),
-NIFTY BANK +1,286, SENSEX +1,591 (Day Break alone: +851, +348, +478, +1,138). Thin: NIFTY 50's first year is +236 over about 210 calls,
+candle that also makes a new day high or low. Both ticked, each on its own, the two give NIFTY 50 +2,174 (two years), +859 (60 days),
+NIFTY BANK +1,117, SENSEX +1,755 (Day Break alone: +851, +348, +478, +1,138). Thin: NIFTY 50's first year is +236 over about 210 calls,
 NIFTY BANK and SENSEX rest on about 50 calls each; 16 to 20 November gave NIFTY 50 -19, NIFTY BANK +231, SENSEX -167. `lab/newrule-check.js`
 M1 to M6 hold its cases.
 

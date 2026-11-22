@@ -226,8 +226,9 @@ their own logic. Read this before touching the code.
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first
   close past the day's high or low by 0.25 ATR); the second, Midday Box (22 November, "yes, build it for all 3 indices"; `MIDDAY`,
   `middayBox`, `middayBoxStep`: the box of the 11:30 to 12:55 candles, from 13:00 to 14:40 the first close past it by 0.1 ATR, the stop at
-  the edge broken; ticked, the chart draws "box top" and "box bottom" dashed). A ticked strategy runs ON ITS OWN (`runDay` with `rules: strategiesFor(...)`, `more:
-  false`) and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
+  the edge broken; ticked, the chart draws "box top" and "box bottom" dashed). Each ticked strategy runs ON ITS OWN, one run per strategy (`NewRule.runStrategies`; the owner:
+  "it should not remove or delete any old fired call or signals ... New rule or strategy should fire additional signals along with the old
+  signals"), so ticking one never takes a call from another or from the page's rules, and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
   table as Call logs from startegy ... scroll up and down ... keep the heade row as fixed row"; `#stratlog`, `strategyLogRows`,
   `drawStratLog`): the days the page holds, the newest first, Call Entry, Call Exit and the points side by side, the header row fixed, two
   round buttons moving it one row a press; the calls table is the same ticked or not. Proposals are judged in the calls' own index points only, never

@@ -2375,7 +2375,7 @@
     const rules = NewRule.rulesFor ? NewRule.rulesFor(name, new Set([...(state.signalsDTS ? ["double top (strict)"] : []), ...(state.strategies || [])])) : null;  // Double Top (strict) in the Double Top's place on all three indices, only while ticked (20 November)
     // the strategies ticked under Settings > Strategies run ON THEIR OWN (22 November): their calls go to "Call logs from strategy", never into the table above
     const strategies = NewRule.strategiesFor ? NewRule.strategiesFor(name, state.strategies || new Set()) : [];
-    const stratTrades = strategies.length ? NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, rules: strategies, more: false, dbShadow: false }).trades : [];
+    const stratTrades = NewRule.runStrategies({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes }, strategies);  // each strategy on its own: ticking one never takes a call from another
     return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) }), bars, before, closed, dayEnd, volumes, strategies, stratTrades };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
@@ -2421,8 +2421,8 @@
       if (cur && key > cur) return;  // a day after the one shown (the Previous day or week views): not yet
       const bars = key === cur ? run.bars : state.candles.filter(b => sessionOf(b) === key), before = key === cur ? run.before : state.candles.filter(b => sessionOf(b) < key);
       if (!bars.length) return;
-      const trades = key === cur ? run.stratTrades : NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null,
-        closedCount: bars.length, dayEnd: true, rules: strategies, more: false, dbShadow: false }).trades;
+      const trades = key === cur ? run.stratTrades : NewRule.runStrategies({ bars, index: name, prevBars: before, atrSeed: before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null,
+        closedCount: bars.length, dayEnd: true }, strategies);
       const atrs = NewRule.atrSeries(before.concat(bars)), base = before.length, last = bars[bars.length - 1];
       for (const t of trades) { const a = atrs[base + t.signalCandle - 1]; out.push({ t, last, guide: a && t.entry != null ? NewRule.round2(t.entry + (t.side === "CE" ? 1 : -1) * a) : null }); }
     });
