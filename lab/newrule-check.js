@@ -697,3 +697,39 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   }
   console.log("New Rule Chart: Double Top (strict): tops 7 candles apart, on all three indices in the Double Top's place, only while ticked (D1 to D4)");
 }
+
+// ---- VWAP Reclaim and Loss (strict) (22 November, the owner: "yes, build it"): the document's VWAP rule with ALL of the last 8 candles
+// on the other side of the VWAP (the document: 5 of the last 6) and the signal candle's body at least 0.5 ATR (the document: 0.3); the
+// VWAP line itself is unchanged. It replaces the VWAP rule on the page (NIFTY 50), only while ticked
+{
+  const M = globalThis.MorePat, A10 = 10;
+  const day = (rows) => rows.map(([o, h, l, c]) => M.candle(o, h, l, c));
+  const flat = (n, p) => Array.from({ length: n }, () => [p, p + 5, p - 5, p]);  // closes flat, a 10-point range (the typical price is the close)
+  const cross = [101, 126, 100, 125];                                         // the first close back above the VWAP, a 24-point green body
+  const sides = (rule, rows, k) => M.detect(rule, day(rows), k, A10).map(s => s.side).join(",");
+  const v8 = flat(10, 120).concat(flat(8, 100), [cross]), v6 = flat(12, 120).concat(flat(6, 100), [cross]);  // 8 or 6 closes under the VWAP
+  assert(M.RULES.vwap_strict.cfg.look === 8 && M.RULES.vwap_strict.cfg.need_below === 8 && M.RULES.vwap_strict.cfg.body_atr === 0.5 && M.RULES.vwap_strict.fn === M.RULES.vwap.fn,
+         "V1: the strict rule is the same VWAP rule with 8 of the last 8 and a body of 0.5 ATR");
+  assert(sides("vwap", v8, 18) === "CE" && sides("vwap_strict", v8, 18) === "CE", "V2: 8 closes under the VWAP, then a strong close above: both rules give Buy CE");
+  const s8 = M.detect("vwap_strict", day(v8), 18, A10)[0], vline = M.vwapSeries(day(v8));
+  assert(s8.rule === "VWAP reclaim (strict)" && Math.abs(s8.level - vline[18]) < 1e-9, "V2: the name says strict, the level is the VWAP of the signal candle (the line itself): " + JSON.stringify(s8));
+  assert(sides("vwap", v6, 18) === "CE" && sides("vwap_strict", v6, 18) === "", "V3: only 6 closes under the VWAP: the document's rule calls, the strict one does not");
+  const weak = flat(10, 120).concat(flat(8, 100), [[110, 115, 109.5, 114.5]]);  // closes 3+ points above the VWAP, a body of 4.5 (0.45 ATR)
+  assert(sides("vwap", weak, 18) === "CE" && sides("vwap_strict", weak, 18) === "", "V3: a body of 0.45 ATR: the document's rule calls (0.3), the strict one does not (0.5)");
+  const mirror = (rows) => rows.map(([o, h, l, c]) => [240 - o, 240 - l, 240 - h, 240 - c]);
+  const pe = M.detect("vwap_strict", day(mirror(v8)), 18, A10);
+  assert(pe.length === 1 && pe[0].side === "PE" && pe[0].rule === "VWAP loss (strict)" && sides("vwap_strict", mirror(v6), 18) === "", "V4: the Buy PE side mirrors it: " + JSON.stringify(pe.map(s => s.rule)));
+  // the swap: the page's list has the strict rule in the old one's place; the reference's list keeps the document's rule
+  const at = M.ORDER.indexOf("vwap");
+  assert(M.ORDER.length === 14 && at >= 0 && !M.ORDER.includes("vwap_strict") && M.PAGE_ORDER[at] === "vwap_strict" && !M.PAGE_ORDER.includes("vwap"), "V5: the page's 14 have the strict VWAP rule in the old one's place; MorePat.ORDER is still the reference's 14");
+  assert(!N.MORE.calls.includes("vwap") && N.MORE.optIn.includes("vwap_strict") && N.moreCalls(new Set(["vwap_strict"])).includes("vwap_strict") && !N.moreCalls(new Set()).includes("vwap_strict"), "V5: the old VWAP rule gives no call; the strict one only when ticked");
+  // the engine on a NIFTY 50 day (ATR about 10 carried in): unticked, no VWAP call of either kind; ticked, the strict call at the next open
+  const t0v = Date.parse("2026-11-20T09:15:00+05:30") / 1000;
+  const bars = v8.concat(flat(6, 126)).map((r, i) => ({ time: t0v + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const prevV = Array.from({ length: 30 }, (_, i) => ({ time: t0v - 86400 + i * 300, open: 120, high: 125, low: 115, close: 120 }));
+  const runV = (ticked) => N.runDay({ bars, index: "NIFTY 50", prevBars: prevV, atrSeed: 10, closedCount: bars.length, dayEnd: true, more: N.moreCalls(ticked) }).trades;
+  const offV = runV(new Set()), onV = runV(new Set(["vwap_strict"])), ev = onV.find(t => t.rule === "vwap_strict");
+  assert(!offV.some(t => t.rule === "vwap" || t.rule === "vwap_strict"), "V6: unticked: no VWAP call: " + JSON.stringify(offV.map(t => t.rule)));
+  assert(ev && ev.side === "CE" && ev.signalCandle === 18 && ev.entry === 126 && ev.lineName === "VWAP" && ev.kind === "VWAP reclaim (strict)", "V6: ticked: Buy CE at the next open 126, the VWAP as its line: " + JSON.stringify(ev && { k: ev.signalCandle, entry: ev.entry, line: ev.lineName, kind: ev.kind }));
+  console.log("New Rule Chart: VWAP Reclaim and Loss (strict): 8 of the last 8 candles past the VWAP, a body of 0.5 ATR, both sides; it replaces the VWAP rule on the page, only while ticked (V1 to V6)");
+}

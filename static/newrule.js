@@ -637,14 +637,16 @@
   // session's last candle's close; a signal carries its level L, its picture's target (or none), its key candles and lines for the chart
   // 20 November (the owner: "yes, build the engulfing strict and replace the old one"; "unticked means keep it out of the table too"):
   // the document's Engulfing gives no call any more; Engulfing (strict) (morepat.js engulfing_strict) takes its place, and only while
-  // its tick in Settings is on (optIn): unticked, it gives no call, draws nothing and holds up no other rule's call
+  // its tick in Settings is on (optIn): unticked, it gives no call, draws nothing and holds up no other rule's call.
+  // 22 November (the owner: "yes, build it"): the same for VWAP Reclaim and Loss: the document's rule gives no call any more; VWAP Reclaim and
+  // Loss (strict) (morepat.js vwap_strict: all of the last 8 candles on the other side of the VWAP, the body 0.5 x ATR) takes its place, opt-in
   const MORE = { indices: ["NIFTY 50"],  // where the 14 run
-                 calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer", "doji", "vwap"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
-                 optIn: ["engulfing_strict"] };  // rules that give calls only while ticked on the page
+                 calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer", "doji"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
+                 optIn: ["engulfing_strict", "vwap_strict"] };  // rules that give calls only while ticked on the page
   const moreCalls = (ticked) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key)));  // the page's call list: the rules above and the opt-in rules ticked (a Set of keys)
   const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more) : MORE.indices.includes(index));  // no index (the lab): only when asked
   const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines,  // the picture's points and lines (a trade's "points" is its result)
-                                             lineName: s.lines.length ? s.lines[0][4] : key === "vwap" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
+                                             lineName: s.lines.length ? s.lines[0][4] : key === "vwap" || key === "vwap_strict" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
   function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
     if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);

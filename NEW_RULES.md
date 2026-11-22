@@ -331,6 +331,45 @@ first top, the documents' swing size of 3, the signal within 10 candles of the s
 NIFTY BANK and SENSEX rest on a handful of calls: thin, to be watched by the daily round. `lab/newrule-check.js` D1 to D4 hold the
 rule's cases and the swap.
 
+## VWAP Reclaim and Loss (strict) replaces the VWAP rule (22 November): NIFTY 50
+
+The owner, 20 November, of the first ranking of the page's rules: "look into the VWAP rule on NIFTY 50"; then, 22 November, "so do
+you mean it is going to change the VWAP line value calculation rule on chart?" (no: the line is untouched) and "yes, build it".
+
+**The rule** (`static/morepat.js`, `vwap_strict`): the document's VWAP Reclaim and Loss, the same function and the same VWAP line
+(`MorePat.vwapSeries`: from 09:15, the futures volume when the page has it, else the plain average), with two of its own checks
+stricter: **all of the last 8 candles** closed on the other side of the VWAP before the first close back across (the document: 5 of
+the last 6), and the signal candle's body **at least 0.5 x ATR** (the document: 0.3). The buffer (0.25 x ATR), the chase limit
+(2 x ATR), the level (the VWAP at the signal candle), Rule 1 and the trail are unchanged. The table says "VWAP reclaim (strict)" or
+"VWAP loss (strict)".
+
+**On the page**: the document's VWAP rule gives no call any more (`NewRule.MORE.calls` no longer lists it); "VWAP Reclaim and Loss
+(strict)" stands in its place in the Settings list, **unticked by default** (`NewRule.MORE.optIn`): unticked, no VWAP call, nothing
+drawn, it holds up no other rule's call; ticked, its calls fill the table, and the VWAP line and the VWAP stretch meter show (they
+showed with the old rule's tick). `MorePat.ORDER` keeps the reference's 14 (`lab/morepat_check.js` unchanged); `MorePat.PAGE_ORDER`
+has the strict rule in the old one's place. NIFTY BANK and SENSEX do not run the 14 more patterns: unchanged, call for call.
+
+**Why** (NIFTY 50, the page as it opens, every rule, one trade at a time, index points; after costs: 8 points a call). On the two years
+and the saved days (501 days; the VWAP of the two-year file is the plain average, as it has no volume) the VWAP rule gave 380 calls,
++765 before costs, -2,275 after: the page's worst rule after costs, both years negative. Its Buy PE side lost even before costs (204
+calls, -113); the 127 calls sold by a close straight back across the VWAP lost 25 points each; on days when the closes had already
+crossed the VWAP two or more times, the calls lost most. On the 60 days with the futures volume (`history/volume/NIFTY50_1min.csv`,
+26 August to 20 November; their 5-minute candles equal the saved ones; before late October the volume is the November contract's,
+an approximation of what the page read then) it nearly broke even (45 calls, -40 after costs), so every change was judged on both.
+After costs, against the page as it was:
+
+| | VWAP calls | VWAP's own | All calls |
+| --- | --- | --- | --- |
+| Strict ticked, 501 days | 380 to 179 | -2,275 to -569 | +1,388 (year 1 +1,080, year 2 +308; 7 of 9 quarters) |
+| Strict ticked, 60 volume days | 45 to 22 | | +225 |
+| Unticked (no VWAP call), 501 days | 0 | | +1,635 (year 1 +903, year 2 +732) |
+| Unticked, 60 volume days | 0 | | -6 |
+
+Each of the two checks helped alone in both years and on the volume days (8 of 8 alone +844, +183, +237; the body alone +394, +185,
++49), and 7, 8 or 9 candles in a row all helped. Tried and not built: at most 1, 2 or 3 earlier crosses of the VWAP that day (lost on
+the volume days), the reclaim side only, 6 of 6, clearing the VWAP by 0.5 ATR, at most 1 ATR past it. The strict rule still loses
+after costs (-569, mostly the Buy PE side). `lab/newrule-check.js` V1 to V6 hold the rule's cases and the swap.
+
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,
