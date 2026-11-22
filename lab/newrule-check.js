@@ -731,9 +731,9 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   const offV = runV(new Set()), onV = runV(new Set(["vwap_strict"])), ev = onV.find(t => t.rule === "vwap_strict");
   assert(!offV.some(t => t.rule === "vwap" || t.rule === "vwap_strict"), "V6: unticked: no VWAP call: " + JSON.stringify(offV.map(t => t.rule)));
   assert(ev && ev.side === "CE" && ev.signalCandle === 18 && ev.entry === 126 && ev.lineName === "VWAP" && ev.kind === "VWAP reclaim (strict)", "V6: ticked: Buy CE at the next open 126, the VWAP as its line: " + JSON.stringify(ev && { k: ev.signalCandle, entry: ev.entry, line: ev.lineName, kind: ev.kind }));
-  // NIFTY BANK and SENSEX (22 November, the owner: "Is it applied on Nifty bank and sensex chart ? if no then do that as well"): the strict
-  // VWAP rule runs there too, alone of the 14, only while ticked
-  for (const ix of ["NIFTY BANK", "SENSEX"]) {
+  // SENSEX (22 November, the owner: "Is it applied on Nifty bank and sensex chart ? if no then do that as well", then "NIFTY 50 and
+  // SENSEX"): the strict VWAP rule runs there too, alone of the 14, only while ticked; NIFTY BANK keeps none of the 14
+  for (const ix of ["SENSEX"]) {
     assert(N.ruleOn("vwap_strict", ix) && !N.ruleOn("hammer", ix) && !N.ruleOn("engulfing_strict", ix) && N.ruleOn("hammer", "NIFTY 50"), `V7: ${ix}: the strict VWAP rule runs there, the other patterns do not`);
     assert(JSON.stringify(N.moreCalls(new Set(["vwap_strict", "engulfing_strict"]), ix)) === JSON.stringify(["vwap_strict"]) && N.moreCalls(new Set(), ix).length === 0, `V7: ${ix}: the call list is the strict VWAP rule while ticked, else empty`);
     const offI = N.runDay({ bars, index: ix, prevBars: prevV, atrSeed: 10, closedCount: bars.length, dayEnd: true, more: N.moreCalls(new Set(), ix) }).trades;
@@ -742,6 +742,8 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
     assert(!offI.some(t => t.more) && onI.some(t => t.rule === "vwap_strict" && t.entry === 126), `V7: ${ix}: unticked no VWAP call, ticked the strict call`);
     assert(fullI.filter(t => t.more).every(t => t.rule === "vwap_strict"), `V7: ${ix}: handed the NIFTY 50 list, it still runs only the strict VWAP rule: ` + JSON.stringify(fullI.filter(t => t.more).map(t => t.rule)));
   }
+  const nbFull = N.runDay({ bars, index: "NIFTY BANK", prevBars: prevV, atrSeed: 10, closedCount: bars.length, dayEnd: true, more: N.moreCalls(new Set(["vwap_strict", "engulfing_strict"])) }).trades;
+  assert(!N.ruleOn("vwap_strict", "NIFTY BANK") && N.moreCalls(new Set(["vwap_strict"]), "NIFTY BANK").length === 0 && !nbFull.some(t => t.more), "V7: NIFTY BANK runs none of the 14, ticked or not, even handed the NIFTY 50 list");
   assert(N.moreCalls(new Set(["vwap_strict"]), "NIFTY 50").length === N.MORE.calls.length + 1 && JSON.stringify(N.moreCalls(new Set(["vwap_strict"]))) === JSON.stringify(N.moreCalls(new Set(["vwap_strict"]), "NIFTY 50")), "V7: NIFTY 50's list is unchanged");
-  console.log("New Rule Chart: VWAP Reclaim and Loss (strict): 8 of the last 8 candles past the VWAP, a body of 0.5 ATR, both sides; it replaces the VWAP rule on the page, only while ticked, on all three indices (V1 to V7)");
+  console.log("New Rule Chart: VWAP Reclaim and Loss (strict): 8 of the last 8 candles past the VWAP, a body of 0.5 ATR, both sides; it replaces the VWAP rule on the page, only while ticked, on NIFTY 50 and SENSEX (V1 to V7)");
 }

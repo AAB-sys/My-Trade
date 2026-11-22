@@ -643,9 +643,10 @@
   const MORE = { indices: ["NIFTY 50"],  // where the 14 run
                  calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer", "doji"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
                  optIn: ["engulfing_strict", "vwap_strict"],  // rules that give calls only while ticked on the page
-                 // 22 November (the owner: "Is it applied on Nifty bank and sensex chart ? if no then do that as well"): the rules that also run
-                 // on other indices than MORE.indices, each alone there (the other 13 stay NIFTY 50 only)
-                 alsoOn: { vwap_strict: ["NIFTY BANK", "SENSEX"] } };
+                 // 22 November (the owner: "Is it applied on Nifty bank and sensex chart ? if no then do that as well", then, shown that it lost
+                 // on NIFTY BANK, "NIFTY 50 and SENSEX"): the rules that also run on other indices than MORE.indices, each alone there (the
+                 // other 13 stay NIFTY 50 only)
+                 alsoOn: { vwap_strict: ["SENSEX"] } };
   const ruleOn = (key, index) => MORE.indices.includes(index) || (MORE.alsoOn[key] || []).includes(index);  // does this rule run on this index
   // the page's call list for an index: the rules above and the opt-in rules ticked (a Set of keys), those that run on the index only
   const moreCalls = (ticked, index = null) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key))).filter(key => index == null || ruleOn(key, index));
