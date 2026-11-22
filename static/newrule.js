@@ -700,29 +700,15 @@
                  // on NIFTY BANK, "NIFTY 50 and SENSEX"): the rules that also run on other indices than MORE.indices, each alone there (the
                  // other 13 stay NIFTY 50 only)
                  // 22 November (the owner: "built it for nifty bank and sensex as well"): NEWHIGH-TREND / NEWLOW-TREND runs on all three indices, opt-in
-                 alsoOn: { vwap_strict: ["SENSEX"], trend_break: ["NIFTY BANK", "SENSEX"] },
-                 // 22 November (the owner: "new inndicator or rules or strategies should not remove old fired call or signals which are fired
-                 // already becasue of the existing 24 signals on the chart ... no change in the exisitng calls logic and no change in already fired
-                 // signals"): the rules that run ON THEIR OWN and only ADD calls (runPage): NEWHIGH-TREND held one call open for hours and, one
-                 // call at a time, took 40 to 65% of the other rules' calls away on all three indices
-                 addOn: ["trend_break"] };
+                 alsoOn: { vwap_strict: ["SENSEX"], trend_break: ["NIFTY BANK", "SENSEX"] } };
   const ruleOn = (key, index) => MORE.indices.includes(index) || (MORE.alsoOn[key] || []).includes(index);  // does this rule run on this index
   // the page's call list for an index: the rules above and the opt-in rules ticked (a Set of keys), those that run on the index only
-  // the page's run (22 November): the page's rules as they always ran, in one pass (their logic unchanged), then each add-on rule ticked in
-  // a run of its own, its calls added: a call of the page's rules is the same whether an add-on rule is ticked or not
-  function runPage(opts) {
-    const more = Array.isArray(opts.more) ? opts.more : null, add = more ? more.filter(key => MORE.addOn.includes(key)) : [];
-    if (!add.length) return runDay(opts);
-    const main = runDay({ ...opts, more: more.filter(key => !MORE.addOn.includes(key)) });
-    const added = add.flatMap(key => runDay({ ...opts, rules: [], more: [key], dbShadow: false }).trades);
-    return { ...main, trades: main.trades.concat(added).sort((a, b) => a.signalTime - b.signalTime), added };
-  }
   const moreCalls = (ticked, index = null) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key))).filter(key => index == null || ruleOn(key, index));
   const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more)
     : MORE.indices.includes(index) || (Array.isArray(more) && more.some(key => (MORE.alsoOn[key] || []).includes(index))));  // no index (the lab): only when asked
   const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines, ...(s.stop0 != null ? { stopAt: round2(s.stop0), trailAtr: s.trail } : {}),  // the picture's points and lines (a trade's "points" is its result)
                                              lineName: s.lines.length ? s.lines[0][4] : key === "vwap" || key === "vwap_strict" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
-  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
+  function runDayOne({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
     if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
@@ -768,5 +754,18 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, runPage, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  // NEWHIGH-TREND / NEWLOW-TREND runs in a lane of its own (22 November evening, the owner, ticking it on Friday's chart: "when i click on the
+  // settings and tick on NEWHIGH/NEWLOW indicator the existing signal goes away ... it is removing the rising wedge signal which is very
+  // important"): its call is open for hours, and with one trade at a time it held back every other rule's call. Now the day is replayed twice,
+  // the other rules exactly as they ran before (the same calls whether it is ticked or not) and this rule alone, with its own trade at a time
+  // and its own losses in a row; the calls are put together by time. Two calls can therefore be open at once, one of each lane
+  const LANE = ["trend_break"];
+  function runDay(args) {
+    const more = args.more, lane = Array.isArray(more) ? more.filter(key => LANE.includes(key)) : [];
+    if (!lane.length) return runDayOne(args);
+    const main = runDayOne({ ...args, more: more.filter(key => !LANE.includes(key)) }), own = runDayOne({ ...args, rules: [], more: lane, dbShadow: false });
+    own.trades.forEach(t => { t.lane = "trend"; });
+    return { ...main, trades: main.trades.concat(own.trades).sort((a, b) => a.signalTime - b.signalTime || (a.lane ? 1 : -1)), skipped: main.skipped.concat(own.skipped) };
+  }
+  root.NewRule = { CFG, DT, DB, MORE, LANE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

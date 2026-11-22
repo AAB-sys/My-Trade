@@ -909,7 +909,7 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
 // ---- K: nothing new takes an existing call away (22 November, the owner: "new inndicator or rules or strategies should not remove old fired
 // call or signals which are fired already becasue of the existing 24 signals on the chart. it should always be there on the chart ... no change
 // in the exisitng calls logic and no change in already fired signals ... It should be for all 3 indices"). On 16 real saved days of all three
-// indices (lab/keep_days.json): every add-on rule (NewRule.MORE.addOn) and every strategy, ticked over every set of the page's own ticks
+// indices (lab/keep_days.json): every rule in a lane of its own (NewRule.LANE) and every strategy, ticked over every set of the page's own ticks
 // tried, leaves every call of the page's rules exactly as it was, and adds only its own calls, the same as it gives alone
 {
   const fs = require("fs"), K = JSON.parse(fs.readFileSync(path.join(__dirname, "keep_days.json"))).days;
@@ -923,13 +923,13 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
       const day = bars(d.indices[ix]), before = K.slice(i - 4, i).flatMap(x => bars(x.indices[ix])), seed = N.atrSeries(before).slice(-1)[0];
       const opts = { bars: day, index: ix, prevBars: before, atrSeed: seed, closedCount: day.length, dayEnd: true };
       for (const base of pageTicks) {
-        const run = (ticked) => N.runPage({ ...opts, more: N.moreCalls(ticked, ix), rules: N.rulesFor(ix, ticked) }).trades;
+        const run = (ticked) => N.runDay({ ...opts, more: N.moreCalls(ticked, ix), rules: N.rulesFor(ix, ticked) }).trades;
         const old = run(new Set(base));
-        for (const key of N.MORE.addOn.filter(k => N.ruleOn(k, ix))) {
+        for (const key of N.LANE.filter(k => N.ruleOn(k, ix))) {
           const now = run(new Set(base.concat([key]))), alone = N.runDay({ ...opts, rules: [], more: [key], dbShadow: false }).trades;
-          const mine = now.filter(t => t.rule === key), others = now.filter(t => t.rule !== key || !N.MORE.addOn.includes(t.rule));
+          const mine = now.filter(t => t.rule === key), others = now.filter(t => t.rule !== key);
           assert(old.every(t => now.some(u => same(u, t))), `K1: ${ix} ${d.date}, ticks [${base}] + ${key}: a call of the page's rules changed or vanished`);
-          assert(same(others.filter(t => t.rule !== key), old) && same(mine, alone), `K1: ${ix} ${d.date}, ticks [${base}] + ${key}: the page's calls must be exactly the old ones and ${key} only its own`);
+          assert(same(others, old) && same(mine, alone), `K1: ${ix} ${d.date}, ticks [${base}] + ${key}: the page's calls must be exactly the old ones and ${key} only its own`);
           checked++; kept += old.length; added += mine.length;
         }
       }
@@ -940,5 +940,25 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
     });
   }
   assert(checked > 0 && kept > 0, "K: the saved days gave nothing to check");
-  console.log(`New Rule Chart: nothing new takes an existing call away: on 16 saved days of all three indices, ${checked} runs with an add-on rule ticked kept every one of the page's ${kept} calls and added ${added} of their own; each strategy the same alone or with the others (K1, K2)`);
+  console.log(`New Rule Chart: nothing new takes an existing call away: on 16 saved days of all three indices, ${checked} runs with a lane rule ticked kept every one of the page's ${kept} calls and added ${added} of their own; each strategy the same alone or with the others (K1, K2)`);
+}
+
+// ---- NEWHIGH-TREND / NEWLOW-TREND runs in a lane of its own (22 November evening, the owner: ticking it removed the Rising Wedge call from Friday's
+// chart): ticking it must only ADD calls. 60 made-up days (a seeded walk, with and without a trend), the other rules as the page runs them, on all three indices
+{
+  const M = globalThis.MorePat; let seed = 20261122; const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+  const t0 = Date.parse("2026-11-20T09:15:00+05:30") / 1000, walk = (n, start, drift, t) => { let p = start; return Array.from({ length: n }, (_, i) => { const o = p, c = p + drift + (rnd() - 0.5) * 12, h = Math.max(o, c) + rnd() * 5, l = Math.min(o, c) - rnd() * 5; p = c; return { time: t + i * 300, open: o, high: h, low: l, close: c }; }); };
+  const sig = (t) => [t.rule, t.side, t.signalTime, t.entry, t.exit, t.points, t.how].join("|");
+  let days = 0, withTrend = 0, withOthers = 0, bothOpen = 0;
+  for (let d = 0; d < 60; d++) {
+    const drift = [0, 1.2, -1.2][d % 3], prev = walk(150, 100, drift, t0 - 86400 * 2), bars = walk(75, prev[prev.length - 1].close, drift, t0), ix = ["NIFTY 50", "NIFTY BANK", "SENSEX"][d % 3];
+    const run = (ticked) => N.runDay({ bars, index: ix, prevBars: prev, atrSeed: M.atrBefore(prev).slice(-1)[0], closedCount: bars.length, dayEnd: true, volumes: null, rules: N.rulesFor(ix, new Set()), more: N.moreCalls(ticked, ix) });
+    const off = run(new Set(["engulfing_strict", "vwap_strict", "doji_strict"])), on = run(new Set(["engulfing_strict", "vwap_strict", "doji_strict", "trend_break"]));
+    const others = on.trades.filter(t => t.rule !== "trend_break"), own = on.trades.filter(t => t.rule === "trend_break");
+    assert(JSON.stringify(others.map(sig)) === JSON.stringify(off.trades.map(sig)), `T9: day ${d} (${ix}): with the tick on, every other rule's call is exactly as with it off`);
+    assert(own.every((t, i) => !i || own[i - 1].exitTime != null && own[i - 1].exitTime <= t.entryTime || own[i - 1].exit != null), `T9: day ${d}: the trend lane takes one trade at a time`);
+    days++; if (own.length) withTrend++; if (others.length) withOthers++; if (own.some(t => others.some(o => o.entryTime < (t.exitTime || Infinity) && t.entryTime < (o.exitTime || Infinity)))) bothOpen++;
+  }
+  assert(withTrend >= 10 && withOthers >= 10, `T9: the made-up days do call both lanes (trend ${withTrend}, others ${withOthers} of ${days})`);
+  console.log(`New Rule Chart: NEWHIGH-TREND has a lane of its own: ticking it leaves every other call as it was, on ${days} made-up days (${withTrend} with its calls, ${withOthers} with other rules' calls, ${bothOpen} with calls of both open at once) (T9)`);
 }

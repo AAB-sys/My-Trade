@@ -219,16 +219,18 @@ their own logic. Read this before touching the code.
   Buy PE on the mirror, the signal candle 10:15 to 14:00. It is the one rule with its own exit: the stop starts 5 ATR behind the signal
   close and trails 5 ATR behind the best close (`stop0`, `trail` in the signal; `stopAt`, `trailAtr` on the trade, which starts on
   stage 2), so it can stay with a trend; every other call keeps Rule 1 and the half-ATR trail. Opt-in (`MORE.optIn`), on all three
-  indices (`MORE.alsoOn`); only its calls are drawn, not the signals a call already open held back. It runs on its own and only adds
-  calls (`MORE.addOn`, `NewRule.runPage`, 22 November evening): before, its call open for hours held 40 to 65% of the other rules' calls
-  back. NEW_RULES.md has the numbers.
+  indices (`MORE.alsoOn`); only its calls are drawn, not the signals a call already open held back. It runs in a lane of its own
+  (`NewRule.runDay`, `LANE`: the day is replayed twice, the other rules as before and this rule alone), because a call open for hours
+  held back every other rule's call (the owner, 22 November evening: it removed the Rising Wedge call): ticking it only adds calls, two
+  calls can be open at once, and `lab/newrule-check.js` T9 proves no other call changes. NEW_RULES.md has the numbers.
   THE OWNER'S RULE FOR EVERYTHING NEW (22 November: "new inndicator or rules or strategies should not remove old fired call or signals
   which are fired already becasue of the existing 24 signals on the chart. it should always be there on the chart. It should not vanish
   or delete or replace by the new inndicator or rules or strategies ... no change in the exisitng calls logic and no change in already
-  fired signals. It should be for all 3 indices"): a new rule goes in `MORE.addOn` (its own run, its calls added to the table) or under
-  Strategies (`runStrategies`, its own run, its calls in "Call logs from strategy"); it never replaces a rule, never shares the page's
-  one call at a time, and never changes the page's rules' logic. `lab/newrule-check.js` K1 and K2 (16 real saved days of all three
-  indices, `lab/keep_days.json`) must pass: with any add-on rule or strategy ticked, every call of the page's rules stays exactly as it was.
+  fired signals. It should be for all 3 indices"): a new rule goes in a lane of its own (`NewRule.LANE`: its own run, its calls added to
+  the table) or under Strategies (`runStrategies`, its own run, its calls in "Call logs from strategy"); it never replaces a rule, never
+  shares the page's one call at a time, and never changes the page's rules' logic. `lab/newrule-check.js` K1 and K2 (16 real saved days
+  of all three indices, `lab/keep_days.json`) and T9 must pass: with any lane rule or strategy ticked, every call of the page's rules
+  stays exactly as it was.
   Settings > Strategies (22 November, the
   owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first

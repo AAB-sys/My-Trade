@@ -2376,8 +2376,7 @@
     // the strategies ticked under Settings > Strategies run ON THEIR OWN (22 November): their calls go to "Call logs from strategy", never into the table above
     const strategies = NewRule.strategiesFor ? NewRule.strategiesFor(name, state.strategies || new Set()) : [];
     const stratTrades = NewRule.runStrategies({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes }, strategies);  // each strategy on its own: ticking one never takes a call from another
-    // runPage (22 November): an add-on rule ticked (NEWHIGH-TREND) runs on its own and only adds calls; the page's rules as they always ran
-    return { ...(NewRule.runPage || NewRule.runDay)({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) }), bars, before, closed, dayEnd, volumes, strategies, stratTrades };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
+    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) }), bars, before, closed, dayEnd, volumes, strategies, stratTrades };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -2636,7 +2635,7 @@
     const how = { reclaim: "reclaim", retouch: "retouch", trail: "trailing stop", "day end": "end of day" };
     const rows = log.rows.slice().reverse().map(r => {
       const tr = document.createElement("tr");
-      const taken = moreTaken(r, run && run.trades), trades = run && run.trades || [], skipped = run && run.skipped || [], bar = run && run.bars && run.bars[r.k];
+      const taken = moreTaken(r, run && run.trades), skipped = run && run.skipped || [], bar = run && run.bars && run.bars[r.k], inLane = (x) => NewRule.LANE.includes(x), trades = (run && run.trades || []).filter(t => inLane(t.rule) === inLane(r.key));  // NEWHIGH-TREND has a lane of its own: only its own calls hold its signals back, and it holds back no other rule's (22 November)
       const busy = !taken && bar && trades.some(t => t.signalCandle < r.k && (t.exitTime == null || t.exitTime > bar.time || (t.exitTime === bar.time && t.how === "day end")));
       const why = !taken && bar && skipped.find(x => x.time === bar.time && !x.rule && (x.side == null || x.side === r.side)), other = !taken && trades.find(t => t.signalCandle === r.k);  // the engine's own skip notes (a scanner's notes carry its rule)
       const unticked = !taken && NewRule.MORE.optIn && NewRule.MORE.optIn.includes(r.key) && !(state.morePat || new Set()).has(r.key);  // Engulfing (strict) unticked: no call (20 November)

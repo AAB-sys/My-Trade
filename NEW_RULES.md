@@ -509,10 +509,10 @@ The owner, 22 November: "new inndicator or rules or strategies should not remove
 becasue of the existing 24 signals on the chart. it should always be there on the chart. It should not vanish or delete or replace by the
 new inndicator or rules or strategies ... no change in the exisitng calls logic and no change in already fired signals. It should be for
 all 3 indices". So every rule or strategy added from now on runs ON ITS OWN and only adds calls: the page's rules keep running exactly as
-they do (`NewRule.runPage`: one pass, their logic unchanged); an add-on rule (`MORE.addOn`) runs in a run of its own and its calls join
-the table and the chart; a strategy (`NewRule.runStrategies`) runs in a run of its own and its calls go to "Call logs from strategy".
-`lab/newrule-check.js` K1 and K2 prove it on 16 real saved days of all three indices (`lab/keep_days.json`): with any add-on rule or
-strategy ticked, over several sets of the page's own ticks, every call of the page's rules stays exactly as it was. Checked on the page
+they do (one pass, their logic unchanged); a rule in a lane of its own (`NewRule.LANE`, run by `NewRule.runDay`: NEWHIGH-TREND, since
+22 November evening, #290) runs alone and its calls join the table and the chart; a strategy (`NewRule.runStrategies`) runs in a run of its own and its calls go to "Call logs from strategy".
+`lab/newrule-check.js` K1 and K2 prove it on 16 real saved days of all three indices (`lab/keep_days.json`), and T9 on 60 made-up days:
+with any lane rule or strategy ticked, over several sets of the page's own ticks, every call of the page's rules stays exactly as it was. Checked on the page
 too, on all three indices: every row of the calls table, every mark and line on the chart, before and after ticking: none lost.
 
 ## On the page
@@ -562,14 +562,11 @@ the day's last candle. The table says "Rule:- NEWHIGH-TREND" (or NEWLOW-TREND) a
 **On the page**: Settings lists "NEWHIGH / NEWLOW Trend (Buy CE / Buy PE)", **unticked by default**, on NIFTY 50, NIFTY BANK and
 SENSEX (`NewRule.MORE.optIn`, `alsoOn`); unticked, it gives no call and holds up nothing; ticked, its calls fill the table. Only its
 calls are drawn on the chart (with the 12-candle high as its line), not the many signals a call already open held back (they stay in
-the signal log, NIFTY 50). **It runs on its own and only adds calls** (22 November evening, the owner: "new inndicator or rules or
-strategies should not remove old fired call or signals which are fired already becasue of the existing 24 signals on the chart. it should
-always be there on the chart ... no change in the exisitng calls logic and no change in already fired signals ... It should be for all 3
-indices"): until then, ticked, its call open for hours held the other rules' calls back, one trade at a time, and 40 to 65% of them
-vanished (NIFTY 50 two years 641 of 1,293, NIFTY BANK 48 of 81, SENSEX 51 of 79). Now `NewRule.runPage` runs the page's rules exactly as
-before, in one pass, and each add-on rule (`MORE.addOn`: this one) in a run of its own, its calls added: none of the page's calls changes,
-on all three indices. On its own it gives NIFTY 50 530 calls +5,306 points (two years, halves +2,098 / +3,207), NIFTY BANK 66 calls +254
-(-2,781 / +3,035), SENSEX 61 calls +2,183 (-149 / +2,332), index points.
+the signal log, NIFTY 50). **It has a lane of its own** (22 November evening, the owner, ticking it on Friday's chart: "the existing
+signal goes away ... it is removing the rising wedge signal which is very important"): at first it shared the page's one trade at a
+time, and its call, open for hours, held back every other rule's call. Now the day is replayed twice, the other rules exactly as they
+ran before and this rule alone with its own trade at a time and its own losses in a row (`NewRule.runDay`, `LANE`); ticking it only adds
+calls, and two calls can be open at once, one of each lane.
 
 **Numbers** (the page's engine as it runs, the rule on its own, index points, 8 points off each call; the candles of NIFTY 50 are the
 owner's two years and the saved days, 498 days; NIFTY BANK and SENSEX only the days since late August, rebuilt from
@@ -584,9 +581,10 @@ owner's two years and the saved days, 498 days; NIFTY BANK and SENSEX only the d
 The ULTROAN study had NIFTY 50 at +502 (year 1) and +1,343 (year 2) with stops filled at the stop price during the candle; the page
 sells at the close of the candle that closes past the stop, which costs points: that is the +780 here. The side that pays differs by
 index (NIFTY 50: the Buy PE; NIFTY BANK and SENSEX: the Buy CE), and NIFTY BANK and SENSEX have two to three months of days, with a
-losing first half on both: thin, to be watched. With the rest of the page's rules running beside it and the tick on, the page's net
-moved +3,859 (NIFTY 50), -1,745 (NIFTY BANK) and +1,358 (SENSEX); the NIFTY 50 gain is mostly the other rules' losing calls held back
-by this rule's open call (its own calls inside that run: 378, -411); since 22 November evening it holds nothing back (above). Friday 20 November, ticked: Buy CE at 10:45 on all three
+losing first half on both: thin, to be watched. With the rest of the page's rules running beside it and the tick on, the page's net moves by exactly this rule's own net
+(NIFTY 50 -8,344 to -7,564, NIFTY BANK +1,134 to +1,664, SENSEX +918 to +3,146): on all 605 days of the three indices no other rule's call
+changed. (The first version shared one trade at a time and held back other rules' calls, which moved the NIFTY 50 net by +3,859 for the
+wrong reason and took the Rising Wedge call off Friday's chart.) Friday 20 November, ticked: Buy CE at 10:45 on all three
 indices, held to the close: NIFTY 50 +246 points, NIFTY BANK +1,268, SENSEX +720 (before costs).
 
-`lab/newrule-check.js` T1 to T8 hold the rule's cases, the three indices and the exit.
+`lab/newrule-check.js` T1 to T8 hold the rule's cases, the three indices and the exit; T9 holds that ticking it never changes another rule's call.
