@@ -518,6 +518,12 @@ branch from `main`.
   the last day's FINISHED candles are read (a later candle has come, or a minute has passed since its end), afresh each time.
   It gives no call and no CE or PE: the document's own evidence says a gap is a map, not a signal. `static/volume.html` names
   it only through `fvgTool`, null unless the page is AAA_V1's chart, so the Volume Profile page is as it was.
+  The layout on a wide window (22 November, the owner, with the AAA_V1 page marked: "there is blank space on the left side and right side of the
+  chart ... move all the yellow highlighted readings to the right ... make the chart more fit and bigger"): while AAA_V1 is open
+  `static/detail.html` lets `main.aaa` use the whole window (the other panels keep the 1100 pixel column) and the frame is a little taller
+  (88vh, at most 900 px); in `static/volume.html` (`embed=aaa` only) the figures and the FVG words stand in a column of their own at the
+  right (`#side`, 320 px, one reading to a line) on a window 900 px wide or more, and the chart takes the rest. Narrower (a phone, a small
+  tablet) `#side` is `display: contents` and the page is exactly as it was (pixel-identical to main at 800 and 390 px wide).
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each

@@ -206,6 +206,30 @@
   body.embed > header, body.embed #index, body.embed #tools .sep, body.embed #note { display: none; }
   body.embed #navrow { display: flex; justify-content: flex-end; border-top: 1px solid var(--border); flex: none; min-height: 30px; }
   body.embed #inforow #info { display: block; padding: 3px 12px; }  /* two rows of figures: the previous day's, then today's */
+  /* 22 November, the owner, with the AAA_V1 page on a wide screen: "there is blank space on the left side and right side of the chart ... move all
+     the yellow highlighted readings [the figures, the FVG words] to the right ... make the chart more fit and bigger": on a window 900 pixels
+     wide or more the readings stand in a column of their own at the right (#side), one to a line, and the chart takes the rest of the width and
+     the height the rows used to take. Narrower (a phone, a small tablet) #side holds nothing of its own: the page is as it was */
+  body.embed #side { display: contents; }
+  @media (min-width: 900px) {
+    body.embed { display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: auto minmax(0, 1fr) auto; }
+    body.embed > #tools { grid-column: 1; grid-row: 1; }
+    body.embed > #main { grid-column: 1; grid-row: 2; min-height: 0; }
+    body.embed > #navrow { grid-column: 1; grid-row: 3; }
+    body.embed > #side { display: block; grid-column: 2; grid-row: 1 / 4; min-height: 0; border-left: 1px solid var(--border); overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: 6px 0 12px; }
+    body.embed #side #inforow { display: block; border-bottom: 0; }
+    body.embed #side #info { display: block; padding: 0 14px; white-space: normal; overflow: visible; }
+    body.embed #side #info .r { display: block; padding: 6px 0; min-height: 0; }
+    body.embed #side #info .r + .r { border-top: 1px solid var(--border); }
+    body.embed #side #info .r > span:not(.cut) { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 3px 0; font-size: 13px; }
+    body.embed #side #info .cut { display: none; }
+    body.embed #side #fvg-row { padding: 6px 14px 8px; border-top: 1px solid var(--border); border-bottom: 0; font-size: 13px; }
+    body.embed #side #fvg-row .r { display: block; padding: 3px 0; }
+    body.embed #side #fvg-row .r + .r { border-top: 1px solid var(--border); margin-top: 3px; padding-top: 6px; }
+    body.embed #side #fvg-row .r > span { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; padding: 2px 0; }
+    body.embed #side #fvg-row .r > span .v { text-align: right; }
+    body.embed #side #fvg-row ol { max-height: 34vh; }
+  }
   body.embed #info .r { display: flex; gap: 0 14px; align-items: center; min-height: 22px; }
   :root { --prev-day: #d97706; }  /* amber: the previous day's readings in AAA_V1 */
   body.embed #info .prev .k, body.embed #info .prev .v { color: var(--prev-day); font-weight: 600; }
@@ -368,6 +392,7 @@
     // then, with the buttons marked: "bring this exactly to the bottom where it is red boxed": the zoom and move buttons stand in a
     // row of their own under the chart, at its right end
     { const row = document.createElement("div"); row.id = "navrow"; document.getElementById("main").after(row); row.appendChild(document.getElementById("nav")); }
+    { const side = document.createElement("div"); side.id = "side"; const info = document.getElementById("inforow"); info.before(side); side.appendChild(info); }  // the figures and (from static/fvg.js) the FVG words: a column of their own on a wide window
   }
   const $ = (id) => document.getElementById(id);
   // No calls on the page (16 November, the owner: "remove all the call tables, i dont want that, and also remove all the signals

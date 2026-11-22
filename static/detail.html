@@ -276,7 +276,11 @@
   main.aaa > .controls.levels, main.aaa > .chart-wrap, main.aaa > #redraw-note, main.aaa > #rule-signal { display: none !important; }
   main.aaa > #summary { display: none; }  /* 19 November, the owner, with the three boxes marked on AAA_V1: "remove this": the Previous session, Today and 52 weeks boxes are not shown while AAA_V1 is open (its chart carries the previous day's and today's figures) */
   #aaa-chart { margin: 0 0 14px; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--surface); }
-  #aaa-chart iframe { display: block; width: 100%; height: min(78vh, 760px); min-height: 480px; border: 0; }
+  #aaa-chart iframe { display: block; width: 100%; height: min(88vh, 900px); min-height: 480px; border: 0; }
+  /* 22 November, the owner: "for AAA_V1 page there is blank space on the left side and right side of the chart ... make the chart more fit and bigger":
+     while AAA_V1 is open the page uses the whole window width (the chart's own page then puts its readings in a column at the right) and
+     the chart is a little taller. Every other panel keeps the 1100 pixel column */
+  main.aaa { max-width: none; }
   #aaa-note { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; } #aaa-note b { color: var(--ink); } #aaa-key { font-size: 12px; color: var(--muted); margin-top: 2px; }
   #aaa { width: 100%; border-collapse: collapse; font-size: 13px; } #aaa th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
   #aaa td.aaa-none { color: var(--muted); padding: 14px 0; }
