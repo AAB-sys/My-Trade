@@ -518,11 +518,20 @@ branch from `main`.
   the last day's FINISHED candles are read (a later candle has come, or a minute has passed since its end), afresh each time.
   It gives no call and no CE or PE: the document's own evidence says a gap is a map, not a signal. `static/volume.html` names
   it only through `fvgTool`, null unless the page is AAA_V1's chart, so the Volume Profile page is as it was.
+  What the FVG panel and the chart say always agree (22 November, the owner: the panel's "15:15" was not what the chart showed): every time is the
+  chart's own label of the candle (its start), not the minute the candle ended (the gap's third candle, "last candle"); the chart draws the
+  WHOLE zone of each open gap, the same two numbers as its label and the panel, with the part price has traded through fainter, and the dashed
+  50% line for as long as the gap is open. The panel's "FVG levels" list (title, No., Formed, Levels, Status) holds EVERY gap formed today,
+  oldest first, so a filled gap stays in it though the chart no longer draws it; the numbers 1, 2, 3 are the same on the chart's labels; a
+  bullish gap's row is green and a bearish gap's red; the status is `fillStatus(p)`: Filled 100%, Filled 50% (to the middle line, rounded to a
+  whole per cent), Filled 0-50%, Filled 50-100%, or Not filled. The side column is 380 px (`#side`). The Tracker's own times (candle ends) are
+  unchanged: only what is shown is turned into the chart's labels. The browser check that derives every one of these from the chart's own
+  candles (830 gaps, 3 indices, 3 candle sizes, 3 times of day) is described in the PR; `lab/check_fvg.py` holds the rules and the status words.
   The layout on a wide window (22 November, the owner, with the AAA_V1 page marked: "there is blank space on the left side and right side of the
   chart ... move all the yellow highlighted readings to the right ... make the chart more fit and bigger"): while AAA_V1 is open
   `static/detail.html` lets `main.aaa` use the whole window (the other panels keep the 1100 pixel column) and the frame is a little taller
   (88vh, at most 900 px); in `static/volume.html` (`embed=aaa` only) the figures and the FVG words stand in a column of their own at the
-  right (`#side`, 320 px, one reading to a line) on a window 900 px wide or more, and the chart takes the rest. Narrower (a phone, a small
+  right (`#side`, one reading to a line) on a window 900 px wide or more, and the chart takes the rest. Narrower (a phone, a small
   tablet) `#side` is `display: contents` and the page is exactly as it was (pixel-identical to main at 800 and 390 px wide).
   The table under the AAA_V1 chart (the Trade Plan's box with no rule, "no calls") was taken off on 22 November (the owner: "remove the red
   marked table, dont need this on this page"), and on a wide window the chart's frame is taller by the height the table had (`static/detail.html`,

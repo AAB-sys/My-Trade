@@ -212,7 +212,7 @@
      the height the rows used to take. Narrower (a phone, a small tablet) #side holds nothing of its own: the page is as it was */
   body.embed #side { display: contents; }
   @media (min-width: 900px) {
-    body.embed { display: grid; grid-template-columns: minmax(0, 1fr) 320px; grid-template-rows: auto minmax(0, 1fr) auto; }
+    body.embed { display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr) auto; }
     body.embed > #tools { grid-column: 1; grid-row: 1; }
     body.embed > #main { grid-column: 1; grid-row: 2; min-height: 0; }
     body.embed > #navrow { grid-column: 1; grid-row: 3; }
@@ -228,7 +228,7 @@
     body.embed #side #fvg-row .r + .r { border-top: 1px solid var(--border); margin-top: 3px; padding-top: 6px; }
     body.embed #side #fvg-row .r > span { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; padding: 2px 0; }
     body.embed #side #fvg-row .r > span .v { text-align: right; }
-    body.embed #side #fvg-row ol { max-height: 34vh; }
+    body.embed #side #fvg-row .lbody { max-height: 58vh; }
   }
   body.embed #info .r { display: flex; gap: 0 14px; align-items: center; min-height: 22px; }
   :root { --prev-day: #d97706; }  /* amber: the previous day's readings in AAA_V1 */
