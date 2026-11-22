@@ -11,6 +11,7 @@
 <script src="/static/impulse.js"></script>
 <script src="/static/vptool.js"></script>
 <script src="/static/fvg.js"></script>
+<script src="/static/fvgsig.js"></script>
 <!-- The Volume Profile page (12 November, the owner: "build a new page with header name as volume profile ... the chart format
      which dhan uses for pc and mobile"). A page of its own: it reads the index's candles and the futures' volume, draws them,
      and decides nothing. Paper calls and Calls with Signals are not read here and do not read this page. The chart is drawn
@@ -229,6 +230,11 @@
     body.embed #side #fvg-row .r > span { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; padding: 2px 0; }
     body.embed #side #fvg-row .r > span .v { text-align: right; }
     body.embed #side #fvg-row .lbody { max-height: 58vh; }
+    body.embed #side #fs-row { padding: 6px 14px 8px; border-top: 1px solid var(--border); border-bottom: 0; font-size: 13px; }
+    body.embed #side #fs-row .r { display: block; padding: 3px 0; }
+    body.embed #side #fs-row .r > span { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 2px 12px; padding: 2px 0; }
+    body.embed #side #fs-row .r > span .v { text-align: right; }
+    body.embed #side #fs-row .lbody { max-height: 58vh; }
   }
   body.embed #info .r { display: flex; gap: 0 14px; align-items: center; min-height: 22px; }
   :root { --prev-day: #d97706; }  /* amber: the previous day's readings in AAA_V1 */
@@ -372,6 +378,10 @@
   // required on other pages at all"): static/fvg.js, put on the chart further down, and only when this page is AAA_V1's chart.
   // An "FVG" tick box, off until ticked. On the Volume Profile page itself fvgTool stays null and nothing below that names it runs.
   let fvgTool = null;
+  // AAA_V1's FVG fill signals (23 November, the owner, with a build document and its module: "it should not touch any existing logic and it
+  // should not remove any old signals, it should trigger new signals keeping old ones ... keep the chart and panel values same"):
+  // static/fvgsig.js, a layer and a box of its own, and only when this page is AAA_V1's chart. Nothing above it changes.
+  let fvgSigTool = null;
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
   try { const saved = JSON.parse(localStorage.getItem(STORE) || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.vwap === true) document.getElementById("show-vwap").checked = true; if (saved.panel === true) document.getElementById("show-panel").checked = true; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
@@ -783,6 +793,10 @@
     chart, series: candles, IST, tools: $("tools"), infoRow: $("inforow"), name: () => state.name, interval: () => state.interval,
     bars: () => shown().flat(), fine: () => state.fine, num, css, now: () => Date.now() / 1000,
   });
+  if (EMBED && window.FvgSig && FvgSig.attach) fvgSigTool = FvgSig.attach({
+    chart, series: candles, IST, tools: $("tools"), infoRow: $("inforow"), name: () => state.name, interval: () => state.interval,
+    bars: () => shown().flat(), all: () => state.bars, fine: () => state.fine !== state.bars ? state.fine : null, get: (url) => fetch(url, withTab()), num, css, now: () => Date.now() / 1000,
+  });
   if (EMBED) { const volumeBox = $("show-volume").closest("label"); volumeBox.style.display = ""; $("tools").appendChild(volumeBox); }  // AAA_V1: the Volume tick box stands last in the top row, after the FVG gear
   function rebuild() {
     // the count is made from each day's 1-minute candles and their volume, whatever candle size is shown; where those
@@ -798,6 +812,7 @@
     drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable(); tickPanel();
     if (vpTool) vpTool.refresh();  // AAA_V1: the volume profiles drawn by hand are counted again from the candles and volume now
     if (fvgTool) fvgTool.refresh();  // AAA_V1: the fair value gaps are read again from the day's finished candles
+    if (fvgSigTool) fvgSigTool.refresh();  // AAA_V1: the FVG fill signals are worked out again from the finished 5-minute candles
   }
   // The running day's own levels, named (17 November, the owner, of the evening picture's "Today's VAH" and "Today's VAL" tags:
   // "why on live feed it is not showing todays VAH and todays VAL ?"): the profile's dashed VAH and VAL lines and its POC line
