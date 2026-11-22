@@ -162,7 +162,10 @@
     }
   }
 
-  const calc = { DEFAULTS, mins, hmOf, fmt, pts, resample, Tracker };
+  // How far price has traded through a gap, in the owner's words (22 November: "if it is filled 100% then mark it as Filled 100%, if filled till 50% then Filled 50%,
+  // if not filled completely then the range, 0 to 50% or 50% to 100%"); p is the filled per cent (one decimal), from the deepest wick
+  const fillStatus = (p) => p >= 99.95 ? "Filled 100%" : Math.round(p) === 50 ? "Filled 50%" : p <= 0 ? "Not filled" : p < 50 ? "Filled 0–50%" : "Filled 50–100%";
+  const calc = { DEFAULTS, mins, hmOf, fmt, pts, resample, fillStatus, Tracker };
   // ------------------------------------------------------------------------------------------------ the gaps on AAA_V1's chart
   // attach(A) puts the gaps on a chart. A is the page's side of it: chart, series (the candles), IST (seconds), tools and
   // infoRow (elements), name(), interval(), bars() (every candle on the chart), fine() (the 1-minute candles), num, css, now()
@@ -212,10 +215,10 @@
       const at = (hm) => s.start + mins(hm) * 60;
       for (const g of gaps) g.from_time = at(g.from_hm);
       const bars = A.bars(), price = bars[bars.length - 1].close, [below, above] = t.nearest(price);
-      // Every time shown is the chart's own label of the candle (its start), not the minute the candle ended: the gap's third candle, the candle
-      // that came back into it. The numbers 1, 2, 3 run oldest first over the gaps drawn, and are written on the chart too
-      const list = gaps.slice().sort((a, b) => a.id - b.id), no = new Map(list.map((g, i) => [g.id, i + 1]));
-      st.out = { tf: s.tf, day: s.day, gaps, list, no, events, made: t.made_today.length, below, above, price, read: s.cs.length, last: last ? last.hm : null, atr: t.atr() };
+      // Every time shown is the chart's own label of the candle (its start), not the minute the candle ended: the gap's third candle. The numbers 1, 2, 3
+      // run oldest first over every gap formed today (filled ones too), and are written on the chart's labels of the gaps still open
+      const all = t.made_today.map(g => t.describe(g)).sort((a, b) => a.id - b.id), no = new Map(all.map((g, i) => [g.id, i + 1])), open = gaps.slice().sort((a, b) => a.id - b.id);
+      st.out = { tf: s.tf, day: s.day, gaps, open, list: all, no, events, made: t.made_today.length, below, above, price, read: s.cs.length, last: last ? last.hm : null, atr: t.atr() };
       row(); redraw();
     }
 
@@ -229,7 +232,7 @@
     function boxes() {  // where each open gap stands now (media pixels): the whole zone, with the part price has already traded through; also for the browser checks
       const o = st.out; if (!st.on || !o || !o.gaps.length) return [];
       const Y = (p) => A.series.priceToCoordinate(p);
-      return o.list.map(z => { const top = Y(z.top), bottom = Y(z.bottom); if (top == null || bottom == null) return null;
+      return o.open.map(z => { const top = Y(z.top), bottom = Y(z.bottom); if (top == null || bottom == null) return null;
         let x0 = xAt(z.from_time); if (x0 == null || x0 < 0) x0 = 0;
         const bull = z.kind === "bullish", cut = Y(bull ? z.unfilled_high : z.unfilled_low), done = z.filled_pct > 0 && cut != null;
         // the unfilled part keeps the box's colour; the part traded through is fainter. Bullish: the filled part is the top of the zone; bearish: the bottom
@@ -272,8 +275,8 @@
       #fvg-row .r { display: flex; flex-wrap: wrap; gap: 0 14px; align-items: baseline; } #fvg-row .k { color: var(--muted); } #fvg-row .v { font-weight: 600; font-variant-numeric: tabular-nums; }
       #fvg-row .up { color: var(--up); } #fvg-row .down { color: var(--down); }
       #fvg-row details.fl { margin-top: 2px; } #fvg-row details.fl > summary { cursor: pointer; color: var(--ink); font-weight: 600; min-height: 26px; list-style-position: inside; }
-      #fvg-row .lh, #fvg-row .lr { display: grid; grid-template-columns: 34px 62px minmax(0, 1fr); gap: 0 6px; align-items: baseline; padding: 2px 0; font-variant-numeric: tabular-nums; }
-      #fvg-row .lh { color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); } #fvg-row .lr .no { color: var(--muted); } #fvg-row .lr .lv { font-weight: 600; }
+      #fvg-row .lh, #fvg-row .lr { display: grid; grid-template-columns: 20px 44px minmax(0, 1fr) auto; gap: 0 6px; align-items: baseline; padding: 2px 0; font-variant-numeric: tabular-nums; } #fvg-row .st, #fvg-row .lv { white-space: nowrap; } #fvg-row .st { text-align: right; }
+      #fvg-row .lh { color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--border); } #fvg-row .lr .lv, #fvg-row .lr .st { font-weight: 600; }
       #fvg-row .lbody { max-height: 34vh; overflow-y: auto; overscroll-behavior: contain; } #fvg-row .none { color: var(--muted); padding: 2px 0; }
       #fvg-shade { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.35); display: grid; place-items: center; }
       #fvg-dlg { width: min(430px, 94vw); max-height: min(640px, 92vh); display: flex; flex-direction: column; background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.35); font-size: 14px; }
@@ -307,14 +310,15 @@
       let html;
       if (o.why) html = `<div class="r">${cell("FVG", esc(o.why))}</div>`;
       else {
-        const said = (g) => `${A.num(g.bottom)} – ${A.num(g.top)} (${pts(g.size)} pts, ${g.state === "active" ? "not touched yet" : `${g.filled_pct}% filled, ${g.state === "touched" ? "first touched by the " + cl(g.touched_hm) : "50% line reached by the " + cl(g.half_hm)} candle`})`;
+        // how far price has traded through the gap (the owner, 22 November): Filled 100%; Filled 50% (exactly to the middle line); else the half it is in
+        const status = (g) => fillStatus(g.filled_pct);
         const nb = o.gaps.filter(g => g.kind === "bullish").length, ns = o.gaps.length - nb;
         // FVG levels (the owner, 22 November: "the red marked box should have title name as FVG levels and below that it should only show FVG formed time and
-        // levels with sr.nos 1,2,3"): the gaps drawn on the chart, oldest first, with the same numbers as the chart's labels; formed = the chart's label of the gap's third candle
-        const levels = o.list.map(g => `<div class="lr ${g.kind === "bullish" ? "up" : "down"}"><span class="no">${o.no.get(g.id)}</span><span class="tm">${cl(g.made_hm)}</span><span class="lv">${A.num(g.bottom)} – ${A.num(g.top)}</span></div>`).join("");
+        // levels with sr.nos 1,2,3", then "bullish green, bearish red" and "update the status for every FVG"): every gap formed today, oldest first, with the same
+        // numbers as the chart's labels; formed = the chart's label of the gap's third candle; the row is green for a bullish gap, red for a bearish one
+        const levels = o.list.map(g => `<div class="lr ${g.kind === "bullish" ? "up" : "down"}"><span class="no">${o.no.get(g.id)}</span><span class="tm">${cl(g.made_hm)}</span><span class="lv">${A.num(g.bottom)} – ${A.num(g.top)}</span><span class="st">${status(g)}</span></div>`).join("");
         html = `<div class="r">${cell("FVG on " + o.tf + "-minute candles", o.last ? "last candle " + o.last : "no finished candle yet")}${cell("Open", `${nb} bullish, ${ns} bearish`)}${cell("Made today", o.made)}</div>`
-          + `<div class="r">${cell("Bullish FVG below price", o.below ? said(o.below) : "none", o.below ? "up" : "")}</div>`
-          + `<details class="fl"><summary>FVG levels <span class="k">(${o.list.length})</span></summary>${o.list.length ? `<div class="lh"><span class="no">No.</span><span class="tm">Formed</span><span class="lv">Levels</span></div><div class="lbody">${levels}</div>` : `<div class="none">no open gap</div>`}</details>`;
+          + `<details class="fl"><summary>FVG levels <span class="k">(${o.list.length})</span></summary>${o.list.length ? `<div class="lh"><span class="no">No.</span><span class="tm">Formed</span><span class="lv">Levels</span><span class="st">Status</span></div><div class="lbody">${levels}</div>` : `<div class="none">no gap formed today</div>`}</details>`;
       }
       if (html === shownRow) return;  // nothing new: the list is left as it is (its scroll and its open state too)
       const d = rowEl.querySelector("details"); if (d) open = d.open;

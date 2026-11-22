@@ -159,6 +159,11 @@ def main():
     check("fault 2: a finished candle revised by the feed is read again (the gap that is no longer there goes)", g == [] and t.made_today == [])
     check("fault 3: 12.5 points reads 13, and a 50% line at 100.125 reads 100.13", R._pts(12.5) == "13" and R._fmt(100.125) == "100.13" and R._fmt(82016.5) == "82,016.50")
     g, e = T({"fvg_max_per_side": 0}).update(many, "d"); check("fault 4: 0 open gaps a side means no limit", len(g) == 12, len(g))
+    # the status words of the FVG levels list (the owner, 22 November): Filled 100%, Filled 50%, or the half price has reached
+    ps = [0, 0.1, 12.3, 49.4, 49.6, 50, 50.4, 50.6, 76, 99.9, 99.95, 100]
+    want = ["Not filled", "Filled 0–50%", "Filled 0–50%", "Filled 0–50%", "Filled 50%", "Filled 50%", "Filled 50%", "Filled 50–100%", "Filled 50–100%", "Filled 50–100%", "Filled 100%", "Filled 100%"]
+    got_s = json.loads(subprocess.run(["node", "-e", "const F = require(process.argv[1]); console.log(JSON.stringify(JSON.parse(process.argv[2]).map(F.fillStatus)))", os.path.abspath(JS), json.dumps(ps)], check=True, capture_output=True, text=True).stdout)
+    check("the status words: not filled, 0 to 50%, exactly 50%, 50 to 100%, 100%", got_s == want, list(zip(ps, got_s)))
     print(f"{ok} checks passed, {bad} failed")
     sys.exit(1 if bad else 0)
 
