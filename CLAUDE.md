@@ -545,8 +545,9 @@ branch from `main`.
   changes. `/health` shows `token.own` (no secret). `lab/check_own_token.py` (32 checks, a stand-in for Dhan on the machine).
   Dhan's "Token can be generated once every 2 minutes." (22 November night, two restarts a minute apart, the page red for 10 minutes; the
   owner: "why this msg now") is a rate limit, not a wrong PIN or code: it is not counted as a failed try and the server asks again after
-  `RATE_WAIT_SECONDS` (130 s), not 10 minutes (`_own["wait"]`); ten such answers in a day stop it (`RATE_MAX`). Merge one change, wait for it
-  to be live, then the next: every merge restarts the server and a restart makes a token.
+  `RATE_WAIT_SECONDS` (125 s), not 10 minutes (`_own["wait"]`); ten such answers in a day stop it (`RATE_MAX`). The owner merges several changes at
+  once (23 November: "i will merge all the changes at a time, i am not going wait"): every merge restarts the server and a restart makes a token,
+  so the server must be ready on its own, with no waiting between merges asked of the owner.
   Ready within two minutes (23 November, the owner: "it should be a very fast process and it should be ready within max 2 minutes"): a single merge
   was measured at 44 seconds from merge to the server's own token (merge 01:28:19, token 01:29:03; the four merges before it 45 to 54 seconds). The
   two slow cases retry on a timer of their own (`_retry_in`, a daemon thread, one at a time), not at the next poll: 125 seconds after Dhan's
