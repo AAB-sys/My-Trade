@@ -518,6 +518,14 @@ branch from `main`.
   the last day's FINISHED candles are read (a later candle has come, or a minute has passed since its end), afresh each time.
   It gives no call and no CE or PE: the document's own evidence says a gap is a map, not a signal. `static/volume.html` names
   it only through `fvgTool`, null unless the page is AAA_V1's chart, so the Volume Profile page is as it was.
+  What the FVG panel and the chart say always agree (22 November, the owner: the panel's "15:15" was not what the chart showed): every time is the
+  chart's own label of the candle (its start), not the minute the candle ended (the gap's third candle, the candle that came back into it,
+  "last candle"); the chart draws the WHOLE zone, the same two numbers as its label and the panel, with the part price has traded through
+  fainter, and the dashed 50% line for as long as the gap is open; the gaps are numbered 1, 2, 3 (oldest first) on the chart's labels and
+  in the panel's "FVG levels" list (the gaps drawn, with their formed time and levels), and the line "Bullish FVG below price" gives the
+  fill in per cent and the candle. The Tracker's own times (candle ends) are unchanged: only what is shown is turned into the chart's labels.
+  The browser check that derives every one of these from the chart's candles (144 gaps, 3 indices, 3 candle sizes, 3 times of day) is
+  described in the PR; `lab/check_fvg.py` still holds the rules.
   The layout on a wide window (22 November, the owner, with the AAA_V1 page marked: "there is blank space on the left side and right side of the
   chart ... move all the yellow highlighted readings to the right ... make the chart more fit and bigger"): while AAA_V1 is open
   `static/detail.html` lets `main.aaa` use the whole window (the other panels keep the 1100 pixel column) and the frame is a little taller
