@@ -852,3 +852,23 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(t2 && t2.how === "trail" && t2.stop > t2.stopAt && t2.exit < t2.stop && t2.points > 0, "T8: after a long rise the stop has trailed up and the call is sold at the first close below it, in profit: " + JSON.stringify(t2 && { how: t2.how, stop: t2.stop, stopAt: t2.stopAt, exit: t2.exit, points: t2.points }));
   console.log("New Rule Chart: NEWHIGH-TREND / NEWLOW-TREND: a close past the last 12 candles' high (low) with the averages agreeing, its own 5 ATR stop and trail, opt-in on all three indices (T1 to T8)");
 }
+
+// ---- NEWHIGH-TREND / NEWLOW-TREND runs in a lane of its own (22 November evening, the owner: ticking it removed the Rising Wedge call from Friday's
+// chart): ticking it must only ADD calls. 60 made-up days (a seeded walk, with and without a trend), the other rules as the page runs them, on all three indices
+{
+  const M = globalThis.MorePat; let seed = 20261122; const rnd = () => (seed = (seed * 1664525 + 1013904223) % 4294967296) / 4294967296;
+  const t0 = Date.parse("2026-11-20T09:15:00+05:30") / 1000, walk = (n, start, drift, t) => { let p = start; return Array.from({ length: n }, (_, i) => { const o = p, c = p + drift + (rnd() - 0.5) * 12, h = Math.max(o, c) + rnd() * 5, l = Math.min(o, c) - rnd() * 5; p = c; return { time: t + i * 300, open: o, high: h, low: l, close: c }; }); };
+  const sig = (t) => [t.rule, t.side, t.signalTime, t.entry, t.exit, t.points, t.how].join("|");
+  let days = 0, withTrend = 0, withOthers = 0, bothOpen = 0;
+  for (let d = 0; d < 60; d++) {
+    const drift = [0, 1.2, -1.2][d % 3], prev = walk(150, 100, drift, t0 - 86400 * 2), bars = walk(75, prev[prev.length - 1].close, drift, t0), ix = ["NIFTY 50", "NIFTY BANK", "SENSEX"][d % 3];
+    const run = (ticked) => N.runDay({ bars, index: ix, prevBars: prev, atrSeed: M.atrBefore(prev).slice(-1)[0], closedCount: bars.length, dayEnd: true, volumes: null, rules: N.rulesFor(ix, new Set()), more: N.moreCalls(ticked, ix) });
+    const off = run(new Set(["engulfing_strict", "vwap_strict", "doji_strict"])), on = run(new Set(["engulfing_strict", "vwap_strict", "doji_strict", "trend_break"]));
+    const others = on.trades.filter(t => t.rule !== "trend_break"), own = on.trades.filter(t => t.rule === "trend_break");
+    assert(JSON.stringify(others.map(sig)) === JSON.stringify(off.trades.map(sig)), `T9: day ${d} (${ix}): with the tick on, every other rule's call is exactly as with it off`);
+    assert(own.every((t, i) => !i || own[i - 1].exitTime != null && own[i - 1].exitTime <= t.entryTime || own[i - 1].exit != null), `T9: day ${d}: the trend lane takes one trade at a time`);
+    days++; if (own.length) withTrend++; if (others.length) withOthers++; if (own.some(t => others.some(o => o.entryTime < (t.exitTime || Infinity) && t.entryTime < (o.exitTime || Infinity)))) bothOpen++;
+  }
+  assert(withTrend >= 10 && withOthers >= 10, `T9: the made-up days do call both lanes (trend ${withTrend}, others ${withOthers} of ${days})`);
+  console.log(`New Rule Chart: NEWHIGH-TREND has a lane of its own: ticking it leaves every other call as it was, on ${days} made-up days (${withTrend} with its calls, ${withOthers} with other rules' calls, ${bothOpen} with calls of both open at once) (T9)`);
+}

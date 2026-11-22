@@ -512,8 +512,11 @@ the day's last candle. The table says "Rule:- NEWHIGH-TREND" (or NEWLOW-TREND) a
 **On the page**: Settings lists "NEWHIGH / NEWLOW Trend (Buy CE / Buy PE)", **unticked by default**, on NIFTY 50, NIFTY BANK and
 SENSEX (`NewRule.MORE.optIn`, `alsoOn`); unticked, it gives no call and holds up nothing; ticked, its calls fill the table. Only its
 calls are drawn on the chart (with the 12-candle high as its line), not the many signals a call already open held back (they stay in
-the signal log, NIFTY 50). **Ticked it holds up the other rules' calls**: its call is often open for hours, and one trade is open at
-a time.
+the signal log, NIFTY 50). **It has a lane of its own** (22 November evening, the owner, ticking it on Friday's chart: "the existing
+signal goes away ... it is removing the rising wedge signal which is very important"): at first it shared the page's one trade at a
+time, and its call, open for hours, held back every other rule's call. Now the day is replayed twice, the other rules exactly as they
+ran before and this rule alone with its own trade at a time and its own losses in a row (`NewRule.runDay`, `LANE`); ticking it only adds
+calls, and two calls can be open at once, one of each lane.
 
 **Numbers** (the page's engine as it runs, the rule on its own, index points, 8 points off each call; the candles of NIFTY 50 are the
 owner's two years and the saved days, 498 days; NIFTY BANK and SENSEX only the days since late August, rebuilt from
@@ -528,9 +531,10 @@ owner's two years and the saved days, 498 days; NIFTY BANK and SENSEX only the d
 The ULTROAN study had NIFTY 50 at +502 (year 1) and +1,343 (year 2) with stops filled at the stop price during the candle; the page
 sells at the close of the candle that closes past the stop, which costs points: that is the +780 here. The side that pays differs by
 index (NIFTY 50: the Buy PE; NIFTY BANK and SENSEX: the Buy CE), and NIFTY BANK and SENSEX have two to three months of days, with a
-losing first half on both: thin, to be watched. With the rest of the page's rules running beside it and the tick on, the page's net
-moved +3,859 (NIFTY 50), -1,745 (NIFTY BANK) and +1,358 (SENSEX); the NIFTY 50 gain is mostly the other rules' losing calls held back
-by this rule's open call (its own calls inside that run: 378, -411). Friday 20 November, ticked: Buy CE at 10:45 on all three
+losing first half on both: thin, to be watched. With the rest of the page's rules running beside it and the tick on, the page's net moves by exactly this rule's own net
+(NIFTY 50 -8,344 to -7,564, NIFTY BANK +1,134 to +1,664, SENSEX +918 to +3,146): on all 605 days of the three indices no other rule's call
+changed. (The first version shared one trade at a time and held back other rules' calls, which moved the NIFTY 50 net by +3,859 for the
+wrong reason and took the Rising Wedge call off Friday's chart.) Friday 20 November, ticked: Buy CE at 10:45 on all three
 indices, held to the close: NIFTY 50 +246 points, NIFTY BANK +1,268, SENSEX +720 (before costs).
 
-`lab/newrule-check.js` T1 to T8 hold the rule's cases, the three indices and the exit.
+`lab/newrule-check.js` T1 to T8 hold the rule's cases, the three indices and the exit; T9 holds that ticking it never changes another rule's call.
