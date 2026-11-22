@@ -87,8 +87,14 @@ RENEW_WAIT_SECONDS = float(os.environ.get("DHAN_RENEW_WAIT_SECONDS", "600"))
 # 22 November, two restarts a minute apart: Dhan answered the second try "Token can be generated once every 2 minutes." and the server then waited the
 # full 10 minutes, with the page red all that time. That answer is a rate limit, not a wrong PIN or code: it is not counted as a failed try and the
 # server asks again after RATE_WAIT_SECONDS (a little over the 2 minutes). Ten such answers in a day stop it, as failed tries do
-RATE_WAIT_SECONDS = float(os.environ.get("DHAN_RATE_WAIT_SECONDS", "130"))
+RATE_WAIT_SECONDS = float(os.environ.get("DHAN_RATE_WAIT_SECONDS", "125"))
 RATE_MAX = 10
+# 23 November, the owner: "it should be a very fast process and it should be ready within max 2 minutes". A single merge was ready in 44 seconds (merge 01:28:19,
+# token 01:29:03). Two cases were slower: Dhan's "once every 2 minutes" after two restarts close together, and "Invalid TOTP" twice in a row. Both now retry on a
+# timer of their own, not at the next poll: after RATE_WAIT_SECONDS (125, the 2 minutes counted from the earlier token, which was made before this restart), and
+# after TOTP_WAIT_SECONDS (60) for the code. A wrong PIN still waits 10 minutes (asked over and over it could lock the account); the 3 failed tries a day stay
+TOTP_WAIT_SECONDS = float(os.environ.get("DHAN_TOTP_WAIT_SECONDS", "60"))
+_retry = {"timer": None}
 RENEW_MAX_FAILS = int(os.environ.get("DHAN_RENEW_MAX_FAILS", "3"))
 TOTP_EDGE_SECONDS = float(os.environ.get("DHAN_TOTP_EDGE_SECONDS", "6"))  # no code is made this close to its change
 _own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "tries": 0, "wait": None, "limited": 0}
@@ -131,6 +137,15 @@ def own_report() -> dict:
     """What /health may say about the server's own token: no secret, only whether it is on, in use, when made, and why not."""
     return {"on": totp_on(), "in_use": bool(_own["token"]), "made_at": _own["made_at"], "problem": _own["problem"],
             "failed_tries": _own["fails"], "stopped": _own["fails"] >= RENEW_MAX_FAILS or _own["limited"] >= RATE_MAX}
+
+
+def _retry_in(seconds: float, why: str) -> None:
+    """One retry on a timer of its own (a daemon thread: it never keeps the server from stopping), unless one is already waiting."""
+    t = _retry["timer"]
+    if t is not None and t.is_alive():
+        return
+    t = threading.Timer(seconds + 1, lambda: renew_token(why))
+    t.daemon = True; _retry["timer"] = t; t.start()
 
 
 def renew_token(why: str, by_hand: bool = False) -> bool:
@@ -193,11 +208,16 @@ def renew_token(why: str, by_hand: bool = False) -> bool:
             _own["wait"], _own["limited"] = RATE_WAIT_SECONDS, _own["limited"] + 1
             _own["problem"] = f"Dhan did not give a token (HTTP {response.status_code}: {said}); the server asks again in about {round(RATE_WAIT_SECONDS / 60)} minutes" + (
                 f"; stopped for today after {_own['limited']} such answers" if _own["limited"] >= RATE_MAX else "")
+            if _own["limited"] < RATE_MAX:
+                _retry_in(RATE_WAIT_SECONDS, "Dhan's two minutes have passed")
         else:
-            _own["wait"] = None
             _own["fails"] += 1
+            code_only = "totp" in said.lower()  # the code, not the PIN: asked again after a minute (the next code), still within the day's three tries
+            _own["wait"] = TOTP_WAIT_SECONDS if code_only else None
             _own["problem"] = f"Dhan did not give a token (HTTP {response.status_code}{': ' + said if said else ''})" + (
-                f"; stopped for today after {_own['fails']} failed tries" if _own["fails"] >= RENEW_MAX_FAILS else "")
+                f"; stopped for today after {_own['fails']} failed tries" if _own["fails"] >= RENEW_MAX_FAILS else (f"; the server asks again in about {round(TOTP_WAIT_SECONDS)} seconds" if code_only else ""))
+            if code_only and _own["fails"] < RENEW_MAX_FAILS:
+                _retry_in(TOTP_WAIT_SECONDS, "the code was refused, the next code")
         log.warning("Dhan own token (%s): %s", why, _own["problem"])
         return False
 
