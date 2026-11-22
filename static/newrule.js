@@ -642,9 +642,15 @@
   // Loss (strict) (morepat.js vwap_strict: all of the last 8 candles on the other side of the VWAP, the body 0.5 x ATR) takes its place, opt-in
   const MORE = { indices: ["NIFTY 50"],  // where the 14 run
                  calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer", "doji"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
-                 optIn: ["engulfing_strict", "vwap_strict"] };  // rules that give calls only while ticked on the page
-  const moreCalls = (ticked) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key)));  // the page's call list: the rules above and the opt-in rules ticked (a Set of keys)
-  const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more) : MORE.indices.includes(index));  // no index (the lab): only when asked
+                 optIn: ["engulfing_strict", "vwap_strict"],  // rules that give calls only while ticked on the page
+                 // 22 November (the owner: "Is it applied on Nifty bank and sensex chart ? if no then do that as well"): the rules that also run
+                 // on other indices than MORE.indices, each alone there (the other 13 stay NIFTY 50 only)
+                 alsoOn: { vwap_strict: ["NIFTY BANK", "SENSEX"] } };
+  const ruleOn = (key, index) => MORE.indices.includes(index) || (MORE.alsoOn[key] || []).includes(index);  // does this rule run on this index
+  // the page's call list for an index: the rules above and the opt-in rules ticked (a Set of keys), those that run on the index only
+  const moreCalls = (ticked, index = null) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key))).filter(key => index == null || ruleOn(key, index));
+  const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more)
+    : MORE.indices.includes(index) || (Array.isArray(more) && more.some(key => (MORE.alsoOn[key] || []).includes(index))));  // no index (the lab): only when asked
   const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines,  // the picture's points and lines (a trade's "points" is its result)
                                              lineName: s.lines.length ? s.lines[0][4] : key === "vwap" || key === "vwap_strict" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
   function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
@@ -657,7 +663,7 @@
     rules.forEach(name => { if (SCANNERS[name]) scanners[name] = { active: null, used: new Set(), lastDrop: null }; });
     let open = null, lossesInRow = 0, dayLoss = 0;
     const lastK = (closedCount == null ? bars.length : Math.min(closedCount, bars.length)) - 1;
-    const withMore = moreOn(index, more), MP = withMore ? root.MorePat : null, moreKeys = Array.isArray(more) ? more : MORE.calls;
+    const withMore = moreOn(index, more), MP = withMore ? root.MorePat : null, moreKeys = (Array.isArray(more) ? more : MORE.calls).filter(key => index == null || ruleOn(key, index));  // on an index, only the rules that run there (22 November)
     const moreAtr = withMore ? MP.atrBefore((prevBars || []).concat(bars.slice(0, lastK + 1))).slice((prevBars || []).length) : null;  // the reference's ATR, as of the previous candle
     const hasPrev = !!(prevBars && prevBars.length);
     // volumes (17 November): the futures volume of each candle of `bars`, for the VWAP rule's true VWAP; null: the plain average, as before
@@ -693,5 +699,5 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

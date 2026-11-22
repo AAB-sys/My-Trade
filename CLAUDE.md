@@ -207,7 +207,8 @@ their own logic. Read this before touching the code.
   `lab/morepat_check.js`); NEW_RULES.md has the numbers. The second: Double Top (strict) (the tops at least 7 candles apart,
   `DT_STRICT`) replaced the Double Top on all three indices on 20 November (`NewRule.rulesFor`, `RULE_OPT_IN`). The third: VWAP Reclaim and Loss (strict)
   (`morepat.js` `vwap_strict`: all of the last 8 candles past the VWAP, the body 0.5 ATR; the VWAP line untouched) replaced the VWAP
-  rule on NIFTY 50 on 22 November (`MORE.optIn`).
+  rule on NIFTY 50 on 22 November (`MORE.optIn`), and runs on NIFTY BANK and SENSEX too, alone of the 14 (`MORE.alsoOn`,
+  `ruleOn`, `moreCalls(ticked, index)`); the Settings ticks are one set for the three index pages.
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all

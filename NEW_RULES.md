@@ -331,7 +331,7 @@ first top, the documents' swing size of 3, the signal within 10 candles of the s
 NIFTY BANK and SENSEX rest on a handful of calls: thin, to be watched by the daily round. `lab/newrule-check.js` D1 to D4 hold the
 rule's cases and the swap.
 
-## VWAP Reclaim and Loss (strict) replaces the VWAP rule (22 November): NIFTY 50
+## VWAP Reclaim and Loss (strict) replaces the VWAP rule (22 November): NIFTY 50, and NIFTY BANK and SENSEX
 
 The owner, 20 November, of the first ranking of the page's rules: "look into the VWAP rule on NIFTY 50"; then, 22 November, "so do
 you mean it is going to change the VWAP line value calculation rule on chart?" (no: the line is untouched) and "yes, build it".
@@ -347,7 +347,16 @@ the last 6), and the signal candle's body **at least 0.5 x ATR** (the document: 
 (strict)" stands in its place in the Settings list, **unticked by default** (`NewRule.MORE.optIn`): unticked, no VWAP call, nothing
 drawn, it holds up no other rule's call; ticked, its calls fill the table, and the VWAP line and the VWAP stretch meter show (they
 showed with the old rule's tick). `MorePat.ORDER` keeps the reference's 14 (`lab/morepat_check.js` unchanged); `MorePat.PAGE_ORDER`
-has the strict rule in the old one's place. NIFTY BANK and SENSEX do not run the 14 more patterns: unchanged, call for call.
+has the strict rule in the old one's place.
+
+**NIFTY BANK and SENSEX** (the owner, 22 November: "Is it applied on Nifty bank and sensex chart ? if no then do that as well"): the
+strict VWAP rule runs there too, alone of the 14 (`NewRule.MORE.alsoOn`, `ruleOn`, `moreCalls(ticked, index)`; `runDay` runs on an
+index only the rules that run there), with the index's own futures volume when every closed candle has it, else the plain average.
+The Settings ticks are kept once for the three index pages, so one tick turns it on for all three. Unticked, nothing changes on either
+index, call for call. Ticked, on their days (59 and 57; their futures volume from `history/volume/NIFTYBANK_1min.csv` and
+`SENSEX_1min.csv`, complete on 31 and 4 of the days: SENSEX futures trade thinly, so its VWAP is mostly the plain average, live too),
+after 8 points a call against the page as it was: **NIFTY BANK -777** (29 calls, 10 won; first half +253, second half -1,029) and
+**SENSEX +609** (31 calls; first half -123, second half +732). On NIFTY BANK the rule loses: said to the owner before the merge.
 
 **Why** (NIFTY 50, the page as it opens, every rule, one trade at a time, index points; after costs: 8 points a call). On the two years
 and the saved days (501 days; the VWAP of the two-year file is the plain average, as it has no volume) the VWAP rule gave 380 calls,
