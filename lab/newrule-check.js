@@ -796,10 +796,13 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(run(twice).filter(t => t.side === "CE").length === 1, "B3: once per side per day");
   const mirror = up.map(([o, h, l, c]) => [200 - o, 200 - l, 200 - h, 200 - c]), t4 = run(mirror);
   assert(t4.length === 1 && t4[0].side === "PE" && t4[0].L === 95 && t4[0].kind === "day low broken", "B4: the Buy PE side mirrors it");
+  // the strategies run on their own (22 November, the owner: "any new call fired by strategy ... create new table ... Call logs from
+  // startegy"): the page's rule list is the same ticked or not; the strategy's own list holds it only while ticked
   for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
-    assert(!N.rulesFor(ix, new Set()).includes("day break") && N.rulesFor(ix, new Set(["day break"])).slice(-1)[0] === "day break", `B5: ${ix}: Day Break only while ticked, after every other rule`);
-    const off = N.runDay({ bars: mk(up), atrFixed: 10, index: ix, rules: N.rulesFor(ix, new Set()), more: false }).trades, on = N.runDay({ bars: mk(up), atrFixed: 10, index: ix, rules: N.rulesFor(ix, new Set(["day break"])), more: false }).trades;
-    assert(!off.some(t => t.rule === "day break") && on.some(t => t.rule === "day break"), `B5: ${ix}: unticked no Day Break call, ticked its call`);
+    assert(JSON.stringify(N.rulesFor(ix, new Set(["day break"]))) === JSON.stringify(N.rulesFor(ix, new Set())) && !N.rulesFor(ix, new Set(["day break"])).includes("day break"), `B5: ${ix}: the page's rules are the same with Day Break ticked`);
+    assert(N.strategiesFor(ix, new Set()).length === 0 && JSON.stringify(N.strategiesFor(ix, new Set(["day break"]))) === JSON.stringify(["day break"]), `B5: ${ix}: the strategy list holds Day Break only while ticked`);
+    const own = N.runDay({ bars: mk(up), atrFixed: 10, index: ix, rules: N.strategiesFor(ix, new Set(["day break"])), more: false }).trades;
+    assert(own.length === 1 && own[0].rule === "day break" && own[0].entry === 110, `B5: ${ix}: run on its own, Day Break gives its call`);
   }
-  console.log("New Rule Chart: Strategies > Day Break: from 11:15 the first close past the day's high or low by 0.25 ATR, once per side per day, off until ticked (B1 to B5)");
+  console.log("New Rule Chart: Strategies > Day Break: from 11:15 the first close past the day's high or low by 0.25 ATR, once per side per day, off until ticked, on its own (B1 to B5)");
 }

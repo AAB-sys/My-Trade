@@ -643,13 +643,16 @@
   // The owner, 20 November: "unticked means keep it out of the table too"; Double Top (strict): "add it for all three indices"
   const RULE_LIST = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"];
   const RULE_OPT_IN = { "double top (strict)": { replaces: "double top", indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
-  // the strategies under Settings > Strategies (22 November): off until ticked, after every other rule in the list (a rule earlier in the
-  // list wins a candle two rules call the same way); each with the indices it is offered on (every index page keeps its own ticks)
-  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
-  const rulesFor = (index, ticked) => RULE_LIST.flatMap(rule => {  // ticked: a Set of the opt-in rules and strategies whose tick is on
+  const rulesFor = (index, ticked) => RULE_LIST.flatMap(rule => {  // ticked: a Set of the opt-in rules whose tick is on
     const opt = Object.keys(RULE_OPT_IN).find(key => RULE_OPT_IN[key].replaces === rule && RULE_OPT_IN[key].indices.includes(index));
     return !opt ? [rule] : ticked && ticked.has(opt) ? [opt] : [];
-  }).concat(Object.keys(STRATEGIES).filter(key => ticked && ticked.has(key) && STRATEGIES[key].indices.includes(index)));
+  });
+  // the strategies under Settings > Strategies (22 November): off until ticked, each with the indices it is offered on (every index page
+  // keeps its own ticks). They run ON THEIR OWN, apart from the page's rules (the owner: "any new call fired by strategy if that strategy is
+  // ticked then create new table give the name to the table as Call logs from startegy"): runDay with rules: strategiesFor(...) and
+  // more: false, its own one call at a time; the page's table and its calls are the same whether a strategy is ticked or not
+  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
+  const strategiesFor = (index, ticked) => Object.keys(STRATEGIES).filter(key => ticked && ticked.has(key) && STRATEGIES[key].indices.includes(index));
   // The 14 more patterns (the owner's "More Chart Patterns and Rules" document; static/morepat.js; 30 October: "make their behaviour same
   // like the earlier 11 signals"): on NIFTY 50 (MORE.indices) their signals join the other rules' on every closed candle, after them in
   // the list (the rule earlier in the list wins a candle that two rules call the same way; opposite ways: nothing, as before), under the
@@ -723,5 +726,5 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, DAYBREAK, dayBreakStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, DAYBREAK, dayBreakStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

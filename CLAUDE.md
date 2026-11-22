@@ -213,8 +213,12 @@ their own logic. Read this before touching the code.
   each index page keeps its own Settings ticks (`signalsIndicators:<index>`, started from the shared `signalsIndicators`; the owner:
   "do not share the tick across the 3 pages"), and the grey note in that list is gone. Settings > Strategies (22 November, the
   owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
-  until ticked (`NewRule.STRATEGIES`, `rulesFor` adds the ticked ones last; ticks `st_<name>`); the first, Day Break (`dayBreakStep`:
-  from 11:15 the first close past the day's high or low by 0.25 ATR). Proposals are judged in the calls' own index points only, never
+  until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first
+  close past the day's high or low by 0.25 ATR). A ticked strategy runs ON ITS OWN (`runDay` with `rules: strategiesFor(...)`, `more:
+  false`) and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
+  table as Call logs from startegy ... scroll up and down ... keep the heade row as fixed row"; `#stratlog`, `strategyLogRows`,
+  `drawStratLog`): the days the page holds, the newest first, Call Entry, Call Exit and the points side by side, the header row fixed, two
+  round buttons moving it one row a press; the calls table is the same ticked or not. Proposals are judged in the calls' own index points only, never
   with a cost per call (the owner, 22 November).
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
