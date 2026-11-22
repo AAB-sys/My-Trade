@@ -516,7 +516,25 @@
   }
   const bullishTriangleAt = (bars, k, atr, cfg) => symmetricalAt(bars, k, atr, cfg, "bullish"), bearishTriangleAt = (bars, k, atr, cfg) => symmetricalAt(bars, k, atr, cfg, "bearish");
   const ascendingAt = (bars, k, atr, cfg) => flatAt(bars, k, atr, cfg, "ascending"), descendingAt = (bars, k, atr, cfg) => flatAt(bars, k, atr, cfg, "descending");
-  const SCANNERS = { "falling wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "falling", atr, cfg, skipped),
+  // ---- Strategies (22 November, the owner: "give it as a name as startegies same llike indicators and under startegies mark your
+  // strategies and keep it untick by default, whenever i want to activate it I will tick it an enable it"): rules of Claude's own, built from
+  // the page's parts and tested on the saved candles (NEW_RULES.md), each given calls only while its tick under Strategies is on.
+  // Day Break: from 11:15, the first 5-minute close above the day's high so far (09:15 to the candle before) by at least 0.25 x ATR is a
+  // Buy CE, the first close below the day's low so far by 0.25 x ATR a Buy PE; the level (the stop) is the high or low broken; once per
+  // side per day; the entry at the next candle's open and the page's exits (Rule 1, the retouch, the half-ATR trail, the day end)
+  const DAYBREAK = { from: "11:15", bufferAtr: 0.25 };
+  function dayBreakStep(st, bars, k, atr, cfg = DT, skipped = null) {
+    const w = { ...DAYBREAK, ...(cfg.dayBreak || {}) };
+    if (k < 1 || atr == null || istHM(bars[k].time) < w.from) return null;
+    let dh = -Infinity, dl = Infinity; for (let i = 0; i < k; i++) { dh = Math.max(dh, bars[i].high); dl = Math.min(dl, bars[i].low); }
+    const b = bars[k], p = bars[k - 1], buf = w.bufferAtr * atr;
+    const side = b.close > dh + buf && p.close <= dh ? "CE" : b.close < dl - buf && p.close >= dl ? "PE" : null;
+    if (!side || st.used.has(side)) return null;
+    st.used.add(side);                                                     // once per side per day, taken or not
+    return { side, rule: "day break", kind: side === "CE" ? "day high broken" : "day low broken", L: round2(side === "CE" ? dh : dl), target: null, signalCandle: k, signalTime: b.time };
+  }
+  const SCANNERS = { "day break": (st, bars, k, atr, cfg, skipped) => dayBreakStep(st, bars, k, atr, cfg, skipped),
+                     "falling wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "falling", atr, cfg, skipped),
                      "rising wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "rising", atr, cfg, skipped),
                      "bullish rectangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, rectangleAt, { ...RECT, ...(cfg.rect || {}) }, atr, cfg, skipped),
                      "bullish symmetrical triangle": (st, bars, k, atr, cfg, skipped) => triangleStep(st, bars, k, bullishTriangleAt, "CE", false, atr, cfg, skipped),
@@ -625,10 +643,13 @@
   // The owner, 20 November: "unticked means keep it out of the table too"; Double Top (strict): "add it for all three indices"
   const RULE_LIST = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"];
   const RULE_OPT_IN = { "double top (strict)": { replaces: "double top", indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
-  const rulesFor = (index, ticked) => RULE_LIST.flatMap(rule => {  // ticked: a Set of the opt-in rules whose tick is on
+  // the strategies under Settings > Strategies (22 November): off until ticked, after every other rule in the list (a rule earlier in the
+  // list wins a candle two rules call the same way); each with the indices it is offered on (every index page keeps its own ticks)
+  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
+  const rulesFor = (index, ticked) => RULE_LIST.flatMap(rule => {  // ticked: a Set of the opt-in rules and strategies whose tick is on
     const opt = Object.keys(RULE_OPT_IN).find(key => RULE_OPT_IN[key].replaces === rule && RULE_OPT_IN[key].indices.includes(index));
     return !opt ? [rule] : ticked && ticked.has(opt) ? [opt] : [];
-  });
+  }).concat(Object.keys(STRATEGIES).filter(key => ticked && ticked.has(key) && STRATEGIES[key].indices.includes(index)));
   // The 14 more patterns (the owner's "More Chart Patterns and Rules" document; static/morepat.js; 30 October: "make their behaviour same
   // like the earlier 11 signals"): on NIFTY 50 (MORE.indices) their signals join the other rules' on every closed candle, after them in
   // the list (the rule earlier in the list wins a candle that two rules call the same way; opposite ways: nothing, as before), under the
@@ -702,5 +723,5 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, DAYBREAK, dayBreakStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

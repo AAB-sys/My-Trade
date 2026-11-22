@@ -211,7 +211,11 @@ their own logic. Read this before touching the code.
   `moreCalls(ticked, index)`; not on NIFTY BANK, where it lost: the owner's choice). The fourth: Doji Reversal (strict) (`morepat.js`
   `doji_strict`: the doji at least 1.0 ATR tall) replaced the Doji rule on NIFTY 50 on 22 November (`MORE.optIn`). Since 22 November
   each index page keeps its own Settings ticks (`signalsIndicators:<index>`, started from the shared `signalsIndicators`; the owner:
-  "do not share the tick across the 3 pages"), and the grey note in that list is gone.
+  "do not share the tick across the 3 pages"), and the grey note in that list is gone. Settings > Strategies (22 November, the
+  owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
+  until ticked (`NewRule.STRATEGIES`, `rulesFor` adds the ticked ones last; ticks `st_<name>`); the first, Day Break (`dayBreakStep`:
+  from 11:15 the first close past the day's high or low by 0.25 ATR). Proposals are judged in the calls' own index points only, never
+  with a cost per call (the owner, 22 November).
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
