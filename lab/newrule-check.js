@@ -807,6 +807,45 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   console.log("New Rule Chart: Strategies > Day Break: from 11:15 the first close past the day's high or low by 0.25 ATR, once per side per day, off until ticked, on its own (B1 to B5)");
 }
 
+// ---- Strategies > Midday Box (22 November, the owner: "yes, build it for all 3 indices"): the box is the highs and lows of 11:30 to 12:55;
+// from 13:00 (signal candles to 14:40) the first close past it by 0.1 ATR, the stop at the box edge broken, once per side per day, off until ticked
+{
+  const t0m = Date.parse("2026-11-20T09:15:00+05:30") / 1000, mk = (rows) => rows.map((r, i) => ({ time: t0m + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const flat = (n, p = 100, w = 5) => Array.from({ length: n }, () => [p, p + w, p - w, p]);
+  // 09:15 to 11:25 (27 candles) swing 90 to 120; 11:30 to 12:55 (18 candles) inside 98 to 104 (the box); then 13:00 onwards
+  const morning = flat(27, 105, 15), box = Array.from({ length: 18 }, (_, i) => [101, i === 4 ? 104 : 103, i === 9 ? 98 : 99, 101]);
+  const day = (after) => morning.concat(box, after);
+  const run = (rows, rules = ["midday box"]) => N.runDay({ bars: mk(rows), atrFixed: 10, rules, more: false }).trades;
+  assert(N.MIDDAY.boxFrom === "11:30" && N.MIDDAY.boxTo === "12:55" && N.MIDDAY.until === "14:40" && N.MIDDAY.bufferAtr === 0.1, "M1: the settings: box 11:30 to 12:55, signal candles to 14:40, 0.1 ATR");
+  const bx = N.middayBox(mk(day(flat(5, 101, 1))));
+  assert(bx && bx.high === 104 && bx.low === 98 && bx.first === 27 && bx.last === 44, "M1: the box is the highest high and the lowest low of 11:30 to 12:55: " + JSON.stringify(bx));
+  assert(N.middayBox(mk(morning.concat(box.slice(0, 17)))) === null, "M1: no box until the 12:55 candle is in");
+  const up = day([[101, 103, 100, 102], [102, 106, 101, 105.5], [105.5, 110, 105, 109], [109, 113, 108, 112], [112, 116, 111, 115]]);  // 13:05 closes 105.5 > 104 + 1
+  const t1 = run(up);
+  assert(t1.length === 1 && t1[0].rule === "midday box" && t1[0].side === "CE" && t1[0].signalCandle === 46 && t1[0].L === 104 && t1[0].entry === 105.5 && t1[0].kind === "box top broken" && t1[0].boxLow === 98,
+         "M2: the 13:05 close above the box's top gives Buy CE at the next open, the stop at the box's top: " + JSON.stringify(t1.map(t => [t.side, t.signalCandle, t.L, t.entry])));
+  assert(run(day([[101, 105, 100, 104.5], [104.5, 105, 103, 104.8]].concat(flat(3, 104.6, 0.5)))).length === 0, "M3: a close above the top by less than 0.1 ATR (104.5, 104.8 against 105) gives no call");
+  const early = morning.concat(box.slice(0, 10), [[101, 112, 100, 111]], box.slice(11), flat(4, 101, 1));  // a wide candle inside the box's hours: no call (it is the box)
+  assert(run(early).length === 0, "M3: a candle inside 11:30 to 12:55 gives no call; it widens the box");
+  const lastOk = day(flat(20, 101, 1).concat([[101, 107, 100, 106], [106, 108, 105, 107]]));  // the first close out at 14:40: the call, in at 14:45
+  const tl = run(lastOk);
+  assert(tl.length === 1 && N.istHM(tl[0].signalTime) === "14:40" && N.istHM(tl[0].entryTime) === "14:45", "M4: a close out at 14:40 gives the call, in at 14:45");
+  const late = day(flat(21, 101, 1).concat([[101, 107, 100, 106], [106, 108, 105, 107]]));  // the first close out at 14:45: no call
+  assert(run(late).length === 0, "M4: no signal candle after 14:40");
+  const twice = up.concat([[115, 116, 103, 103.5], [103.5, 104, 101, 102], [102, 108, 101, 107], [107, 110, 106, 109]]);  // out, back in, out again: the CE side is used up
+  assert(run(twice).filter(t => t.side === "CE").length === 1, "M4: once per side per day");
+  const mirror = up.map(([o, h, l, c]) => [200 - o, 200 - l, 200 - h, 200 - c]), t5 = run(mirror);
+  assert(t5.length === 1 && t5[0].side === "PE" && t5[0].L === 96 && t5[0].kind === "box bottom broken", "M5: the Buy PE side mirrors it (the stop at the box's bottom)");
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    assert(N.strategiesFor(ix, new Set()).length === 0 && JSON.stringify(N.strategiesFor(ix, new Set(["midday box"]))) === '["midday box"]', `M6: ${ix}: offered, and only while ticked`);
+    assert(JSON.stringify(N.strategiesFor(ix, new Set(["midday box", "day break"]))) === '["day break","midday box"]', `M6: ${ix}: with Day Break, Day Break first`);
+    assert(JSON.stringify(N.rulesFor(ix, new Set(["midday box"]))) === JSON.stringify(N.rulesFor(ix, new Set())), `M6: ${ix}: the page's own rules are the same ticked or not`);
+    const own = N.runDay({ bars: mk(up), atrFixed: 10, index: ix, rules: N.strategiesFor(ix, new Set(["midday box"])), more: false }).trades;
+    assert(own.length === 1 && own[0].rule === "midday box", `M6: ${ix}: run on its own, Midday Box gives its call`);
+  }
+  console.log("New Rule Chart: Strategies > Midday Box: the box of 11:30 to 12:55, from 13:00 to 14:40 the first close past it by 0.1 ATR, once per side per day, off until ticked, on all three indices (M1 to M6)");
+}
+
 // ---- NEWHIGH-TREND / NEWLOW-TREND (22 November, the owner: "built it for the PE as well like NEWLOW-Trend", "built it for nifty bank and sensex as
 // well and add the indicator in the settings for all 3 indices"): NOT in the reference. A close above the highest high of the 12 candles before it
 // (Buy CE; below the lowest low: Buy PE on the chart turned upside down), the 20 average above the 50, signal candle 10:15 to 14:00; a call with its own

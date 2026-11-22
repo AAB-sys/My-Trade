@@ -533,7 +533,29 @@
     st.used.add(side);                                                     // once per side per day, taken or not
     return { side, rule: "day break", kind: side === "CE" ? "day high broken" : "day low broken", L: round2(side === "CE" ? dh : dl), target: null, signalCandle: k, signalTime: b.time };
   }
+  // Midday Box (22 November, the owner: "yes, build it for all 3 indices"): the box is the highest high and the lowest low of the day's
+  // candles from 11:30 to 12:55; from 13:00 (signal candles to 14:40, entries to 14:45) the first 5-minute close above the box's top by at least 0.1 x ATR is
+  // a Buy CE, the first close below its bottom by 0.1 x ATR a Buy PE; the level (the stop) is the box edge broken; once per side per day;
+  // the entry at the next candle's open and the page's exits. Tested on the saved candles of all three indices (NEW_RULES.md)
+  const MIDDAY = { boxFrom: "11:30", boxTo: "12:55", until: "14:40", bufferAtr: 0.1 };  // until: the last signal candle (its entry at 14:45, the page's last)
+  function middayBox(bars, k = bars.length, cfg = DT) {  // the box from the candles before k: { high, low, first, last } (indices), or null until the 12:55 candle is in
+    const w = { ...MIDDAY, ...(cfg.midday || {}) };
+    let high = -Infinity, low = Infinity, first = -1, last = -1;
+    for (let i = 0; i < Math.min(k, bars.length); i++) { const t = istHM(bars[i].time); if (t >= w.boxFrom && t <= w.boxTo) { high = Math.max(high, bars[i].high); low = Math.min(low, bars[i].low); if (first < 0) first = i; last = i; } }
+    return first < 0 || last - first < 2 || istHM(bars[last].time) !== w.boxTo ? null : { high: round2(high), low: round2(low), first, last };
+  }
+  function middayBoxStep(st, bars, k, atr, cfg = DT, skipped = null) {
+    const w = { ...MIDDAY, ...(cfg.midday || {}) }, t = istHM(bars[k].time);
+    if (atr == null || t <= w.boxTo || t > w.until) return null;
+    const box = middayBox(bars, k, cfg); if (!box) return null;
+    const b = bars[k], buf = w.bufferAtr * atr;
+    const side = b.close > box.high + buf ? "CE" : b.close < box.low - buf ? "PE" : null;
+    if (!side || st.used.has(side)) return null;
+    st.used.add(side);                                                     // once per side per day, taken or not
+    return { side, rule: "midday box", kind: side === "CE" ? "box top broken" : "box bottom broken", L: side === "CE" ? box.high : box.low, boxHigh: box.high, boxLow: box.low, target: null, signalCandle: k, signalTime: b.time };
+  }
   const SCANNERS = { "day break": (st, bars, k, atr, cfg, skipped) => dayBreakStep(st, bars, k, atr, cfg, skipped),
+                     "midday box": (st, bars, k, atr, cfg, skipped) => middayBoxStep(st, bars, k, atr, cfg, skipped),
                      "falling wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "falling", atr, cfg, skipped),
                      "rising wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "rising", atr, cfg, skipped),
                      "bullish rectangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, rectangleAt, { ...RECT, ...(cfg.rect || {}) }, atr, cfg, skipped),
@@ -651,7 +673,7 @@
   // keeps its own ticks). They run ON THEIR OWN, apart from the page's rules (the owner: "any new call fired by strategy if that strategy is
   // ticked then create new table give the name to the table as Call logs from startegy"): runDay with rules: strategiesFor(...) and
   // more: false, its own one call at a time; the page's table and its calls are the same whether a strategy is ticked or not
-  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
+  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] }, "midday box": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };  // in this order: a candle both call the same way is Day Break's
   const strategiesFor = (index, ticked) => Object.keys(STRATEGIES).filter(key => ticked && ticked.has(key) && STRATEGIES[key].indices.includes(index));
   // The 14 more patterns (the owner's "More Chart Patterns and Rules" document; static/morepat.js; 30 October: "make their behaviour same
   // like the earlier 11 signals"): on NIFTY 50 (MORE.indices) their signals join the other rules' on every closed candle, after them in
@@ -727,5 +749,5 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, DAYBREAK, dayBreakStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

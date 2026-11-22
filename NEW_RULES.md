@@ -465,6 +465,41 @@ From 12:15 instead, NIFTY 50 was positive in both years (+807) but SENSEX weaker
 BANK its first half lost: offered there by the owner's choice of a tick per page, said to the owner. The
 NIFTY BANK and SENSEX numbers rest on 20 to 40 calls. `lab/newrule-check.js` B1 to B5 hold its cases.
 
+## Strategies: Midday Box (22 November)
+
+The owner, 22 November: "develop a new strategy for all 3 indices", then "yes, build it for all 3 indices, show me the screenshot, where it
+will appear". The second strategy under Settings > Strategies, unticked by default, offered on all three index pages (each page its own
+tick); ticked, it runs on its own and its calls go to "Call logs from strategy", like Day Break.
+
+**Midday Box** (`static/newrule.js`, `MIDDAY`, `middayBox`, `middayBoxStep`, a scanner): the box is the highest high and the lowest low of
+the day's 5-minute candles from 11:30 to 12:55 (no box until the 12:55 candle is in). From 13:00, the first close above the box's top by at
+least 0.1 x ATR is a Buy CE, the first close below its bottom by 0.1 x ATR a Buy PE; the signal candles run to 14:40 (the entry at the next
+candle's open, the page's last entry at 14:45). The level, and the stop, is the box edge broken; once per side per day; the page's exits (a
+close back inside the box, the retouch, the half-ATR trail, the day end); no pattern target (the 1 ATR guide). Ticked, the chart draws the
+box's top and bottom, dashed and named ("box top", "box bottom"), once the 12:55 candle has closed; a call's own line stands on its edge.
+With Day Break also ticked the two run in one pass, one call at a time, Day Break first on a candle both call the same way.
+
+**How it was found** (the page's parts only: the day's candles, the ATR, the buffer, the window, the page's exits). Six ideas were run
+through the engine on NIFTY 50 (503 days), NIFTY 50 with volume (60), NIFTY BANK (60) and SENSEX (57): the failed break of the day's high
+or low (NIFTY 50 two years -231), a pull-back to the broken day high (NIFTY BANK -101), a wide candle closing at its end (NIFTY BANK -270),
+the break of a tight run of candles (NIFTY 50 -370), the turn of a move stretched from the day's open (SENSEX -723), and the midday box,
+the only one positive on every index. Its box hours and buffer were chosen from about 90 settings; the box from 11:30 with a buffer of 0
+to 0.15 ATR is positive in every half on every index. Run on its own, as the page runs it:
+
+| | Calls | Won | Points | First half | Second half |
+| --- | --- | --- | --- | --- | --- |
+| NIFTY 50, 503 days | 421 | 36% | +1,323 | +236 | +1,087 |
+| NIFTY 50, 60 volume days | 46 | 46% | +511 | +204 | +307 |
+| NIFTY BANK, 60 days | 52 | 37% | +639 | +227 | +412 |
+| SENSEX, 57 days | 45 | 44% | +617 | +335 | +282 |
+
+78 to 89% of its calls went at least 0.25 ATR the right way; the price ran 1.4 to 1.9 ATR in the call's favour against 0.7 to 0.8 against;
+a winning call keeps 43 to 55% of its best move; the average win is about 2.5 times the average loss. About 40% of its calls fall on a
+candle that also makes a new day high or low. With Day Break in one pass the totals were NIFTY 50 +1,894 (two years), +661 (60 days),
+NIFTY BANK +1,286, SENSEX +1,591 (Day Break alone: +851, +348, +478, +1,138). Thin: NIFTY 50's first year is +236 over about 210 calls,
+NIFTY BANK and SENSEX rest on about 50 calls each; 16 to 20 November gave NIFTY 50 -19, NIFTY BANK +231, SENSEX -167. `lab/newrule-check.js`
+M1 to M6 hold its cases.
+
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,

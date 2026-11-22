@@ -224,7 +224,9 @@ their own logic. Read this before touching the code.
   Settings > Strategies (22 November, the
   owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first
-  close past the day's high or low by 0.25 ATR). A ticked strategy runs ON ITS OWN (`runDay` with `rules: strategiesFor(...)`, `more:
+  close past the day's high or low by 0.25 ATR); the second, Midday Box (22 November, "yes, build it for all 3 indices"; `MIDDAY`,
+  `middayBox`, `middayBoxStep`: the box of the 11:30 to 12:55 candles, from 13:00 to 14:40 the first close past it by 0.1 ATR, the stop at
+  the edge broken; ticked, the chart draws "box top" and "box bottom" dashed). A ticked strategy runs ON ITS OWN (`runDay` with `rules: strategiesFor(...)`, `more:
   false`) and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
   table as Call logs from startegy ... scroll up and down ... keep the heade row as fixed row"; `#stratlog`, `strategyLogRows`,
   `drawStratLog`): the days the page holds, the newest first, Call Entry, Call Exit and the points side by side, the header row fixed, two
