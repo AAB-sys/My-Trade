@@ -281,9 +281,9 @@
      while AAA_V1 is open the page uses the whole window width (the chart's own page then puts its readings in a column at the right) and
      the chart is a little taller. Every other panel keeps the 1100 pixel column */
   main.aaa { max-width: none; }
-  #aaa-note { font-size: 13px; color: var(--ink-2); margin: 0 0 10px; } #aaa-note b { color: var(--ink); } #aaa-key { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  #aaa { width: 100%; border-collapse: collapse; font-size: 13px; } #aaa th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border); white-space: nowrap; }
-  #aaa td.aaa-none { color: var(--muted); padding: 14px 0; }
+  /* 22 November, the owner: "remove the red marked table ... and once it is removed increase the shape of the chart and make it fit into that area as
+     well": on a wide window the frame is taller by the height the table's box had (about 170 pixels); a phone keeps its height */
+  @media (min-width: 900px) { #aaa-chart iframe { height: min(calc(88vh + 170px), 1100px); } }
   /* The OI chart: Dhan's option chain, its rows and columns (17 October). The header stays while the table scrolls both ways;
      the columns can be dragged into any order */
   #chain-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 22px; margin: 0 0 10px; font-size: 13px; }
@@ -517,17 +517,7 @@
     </div>
   </section>
 
-  <!-- AAA_V1 (19 November): the Trade Plan's box and table, with no rule: no call is fired here until the owner gives it a rule -->
-  <section id="aaa-box" aria-label="AAA_V1" hidden>
-    <div id="aaa-note"><b>AAA_V1</b> · <span id="aaa-name"></span> · no rule on this page yet: no calls<div id="aaa-key">The chart above: candles and their volume, with the previous day's high, low and close.</div></div>
-    <div class="scroll">
-      <table id="aaa">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th>Premium Paid -> Now</th><th>Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
-        <tbody><tr><td colspan="9" class="aaa-none">No calls: AAA_V1 has no rule yet.</td></tr></tbody>
-      </table>
-    </div>
-  </section>
-
+  <!-- AAA_V1's table box (19 November) was taken off on 22 November (the owner: "remove the red marked table, dont need this on this page"): the chart alone -->
   <!-- Calls with Signals (21 October): the same table as Paper calls, empty until the new set of rules is built -->
   <section id="signals-box" aria-label="Calls with Signals" hidden>
     <!-- 21 October evening, the owner: the note taken off; the header row fixed while the table scrolls up, down, left and right (the OI
@@ -2242,10 +2232,10 @@
   function showAaa(on) {
     const frameBox = document.getElementById("aaa-chart");
     document.querySelector("main").classList.toggle("aaa", on);
-    frameBox.hidden = !on; document.getElementById("aaa-box").hidden = !on;
+    frameBox.hidden = !on;
     if (on && !frameBox.firstChild) {
       const f = document.createElement("iframe"); f.title = "AAA_V1 chart: " + name; f.src = "/volume-profile?index=" + encodeURIComponent(name) + "&embed=aaa" + (TAB ? "#t=" + encodeURIComponent(TAB) : "");
-      frameBox.appendChild(f); document.getElementById("aaa-name").textContent = name;
+      frameBox.appendChild(f);
     }
     if (!on && frameBox.firstChild) frameBox.textContent = "";
   }
