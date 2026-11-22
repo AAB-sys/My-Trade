@@ -223,11 +223,22 @@ their own logic. Read this before touching the code.
   (`NewRule.runDay`, `LANE`: the day is replayed twice, the other rules as before and this rule alone), because a call open for hours
   held back every other rule's call (the owner, 22 November evening: it removed the Rising Wedge call): ticking it only adds calls, two
   calls can be open at once, and `lab/newrule-check.js` T9 proves no other call changes. NEW_RULES.md has the numbers.
+  THE OWNER'S RULE FOR EVERYTHING NEW (22 November: "new inndicator or rules or strategies should not remove old fired call or signals
+  which are fired already becasue of the existing 24 signals on the chart. it should always be there on the chart. It should not vanish
+  or delete or replace by the new inndicator or rules or strategies ... no change in the exisitng calls logic and no change in already
+  fired signals. It should be for all 3 indices"): a new rule goes in a lane of its own (`NewRule.LANE`: its own run, its calls added to
+  the table) or under Strategies (`runStrategies`, its own run, its calls in "Call logs from strategy"); it never replaces a rule, never
+  shares the page's one call at a time, and never changes the page's rules' logic. `lab/newrule-check.js` K1 and K2 (16 real saved days
+  of all three indices, `lab/keep_days.json`) and T9 must pass: with any lane rule or strategy ticked, every call of the page's rules
+  stays exactly as it was.
   Settings > Strategies (22 November, the
   owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first
-  close past the day's high or low by 0.25 ATR). A ticked strategy runs ON ITS OWN (`runDay` with `rules: strategiesFor(...)`, `more:
-  false`) and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
+  close past the day's high or low by 0.25 ATR); the second, Midday Box (22 November, "yes, build it for all 3 indices"; `MIDDAY`,
+  `middayBox`, `middayBoxStep`: the box of the 11:30 to 12:55 candles, from 13:00 to 14:40 the first close past it by 0.1 ATR, the stop at
+  the edge broken; ticked, the chart draws "box top" and "box bottom" dashed). Each ticked strategy runs ON ITS OWN, one run per strategy (`NewRule.runStrategies`; the owner:
+  "it should not remove or delete any old fired call or signals ... New rule or strategy should fire additional signals along with the old
+  signals"), so ticking one never takes a call from another or from the page's rules, and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
   table as Call logs from startegy ... scroll up and down ... keep the heade row as fixed row"; `#stratlog`, `strategyLogRows`,
   `drawStratLog`): the days the page holds, the newest first, Call Entry, Call Exit and the points side by side, the header row fixed, two
   round buttons moving it one row a press; the calls table is the same ticked or not. Proposals are judged in the calls' own index points only, never

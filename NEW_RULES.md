@@ -430,8 +430,8 @@ Unticked, the engine does not run it.
 
 **Call logs from strategy** (the owner, 22 November: "any new call fired by startegy if that strategy is ticked then create new table
 give the name to the table as Call logs from startegy. Add options to scroll up and down on the table . keep the heade row as fixed row
-for the new table"): a strategy ticked runs ON ITS OWN (`runDay` with `rules: NewRule.strategiesFor(index, ticked)`, `more: false`), one
-call at a time among the strategies, and its calls go to a table of their own under the calls table, never into it: the calls table is the
+for the new table"): a strategy ticked runs ON ITS OWN (`runDay` with `rules: [that strategy]`, `more: false`, one run per strategy since
+22 November: `NewRule.runStrategies`), so a strategy never takes a call from another, and its calls go to a table of their own under the calls table, never into it: the calls table is the
 same ticked or not. The table "Call logs from strategy" (`#stratlog`, `strategyLogRows`, `drawStratLog` in `static/detail.html`) shows
 every strategy call of the days the page holds (the last five sessions, each run as the page runs a day), the newest first: Time (the
 signal candle), Strategy, Call (CE/PE), Call Entry (with the time in), Call Exit (with the time out; an open call: the price now), Total
@@ -464,6 +464,56 @@ calls +1,384 (+442, +942). Its entries run about 1.5 to 1.8 ATR in the call's fa
 From 12:15 instead, NIFTY 50 was positive in both years (+807) but SENSEX weaker (+138); from 10:15 NIFTY BANK lost more (-526). On NIFTY
 BANK its first half lost: offered there by the owner's choice of a tick per page, said to the owner. The
 NIFTY BANK and SENSEX numbers rest on 20 to 40 calls. `lab/newrule-check.js` B1 to B5 hold its cases.
+
+## Strategies: Midday Box (22 November)
+
+The owner, 22 November: "develop a new strategy for all 3 indices", then "yes, build it for all 3 indices, show me the screenshot, where it
+will appear". The second strategy under Settings > Strategies, unticked by default, offered on all three index pages (each page its own
+tick); ticked, it runs on its own and its calls go to "Call logs from strategy", like Day Break.
+
+**Midday Box** (`static/newrule.js`, `MIDDAY`, `middayBox`, `middayBoxStep`, a scanner): the box is the highest high and the lowest low of
+the day's 5-minute candles from 11:30 to 12:55 (no box until the 12:55 candle is in). From 13:00, the first close above the box's top by at
+least 0.1 x ATR is a Buy CE, the first close below its bottom by 0.1 x ATR a Buy PE; the signal candles run to 14:40 (the entry at the next
+candle's open, the page's last entry at 14:45). The level, and the stop, is the box edge broken; once per side per day; the page's exits (a
+close back inside the box, the retouch, the half-ATR trail, the day end); no pattern target (the 1 ATR guide). Ticked, the chart draws the
+box's top and bottom, dashed and named ("box top", "box bottom"), once the 12:55 candle has closed; a call's own line stands on its edge.
+Each strategy runs on its own (`NewRule.runStrategies`, one run per strategy; the owner, 22 November: "it should not remove or delete any old
+fired call or signals from the chart whatever it may b. New rule or strategy should fire additional signals along with the old signals"):
+with Day Break also ticked, every Day Break call stays and the Midday Box calls are added beside them; the calls table and every mark and
+line on the chart stay as they were (checked on all three pages, every mark and line, unticked against ticked).
+
+**How it was found** (the page's parts only: the day's candles, the ATR, the buffer, the window, the page's exits). Six ideas were run
+through the engine on NIFTY 50 (503 days), NIFTY 50 with volume (60), NIFTY BANK (60) and SENSEX (57): the failed break of the day's high
+or low (NIFTY 50 two years -231), a pull-back to the broken day high (NIFTY BANK -101), a wide candle closing at its end (NIFTY BANK -270),
+the break of a tight run of candles (NIFTY 50 -370), the turn of a move stretched from the day's open (SENSEX -723), and the midday box,
+the only one positive on every index. Its box hours and buffer were chosen from about 90 settings; the box from 11:30 with a buffer of 0
+to 0.15 ATR is positive in every half on every index. Run on its own, as the page runs it:
+
+| | Calls | Won | Points | First half | Second half |
+| --- | --- | --- | --- | --- | --- |
+| NIFTY 50, 503 days | 421 | 36% | +1,323 | +236 | +1,087 |
+| NIFTY 50, 60 volume days | 46 | 46% | +511 | +204 | +307 |
+| NIFTY BANK, 60 days | 52 | 37% | +639 | +227 | +412 |
+| SENSEX, 57 days | 45 | 44% | +617 | +335 | +282 |
+
+78 to 89% of its calls went at least 0.25 ATR the right way; the price ran 1.4 to 1.9 ATR in the call's favour against 0.7 to 0.8 against;
+a winning call keeps 43 to 55% of its best move; the average win is about 2.5 times the average loss. About 40% of its calls fall on a
+candle that also makes a new day high or low. Both ticked, each on its own, the two give NIFTY 50 +2,174 (two years), +859 (60 days),
+NIFTY BANK +1,117, SENSEX +1,755 (Day Break alone: +851, +348, +478, +1,138). Thin: NIFTY 50's first year is +236 over about 210 calls,
+NIFTY BANK and SENSEX rest on about 50 calls each; 16 to 20 November gave NIFTY 50 -19, NIFTY BANK +231, SENSEX -167. `lab/newrule-check.js`
+M1 to M6 hold its cases.
+
+## New rules never take an old call away (22 November)
+
+The owner, 22 November: "new inndicator or rules or strategies should not remove old fired call or signals which are fired already
+becasue of the existing 24 signals on the chart. it should always be there on the chart. It should not vanish or delete or replace by the
+new inndicator or rules or strategies ... no change in the exisitng calls logic and no change in already fired signals. It should be for
+all 3 indices". So every rule or strategy added from now on runs ON ITS OWN and only adds calls: the page's rules keep running exactly as
+they do (one pass, their logic unchanged); a rule in a lane of its own (`NewRule.LANE`, run by `NewRule.runDay`: NEWHIGH-TREND, since
+22 November evening, #290) runs alone and its calls join the table and the chart; a strategy (`NewRule.runStrategies`) runs in a run of its own and its calls go to "Call logs from strategy".
+`lab/newrule-check.js` K1 and K2 prove it on 16 real saved days of all three indices (`lab/keep_days.json`), and T9 on 60 made-up days:
+with any lane rule or strategy ticked, over several sets of the page's own ticks, every call of the page's rules stays exactly as it was. Checked on the page
+too, on all three indices: every row of the calls table, every mark and line on the chart, before and after ticking: none lost.
 
 ## On the page
 
