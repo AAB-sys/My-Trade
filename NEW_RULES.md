@@ -250,6 +250,87 @@ days than it won and rested on three days, so it did not pass the bar. `lab/vwap
 
 **Not built:** nothing of the document is left out; the rules run on NIFTY 50 only, as the document covers.
 
+## Engulfing (strict) replaces Engulfing (20 November): NIFTY 50
+
+The owner, 20 November, after the daily Calls with Signals round: "look into the engulfing rule on NIFTY 50, this is really causing
+the problem"; "engulfing rule is causing more damage in case of money, is there any change required?"; then "yes, build the engulfing
+strict and replace the old one", and of a new rule's tick: "unticked means keep it out of the table too".
+
+**The rule** (`static/morepat.js`, `engulfing_strict`, not in the owner's reference): the document's Engulfing with its own setting
+raised and two checks added. (a) The fall before it (a rise, for the PE side) is at least 2.0 x ATR (the document: 1.5). (b) The second
+candle closes at or past the first candle's high (CE: the green candle closes at or above the red candle's high, covering the whole red
+candle, not only its body; PE: the red candle closes at or below the green candle's low). (c) The signal candle starts before 14:00
+(candle 57 of the day), so the call enters by 14:00 at the latest. Everything else is the document's: the body of at least 0.5 x ATR,
+the look-back of 8 candles, the level L (the pattern's low; PE: its high), no pattern target (the 1 ATR guide shows), the page's exits
+(Rule 1, then the trail), the gates. The table says "Rule:- Bullish Engulfing (strict)" or "Bearish Engulfing (strict)".
+
+**On the page**: the document's Engulfing gives no call any more (`NewRule.MORE.calls` no longer lists it) and is gone from Settings,
+the chart and the signal log. "Engulfing (strict)" stands in its place in the Settings list, **unticked by default**, and it is the
+only rule whose tick decides its calls (`NewRule.MORE.optIn`, `NewRule.moreCalls(ticked)`): unticked, it gives no call, draws nothing
+and holds up no other rule's call (the engine does not run it); ticked, its calls join the table and the chart like any other rule's,
+in the old Engulfing's place in the list. The signal log under the table lists its signals either way; unticked they say "no call:
+unticked in Settings". The other 24 rules are unchanged (their calls in the table, ticked or not). The reference's own list
+(`MorePat.ORDER`) still holds the document's 14, so `lab/morepat_check.js` still checks the port against the reference;
+`MorePat.PAGE_ORDER` is the page's 14 (the strict rule in the old one's place), `MorePat.ALL_ORDER` every rule (a replay may still ask
+for the old one with `more: [...]`).
+
+**Why** (NIFTY 50, the owner's two years of 5-minute candles from 11 November 2024 to 9 November 2026 and the saved days to 20 November:
+501 days; the page's engine as it runs, every rule, one trade at a time, index points; "after costs" takes 8 points a call; the VWAP
+of the older days is the plain average, as they have no volume). After costs Engulfing was the rule that lost the most: 417 calls,
+-2,137 points (year 1 -815, year 2 -1,321, the 36 saved days -260); a win averaged +24.9 after costs, a loss -29.5. The 81 calls that
+ended by a close back across the pattern's low lost 38.6 points each. Of 72 stricter versions built from the rule's own checks (the
+body, the fall, the close past the other candle, the time), 69 lost less than the page in both years. Taking Engulfing out alone saves
+less (+386 points after costs over the two years) because the slots it frees go to other rules that also lose. The page's NIFTY 50
+calls, after costs, against the page as it was:
+
+| | Engulfing calls | Engulfing's own, after costs | All calls, two years | Year 1 | Year 2 | 36 saved days |
+| --- | --- | --- | --- | --- | --- | --- |
+| Engulfing out (Engulfing (strict) unticked) | 0 | 0 | +386 | +222 | +164 | +142 |
+| Engulfing (strict) ticked | 258 | -636 | +1,097 | +500 | +597 | +195 |
+
+The strict version was the best of the 72 on these same days, so the true gain is likely smaller: chosen on the first year alone, the
+stricter versions still gained in the second (+47 to +325). Engulfing (strict) still loses after costs, and all the page's rules
+together still lose about 10,300 points after costs over the two years with it ticked: it closes the biggest leak, it does not make
+the page pay. Also seen: after an Engulfing signal the index went the call's way about half the time (47% after an hour, 716
+signals), so buying the opposite side is no fix either; calls against the day's move did worse (39 to 45% after an hour) than calls
+with it (52%), but taking Engulfing only with the day's move gained in year 1 and lost 271 points in year 2, so it was not built.
+`lab/newrule-check.js` S1 to S7 hold the rule's cases and the swap.
+
+## Double Top (strict) replaces the Double Top (20 November): all three indices
+
+The owner, 20 November: "look into the double top rule on NIFTY BANK"; "yes, build it for NIFTY BANK only"; then, told that the test
+helped NIFTY 50 and SENSEX too, "add it for all three indices".
+
+**The rule** (`static/newrule.js`, `RULES["double top (strict)"]`, `DT_STRICT`): the Double Top of the "Trading Rules
+Specification" as the page runs it (Buy PE, swing size 2, the neckline break by 0.25 x ATR, Rule 1 and the trail), with one change:
+the two tops at least **7 candles** (35 minutes) apart, not 5. The table says "Rule:- Double Top (strict)".
+
+**On the page** (`NewRule.rulesFor`, `RULE_OPT_IN`): on NIFTY 50, NIFTY BANK and SENSEX the old Double Top gives no call; "Double Top
+(strict)" stands in its place in the Settings list, **unticked by default**: unticked, the engine does not run it (no call, nothing
+drawn, it holds up no other rule's call); ticked, its calls fill the table in the Double Top's place in the list.
+
+**Why** (index points before costs, the page's engine as it runs, every rule, one trade at a time). NIFTY BANK: 59 days, 26 August to
+20 November (the 36 saved days and the days before them rebuilt from `history/volume/NIFTYBANK_1min.csv`; on the 36 days both have,
+the rebuilt 5-minute candles equal the saved ones, 2,700 of 2,700). The Double Top gave 17 calls, 7 won, +497, carried by two calls
+(1 September +372, 9 September +283); from October 9 calls lost 258, six of them sold within one to three candles by a close back above
+the neckline. Seventeen calls are too few to tune on, so every change was tested on NIFTY BANK, on SENSEX (57 days, rebuilt the same
+way from its 1-minute file, 1,425 of 1,425 candles equal to the saved ones) and on NIFTY 50 (the two years and the saved days, 501
+days), and only a change that helped all three was kept. Against the page as it was:
+
+| | Double Top calls | Ticked (the strict rule) | Unticked (no Double Top) |
+| --- | --- | --- | --- |
+| NIFTY BANK, 59 days | 17 to 11 | +136 (26 August to 30 September +19, October and November +117) | -177 |
+| SENSEX, 57 days | 6 to 3 | +32 | -117 |
+| NIFTY 50, 501 days | 54 to 39 | +279; after 8 a call year 1 +50, year 2 +230 | +89; after 8 a call year 1 +158, year 2 +4 |
+
+On NIFTY BANK it takes out 6 Double Top calls (5 lost, 1 won: -167 together); two other calls come in for -31. On SENSEX it takes out
+one loser (-70) and one winner (+37); a third (+121) stays as the Double Bottom call of the same candle. On NIFTY 50 the strict Double
+Top still loses a little (39 calls, -77). Tried and not built: a break of the neckline by 0.5 x ATR (NIFTY BANK +207, NIFTY 50 better,
+SENSEX -92), 0.6 and 0.75 x ATR (SENSEX worse), 1.0 x ATR, tops within 0.3 ATR, a neckline 2.0 ATR deep, a rise of 3.0 ATR into the
+first top, the documents' swing size of 3, the signal within 10 candles of the second top, and no Double Top at all. The gains on
+NIFTY BANK and SENSEX rest on a handful of calls: thin, to be watched by the daily round. `lab/newrule-check.js` D1 to D4 hold the
+rule's cases and the swap.
+
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,

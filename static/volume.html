@@ -9,6 +9,8 @@
 <script src="/static/volprofile.js"></script>
 <script src="/static/vpshape.js"></script>
 <script src="/static/impulse.js"></script>
+<script src="/static/vptool.js"></script>
+<script src="/static/fvg.js"></script>
 <!-- The Volume Profile page (12 November, the owner: "build a new page with header name as volume profile ... the chart format
      which dhan uses for pc and mobile"). A page of its own: it reads the index's candles and the futures' volume, draws them,
      and decides nothing. Paper calls and Calls with Signals are not read here and do not read this page. The chart is drawn
@@ -190,6 +192,7 @@
   #panel .lv { display: grid; grid-template-columns: 1fr auto 46px; gap: 8px; padding: 1.5px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; }
   #panel .lv .d { color: var(--muted); min-width: 44px; text-align: right; }
   #panel .lv.now { background: var(--hover); font-weight: 600; }
+  #panel h3 .livetag { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--up); margin-left: 6px; }
   #panel .cond { padding: 3px 0; } #panel .cond .if { color: var(--ink); } #panel .cond .then { color: var(--ink-2); }
   #panel .flag { color: #b45309; padding: 2px 0; }
   #panel .alerts { max-height: 132px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; }
@@ -336,6 +339,15 @@
   // with ?embed=aaa. Then it is the chart alone: no title row, no index box (the index page's index), and none of the rule
   // boxes (Signal, Shape signal, Impulse MACD, Panel), which stay off. Its settings are kept apart, so this page's own stay as they are.
   const EMBED = params.get("embed") === "aaa", STORE = EMBED ? "volumeProfileAAA" : "volumeProfile";
+  // AAA_V1's own two drawing tools, the Fixed range volume profile and the Anchored volume profile (20 November, the owner, with
+  // the tool marked on a chart and a build document: "it should go to the AAA_V1 page. No logic change for all other pages at
+  // all"): static/vptool.js, put on the chart further down, and only when this page is AAA_V1's chart. On the Volume Profile
+  // page itself vpTool stays null, and every line below that names it does nothing.
+  let vpTool = null;
+  // AAA_V1's fair value gaps (20 November, the owner, with a build document and its module: "it is for AAA_V1, no changes
+  // required on other pages at all"): static/fvg.js, put on the chart further down, and only when this page is AAA_V1's chart.
+  // An "FVG" tick box, off until ticked. On the Volume Profile page itself fvgTool stays null and nothing below that names it runs.
+  let fvgTool = null;
   const state = { name: "NIFTY 50", interval: "5m", days: 1, bars: [], volumes: new Map(), fine: [], fineVolumes: new Map(), contract: null, problem: null, sessions: [], profiles: [], hover: null };
   try { const saved = JSON.parse(localStorage.getItem(STORE) || "null"); if (saved) { if (BARS_A_DAY[saved.interval]) state.interval = saved.interval; if ([1, 2, 3, 5].includes(saved.days)) state.days = saved.days; if (saved.name) state.name = saved.name; if (saved.volume === false) document.getElementById("show-volume").checked = false; if (saved.rsi === false) document.getElementById("show-rsi").checked = false; if (saved.vwap === true) document.getElementById("show-vwap").checked = true; if (saved.panel === true) document.getElementById("show-panel").checked = true; if (saved.shape === true) document.getElementById("show-shape").checked = true; if (saved.impulse === true) document.getElementById("show-impulse").checked = true; if (saved.signal === false) document.getElementById("show-signal").checked = false; } } catch (e) {}
   if (params.get("index")) state.name = params.get("index").toUpperCase();
@@ -425,7 +437,7 @@
     candles.applyOptions({ upColor: up, downColor: down, borderUpColor: up, borderDownColor: down, wickUpColor: up, wickDownColor: down });
     setVolume();
     if (rsi) rsi.applyOptions({ color: css("--rsi") });
-    profile.requestUpdate && profile.requestUpdate(); redraw();
+    profile.requestUpdate && profile.requestUpdate(); redraw(); if (vpTool) vpTool.redraw();
   }
 
   // ---------------------------------------------------------------- the profile, drawn behind the candles
@@ -556,12 +568,12 @@
   const KINDS = ["line", "hline", "vline", "box", "fib", "text"];
   const FIB = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
   const drawKey = () => "volumeProfileDrawings:" + state.name;
-  function loadDrawings() { draw.items = []; draw.picked = -1; draw.first = null; try { const saved = JSON.parse(localStorage.getItem(drawKey()) || "[]"); if (Array.isArray(saved)) draw.items = saved.filter(d => d && KINDS.includes(d.kind)); } catch (e) {} drawButtons(); redraw(); }
+  function loadDrawings() { if (vpTool) vpTool.load(); draw.items = []; draw.picked = -1; draw.first = null; try { const saved = JSON.parse(localStorage.getItem(drawKey()) || "[]"); if (Array.isArray(saved)) draw.items = saved.filter(d => d && KINDS.includes(d.kind)); } catch (e) {} drawButtons(); redraw(); }
   function saveDrawings() { try { localStorage.setItem(drawKey(), JSON.stringify(draw.items)); } catch (e) {} drawButtons(); }
   const redraw = () => drawings.requestUpdate && drawings.requestUpdate();
   function drawButtons() {
     document.querySelectorAll("#draw button[data-tool]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tool === draw.tool)));
-    $("draw-delete").disabled = $("draw-clear").disabled = !draw.items.length && !draw.first;
+    $("draw-delete").disabled = $("draw-clear").disabled = !draw.items.length && !draw.first && !(vpTool && vpTool.count());
     $("wrap").classList.toggle("drawing", !!draw.tool);
   }
   // a time to its place along the candles shown (a candle's number, with a fraction between two candles and beyond the ends), and back
@@ -654,12 +666,13 @@
     if (!e.isPrimary) return;
     downAt = { x: e.clientX, y: e.clientY, t: Date.now() };
     const at = !draw.tool && inPane(e), held = at && grab(at.x, at.y);
-    if (!held) return;
+    if (!held) { if (at && vpTool && vpTool.down(at, e)) holdChart(true); return; }  // AAA_V1: a volume profile under the pointer is held instead
     const place = chart.timeScale().coordinateToLogical(at.x), price = candles.coordinateToPrice(at.y);
     draw.drag = { ...held, place, price, from: JSON.parse(JSON.stringify(draw.items[held.i])), moved: false };
     holdChart(true);
   }, true);
   window.addEventListener("pointermove", (e) => {
+    if (vpTool && vpTool.dragging()) { if (e.isPrimary) vpTool.move(e, e.clientX - $("chart").getBoundingClientRect().left); return; }
     const g = draw.drag; if (!g || !e.isPrimary) return;
     if (!g.moved && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) <= 8) return;
     const r = $("chart").getBoundingClientRect(), x = e.clientX - r.left, y = Math.max(0, Math.min(paneSize.h, e.clientY - r.top));
@@ -673,7 +686,7 @@
     else d[g.part] = { time: timeOf(place), price: round(price) };
     redraw();
   });
-  const drop = () => { const g = draw.drag; if (!g) return false; draw.drag = null; holdChart(false); $("wrap").classList.remove("moving"); if (g.moved) saveDrawings(); return g.moved; };
+  const drop = () => { if (vpTool && vpTool.dragging()) { const moved = vpTool.up(); holdChart(false); return moved; } const g = draw.drag; if (!g) return false; draw.drag = null; holdChart(false); $("wrap").classList.remove("moving"); if (g.moved) saveDrawings(); return g.moved; };
   $("chart").addEventListener("pointerup", (e) => {  // a finger's tap gives no "click" on the chart, so the tap is read from the pointer going down and up
     const from = downAt; downAt = null;
     if (drop()) return;  // a drawing was carried: not a tap
@@ -684,6 +697,7 @@
   window.addEventListener("pointercancel", () => { downAt = null; drop(); });
   function tapped(at) {
     if (!at) return;
+    if (vpTool && vpTool.place(at, draw.tool)) return;  // AAA_V1: a tap with one of the two volume profile tools chosen
     const p = { time: at.time, price: Math.round(at.price * 100) / 100 };
     if (draw.tool === "hline" || draw.tool === "vline") { draw.items.push(draw.tool === "hline" ? { kind: "hline", price: p.price } : { kind: "vline", time: p.time }); setTool(""); saveDrawings(); redraw(); return; }
     if (draw.tool === "text") { const text = (prompt("Note:") || "").trim().slice(0, 80); if (text) { draw.items.push({ kind: "text", a: p, text }); saveDrawings(); } setTool(""); redraw(); return; }
@@ -693,14 +707,15 @@
     }
     let hit = -1;  // the pointer: the drawing under the tap is picked (the newest first), a tap elsewhere lets go
     for (let i = draw.items.length - 1; i >= 0 && hit < 0; i--) { const sh = shape(draw.items[i], paneSize.w, paneSize.h); if (sh && near(sh, at.x, at.y)) hit = i; }
+    if (vpTool) vpTool.select(hit < 0 ? at : null);  // AAA_V1: no drawing under the tap: the volume profile there is picked
     if (hit !== draw.picked) { draw.picked = hit; drawButtons(); redraw(); }
   }
-  function setTool(tool) { draw.tool = tool; draw.first = null; draw.hover = null; if (tool) draw.picked = -1; drawButtons(); redraw(); }
+  function setTool(tool) { draw.tool = tool; draw.first = null; draw.hover = null; if (tool) draw.picked = -1; if (vpTool) vpTool.toolChanged(tool); drawButtons(); redraw(); }
   $("draw").addEventListener("click", (e) => {
     const b = e.target.closest("button"); if (!b || b.disabled) return;
     if (b.dataset.tool != null) setTool(b.dataset.tool === draw.tool ? "" : b.dataset.tool);
     else if (b.id === "draw-delete") deleteOne();
-    else if (b.id === "draw-clear") { draw.items = []; draw.picked = -1; setTool(""); saveDrawings(); redraw(); }
+    else if (b.id === "draw-clear") { draw.items = []; draw.picked = -1; if (vpTool) vpTool.clear(); setTool(""); saveDrawings(); redraw(); }
   });
   // The bin always deletes something when there is something (13 November, the owner, with a photo of a half-drawn line and
   // the question box: "when i press delete and when i press cross bar it should be deleted or erased, which is not happening"):
@@ -708,7 +723,8 @@
   // last one drawn. The cross removes everything at once, a half-made drawing too, without a question. Both put the pointer back.
   function deleteOne() {
     if (draw.first) { setTool(""); return; }
-    if (!draw.items.length) return;
+    if (vpTool && draw.picked < 0 && vpTool.deleteSelected()) { drawButtons(); return; }  // AAA_V1: the picked volume profile, or one half placed
+    if (!draw.items.length) { if (vpTool && vpTool.deleteLast()) drawButtons(); return; }
     draw.items.splice(draw.picked >= 0 ? draw.picked : draw.items.length - 1, 1); draw.picked = -1; setTool(""); saveDrawings(); redraw();
   }
   document.addEventListener("keydown", (e) => {
@@ -727,6 +743,17 @@
     const days = VolProfile.sessions(state.bars);
     return days.slice(-Math.max(state.days, DAYS_BACK + 1));
   }
+  // AAA_V1 only: the two volume profile tools (see vpTool at the top). They read the candles shown and their volume, and the
+  // 1-minute candles under them; they draw on this chart and nowhere else, and are kept apart from the page's other drawings.
+  if (EMBED && window.VpTool && VpTool.attach) vpTool = VpTool.attach({
+    chart, series: candles, IST, wrap: $("wrap"), toolbar: $("draw"), name: () => state.name, interval: () => state.interval,
+    bars: () => shown().flat(), volumes: () => state.volumes, fine: () => state.fine !== state.bars ? state.fine : null, fineVolumes: () => state.fineVolumes,
+    xOf, yOf, placeOf, timeOf, pointAt, num, short, css, holdChart, setTool, changed: drawButtons,
+  });
+  if (EMBED && window.Fvg && Fvg.attach) fvgTool = Fvg.attach({
+    chart, series: candles, IST, tools: $("tools"), infoRow: $("inforow"), name: () => state.name, interval: () => state.interval,
+    bars: () => shown().flat(), fine: () => state.fine, num, css, now: () => Date.now() / 1000,
+  });
   function rebuild() {
     // the count is made from each day's 1-minute candles and their volume, whatever candle size is shown; where those
     // are missing, from the candles shown
@@ -738,7 +765,9 @@
     state.profiles = days.map(d => { const f = useFine && fineDays.get(Math.floor((d[0].time + IST) / 86400)); const got = $("show-shape").checked ? VpShape.read(f || d, have ? vols : null) : null; return { bars: d, profile: VolProfile.build(f || d, have ? vols : null), shape: got && got.shape }; });
     profile.requestUpdate && profile.requestUpdate();
     drawTodayNames();
-    drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable();
+    drawLegend(); drawNote(); drawShape(); drawImpulse(); drawImpulseTable(); tickPanel();
+    if (vpTool) vpTool.refresh();  // AAA_V1: the volume profiles drawn by hand are counted again from the candles and volume now
+    if (fvgTool) fvgTool.refresh();  // AAA_V1: the fair value gaps are read again from the day's finished candles
   }
   // The running day's own levels, named (17 November, the owner, of the evening picture's "Today's VAH" and "Today's VAL" tags:
   // "why on live feed it is not showing todays VAH and todays VAL ?"): the profile's dashed VAH and VAL lines and its POC line
@@ -1411,6 +1440,35 @@
     return diff.length ? { ok: false, text: `NOT the same as the chart at ${g.time}: ${diff.join("; ")}. Both sides read the same volume, so this is a real difference: do not rely on the panel, and tell ULTROAN.` }
       : { ok: true, text: `Same as the chart at ${g.time}: POC, VAH, VAL, VWAP${shapeSaid}${prevSaid}` };
   }
+  // The Panel's key levels, LIVE (19 November 2026, the owner, on a fast open with the Panel's VWAP and price a minute behind the
+  // chart's: "there is a difference on every value"): the panel is read once a minute, the chart moves every second. So the
+  // list takes the numbers the chart itself holds at this moment: the price, the day's high and low, today's VAH, POC and VAL
+  // (the drawn profile's), and VWAP (counted as the chart's line is); the distances are counted from the live price; the list
+  // is sorted again. Yesterday's levels are the panel's (they do not move in the day). The reading, the score, the checks and
+  // the alerts stay the panel's, read at the close of each minute. Written again on every tick.
+  function panelLive(g) {
+    const s = state.profiles[state.profiles.length - 1];
+    if (!g || !s || !s.bars.length || g.name !== state.name || g.date !== new Date((s.bars[0].time + IST) * 1000).toISOString().slice(0, 10)) return null;
+    const day = s.bars, p = s.profile && s.profile.total > 0 ? s.profile : null, vw = state.timeOnly ? [] : vwapOf(day);
+    return { price: day[day.length - 1].close, "Day high": Math.max(...day.map(b => b.high)), "Day low": Math.min(...day.map(b => b.low)),
+             "Today's VAH": p ? p.vah : null, "Today's POC": p ? p.poc : null, "Today's VAL": p ? p.val : null, "VWAP": vw.length ? vw[vw.length - 1].value : null };
+  }
+  function panelLevels(g) {
+    const live = panelLive(g), price = live ? live.price : g.price;
+    const lv = (g.levels || []).map(l => ({ name: l.name, price: live && live[l.name] != null ? live[l.name] : l.price, distance: live ? null : l.distance })).sort((a, b) => b.price - a.price);
+    let placed = false, rows = "";
+    const now = `<div class="lv now"><span>Price now</span><span>${num(price)}</span><span class="d"></span></div>`;
+    for (const l of lv) { if (!placed && l.price < price) { rows += now; placed = true; }
+      const d = l.distance != null ? l.distance : l.price - price;
+      rows += `<div class="lv"><span>${esc(l.name)}</span><span>${num(l.price)}</span><span class="d">${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(Math.round(d))}</span></div>`; }
+    if (!placed) rows += now;
+    const tag = $("panel-live"); if (tag) tag.textContent = live ? "live, as on the chart" : "";
+    return rows;
+  }
+  function tickPanel() {  // on every tick: the list alone, so the rest of the panel (and its scroll place) stays
+    const el = $("panel-levels"), g = state.panel; if (!el || !$("show-panel").checked || !g || !g.checks) return;
+    const rows = panelLevels(g); if (el.dataset.rows !== rows) { el.innerHTML = rows; el.dataset.rows = rows; }
+  }
   function drawPanel() {
     const box = $("panel"), on = $("show-panel").checked, g = state.panel;
     box.hidden = !on;
@@ -1425,21 +1483,16 @@
     h += `<div class="meta">${esc(g.name)} · ${esc(g.time)} · price ${num(g.price)} · score <b>${g.score > 0 ? "+" + g.score : g.score < 0 ? "−" + Math.abs(g.score) : "0"}</b> of a possible +7${g.contract ? " · volume of " + esc(g.contract.name) : ""}</div>`;
     const ck = checkPanel(g);
     if (ck) h += `<div class="verify ${ck.ok === true ? "yes" : ck.ok === false ? "no" : "wait"}">${ck.ok === true ? "✓ " : ck.ok === false ? "✗ " : ""}${esc(ck.text)}</div>`;
-    h += `<div class="meta">Read at the close of the ${esc(g.time)} minute. The chart's lines also count the candle forming now, so they can move a little before the next minute closes.${g.previous_day ? ` Yesterday here is ${shortDay(g.previous_day)}${state.signal && state.signal.chart_levels ? "; after the close the chart's Prev day lines show today's levels, for the next session" : ""}.` : ""}</div>`;
+    h += `<div class="meta">The reading, the score, the checks and the alerts are read at the close of the ${esc(g.time)} minute. The key levels below are live: the same numbers as the chart, every second.${g.previous_day ? ` Yesterday here is ${shortDay(g.previous_day)}${state.signal && state.signal.chart_levels ? "; after the close the chart's Prev day lines show today's levels, for the next session" : ""}.` : ""}</div>`;
     h += `<h3>Checks</h3>` + g.checks.map(c => `<div class="row">${mark(c.score)}<span class="t"><span class="k">${esc(c.name)}:</span> ${esc(c.result)}</span></div>`).join("");
-    // the levels, highest first, with the price's own row where it belongs
-    const lv = (g.levels || []).slice(); let placed = false, rows = "";
-    for (const l of lv) { if (!placed && l.price < g.price) { rows += `<div class="lv now"><span>Price now</span><span>${num(g.price)}</span><span class="d"></span></div>`; placed = true; }
-      const d = l.distance != null ? l.distance : l.price - g.price;
-      rows += `<div class="lv"><span>${esc(l.name)}</span><span>${num(l.price)}</span><span class="d">${d > 0 ? "+" : d < 0 ? "−" : ""}${Math.abs(Math.round(d))}</span></div>`; }
-    if (!placed) rows += `<div class="lv now"><span>Price now</span><span>${num(g.price)}</span><span class="d"></span></div>`;
-    h += `<h3>Key levels</h3>${rows}`;
+    h += `<h3>Key levels <span class="livetag" id="panel-live"></span></h3><div id="panel-levels">${panelLevels(g)}</div>`;
     h += `<h3>Thin zones</h3>` + ((g.zones || []).length ? g.zones.map(z => `<div class="row"><span class="t">${esc(z.name)}: ${num(z.low)} to ${num(z.high)}</span></div>`).join("") : `<div class="none">None now</div>`);
     h += `<h3>If / then</h3>` + ((g.conditions || []).length ? g.conditions.map(c => `<div class="cond"><span class="if">${esc(c.if)}</span> → <span class="then">${esc(c.then)}</span></div>`).join("") : `<div class="none">Nothing to watch yet</div>`);
     h += `<h3>Flags</h3>` + ((g.flags || []).length ? g.flags.map(f => `<div class="flag">${esc(f)}</div>`).join("") : `<div class="none">None</div>`);
     h += `<h3>Alerts</h3><div class="alerts">` + ((g.alerts || []).length ? g.alerts.map(a => `<div class="a"><span class="tm">${esc(a.time)}</span>${esc(a.text)}</div>`).join("") : `<div class="none">None yet today</div>`) + `</div>`;
     box.innerHTML = `<div class="body">${h}</div>${warn}`;
     box.querySelector(".body").scrollTop = keep;
+    tickPanel();
   }
 
   // ---------------------------------------------------------------- the tool row
@@ -1492,7 +1545,7 @@
   // the old connection is dropped without waiting and a new one opened at once, and everything is fetched again at once. The
   // same when the phone comes back online, and whenever the price is silent for 10 seconds in market hours while the page is
   // in front (then 20, 40, 60 seconds: the server or Dhan may be the quiet one).
-  const KICK_FIRST = 10000;
+  const KICK_FIRST = 5000;
   let lastTickAt = 0, lastKick = 0, kickWait = KICK_FIRST;
   const tickHours = () => { const s = Date.now() / 1000 + IST, day = new Date(s * 1000).getUTCDay(), sec = ((s % 86400) + 86400) % 86400; return day >= 1 && day <= 5 && sec >= 9 * 3600 && sec < 15 * 3600 + 45 * 60; };  // as the server: 09:00 to 15:45 IST, Monday to Friday
   function reconnectNow() {
@@ -1509,9 +1562,17 @@
     kickWait = Math.min(kickWait * 2, 60000);
     reconnectNow();
   }, 2000);
+  // 19 November, the owner again, on the phone and the computer: "it is still taking time to reload while switching from one
+  // page to my trade page ... about 10 seconds". As the page wakes, the browser hands it the prices that were waiting, so the
+  // last price looks fresh although the connection behind it is dead; the page then trusted it and stood still until the
+  // 10-second watch. So: away for AWAY_SECONDS or more = a fresh connection at once, whatever the last price's age; and the
+  // watch itself asks after 5 silent seconds, not 10 (in market hours a price comes every second).
+  const AWAY_SECONDS = 4; let hiddenAt = 0;
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden || parked) return;
-    if (tickHours() && (Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (parked) return;
+    const away = hiddenAt ? (Date.now() - hiddenAt) / 1000 : 0; hiddenAt = 0;
+    if (tickHours() && (away >= AWAY_SECONDS || Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
     else { load(); loadSignal(); loadPanel(); }
   });
   window.addEventListener("online", () => { kickWait = KICK_FIRST; reconnectNow(); });

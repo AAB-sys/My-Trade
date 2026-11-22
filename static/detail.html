@@ -550,7 +550,7 @@
       <div class="layout-box">
         <h3 id="indicators-title">Indicators</h3>
         <p class="hint">Tick an indicator to make it active. Remembered on this browser.</p>
-        <div id="indicators-list" class="indicators"><label><input type="checkbox" data-ind="fib">Fib Levels</label><label><input type="checkbox" data-ind="dt">Double Top</label><label><input type="checkbox" data-ind="db">Double Bottom</label><label><input type="checkbox" data-ind="tt">Triple Top</label><label><input type="checkbox" data-ind="tb">Triple Bottom</label><label><input type="checkbox" data-ind="fw">Falling Wedge</label><label><input type="checkbox" data-ind="rw">Rising Wedge</label><label><input type="checkbox" data-ind="br">Bullish Rectangle</label><label><input type="checkbox" data-ind="bst">Bullish Symmetrical Triangle</label><label><input type="checkbox" data-ind="bet">Bearish Symmetrical Triangle</label><label><input type="checkbox" data-ind="asc">Ascending Triangle</label><label><input type="checkbox" data-ind="des">Descending Triangle</label><div class="group">14 more patterns (30 October): their calls fill the table like the other rules' · a tick draws that rule's signals on the chart; the log under the table always carries every signal</div><label><input type="checkbox" data-ind="mp_inverse_head_shoulders">Head and Shoulders (and Inverse)</label><label><input type="checkbox" data-ind="mp_cup_handle">Cup and Handle (and Inverted)</label><label><input type="checkbox" data-ind="mp_rounding_bottom">Rounding Bottom and Top</label><label><input type="checkbox" data-ind="mp_flag">Flags (Bull and Bear)</label><label><input type="checkbox" data-ind="mp_pennant">Pennants (Bull and Bear)</label><label><input type="checkbox" data-ind="mp_falling_channel">Falling and Rising Channels</label><label><input type="checkbox" data-ind="mp_broadening">Broadening Formation</label><label><input type="checkbox" data-ind="mp_island">Island Reversal</label><label><input type="checkbox" data-ind="mp_orb">Opening Range Breakout</label><label><input type="checkbox" data-ind="mp_gap">Gap Rule</label><label><input type="checkbox" data-ind="mp_engulfing">Engulfing Candles</label><label><input type="checkbox" data-ind="mp_hammer">Hammer and Shooting Star</label><label><input type="checkbox" data-ind="mp_doji">Doji Reversal</label><label><input type="checkbox" data-ind="mp_vwap">VWAP Reclaim and Loss</label></div>
+        <div id="indicators-list" class="indicators"><label><input type="checkbox" data-ind="fib">Fib Levels</label><label><input type="checkbox" data-ind="dts">Double Top (strict)</label><label><input type="checkbox" data-ind="db">Double Bottom</label><label><input type="checkbox" data-ind="tt">Triple Top</label><label><input type="checkbox" data-ind="tb">Triple Bottom</label><label><input type="checkbox" data-ind="fw">Falling Wedge</label><label><input type="checkbox" data-ind="rw">Rising Wedge</label><label><input type="checkbox" data-ind="br">Bullish Rectangle</label><label><input type="checkbox" data-ind="bst">Bullish Symmetrical Triangle</label><label><input type="checkbox" data-ind="bet">Bearish Symmetrical Triangle</label><label><input type="checkbox" data-ind="asc">Ascending Triangle</label><label><input type="checkbox" data-ind="des">Descending Triangle</label><div class="group">14 more patterns (30 October): their calls fill the table like the other rules' · a tick draws that rule's signals on the chart; the log under the table always carries every signal · Engulfing (strict) gives calls only while ticked (20 November)</div><label><input type="checkbox" data-ind="mp_inverse_head_shoulders">Head and Shoulders (and Inverse)</label><label><input type="checkbox" data-ind="mp_cup_handle">Cup and Handle (and Inverted)</label><label><input type="checkbox" data-ind="mp_rounding_bottom">Rounding Bottom and Top</label><label><input type="checkbox" data-ind="mp_flag">Flags (Bull and Bear)</label><label><input type="checkbox" data-ind="mp_pennant">Pennants (Bull and Bear)</label><label><input type="checkbox" data-ind="mp_falling_channel">Falling and Rising Channels</label><label><input type="checkbox" data-ind="mp_broadening">Broadening Formation</label><label><input type="checkbox" data-ind="mp_island">Island Reversal</label><label><input type="checkbox" data-ind="mp_orb">Opening Range Breakout</label><label><input type="checkbox" data-ind="mp_gap">Gap Rule</label><label><input type="checkbox" data-ind="mp_engulfing_strict">Engulfing (strict)</label><label><input type="checkbox" data-ind="mp_hammer">Hammer and Shooting Star</label><label><input type="checkbox" data-ind="mp_doji">Doji Reversal</label><label><input type="checkbox" data-ind="mp_vwap">VWAP Reclaim and Loss</label></div>
         <div class="layout-foot"><button type="button" class="pill" id="indicators-close">Close</button></div>
       </div>
     </div>
@@ -1940,8 +1940,8 @@
   // lives while some page does either.
   let liveWs = null;
   let parked = false;  // the page is being left (the Back button, a link): it closed its own connection, and reconnects when shown again
-  const KICK_FIRST = 10000;  // in market hours, no live price for this long: a fresh connection (29 October; 45 s until then)
-  let kickWait = KICK_FIRST;  // doubles (to 60 s at most) while fresh connections bring no price either, back to 10 s when one does
+  const KICK_FIRST = 5000;  // in market hours, no live price for this long: a fresh connection (10 s from 29 October, 45 s before; 5 s since 19 November)
+  let kickWait = KICK_FIRST;  // doubles (to 60 s at most) while fresh connections bring no price either, back to 5 s when one does
   let wsOpenedAt = 0;
   function keepAlive() {
     if (parked) return;
@@ -2005,9 +2005,17 @@
   }, 2000);
   // Back on the page (from Dhan's app, the screen on again) or back online: in market hours with no live price in the
   // last 3 s, a fresh connection at once instead of waiting for the check above; otherwise the candles fetched again
+  // 19 November, the owner, on the phone and the computer: "it is still taking time to reload while switching from one page to
+  // my trade page ... about 10 seconds". As the page wakes, the browser hands it the prices that were waiting, so the last
+  // price looks fresh although the connection behind it is dead; the page trusted it and stood still until the 10-second
+  // check. So: away for AWAY_SECONDS or more = a fresh connection at once, whatever the last price's age; and the check
+  // itself asks after 5 silent seconds, not 10 (in market hours a price comes every second).
+  const AWAY_SECONDS = 4; let hiddenAt = 0;
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden || parked) return;
-    if (ticksExpected() && (Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    if (parked) return;
+    const away = hiddenAt ? (Date.now() - hiddenAt) / 1000 : 0; hiddenAt = 0;
+    if (ticksExpected() && (away >= AWAY_SECONDS || Date.now() - lastTickAt > 3000 || !liveWs || liveWs.readyState !== WebSocket.OPEN)) { kickWait = KICK_FIRST; reconnectNow(); }
     else { clearTimeout(state.timer); load(); }
   });
   window.addEventListener("online", () => { kickWait = KICK_FIRST; reconnectNow(); });
@@ -2252,6 +2260,7 @@
     state.signalsDT = active.has("dt"); state.signalsDB = active.has("db"); state.signalsTT = active.has("tt"); state.signalsTB = active.has("tb"); state.signalsFW = active.has("fw"); state.signalsRW = active.has("rw"); state.signalsBR = active.has("br"); state.signalsBST = active.has("bst"); state.signalsBET = active.has("bet"); state.signalsASC = active.has("asc"); state.signalsDES = active.has("des");  // each rule's marks and lines on the chart (the table always carries every rule's calls, drawSignals)
     const moreTicks = () => new Set([...active].filter(k => k.startsWith("mp_")).map(k => k.slice(3)));  // the 14 more patterns ticked (30 October): their signals' marks and lines on the chart
     state.morePat = moreTicks();
+    state.signalsDTS = active.has("dts");  // Double Top (strict), all three indices (20 November): in the Double Top's place; its tick also decides its calls (NewRule.rulesFor)
     const fill = () => list.querySelectorAll("input").forEach(i => { i.checked = active.has(i.dataset.ind); });
     const open = () => { fill(); box.hidden = false; const first = list.querySelector("input"); if (first) first.focus(); };
     const close = () => { box.hidden = true; button.focus(); };
@@ -2261,8 +2270,8 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
     list.addEventListener("change", e => { const k = e.target.dataset.ind; if (!k) return; if (e.target.checked) active.add(k); else active.delete(k);
       state.signalsFib = active.has("fib"); state.signalsDT = active.has("dt"); state.signalsDB = active.has("db"); state.signalsTT = active.has("tt"); state.signalsTB = active.has("tb"); state.signalsFW = active.has("fw"); state.signalsRW = active.has("rw"); state.signalsBR = active.has("br"); state.signalsBST = active.has("bst"); state.signalsBET = active.has("bet"); state.signalsASC = active.has("asc"); state.signalsDES = active.has("des"); try { localStorage.setItem("signalsIndicators", JSON.stringify([...active])); } catch (err) {}
-      state.morePat = moreTicks();
-      if (series) drawLevels(); });  // the tick draws the rule's marks and lines at once, or takes them off; the table stays
+      state.morePat = moreTicks(); state.signalsDTS = active.has("dts");
+      if (series) drawLevels(); });  // the tick draws the rule's marks and lines at once, or takes them off; the table stays (Engulfing (strict)'s tick also puts its calls in the table, or takes them out: 20 November)
   })();
   // ---- New Rule Chart: the double top (Buy PE) and double bottom (Buy CE) rule of the owner's "Trading Rules Specification" (21 October),
   // with Rule 1 (break-and-hold) and Rule 2 (trailing) after the entry: NewRule.runDay over the session's closed 5-minute candles,
@@ -2316,7 +2325,9 @@
     const seed = before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null;
     const last = bars[closed - 1], dayEnd = closed === bars.length && (last.time + IST_OFFSET) % 86400 >= 15 * 3600 + 25 * 60;  // the 15:25 candle closed: the day is over
     const volumes = volumesFor(bars, closed);  // the futures volume of each candle, or null (then the VWAP is the plain average, and the page says so)
-    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes }), bars, before, closed, dayEnd, volumes };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
+    const more = NewRule.moreCalls ? NewRule.moreCalls(state.morePat) : null;  // the 14 more patterns' call list: Engulfing (strict) only while ticked (20 November)
+    const rules = NewRule.rulesFor ? NewRule.rulesFor(name, new Set(state.signalsDTS ? ["double top (strict)"] : [])) : null;  // Double Top (strict) in the Double Top's place on all three indices, only while ticked (20 November)
+    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) }), bars, before, closed, dayEnd, volumes };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -2363,12 +2374,12 @@
     if (!run) { clearSignals(); return []; }
     const lines = [], marks = [], segs = [];
     // The 1 ATR guide (4 November, the owner: "why target is not given here? how can I guess where to exit?"): a call whose rule has no
-    // pattern target (VWAP reclaim and loss, Engulfing, Hammer and Shooting Star, Doji) shows one ATR from its entry, in its direction,
+    // pattern target (VWAP reclaim and loss, Engulfing (strict), Hammer and Shooting Star, Doji) shows one ATR from its entry, in its direction,
     // where it showed "—". A guide only: nothing is sold there; the call is still sold by its stop (Rule 1, then the trail). The ATR is
     // the one as of the candle before the signal candle, from the previous sessions loaded and today's candles, as the engine reads it.
     const guideAtrs = NewRule.atrSeries((run.before || []).concat(run.bars)), guideBase = (run.before || []).length;
     const guideOf = (t) => { if (t.target != null || t.entry == null) return null; const a = guideAtrs[guideBase + t.signalCandle - 1]; return a ? NewRule.round2(t.entry + (t.side === "CE" ? 1 : -1) * a) : null; };
-    const ticked = { "double top": state.signalsDT, "double bottom": state.signalsDB, "triple top": state.signalsTT, "triple bottom": state.signalsTB, "falling wedge": state.signalsFW, "rising wedge": state.signalsRW, "bullish rectangle": state.signalsBR, "bullish symmetrical triangle": state.signalsBST, "bearish symmetrical triangle": state.signalsBET, "ascending triangle": state.signalsASC, "descending triangle": state.signalsDES , ...Object.fromEntries((typeof MorePat !== "undefined" ? MorePat.ORDER : []).map(key => [key, (state.morePat || new Set()).has(key)])) };  // the 14 more patterns' ticks (30 October)
+    const ticked = { "double top": state.signalsDT, "double top (strict)": state.signalsDTS, "double bottom": state.signalsDB, "triple top": state.signalsTT, "triple bottom": state.signalsTB, "falling wedge": state.signalsFW, "rising wedge": state.signalsRW, "bullish rectangle": state.signalsBR, "bullish symmetrical triangle": state.signalsBST, "bearish symmetrical triangle": state.signalsBET, "ascending triangle": state.signalsASC, "descending triangle": state.signalsDES , ...Object.fromEntries((typeof MorePat !== "undefined" ? (MorePat.PAGE_ORDER || MorePat.ORDER) : []).map(key => [key, (state.morePat || new Set()).has(key)])) };  // the 14 more patterns' ticks (30 October)
     run.trades.filter(t => ticked[t.rule]).forEach(t => {  // a rule's marks and lines only while its tick is on; the table carries every rule's calls
       const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom" || t.rule === "triple bottom", wedge = t.upperLine != null;
       const lineName = t.more ? (t.lineName === "VWAP" ? "VWAP at call" : t.lineName) : t.rule === "bullish rectangle" ? (t.side === "CE" ? "resistance" : "support") : t.rule === "ascending triangle" ? "resistance" : t.rule === "descending triangle" ? "support" : wedge ? "break level" : bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
@@ -2423,7 +2434,7 @@
         : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
       tr.innerHTML = `<td class="when">${callTime(t.signalTime)}<small>in at ${callTime(t.entryTime)}</small></td>`
         + `<td class="call">Buy ${t.side}</td>`
-        + `<td>Rule:- ${t.more ? t.kind : { "double top": "Double Top", "double bottom": "Double Bottom", "triple top": "Triple Top", "triple bottom": "Triple Bottom", "falling wedge": "Falling Wedge", "rising wedge": "Rising Wedge", "bullish rectangle": "Bullish Rectangle", "bullish symmetrical triangle": "Bullish Symmetrical Triangle", "bearish symmetrical triangle": "Bearish Symmetrical Triangle", "ascending triangle": "Ascending Triangle", "descending triangle": "Descending Triangle" }[t.rule] || t.rule}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
+        + `<td>Rule:- ${t.more ? t.kind : { "double top": "Double Top", "double top (strict)": "Double Top (strict)", "double bottom": "Double Bottom", "triple top": "Triple Top", "triple bottom": "Triple Bottom", "falling wedge": "Falling Wedge", "rising wedge": "Rising Wedge", "bullish rectangle": "Bullish Rectangle", "bullish symmetrical triangle": "Bullish Symmetrical Triangle", "bearish symmetrical triangle": "Bearish Symmetrical Triangle", "ascending triangle": "Ascending Triangle", "descending triangle": "Descending Triangle" }[t.rule] || t.rule}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
         + `<td>${fmt.format(t.entry)}</td>`
         + `<td class="target">${t.target == null ? (guide != null ? `guide ${fmt.format(guide)}` : "—") : fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
         + `<td class="opt">—</td><td class="opt ${pts > 0 ? "up" : pts < 0 ? "down" : ""}">${pts > 0 ? "+" : ""}${fmt.format(pts)} pts</td>`
@@ -2473,7 +2484,7 @@
   // The summary: the signals, how many would be traded, each rule's count (a rule that spoke more than 5 times is flagged), the paper sum
   const MORE_STATUS = { ok: "would be traded", "outside time": "outside 09:30 to 14:45", "same side": "same side, another rule first", "both sides": "both sides, skipped" };
   const moreLogNow = (run) => run && run.bars && name === "NIFTY 50" && !longCandles() && typeof MorePat !== "undefined"
-    ? MorePat.dayLog({ bars: run.bars, prevBars: run.before, closedCount: run.closed, dayEnd: run.dayEnd, manage: (t, bar, j, atr, lastK, dayEnd) => NewRule.manageStep(t, bar, j, atr, lastK, dayEnd, NewRule.DT) }) : null;
+    ? MorePat.dayLog({ bars: run.bars, prevBars: run.before, closedCount: run.closed, dayEnd: run.dayEnd, manage: (t, bar, j, atr, lastK, dayEnd) => NewRule.manageStep(t, bar, j, atr, lastK, dayEnd, NewRule.DT), rules: MorePat.PAGE_ORDER || null }) : null;  // the page's 14: Engulfing (strict) in the old Engulfing's place (20 November)
   // The pictures of the signals whose rule is ticked in Settings (30 October): the signal candle's arrow with the rule's name, the
   // pattern's key candles as circles (the document's picture points, short names), and its lines (neckline, rim, the flag's two lines,
   // the opening range, the island high) from candle to candle, in the side's colour
@@ -2507,7 +2518,8 @@
       const taken = moreTaken(r, run && run.trades), trades = run && run.trades || [], skipped = run && run.skipped || [], bar = run && run.bars && run.bars[r.k];
       const busy = !taken && bar && trades.some(t => t.signalCandle < r.k && (t.exitTime == null || t.exitTime > bar.time || (t.exitTime === bar.time && t.how === "day end")));
       const why = !taken && bar && skipped.find(x => x.time === bar.time && !x.rule && (x.side == null || x.side === r.side)), other = !taken && trades.find(t => t.signalCandle === r.k);  // the engine's own skip notes (a scanner's notes carry its rule)
-      const order = taken ? `taken: ${taken.exit != null ? `${taken.points > 0 ? "+" : ""}${fmt.format(taken.points)} pts` : "open"}` : r.status !== "ok" ? MORE_STATUS[r.status] : busy ? "a trade already open" : why ? why.why : other ? `the ${other.more ? other.kind : other.rule} call on the same candle` : r.entry == null ? "no next candle yet" : "not taken";
+      const unticked = !taken && NewRule.MORE.optIn && NewRule.MORE.optIn.includes(r.key) && !(state.morePat || new Set()).has(r.key);  // Engulfing (strict) unticked: no call (20 November)
+      const order = taken ? `taken: ${taken.exit != null ? `${taken.points > 0 ? "+" : ""}${fmt.format(taken.points)} pts` : "open"}` : r.status !== "ok" ? MORE_STATUS[r.status] : unticked ? "no call: unticked in Settings" : busy ? "a trade already open" : why ? why.why : other ? `the ${other.more ? other.kind : other.rule} call on the same candle` : r.entry == null ? "no next candle yet" : "not taken";
       tr.innerHTML = `<td>${callTime(r.signalTime)}</td><td class="rule">${r.rule}<small>${r.key}</small></td><td>Buy ${r.side}</td><td class="${taken ? "ok" : ""}">${order}</td>`
         + `<td>${fmt.format(r.level)}${r.target != null ? `<small>target ${fmt.format(r.target)}</small>` : ""}</td><td>${fmt.format(r.close)}<small>ATR ${fmt.format(r.atr)}</small></td>`
         + `<td>${r.entry == null ? "no next candle yet" : `${fmt.format(r.entry)}<small>at ${callTime(r.entryTime)}</small>`}</td>`

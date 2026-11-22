@@ -197,6 +197,15 @@ their own logic. Read this before touching the code.
   Rule 1 (the reclaim, the retouch, the day end), then the ATR trail (the stop half an ATR behind the best close, 22 October evening). The page runs it under
   Calls with Signals (`drawSignals`). Described in `NEW_RULES.md`, apart from LOGIC.md. `lab/newrule-check.js` runs every case the
   documents give. PRs for it are named "New Rule Chart_".
+  The daily round (20 November, the owner: "I have created you to refine that page on daily basis"): each weekday at 16:20 IST the
+  day's saved candles are replayed through Calls with Signals and reported in the chat; report and propose only, nothing built
+  until the owner says yes. A yes goes in as one "New Rule Chart_" PR, the new rule in the Settings popup under its new name,
+  UNTICKED by default, and "unticked means keep it out of the table too" (`NewRule.MORE.optIn`, `moreCalls`): unticked, the engine
+  does not run it. The rules already on the page keep their calls in the table ticked or not. The first: Engulfing (strict)
+  (`morepat.js` `engulfing_strict`: a fall of 2.0 ATR, the close past the other candle's high or low, the signal before 14:00)
+  replaced the document's Engulfing on 20 November (`MorePat.PAGE_ORDER`; `MorePat.ORDER` stays the reference's 14 for
+  `lab/morepat_check.js`); NEW_RULES.md has the numbers. The second: Double Top (strict) (the tops at least 7 candles apart,
+  `DT_STRICT`) replaced the Double Top on all three indices on 20 November (`NewRule.rulesFor`, `RULE_OPT_IN`).
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
@@ -446,6 +455,32 @@ branch from `main`.
   only"), and every reading of the previous day is amber: its three figures and its three lines ("mark yesterdays every reading
   in amber color"; `--prev-day`). It has NO rule and fires no
   call until the owner gives it one; no other page's rule reads or writes it.
+  Its two drawing tools (20 November, the owner, with the tool marked on a chart and the build document "AAA_V1 Volume Profile
+  Tool Logic": "it should go to the AAA_V1 page. No logic change for all other pages at all"): the Fixed range volume profile (two
+  taps: the first and the last candle) and the Anchored volume profile (one tap: from that candle to the latest), in
+  `static/vptool.js`. Its first half is the document's Python module rule for rule (`selectRange`, `pickLowerTf`, `buildSource`,
+  `rowsLayout`, `pointOfControl`, `valueArea`, `compute`, `histogramBars`), with five faults put right, each marked there; the
+  same rules stand in `lab/vptool_ref.py`, and `python3 lab/check_vptool.py` proves the two agree (rows, POC, value area,
+  developing lines, drawn lengths). Its second half (`attach`) is the tool on the chart: the two buttons in the drawing bar, the
+  box, rows and lines drawn behind the candles, the handles, the small bar over a picked profile (settings, lock, hide, delete)
+  and the settings box (Inputs, Style, Coordinates, Visibility; every setting of the document's section 3). It counts from the
+  1-minute candles with the futures' volume under any candle size; with no volume at all it shows time at each price and says
+  so. Profiles are kept per index in this browser (`aaaVolumeProfileTools:<name>`), apart from the page's other drawings.
+  `static/volume.html` names it only through `vpTool`, which is null unless the page is AAA_V1's chart (`embed=aaa`), so the
+  Volume Profile page itself is as it was. The tool reads; it is no rule and gives no call.
+  Its fair value gaps (20 November, the owner, with the build document "AAA_V1 FVG Live chart logic" and its module
+  `panel_fvg.py`: "it is for AAA_V1, no changes required on other pages at all. go through the logic carefully and build it in
+  proper way"; then: "it will impact on the buy CE or buy PE heavily"): `static/fvg.js`. Its first half is the owner's module
+  rule for rule (`resample`, `Tracker`: a gap only when candle 3 has closed, today's candles back to back, the size filter,
+  active, touched, half, filled, inverted, the retiring), with four faults put right (a bigger candle built over a hole in the
+  1-minute candles; a finished candle the feed revises; half-to-even rounding in the words; "0 = no limit" by accident). The
+  same rules stand in `lab/fvg_ref.py`, and `python3 lab/check_fvg.py` proves the two agree. Its second half puts them on the
+  chart: an "FVG" tick box in AAA_V1's top row, OFF until ticked, with a gear for every setting of the document; boxes under
+  the candles from candle 1 to the right edge, shrunk to the unfilled part, fainter once touched, a dashed 50% line; and a row
+  of words above the chart (open gaps, the nearest bullish gap below and bearish gap above the price, the day's alerts). Only
+  the last day's FINISHED candles are read (a later candle has come, or a minute has passed since its end), afresh each time.
+  It gives no call and no CE or PE: the document's own evidence says a gap is a map, not a signal. `static/volume.html` names
+  it only through `fvgTool`, null unless the page is AAA_V1's chart, so the Volume Profile page is as it was.
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
@@ -458,6 +493,11 @@ branch from `main`.
   index page's title, and in the Volume Profile page's index box and legend (`static/volume.html`). `GET /expiry-today` (main.py)
   says which, from Dhan's own expiry list of each index (`dhan.expiries`, the list the Panel's expiry flag reads, asked at most
   once in six hours). The pages ask when they open and every 30 minutes. A mark only: links, values and rules are unchanged.
+- The Panel's key levels are LIVE (19 November, the owner, on a fast open: "there is a difference on every value"): the panel is
+  read once a minute, the chart moves every second, so the list (`panelLevels`, `panelLive`, `tickPanel` in `static/volume.html`)
+  shows the chart's own numbers of the moment: the price, the day's high and low, today's VAH, POC and VAL, VWAP; distances from
+  the live price; sorted again on every tick. Yesterday's levels, the reading, the score, the checks and the alerts stay the
+  panel's minute reading. Only what the list shows: no rule, level or signal is counted differently.
 - The OI walls for the research (17 November, the owner: "yes"): `main.oi_forever` looks at each index's nearest-expiry option
   chain every quarter of an hour during the session (`OI_CHECK_SECONDS`), `dhan.oi_look` keeps the biggest Call OI strike at or
   above the index and Put OI strike at or below it (and the five biggest of each side) in memory for the day, and the day's

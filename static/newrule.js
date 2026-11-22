@@ -614,19 +614,38 @@
   const RULES = { "double top": (bars, k, atr, cfg) => [detectEntry(bars, k, "PE", atr, cfg)],
                   "double bottom": (bars, k, atr, cfg) => [detectDoubleBottom(bars, k, "CE", atr, cfg.db || DB.table), detectDoubleBottom(bars, k, "PE", atr, cfg.db || DB.table)],
                   "triple top": (bars, k, atr, cfg) => [detectTripleTop(bars, k, "PE", atr, cfg), detectTripleTop(bars, k, "CE", atr, cfg)],
-                  "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)] };
+                  "triple bottom": (bars, k, atr, cfg) => [detectTripleBottom(bars, k, "CE", atr, cfg), detectTripleBottom(bars, k, "PE", atr, cfg)],
+                  // Double Top (strict) (20 November, the owner: "yes, build it for NIFTY BANK only", then "add it for all three indices"):
+                  // the double top with its two tops at least 7 candles apart (DT_STRICT; the document: 5), everything else the same (Buy PE).
+                  // On NIFTY 50, NIFTY BANK and SENSEX, in the old Double Top's place, and only while ticked (rulesFor, RULE_OPT_IN)
+                  "double top (strict)": (bars, k, atr, cfg) => { const s = detectEntry(bars, k, "PE", atr, { ...cfg, ...DT_STRICT }); return [s ? { ...s, rule: "double top (strict)" } : null]; } };
+  const DT_STRICT = { minGap: 7 };  // the tops at least 7 candles (35 minutes) apart
+  // The page's list of rules, in order (runDay's default), and the opt-in rules that take an old rule's place on some indices: unticked,
+  // the new rule is left out (no calls, nothing drawn, it holds up no other rule's call); ticked, it stands where the old rule stood.
+  // The owner, 20 November: "unticked means keep it out of the table too"; Double Top (strict): "add it for all three indices"
+  const RULE_LIST = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"];
+  const RULE_OPT_IN = { "double top (strict)": { replaces: "double top", indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
+  const rulesFor = (index, ticked) => RULE_LIST.flatMap(rule => {  // ticked: a Set of the opt-in rules whose tick is on
+    const opt = Object.keys(RULE_OPT_IN).find(key => RULE_OPT_IN[key].replaces === rule && RULE_OPT_IN[key].indices.includes(index));
+    return !opt ? [rule] : ticked && ticked.has(opt) ? [opt] : [];
+  });
   // The 14 more patterns (the owner's "More Chart Patterns and Rules" document; static/morepat.js; 30 October: "make their behaviour same
   // like the earlier 11 signals"): on NIFTY 50 (MORE.indices) their signals join the other rules' on every closed candle, after them in
   // the list (the rule earlier in the list wins a candle that two rules call the same way; opposite ways: nothing, as before), under the
   // same gates (one trade at a time, the entry window, the losses in a row, the day's limits) and the same exits. Their ATR is the
   // reference's own (Wilder 14 as of the previous candle, carried over from the previous sessions) and yesterday's close is the previous
   // session's last candle's close; a signal carries its level L, its picture's target (or none), its key candles and lines for the chart
+  // 20 November (the owner: "yes, build the engulfing strict and replace the old one"; "unticked means keep it out of the table too"):
+  // the document's Engulfing gives no call any more; Engulfing (strict) (morepat.js engulfing_strict) takes its place, and only while
+  // its tick in Settings is on (optIn): unticked, it gives no call, draws nothing and holds up no other rule's call
   const MORE = { indices: ["NIFTY 50"],  // where the 14 run
-                 calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "engulfing", "hammer", "doji", "vwap"] };  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
+                 calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer", "doji", "vwap"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
+                 optIn: ["engulfing_strict"] };  // rules that give calls only while ticked on the page
+  const moreCalls = (ticked) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key)));  // the page's call list: the rules above and the opt-in rules ticked (a Set of keys)
   const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more) : MORE.indices.includes(index));  // no index (the lab): only when asked
   const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines,  // the picture's points and lines (a trade's "points" is its result)
                                              lineName: s.lines.length ? s.lines[0][4] : key === "vwap" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
-  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = ["double top", "double bottom", "triple top", "triple bottom", "falling wedge", "rising wedge", "bullish rectangle", "bullish symmetrical triangle", "bearish symmetrical triangle", "ascending triangle", "descending triangle"] }) {
+  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
     if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
@@ -657,7 +676,7 @@
         else if (scanners[name]) found.push(...wedgeSigs.filter(s => s.rule === name));
         else if (RULES[name]) found.push(...RULES[name](bars, k, atr, cfg));
       }
-      if (withMore && moreAtr[k] != null) for (const key of MP.ORDER) if (moreKeys.includes(key)) for (const s of MP.detect(key, bars, k, moreAtr[k], null, moreCtx)) found.push(moreSignal(s, key, bars, k));  // the 14 more patterns, after the others
+      if (withMore && moreAtr[k] != null) for (const key of (MP.ALL_ORDER || MP.ORDER)) if (moreKeys.includes(key)) for (const s of MP.detect(key, bars, k, moreAtr[k], null, moreCtx)) found.push(moreSignal(s, key, bars, k));  // the 14 more patterns, after the others
       const sigs = found.filter(Boolean);
       if (!sigs.length) continue;
       if (sigs.some(x => x.side !== sigs[0].side)) { skipped.push({ time: bar.time, why: "rules disagree on one candle: " + sigs.map(x => `${x.rule} ${x.side}`).join(", ") }); continue; }
@@ -672,5 +691,5 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);

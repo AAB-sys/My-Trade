@@ -619,3 +619,81 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
          "the documents' E1 gives the same call on the page's setting: " + JSON.stringify(pageE1));
   console.log("New Rule Chart: the page's swing size (2 for the tops and bottoms, 3 for the wedges, rectangle and triangles); the documents' E1 unchanged on it");
 }
+
+// ---- Engulfing (strict) (20 November, the owner: "yes, build the engulfing strict and replace the old one"; "unticked means keep it
+// out of the table too"): the document's Engulfing with the fall before it at least 2.0 ATR (not 1.5), the green candle closing at or
+// above the red candle's high, and the signal candle before 14:00 (candle 57). It replaces the old Engulfing on the page; the reference's
+// own list (MorePat.ORDER, which lab/morepat_check.js holds to the reference) is unchanged
+{
+  require(path.join(__dirname, "..", "static", "morepat.js")); const M = globalThis.MorePat;
+  const C = (rows) => rows.map(r => M.candle(r[0], r[1], r[2], r[3])), A10 = 10;
+  const sides = (rule, cs, k) => M.detect(rule, cs, k, A10).map(s => s.side).join(",");
+  // a fall of 2.3 ATR (131 to 108), a red candle, then a green one closing at 115, above the red candle's high of 114
+  const base = [[130, 131, 127, 128], [128, 129, 122, 123], [123, 124, 117, 118], [118, 119, 112, 113], [113, 114, 108, 109], [108.5, 116, 108.2, 115]];
+  assert(sides("engulfing_strict", C(base), 5) === "CE" && sides("engulfing", C(base), 5) === "CE", "S1: both rules give Buy CE");
+  const s1 = M.detect("engulfing_strict", C(base), 5, A10)[0];
+  assert(s1.level === 108 && s1.rule === "Bullish Engulfing (strict)", "S1: the level is the pattern's low, the name says strict: " + JSON.stringify(s1));
+  // the green body covers the red body (closes at 113.5, above the red open 113) but not the red candle's high (114): old yes, strict no
+  const noCover = base.slice(0, 5).concat([[108.5, 114.2, 108.2, 113.5]]);
+  assert(sides("engulfing", C(noCover), 5) === "CE" && sides("engulfing_strict", C(noCover), 5) === "", "S2: a close below the red candle's high gives no strict call");
+  // a fall of 1.8 ATR (126 to 108): enough for the document's 1.5, not for 2.0
+  const smallFall = [[124, 126, 122, 123], [123, 124, 119, 120], [120, 121, 115, 116], [116, 117, 111, 112], [112, 113, 108, 109], [108.5, 116, 108.2, 115]];
+  assert(sides("engulfing", C(smallFall), 5) === "CE" && sides("engulfing_strict", C(smallFall), 5) === "", "S3: a fall under 2.0 ATR gives no strict call");
+  // the time: the same candles after 51 filler candles end on candle 56 (the 13:55 candle: a call), after 52 on candle 57 (14:00: none)
+  const filler = (n) => Array.from({ length: n }, () => [130, 130.5, 129.5, 130]);
+  assert(sides("engulfing_strict", C(filler(51).concat(base)), 56) === "CE", "S4: the 13:55 signal candle gives the strict call");
+  assert(sides("engulfing_strict", C(filler(52).concat(base)), 57) === "" && sides("engulfing", C(filler(52).concat(base)), 57) === "CE", "S4: from the 14:00 candle no strict call (the old rule still saw it)");
+  // the PE side: the same candles upside down (a rise, a green candle, a red one closing below the green candle's low)
+  const mirror = base.map(([o, h, l, c]) => [300 - o, 300 - l, 300 - h, 300 - c]);
+  const pe = M.detect("engulfing_strict", C(mirror), 5, A10);
+  assert(pe.length === 1 && pe[0].side === "PE" && pe[0].level === 192 && pe[0].rule === "Bearish Engulfing (strict)", "S5: Bearish Engulfing (strict), Buy PE, level 192: " + JSON.stringify(pe));
+  const peNoCover = noCover.map(([o, h, l, c]) => [300 - o, 300 - l, 300 - h, 300 - c]);
+  assert(sides("engulfing_strict", C(peNoCover), 5) === "", "S5: a red candle not closing below the green candle's low gives no strict PE");
+  console.log("New Rule Chart: Engulfing (strict): a fall of 2.0 ATR, the close past the other candle's high (low), before 14:00, both sides (S1 to S5)");
+  // the swap: the page's list has the strict rule in the old one's place; the reference's list is untouched
+  const at = M.ORDER.indexOf("engulfing");
+  assert(M.ORDER.length === 14 && at >= 0 && !M.ORDER.includes("engulfing_strict"), "S6: MorePat.ORDER is still the reference's 14");
+  assert(M.PAGE_ORDER.length === 14 && M.PAGE_ORDER[at] === "engulfing_strict" && !M.PAGE_ORDER.includes("engulfing"), "S6: the page's list: Engulfing (strict) in the old one's place");
+  assert(!N.MORE.calls.includes("engulfing") && !N.MORE.calls.includes("engulfing_strict") && N.MORE.optIn.includes("engulfing_strict"), "S6: the old Engulfing gives no call; the strict one only when ticked");
+  assert(JSON.stringify(N.moreCalls(new Set())) === JSON.stringify(N.MORE.calls) && N.moreCalls(new Set(["engulfing_strict"])).includes("engulfing_strict") && N.moreCalls(null).length === N.MORE.calls.length,
+         "S6: moreCalls: the strict rule joins the list only when its tick is on");
+  // the engine on a NIFTY 50 day: unticked, no Engulfing call of either kind; ticked, the strict call enters at the next candle's open
+  const t0 = Date.parse("2026-11-20T09:15:00+05:30") / 1000;
+  const day = filler(3).concat(base, [[115, 118, 114.5, 117.5], [117.5, 120, 117, 119.5], [119.5, 121, 118.5, 120.5], [120.5, 122, 120, 121.5]]).map((r, i) => ({ time: t0 + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const prev = Array.from({ length: 30 }, (_, i) => ({ time: t0 - 86400 + i * 300, open: 130, high: 135, low: 125, close: 130 }));  // ATR 10 carried in
+  const run = (more) => N.runDay({ bars: day, index: "NIFTY 50", prevBars: prev, atrSeed: 10, closedCount: day.length, dayEnd: true, ...(more ? { more } : {}) }).trades;
+  const off = run(N.moreCalls(new Set())), on = run(N.moreCalls(new Set(["engulfing_strict"]))), plain = run(null);
+  assert(!off.concat(plain).some(t => t.rule === "engulfing" || t.rule === "engulfing_strict"), "S7: unticked (and with no list): no Engulfing call: " + JSON.stringify(off.concat(plain).map(t => t.rule)));
+  const e = on.find(t => t.rule === "engulfing_strict");
+  assert(e && e.side === "CE" && e.signalCandle === 8 && e.entry === 115 && e.L === 108 && e.kind === "Bullish Engulfing (strict)", "S7: ticked: Buy CE at the next open 115, level 108: " + JSON.stringify(e && { side: e.side, k: e.signalCandle, entry: e.entry, L: e.L, kind: e.kind }));
+  console.log("New Rule Chart: Engulfing (strict) replaces Engulfing on the page; unticked it gives no call, ticked it fills the table (S6, S7)");
+}
+
+// ---- Double Top (strict) (20 November, the owner: "yes, build it for NIFTY BANK only", then "add it for all three indices"): the double
+// top with its two tops at least 7 candles apart (the document: 5), on all three indices in the Double Top's place, and only while ticked
+{
+  assert(N.DT_STRICT.minGap === 7 && N.DT.minGap === 5, "D1: the strict rule asks 7 candles between the tops; the page's Double Top keeps 5");
+  // the documents' E1 (tops on candles 7 and 17, 10 apart) gives the strict call too, at the same entry; tops 10 apart fail a gap of 11
+  const strictRun = N.runDay({ bars: peD, atrFixed: ATR, rules: ["double top (strict)"] }).trades;
+  assert(strictRun.length === 1 && strictRun[0].rule === "double top (strict)" && strictRun[0].entry === 90.8 && strictRun[0].points === 5.3 && strictRun[0].t1 === 7 && strictRun[0].t2 === 17,
+         "D1: E1 gives Double Top (strict) the same call: " + JSON.stringify(strictRun.map(t => [t.rule, t.entry, t.points])));
+  assert(N.detectEntry(peD, 22, "PE", ATR, { ...N.DT, minGap: 7 }) && !N.detectEntry(peD, 22, "PE", ATR, { ...N.DT, minGap: 11 }), "D2: the gap between the tops is checked against minGap");
+  // tops 5 apart: the same E1 candles with five candles between the tops taken out (candles 8 to 12), so the second top is 5 after the first
+  const close5 = peD.slice(0, 8).concat(peD.slice(13)).map((b, i) => ({ ...b, time: t0 + i * 300 }));
+  const old5 = N.runDay({ bars: close5, atrFixed: ATR, rules: ["double top"] }).trades, strict5 = N.runDay({ bars: close5, atrFixed: ATR, rules: ["double top (strict)"] }).trades;
+  assert(old5.length === 1 && old5[0].t2 - old5[0].t1 === 5 && strict5.length === 0, "D2: tops 5 apart: the Double Top calls, the strict one does not: " + JSON.stringify([old5.map(t => [t.t1, t.t2]), strict5.length]));
+  // the page's list: on each of the three indices the strict rule takes the Double Top's place only while ticked; an index not listed
+  // (none on the page today) keeps the plain list
+  const on = new Set(["double top (strict)"]), off = new Set();
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    assert(JSON.stringify(N.rulesFor(ix, on)) === JSON.stringify(["double top (strict)"].concat(N.RULE_LIST.slice(1))), `D3: ${ix} ticked: the strict rule first, the rest unchanged`);
+    assert(JSON.stringify(N.rulesFor(ix, off)) === JSON.stringify(N.RULE_LIST.slice(1)) && JSON.stringify(N.rulesFor(ix, null)) === JSON.stringify(N.RULE_LIST.slice(1)), `D3: ${ix} unticked: no Double Top of either kind`);
+  }
+  assert(JSON.stringify(N.rulesFor("SOME OTHER INDEX", on)) === JSON.stringify(N.RULE_LIST), "D3: an index not listed keeps the Double Top");
+  // the engine on each index: unticked, no double top call; ticked, the strict call
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    const off1 = N.runDay({ bars: peD, atrFixed: ATR, index: ix, rules: N.rulesFor(ix, off), more: false }).trades, on1 = N.runDay({ bars: peD, atrFixed: ATR, index: ix, rules: N.rulesFor(ix, on), more: false }).trades;
+    assert(!off1.some(t => /double top/.test(t.rule)) && on1.some(t => t.rule === "double top (strict)" && t.entry === 90.8), `D4: ${ix}: unticked no Double Top call, ticked the strict call`);
+  }
+  console.log("New Rule Chart: Double Top (strict): tops 7 candles apart, on all three indices in the Double Top's place, only while ticked (D1 to D4)");
+}
