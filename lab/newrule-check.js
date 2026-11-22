@@ -747,3 +747,35 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(N.moreCalls(new Set(["vwap_strict"]), "NIFTY 50").length === N.MORE.calls.length + 1 && JSON.stringify(N.moreCalls(new Set(["vwap_strict"]))) === JSON.stringify(N.moreCalls(new Set(["vwap_strict"]), "NIFTY 50")), "V7: NIFTY 50's list is unchanged");
   console.log("New Rule Chart: VWAP Reclaim and Loss (strict): 8 of the last 8 candles past the VWAP, a body of 0.5 ATR, both sides; it replaces the VWAP rule on the page, only while ticked, on NIFTY 50 and SENSEX (V1 to V7)");
 }
+
+// ---- Doji Reversal (strict) (22 November, the owner: "yes, build it for NIFTY 50 only"): the document's Doji Reversal with the doji
+// candle at least 1.0 ATR tall (the document: 0.5); it replaces the Doji rule on the page, NIFTY 50 only, only while ticked
+{
+  const M = globalThis.MorePat, A10 = 10, day = (rows) => rows.map(([o, h, l, c]) => M.candle(o, h, l, c));
+  const fall = [[130, 131, 127, 128], [128, 129, 122, 123], [123, 124, 117, 118], [118, 119, 112, 113]];  // a fall of 2.7 ATR
+  const confirm = [111, 120, 110.5, 119];                                                               // green, closes above the doji
+  const tall = fall.concat([[110, 116, 104, 110.4], confirm]), small = fall.concat([[110, 114, 106, 110.3], confirm]);  // dojis 1.2 and 0.8 ATR tall
+  const sides = (rule, rows) => M.detect(rule, day(rows), 5, A10).map(s => s.side).join(",");
+  assert(M.RULES.doji_strict.fn === M.RULES.doji.fn && M.RULES.doji_strict.cfg.range_atr === 1.0 && M.RULES.doji.cfg.range_atr === 0.5, "J1: the same Doji rule, the doji at least 1.0 ATR tall");
+  assert(sides("doji", tall) === "CE" && sides("doji_strict", tall) === "CE", "J2: a doji 1.2 ATR tall: both rules give Buy CE");
+  const j2 = M.detect("doji_strict", day(tall), 5, A10)[0];
+  assert(j2.rule === "Doji reversal up (strict)" && j2.level === 104, "J2: the name says strict, the level is the doji's low: " + JSON.stringify(j2));
+  assert(sides("doji", small) === "CE" && sides("doji_strict", small) === "", "J3: a doji 0.8 ATR tall: the document's rule calls, the strict one does not");
+  const mirror = (rows) => rows.map(([o, h, l, c]) => [300 - o, 300 - l, 300 - h, 300 - c]);
+  const pe = M.detect("doji_strict", day(mirror(tall)), 5, A10);
+  assert(pe.length === 1 && pe[0].side === "PE" && pe[0].rule === "Doji reversal down (strict)" && sides("doji_strict", mirror(small)) === "", "J4: the Buy PE side mirrors it");
+  const at = M.ORDER.indexOf("doji");
+  assert(M.ORDER.length === 14 && at >= 0 && !M.ORDER.includes("doji_strict") && M.PAGE_ORDER[at] === "doji_strict" && !M.PAGE_ORDER.includes("doji"), "J5: the page's 14 have the strict Doji in the old one's place; MorePat.ORDER is the reference's 14");
+  assert(!N.MORE.calls.includes("doji") && N.MORE.optIn.includes("doji_strict") && !N.ruleOn("doji_strict", "NIFTY BANK") && !N.ruleOn("doji_strict", "SENSEX") && N.ruleOn("doji_strict", "NIFTY 50"),
+         "J5: the old Doji gives no call; the strict one is opt-in and NIFTY 50 only");
+  const t0d = Date.parse("2026-11-20T09:15:00+05:30") / 1000;
+  const bars = [[130, 135, 125, 130], [130, 135, 125, 130], [130, 135, 125, 130]].concat(tall, [[119, 124, 117, 122], [122, 126, 120, 124], [124, 128, 122, 126]])
+    .map((r, i) => ({ time: t0d + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const prevD = Array.from({ length: 30 }, (_, i) => ({ time: t0d - 86400 + i * 300, open: 130, high: 135, low: 125, close: 130 }));
+  const runD = (ix, ticked) => N.runDay({ bars, index: ix, prevBars: prevD, atrSeed: 10, closedCount: bars.length, dayEnd: true, more: N.moreCalls(ticked, ix) }).trades;
+  const off = runD("NIFTY 50", new Set()), on = runD("NIFTY 50", new Set(["doji_strict"])), ej = on.find(t => t.rule === "doji_strict");
+  assert(!off.some(t => t.rule === "doji" || t.rule === "doji_strict"), "J6: unticked: no Doji call");
+  assert(ej && ej.side === "CE" && ej.signalCandle === 8 && ej.entry === 119 && ej.L === 104, "J6: ticked: Buy CE at the next open 119, the stop at the doji's low 104: " + JSON.stringify(ej && { k: ej.signalCandle, entry: ej.entry, L: ej.L }));
+  for (const ix of ["NIFTY BANK", "SENSEX"]) assert(!runD(ix, new Set(["doji_strict"])).some(t => t.more && /doji/.test(t.rule)), `J6: ${ix}: no Doji call, ticked or not`);
+  console.log("New Rule Chart: Doji Reversal (strict): the doji at least 1.0 ATR tall, both sides; it replaces the Doji rule on NIFTY 50, only while ticked (J1 to J6)");
+}

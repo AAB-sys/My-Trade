@@ -5,8 +5,8 @@
 // (flip: every price becomes minus the price), the signal turned back (unflip). lab/morepat_check.js proves this file gives the
 // reference's answers: its 113 test scans, its 14 examples, the 4 real days of the document and 400 random days, signal for signal.
 // Nothing of the Paper calls page or of newrule.js is used here; the page hands the paper exits (Rule 1 and the trail) in as a function.
-// Two rules here are NOT the reference's: engulfing_strict (20 November) and vwap_strict (22 November), the owner's choices, which replace
-// Engulfing and VWAP Reclaim and Loss on the page; they are kept out of ORDER, so the reference's 14 and their checks are untouched
+// Three rules here are NOT the reference's: engulfing_strict (20 November), vwap_strict and doji_strict (22 November), the owner's choices,
+// which replace Engulfing, VWAP Reclaim and Loss and Doji Reversal on the page; they are kept out of ORDER, so the reference's 14 and their checks are untouched
 // (PAGE_ORDER: the page's list; ALL_ORDER: every rule).
 (function (root) {
   "use strict";
@@ -378,15 +378,18 @@
     engulfing_strict: { fn: engulfingStrict, names: ["Bullish Engulfing (strict)", "Bearish Engulfing (strict)"], cfg: { body_atr: 0.5, prior_move_atr: 2.0, lookback: 8, before_candle: 57 } },  // 20 November: not in the reference (see above)
     hammer: { fn: hammer, names: ["Hammer", "Shooting Star"], cfg: { range_atr: 0.8, wick_mult: 2.0, upper_max: 0.15, prior_move_atr: 1.5, lookback: 8, confirm: true } },
     doji: { fn: doji, names: ["Doji reversal (up)", "Doji reversal (down)"], cfg: { body_frac: 0.1, range_atr: 0.5, prior_move_atr: 1.5, lookback: 8 } },
+    // Doji Reversal (strict) (22 November, the owner: "yes, build it for NIFTY 50 only"): NOT in the reference. The same rule with one of
+    // its own checks stricter: the doji candle at least 1.0 x ATR from high to low (the document: 0.5). Everything else is the document's
+    doji_strict: { fn: doji, names: ["Doji reversal up (strict)", "Doji reversal down (strict)"], cfg: { body_frac: 0.1, range_atr: 1.0, prior_move_atr: 1.5, lookback: 8 } },
     vwap: { fn: vwap, names: ["VWAP reclaim", "VWAP loss"], cfg: { look: 6, need_below: 5, body_atr: 0.3 } },
     // VWAP Reclaim and Loss (strict) (22 November, the owner: "yes, build it"): NOT in the reference. The same rule, the same VWAP line,
     // two of its own checks stricter: ALL of the last 8 candles closed on the other side of the VWAP (the document: 5 of the last 6),
     // and the signal candle's body at least 0.5 x ATR (the document: 0.3). The buffer (0.25 x ATR) and the chase limit (2 x ATR) stay
     vwap_strict: { fn: vwap, names: ["VWAP reclaim (strict)", "VWAP loss (strict)"], cfg: { look: 8, need_below: 8, body_atr: 0.5 } },
   };
-  const STRICT = { engulfing: "engulfing_strict", vwap: "vwap_strict" };  // the owner's refinements (20 and 22 November): each replaces its rule on the page
+  const STRICT = { engulfing: "engulfing_strict", doji: "doji_strict", vwap: "vwap_strict" };  // the owner's refinements (20 and 22 November): each replaces its rule on the page
   const ORDER = Object.keys(RULES).filter(key => !Object.values(STRICT).includes(key));  // the reference's 14, in its order: when two rules give the same side on one candle, the one earlier in this list is the label used
-  // Engulfing (strict) (20 November) and VWAP Reclaim and Loss (strict) (22 November) replace the document's rules on the page, each in its
+  // Engulfing (strict) (20 November), VWAP Reclaim and Loss (strict) and Doji Reversal (strict) (22 November) replace the document's rules on the page, each in its
   // rule's place in the list. PAGE_ORDER: the page's 14 (the signal log, the chart's ticks); ALL_ORDER: every rule here in order (the engine
   // walks it, so a replay may still ask for an old one)
   const PAGE_ORDER = ORDER.map(key => STRICT[key] || key), ALL_ORDER = Object.keys(RULES);
