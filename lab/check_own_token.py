@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 CLIENT, PIN, KEY, PASTED = "1100123456", "482913", "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP", "pasted-token-aaaa"
-state = {"good": set(), "made": 0, "asked": 0, "seen": [], "refuse_pin": False, "down": False, "late_code": 0}
+state = {"good": set(), "made": 0, "asked": 0, "seen": [], "refuse_pin": False, "down": False, "late_code": 0, "rate": 0}
 
 
 class Dhan(BaseHTTPRequestHandler):
@@ -21,6 +21,8 @@ class Dhan(BaseHTTPRequestHandler):
         state["asked"] += 1; state["seen"].append(q)
         import dhan
         codes = {dhan.totp_code(KEY, time.time() + d) for d in (-30, 0, 30)}
+        if state["rate"] > 0:  # as Dhan answered on 22 November to a second try within two minutes: HTTP 200 and these words
+            state["rate"] -= 1; return self.answer(200, {"status": "error", "message": "Token can be generated once every 2 minutes."})
         if state["late_code"] > 0:  # as Dhan answered on 19 November to a code sent as it changed: HTTP 200 and these words
             state["late_code"] -= 1; return self.answer(200, {"status": "error", "message": "Invalid TOTP"})
         if state["refuse_pin"] or q.get("pin") != PIN or q.get("dhanClientId") != CLIENT or q.get("totp") not in codes:
@@ -59,7 +61,7 @@ def check(what, cond):
     bad += not cond
     print(("ok    " if cond else "WRONG ") + what)
 def fresh():
-    dhan._own.update(token="", made_at=None, problem=None, fails=0, fail_day=None, last_try=0.0, tries=0)
+    dhan._own.update(token="", made_at=None, problem=None, fails=0, fail_day=None, last_try=0.0, tries=0, wait=None, limited=0)
 
 # 1. the code of the moment: RFC 6238's own test values (SHA-1, the key "12345678901234567890"), six digits
 RFC = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
@@ -130,6 +132,27 @@ check("3 seconds before the code changes: the try waits for the next code first 
 fresh(); slept.clear(); _Clock.shift = (10 - time.time() % 30) % 30 - 30 if (10 - time.time() % 30) % 30 > 15 else (10 - time.time() % 30) % 30
 dhan.renew_token("test"); _Clock.shift = 0.0
 check("in the middle of the code's 30 seconds: no waiting", slept == [])
+
+# 7d. Dhan's "Token can be generated once every 2 minutes." (22 November: two restarts a minute apart, and the page red for 10 minutes): a rate limit, not
+# a failed try; the server asks again after about 2 minutes, not 10
+fresh(); state["good"] = set(); state["rate"] = 1; n = state["asked"]
+check("Dhan says 'once every 2 minutes': no token, and NOT counted as a failed try", not dhan.renew_token("test") and state["asked"] == n + 1 and dhan.own_report()["failed_tries"] == 0)
+check("the report says what Dhan answered and that it asks again in about 2 minutes", "once every 2 minutes" in dhan.own_report()["problem"] and "again in about 2 minutes" in dhan.own_report()["problem"])
+check("a second try at once is not sent to Dhan (130 seconds between such tries)", not dhan.renew_token("test") and state["asked"] == n + 1)
+dhan._own["last_try"] = time.time() - 125
+check("125 seconds after: still waiting", not dhan.renew_token("test") and state["asked"] == n + 1)
+dhan._own["last_try"] = time.time() - 135
+check("135 seconds after: it asks again, and now a token is made (not 10 minutes)", dhan.renew_token("test") and state["asked"] == n + 2 and dhan.own_report()["problem"] is None and dhan._own["wait"] is None)
+fresh(); state["good"] = set(); state["rate"] = 1; dhan.renew_token("test"); state["refuse_pin"] = True; dhan._own["last_try"] = time.time() - 135; n = state["asked"]
+check("after the rate limit a wrong PIN is a failed try, and then the wait is 10 minutes again", not dhan.renew_token("test") and dhan.own_report()["failed_tries"] == 1 and dhan._own["wait"] is None)
+dhan._own["last_try"] = time.time() - 300; n2 = state["asked"]; dhan.renew_token("test")
+check("300 seconds after a wrong PIN: not asked (10 minutes)", state["asked"] == n2)
+state["refuse_pin"] = False
+fresh(); state["good"] = set(); state["rate"] = 99; n = state["asked"]
+for _ in range(14):
+    dhan._own["last_try"] = time.time() - 3600; dhan.renew_token("test")
+check(f"{dhan.RATE_MAX} such answers in a day stop it, as failed tries do", state["asked"] == n + dhan.RATE_MAX and dhan.own_report()["stopped"])
+state["rate"] = 0; fresh()
 
 # 7c. what /health shows is never older than the last try
 fresh(); state["good"] = set(); r = dhan.token_report()

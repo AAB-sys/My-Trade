@@ -543,6 +543,10 @@ branch from `main`.
   `dhan.token_report`), and at once when Dhan refuses the token in use (`dhan.call`). In memory only; at most 3 failed tries a
   day, 10 minutes apart; the pasted `DHAN_ACCESS_TOKEN` keeps working and is the fallback. Without the two settings nothing
   changes. `/health` shows `token.own` (no secret). `lab/check_own_token.py` (32 checks, a stand-in for Dhan on the machine).
+  Dhan's "Token can be generated once every 2 minutes." (22 November night, two restarts a minute apart, the page red for 10 minutes; the
+  owner: "why this msg now") is a rate limit, not a wrong PIN or code: it is not counted as a failed try and the server asks again after
+  `RATE_WAIT_SECONDS` (130 s), not 10 minutes (`_own["wait"]`); ten such answers in a day stop it (`RATE_MAX`). Merge one change, wait for it
+  to be live, then the next: every merge restarts the server and a restart makes a token.
 - The (E) mark (19 November, the owner: "for the expiry of any index, please mark as (E) in front of every index"): on the day an
   index's options expire its name is written "(E) NIFTY 50" in the Index menus (`static/index.html`, `static/detail.html`), as the
   index page's title, and in the Volume Profile page's index box and legend (`static/volume.html`). `GET /expiry-today` (main.py)

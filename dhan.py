@@ -84,9 +84,14 @@ def settings() -> tuple[str, str]:
 #   - The PIN, the key and the code are sent to Dhan's own address only, and are never part of an error text.
 AUTH_BASE = os.environ.get("DHAN_AUTH_BASE", "https://auth.dhan.co")  # overridden only by tests
 RENEW_WAIT_SECONDS = float(os.environ.get("DHAN_RENEW_WAIT_SECONDS", "600"))
+# 22 November, two restarts a minute apart: Dhan answered the second try "Token can be generated once every 2 minutes." and the server then waited the
+# full 10 minutes, with the page red all that time. That answer is a rate limit, not a wrong PIN or code: it is not counted as a failed try and the
+# server asks again after RATE_WAIT_SECONDS (a little over the 2 minutes). Ten such answers in a day stop it, as failed tries do
+RATE_WAIT_SECONDS = float(os.environ.get("DHAN_RATE_WAIT_SECONDS", "130"))
+RATE_MAX = 10
 RENEW_MAX_FAILS = int(os.environ.get("DHAN_RENEW_MAX_FAILS", "3"))
 TOTP_EDGE_SECONDS = float(os.environ.get("DHAN_TOTP_EDGE_SECONDS", "6"))  # no code is made this close to its change
-_own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "tries": 0}
+_own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "tries": 0, "wait": None, "limited": 0}
 _own_lock = threading.Lock()
 
 
@@ -125,7 +130,7 @@ def totp_code(key: str, at: float | None = None, digits: int = 6, step: int = 30
 def own_report() -> dict:
     """What /health may say about the server's own token: no secret, only whether it is on, in use, when made, and why not."""
     return {"on": totp_on(), "in_use": bool(_own["token"]), "made_at": _own["made_at"], "problem": _own["problem"],
-            "failed_tries": _own["fails"], "stopped": _own["fails"] >= RENEW_MAX_FAILS}
+            "failed_tries": _own["fails"], "stopped": _own["fails"] >= RENEW_MAX_FAILS or _own["limited"] >= RATE_MAX}
 
 
 def renew_token(why: str, by_hand: bool = False) -> bool:
@@ -137,8 +142,9 @@ def renew_token(why: str, by_hand: bool = False) -> bool:
         now = time.time()
         today = datetime.now(IST).date().isoformat()
         if _own["fail_day"] != today:  # a new day: the count of failed tries starts again (at most RENEW_MAX_FAILS a day)
-            _own["fail_day"], _own["fails"] = today, 0
-        if not by_hand and (_own["fails"] >= RENEW_MAX_FAILS or (_own["last_try"] and now - _own["last_try"] < RENEW_WAIT_SECONDS)):
+            _own["fail_day"], _own["fails"], _own["limited"] = today, 0, 0
+        wait = _own["wait"] if _own["wait"] is not None else RENEW_WAIT_SECONDS  # 130 s after Dhan's "once every 2 minutes", else 10 minutes
+        if not by_hand and (_own["fails"] >= RENEW_MAX_FAILS or _own["limited"] >= RATE_MAX or (_own["last_try"] and now - _own["last_try"] < wait)):
             return False
         client_id = os.environ.get("DHAN_CLIENT_ID", "").strip()
         pin, key = totp_settings()
@@ -174,7 +180,7 @@ def renew_token(why: str, by_hand: bool = False) -> bool:
             if isinstance(body, dict):
                 token = str(body.get("accessToken") or body.get("access_token") or inner.get("accessToken") or inner.get("access_token") or "").strip()
             if response.status_code == 200 and token:
-                _own.update(token=token, made_at=datetime.now(IST).isoformat(timespec="seconds"), problem=None, fails=0)
+                _own.update(token=token, made_at=datetime.now(IST).isoformat(timespec="seconds"), problem=None, fails=0, wait=None, limited=0)
                 log.warning("Dhan own token: a new token was made (%s)", why)
                 return True
             if "totp" not in json.dumps(body).lower():
@@ -183,9 +189,15 @@ def renew_token(why: str, by_hand: bool = False) -> bool:
         if isinstance(body, dict):
             said = str(body.get("errorMessage") or body.get("message") or body.get("remarks") or body.get("error") or inner.get("message") or "")
         said = re.sub(r"\d{4,}", "…", said)[:160]  # no long number of Dhan's answer is repeated (a PIN, a code, an id)
-        _own["fails"] += 1
-        _own["problem"] = f"Dhan did not give a token (HTTP {response.status_code}{': ' + said if said else ''})" + (
-            f"; stopped for today after {_own['fails']} failed tries" if _own["fails"] >= RENEW_MAX_FAILS else "")
+        if re.search(r"once every \d+ minute", said, re.I):  # Dhan's rate limit: not a wrong PIN or code, so not a failed try; asked again soon
+            _own["wait"], _own["limited"] = RATE_WAIT_SECONDS, _own["limited"] + 1
+            _own["problem"] = f"Dhan did not give a token (HTTP {response.status_code}: {said}); the server asks again in about {round(RATE_WAIT_SECONDS / 60)} minutes" + (
+                f"; stopped for today after {_own['limited']} such answers" if _own["limited"] >= RATE_MAX else "")
+        else:
+            _own["wait"] = None
+            _own["fails"] += 1
+            _own["problem"] = f"Dhan did not give a token (HTTP {response.status_code}{': ' + said if said else ''})" + (
+                f"; stopped for today after {_own['fails']} failed tries" if _own["fails"] >= RENEW_MAX_FAILS else "")
         log.warning("Dhan own token (%s): %s", why, _own["problem"])
         return False
 
