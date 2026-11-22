@@ -416,6 +416,55 @@ run, adding it was tested and not built: NIFTY BANK, 59 days, the strict Doji -3
 -574); SENSEX, 57 days, the strict Doji +156 from 7 calls (second half -35; 0.75 ATR -520, 1.25 ATR +313): too thin and unsteady.
 `lab/newrule-check.js` J1 to J6 hold the rule's cases and the swap.
 
+## Strategies: Day Break (22 November)
+
+The owner, 22 November: "develop a new strategy for all 3 indices"; then, with the Settings popup marked: "give it as a name as
+startegies same llike indicators and under startegies mark your strategies and keep it untick by default, whenever i want to activate
+it I will tick it an enable it". And the rule for every proposal from that day on: "it is only important to fire the call at precise
+levels and give exact entry for buy CE and buy PE ... those suggestion should not compare before cost and after cost at all": every
+number here is the calls' own index points, as the page counts them.
+
+**The Strategies section**: at the foot of Calls with Signals > Settings, a heading "Strategies" like "Indicators", with the strategies of
+Claude's own under it, each unticked by default (`NewRule.STRATEGIES`; ticks kept per index page with the others, keys `st_<name>`).
+Unticked, the engine does not run it.
+
+**Call logs from strategy** (the owner, 22 November: "any new call fired by startegy if that strategy is ticked then create new table
+give the name to the table as Call logs from startegy. Add options to scroll up and down on the table . keep the heade row as fixed row
+for the new table"): a strategy ticked runs ON ITS OWN (`runDay` with `rules: NewRule.strategiesFor(index, ticked)`, `more: false`), one
+call at a time among the strategies, and its calls go to a table of their own under the calls table, never into it: the calls table is the
+same ticked or not. The table "Call logs from strategy" (`#stratlog`, `strategyLogRows`, `drawStratLog` in `static/detail.html`) shows
+every strategy call of the days the page holds (the last five sessions, each run as the page runs a day), the newest first: Time (the
+signal candle), Strategy, Call (CE/PE), Call Entry (with the time in), Call Exit (with the time out; an open call: the price now), Total
+Profit/Loss, Stop at (the day's high or low broken; an open call in profit: its trailing stop), Call Target (the 1 ATR guide), Candle
+status, Reason. The header row stays in place; four calls are in view and two round buttons beside the table move it one row a press
+(pale at an end). The entry, the exit and the points stand side by side: the first look put the stop beside the entry, and the owner
+read it as the exit ("r u giving the reverse signals?"). The chart marks the strategy calls of the day shown. No strategy ticked: no table.
+
+**Day Break** (`static/newrule.js`, `DAYBREAK`, `dayBreakStep`, a scanner like the wedges): from 11:15, the first 5-minute close above
+the day's high so far (09:15 to the candle before) by at least 0.25 x ATR is a Buy CE; the first close below the day's low so far by
+0.25 x ATR a Buy PE. The level, and the stop, is the high or low broken; once per side per day (a break while another call is open uses
+the side up); the entry at the next candle's open; the page's exits (a close back across the level, the retouch, the half-ATR trail,
+the day end); no pattern target (the 1 ATR guide). Its calls are in "Call logs from strategy", Strategy "Day Break". Offered on all
+three index pages (every page keeps its own ticks).
+
+**How it was found** (the page's parts only: the day's high and low, the ATR, the 0.25 ATR buffer, the entry window, the exits). On
+NIFTY 50 (501 days), NIFTY BANK (59) and SENSEX (57), on its own: the previous day's high, low and close (a break, a rejection, a cross of
+the close, with and without the VWAP side or a firmer candle) held on no index in both halves; the break of the day's own high or low
+from 11:15 was the best: NIFTY 50 348 calls, 39% won, +888 points (halves +91, +797), NIFTY BANK 39 calls +460 (-264, +724), SENSEX 40
+calls +1,384 (+442, +942). Its entries run about 1.5 to 1.8 ATR in the call's favour against about 0.8 against; a winning call keeps
+42 to 54% of its best move. Run on its own as the page runs it (the engine's own counting, `runDay` with Day Break alone):
+
+| | Day Break calls | Won | Points | First half | Second half |
+| --- | --- | --- | --- | --- | --- |
+| NIFTY 50, 503 days | 350 | 39% | +851 | +90 | +760 |
+| NIFTY 50, 60 volume days | 46 | 43% | +348 | +131 | +217 |
+| SENSEX, 57 days | 41 | 39% | +1,138 | +381 | +758 |
+| NIFTY BANK, 60 days | 40 | 35% | +478 | -262 | +740 |
+
+From 12:15 instead, NIFTY 50 was positive in both years (+807) but SENSEX weaker (+138); from 10:15 NIFTY BANK lost more (-526). On NIFTY
+BANK its first half lost: offered there by the owner's choice of a tick per page, said to the owner. The
+NIFTY BANK and SENSEX numbers rest on 20 to 40 calls. `lab/newrule-check.js` B1 to B5 hold its cases.
+
 ## On the page
 
 The Calls with Signals table always carries every rule's calls (Time with the entry, Buy CE or PE, "Rule:- Double Top" and so on,

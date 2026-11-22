@@ -780,6 +780,33 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   console.log("New Rule Chart: Doji Reversal (strict): the doji at least 1.0 ATR tall, both sides; it replaces the Doji rule on NIFTY 50, only while ticked (J1 to J6)");
 }
 
+// ---- Strategies > Day Break (22 November, the owner: "under startegies mark your strategies and keep it untick by default"): from 11:15
+// the first close past the day's high (CE) or low (PE) so far by 0.25 ATR, the stop at the level broken, once per side per day, off until ticked
+{
+  const t0b = Date.parse("2026-11-20T09:15:00+05:30") / 1000, mk = (rows) => rows.map((r, i) => ({ time: t0b + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const flat = (n, p = 100) => Array.from({ length: n }, () => [p, p + 5, p - 5, p]);         // the day's range 95 to 105 until 11:10
+  const up = flat(24).concat([[100, 111, 99, 110], [110, 114, 109, 113], [113, 117, 112, 116], [116, 120, 115, 119]]);  // 11:15 closes at 110 (> 105 + 2.5)
+  const run = (rows, rules = ["day break"]) => N.runDay({ bars: mk(rows), atrFixed: 10, rules, more: false }).trades;
+  const t1 = run(up);
+  assert(N.DAYBREAK.from === "11:15" && N.DAYBREAK.bufferAtr === 0.25 && t1.length === 1 && t1[0].rule === "day break" && t1[0].side === "CE" && t1[0].signalCandle === 24 && t1[0].L === 105 && t1[0].entry === 110,
+         "B1: the 11:15 close above the day's high gives Buy CE at the next open, the stop at the high broken: " + JSON.stringify(t1.map(t => [t.side, t.signalCandle, t.L, t.entry])));
+  const early = flat(12).concat([[100, 111, 99, 110]], flat(15, 108));                         // a break at 10:15: before 11:15, no call
+  assert(!run(early).some(t => t.rule === "day break" && t.signalCandle === 12), "B2: before 11:15 no call");
+  const twice = up.concat([[119, 120, 112, 113], [113, 114, 108, 109], [109, 122, 108, 121.5]]);  // a second close above the new high later: the CE side is used up
+  assert(run(twice).filter(t => t.side === "CE").length === 1, "B3: once per side per day");
+  const mirror = up.map(([o, h, l, c]) => [200 - o, 200 - l, 200 - h, 200 - c]), t4 = run(mirror);
+  assert(t4.length === 1 && t4[0].side === "PE" && t4[0].L === 95 && t4[0].kind === "day low broken", "B4: the Buy PE side mirrors it");
+  // the strategies run on their own (22 November, the owner: "any new call fired by strategy ... create new table ... Call logs from
+  // startegy"): the page's rule list is the same ticked or not; the strategy's own list holds it only while ticked
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    assert(JSON.stringify(N.rulesFor(ix, new Set(["day break"]))) === JSON.stringify(N.rulesFor(ix, new Set())) && !N.rulesFor(ix, new Set(["day break"])).includes("day break"), `B5: ${ix}: the page's rules are the same with Day Break ticked`);
+    assert(N.strategiesFor(ix, new Set()).length === 0 && JSON.stringify(N.strategiesFor(ix, new Set(["day break"]))) === JSON.stringify(["day break"]), `B5: ${ix}: the strategy list holds Day Break only while ticked`);
+    const own = N.runDay({ bars: mk(up), atrFixed: 10, index: ix, rules: N.strategiesFor(ix, new Set(["day break"])), more: false }).trades;
+    assert(own.length === 1 && own[0].rule === "day break" && own[0].entry === 110, `B5: ${ix}: run on its own, Day Break gives its call`);
+  }
+  console.log("New Rule Chart: Strategies > Day Break: from 11:15 the first close past the day's high or low by 0.25 ATR, once per side per day, off until ticked, on its own (B1 to B5)");
+}
+
 // ---- NEWHIGH-TREND / NEWLOW-TREND (22 November, the owner: "built it for the PE as well like NEWLOW-Trend", "built it for nifty bank and sensex as
 // well and add the indicator in the settings for all 3 indices"): NOT in the reference. A close above the highest high of the 12 candles before it
 // (Buy CE; below the lowest low: Buy PE on the chart turned upside down), the 20 average above the 50, signal candle 10:15 to 14:00; a call with its own

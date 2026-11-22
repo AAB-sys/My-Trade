@@ -221,6 +221,15 @@ their own logic. Read this before touching the code.
   stage 2), so it can stay with a trend; every other call keeps Rule 1 and the half-ATR trail. Opt-in (`MORE.optIn`), on all three
   indices (`MORE.alsoOn`); only its calls are drawn, not the signals a call already open held back. Because it holds a call open for
   hours, ticked it holds up the other rules' calls (one trade at a time). NEW_RULES.md has the numbers.
+  Settings > Strategies (22 November, the
+  owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
+  until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first
+  close past the day's high or low by 0.25 ATR). A ticked strategy runs ON ITS OWN (`runDay` with `rules: strategiesFor(...)`, `more:
+  false`) and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
+  table as Call logs from startegy ... scroll up and down ... keep the heade row as fixed row"; `#stratlog`, `strategyLogRows`,
+  `drawStratLog`): the days the page holds, the newest first, Call Entry, Call Exit and the points side by side, the header row fixed, two
+  round buttons moving it one row a press; the calls table is the same ticked or not. Proposals are judged in the calls' own index points only, never
+  with a cost per call (the owner, 22 November).
 - `static/detail.html` - the per-index page: summary figures and a chart with a
   Line/Candles switch and drop-downs for the time frame (1/5/15/30-minute or 1-day
   candles), the levels and the session (today, one of the last five days, or all
