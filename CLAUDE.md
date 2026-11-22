@@ -524,6 +524,9 @@ branch from `main`.
   (88vh, at most 900 px); in `static/volume.html` (`embed=aaa` only) the figures and the FVG words stand in a column of their own at the
   right (`#side`, 320 px, one reading to a line) on a window 900 px wide or more, and the chart takes the rest. Narrower (a phone, a small
   tablet) `#side` is `display: contents` and the page is exactly as it was (pixel-identical to main at 800 and 390 px wide).
+  The table under the AAA_V1 chart (the Trade Plan's box with no rule, "no calls") was taken off on 22 November (the owner: "remove the red
+  marked table, dont need this on this page"), and on a wide window the chart's frame is taller by the height the table had (`static/detail.html`,
+  `#aaa-chart iframe`: 88vh + 170 px, at most 1100 px; a phone keeps 88vh).
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
