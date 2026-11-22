@@ -592,14 +592,14 @@
       else if (t.stage === 1 && k === t.signalCandle + 1 && d * (bar.open - t.c1.close) > 0 && d * (t.c1.open - (d > 0 ? bar.low : bar.high)) >= 0) how = "retouch";
       if (!how && atr != null) {
         const gain = d * (bar.close - t.entry);
-        if (gain > 0) { t.best = round2(Math.max(t.best || 0, gain)); const s = round2(bar.close - d * cfg.trailAtr * atr);  // behind this close: the best close, as the stop never moves back
+        if (gain > 0) { t.best = round2(Math.max(t.best || 0, gain)); const s = round2(bar.close - d * (t.trailAtr != null ? t.trailAtr : cfg.trailAtr) * atr);  // behind this close: the best close, as the stop never moves back
           if (d * (s - t.stop) > 0) { t.stop = s; t.stage = 2; } }
       }
     }
     if (how) { t.exit = bar.close; t.exitTime = bar.time; t.how = how; t.points = round2(d * (bar.close - t.entry)); }
     return how;
   }
-  const newTrade = (sig, bars) => ({ ...sig, entryTime: bars[sig.signalCandle + 1].time, entry: bars[sig.signalCandle + 1].open, c1: bars[sig.signalCandle], stage: 1, stop: sig.L, best: 0, exit: null, exitTime: null, points: null, how: "open" });
+  const newTrade = (sig, bars) => ({ ...sig, entryTime: bars[sig.signalCandle + 1].time, entry: bars[sig.signalCandle + 1].open, c1: bars[sig.signalCandle], stage: sig.stopAt != null ? 2 : 1, stop: sig.stopAt != null ? sig.stopAt : sig.L, best: 0, exit: null, exitTime: null, points: null, how: "open" });  // a call with its own exit (NEWHIGH-TREND: stopAt, trailAtr) starts on its wide stop; every other call on L (Rule 1)
   // The day replayed: the entries, Rule 1 and the ATR trail over closed candles.
   // atrSeed: the ATR to start the day with (from the previous day's candles), else the day warms up on its own 14 candles;
   // atrFixed: a test's fixed ATR. One trade at a time; both sides firing on one candle skip both; the filters of section 9.5
@@ -644,17 +644,18 @@
                  calls: ["inverse_head_shoulders", "cup_handle", "rounding_bottom", "flag", "pennant", "falling_channel", "broadening", "island", "orb", "gap", "hammer"],  // the rules whose signals become calls (every signal is logged either way); more: an array of keys replays another choice
                  // 22 November (the owner: "yes, build it for NIFTY 50 only"): the document's Doji Reversal gives no call any more either; Doji
                  // Reversal (strict) (morepat.js doji_strict: the doji at least 1.0 x ATR tall) takes its place, opt-in, NIFTY 50 only
-                 optIn: ["engulfing_strict", "vwap_strict", "doji_strict"],  // rules that give calls only while ticked on the page
+                 optIn: ["engulfing_strict", "vwap_strict", "doji_strict", "trend_break"],  // rules that give calls only while ticked on the page
                  // 22 November (the owner: "Is it applied on Nifty bank and sensex chart ? if no then do that as well", then, shown that it lost
                  // on NIFTY BANK, "NIFTY 50 and SENSEX"): the rules that also run on other indices than MORE.indices, each alone there (the
                  // other 13 stay NIFTY 50 only)
-                 alsoOn: { vwap_strict: ["SENSEX"] } };
+                 // 22 November (the owner: "built it for nifty bank and sensex as well"): NEWHIGH-TREND / NEWLOW-TREND runs on all three indices, opt-in
+                 alsoOn: { vwap_strict: ["SENSEX"], trend_break: ["NIFTY BANK", "SENSEX"] } };
   const ruleOn = (key, index) => MORE.indices.includes(index) || (MORE.alsoOn[key] || []).includes(index);  // does this rule run on this index
   // the page's call list for an index: the rules above and the opt-in rules ticked (a Set of keys), those that run on the index only
   const moreCalls = (ticked, index = null) => MORE.calls.concat(MORE.optIn.filter(key => ticked && ticked.has(key))).filter(key => index == null || ruleOn(key, index));
   const moreOn = (index, more) => more !== false && root.MorePat != null && (index == null ? more === true || Array.isArray(more)
     : MORE.indices.includes(index) || (Array.isArray(more) && more.some(key => (MORE.alsoOn[key] || []).includes(index))));  // no index (the lab): only when asked
-  const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines,  // the picture's points and lines (a trade's "points" is its result)
+  const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines, ...(s.stop0 != null ? { stopAt: round2(s.stop0), trailAtr: s.trail } : {}),  // the picture's points and lines (a trade's "points" is its result)
                                              lineName: s.lines.length ? s.lines[0][4] : key === "vwap" || key === "vwap_strict" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
   function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
     if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
@@ -670,7 +671,7 @@
     const moreAtr = withMore ? MP.atrBefore((prevBars || []).concat(bars.slice(0, lastK + 1))).slice((prevBars || []).length) : null;  // the reference's ATR, as of the previous candle
     const hasPrev = !!(prevBars && prevBars.length);
     // volumes (17 November): the futures volume of each candle of `bars`, for the VWAP rule's true VWAP; null: the plain average, as before
-    const moreCtx = withMore && (hasPrev || volumes) ? { ...(hasPrev ? { prev_close: prevBars[prevBars.length - 1].close } : {}), ...(volumes ? { volumes } : {}) } : null;
+    const moreCtx = withMore && (hasPrev || volumes) ? { ...(hasPrev ? { prev_close: prevBars[prevBars.length - 1].close, prev_bars: prevBars } : {}), ...(volumes ? { volumes } : {}) } : null;  // prev_bars: the previous sessions' candles, for NEWHIGH-TREND's averages
     for (let k = 0; k <= lastK; k++) {
       const bar = bars[k], atr = k > 0 ? atrs[k - 1] : null;
       const wedgeSigs = [];  // the wedge scanners step first, every candle (see above)

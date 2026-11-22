@@ -27,7 +27,7 @@
     return [null].concat(out.slice(0, -1));
   }
   const flip = (cs) => cs.map(c => candle(-c.open, -c.low, -c.high, -c.close));  // the same chart turned upside down
-  const flipCtx = (ctx) => { if (ctx == null) return null; const out = { ...ctx }; if (out.prev_close != null) out.prev_close = -out.prev_close; return out; };
+  const flipCtx = (ctx) => { if (ctx == null) return null; const out = { ...ctx }; if (out.prev_close != null) out.prev_close = -out.prev_close; if (out.prev_bars) out.prev_bars = flip(out.prev_bars); return out; };
   function swingHighs(cs, k, n) {  // candles whose high is at least as high as the n candles on each side; known only n candles later
     const out = []; for (let i = n; i <= k - n; i++) { let ok = true; for (let j = i - n; j <= i + n && ok; j++) if (j !== i && !(cs[i].high >= cs[j].high)) ok = false; if (ok) out.push(i); } return out;
   }
@@ -46,7 +46,7 @@
   const SWAP = { top: "bottom", bottom: "top", high: "low", low: "high", above: "below", below: "above", red: "green", green: "red", hammer: "shooting star" };
   const swapWords = (text) => text.replace(/\b(top|bottom|high|low|above|below|red|green|hammer)\b/g, m => SWAP[m]);
   function unflipSignal(s, ruleName) {
-    return { ...s, rule: ruleName, side: s.side === "CE" ? "PE" : "CE", level: -s.level, target: s.target == null ? null : -s.target,
+    return { ...s, rule: ruleName, side: s.side === "CE" ? "PE" : "CE", level: -s.level, target: s.target == null ? null : -s.target, stop0: s.stop0 == null ? null : -s.stop0,
              points: s.points.map(([i, y, lab]) => [i, -y, swapWords(lab)]), lines: s.lines.map(([i1, y1, i2, y2, lab]) => [i1, -y1, i2, -y2, swapWords(lab)]) };
   }
   function zigzag(cs, k, n) {  // swing highs and lows in time order (H, L, H, L ...); in a run of the same kind keep the most extreme
@@ -324,6 +324,30 @@
     if (!(cs[k].close >= cs[k - 1].high)) return null;                       // (b) it closes above the red candle's high
     return s;
   }
+  // NEWHIGH-TREND / NEWLOW-TREND (22 November, the owner, shown a rally the page's rules had not caught: "built it for the PE as well like
+  // NEWLOW-Trend", "built it for nifty bank and sensex as well and add the indicator in the settings for all 3 indices"): NOT in the
+  // reference, and the only rule here that rides a trend instead of waiting for a pattern. From the ULTROAN study of the owner's NIFTY 50
+  // candles (found 13 November, NEWHIGH-TREND n 12, trail 5, averages agreeing): Buy CE when a candle CLOSES above the highest high of the
+  // 12 candles before it while the 20-candle average is above the 50-candle one (EMAs of the closes, carried over from the previous
+  // sessions); Buy PE (NEWLOW-TREND) is the same on the chart turned upside down: a close below the lowest low of the 12 candles before
+  // it with the 20 below the 50. The signal candle starts at 10:15 (12 candles of the day) to 14:00. The call carries its own exit, not
+  // Rule 1: the stop starts 5 x ATR behind the signal candle's close and trails 5 x ATR behind the best close (stop0, trail), so the
+  // call can stay with a trend; every other rule's calls keep Rule 1 and the half-ATR trail
+  function emaAt(cs, k, n, prev) {  // EMA(n) of the closes, seeded with the first close, over the previous sessions' candles and then today's up to k
+    const a = 2 / (n + 1); let e = null;
+    for (const x of prev || []) e = e == null ? x.close : e + (x.close - e) * a;
+    for (let i = 0; i <= k; i++) e = e == null ? cs[i].close : e + (cs[i].close - e) * a;
+    return e;
+  }
+  function trendBreak(cs, k, atr, c, ctx) {
+    if (k < c.window || k > c.until) return null;
+    const hi = rangeMax(k - c.window, k, j => cs[j].high);                    // the highest high of the 12 candles before this one
+    if (!(cs[k].close > hi)) return null;                                     // the close is above it
+    const prev = ctx && ctx.prev_bars ? ctx.prev_bars : null;
+    if (!(emaAt(cs, k, 20, prev) > emaAt(cs, k, 50, prev))) return null;     // the averages agree
+    return { ...makeSignal("CE", hi, k, { points: [[k, cs[k].close, "closes above"]], lines: [[k - c.window, hi, k, hi, c.window + "-candle high"]], note: "a close above the highest high of the last " + c.window + " candles, the 20 average above the 50" }),
+             stop0: cs[k].close - c.stop_atr * atr, trail: c.trail_atr };
+  }
   function hammer(cs, k, atr, c) {
     const h = c.confirm ? k - 1 : k;                                         // the hammer candle (confirm: the candle after must close above it)
     if (h < 1) return null;
@@ -386,13 +410,16 @@
     // two of its own checks stricter: ALL of the last 8 candles closed on the other side of the VWAP (the document: 5 of the last 6),
     // and the signal candle's body at least 0.5 x ATR (the document: 0.3). The buffer (0.25 x ATR) and the chase limit (2 x ATR) stay
     vwap_strict: { fn: vwap, names: ["VWAP reclaim (strict)", "VWAP loss (strict)"], cfg: { look: 8, need_below: 8, body_atr: 0.5 } },
+    // NEWHIGH-TREND / NEWLOW-TREND (22 November): see trendBreak above; not in the reference; opt-in on the page, on all three indices
+    trend_break: { fn: trendBreak, names: ["NEWHIGH-TREND", "NEWLOW-TREND"], cfg: { window: 12, until: 57, stop_atr: 5, trail_atr: 5 } },
   };
   const STRICT = { engulfing: "engulfing_strict", doji: "doji_strict", vwap: "vwap_strict" };  // the owner's refinements (20 and 22 November): each replaces its rule on the page
-  const ORDER = Object.keys(RULES).filter(key => !Object.values(STRICT).includes(key));  // the reference's 14, in its order: when two rules give the same side on one candle, the one earlier in this list is the label used
+  const EXTRA = ["trend_break"];  // rules of the owner's own that stand after the 14 on the page (22 November)
+  const ORDER = Object.keys(RULES).filter(key => !Object.values(STRICT).includes(key) && !EXTRA.includes(key));  // the reference's 14, in its order: when two rules give the same side on one candle, the one earlier in this list is the label used
   // Engulfing (strict) (20 November), VWAP Reclaim and Loss (strict) and Doji Reversal (strict) (22 November) replace the document's rules on the page, each in its
   // rule's place in the list. PAGE_ORDER: the page's 14 (the signal log, the chart's ticks); ALL_ORDER: every rule here in order (the engine
   // walks it, so a replay may still ask for an old one)
-  const PAGE_ORDER = ORDER.map(key => STRICT[key] || key), ALL_ORDER = Object.keys(RULES);
+  const PAGE_ORDER = ORDER.map(key => STRICT[key] || key).concat(EXTRA), ALL_ORDER = Object.keys(RULES);
   const settingsFor = (rule, over = null) => ({ ...COMMON, ...RULES[rule].cfg, ...(over || {}) });
   const LOOKBACK = 30;  // how many candles back we look to see if the same pattern already signalled
   const sameIdent = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -448,7 +475,7 @@
     const lastK = (closedCount == null ? bars.length : Math.min(closedCount, bars.length)) - 1;
     if (lastK < 0) return { signals: [], rows: [], summary: { signals: 0, ok: 0, byRule: {}, often: [], okPoints: 0 }, atr: [] };
     const closed = bars.slice(0, lastK + 1), all = (prevBars || []).concat(closed), atrAll = atrBefore(all), atr = atrAll.slice(all.length - closed.length);
-    const ctx = prevBars && prevBars.length ? { prev_close: prevBars[prevBars.length - 1].close } : null;
+    const ctx = prevBars && prevBars.length ? { prev_close: prevBars[prevBars.length - 1].close, prev_bars: prevBars } : null;
     const signals = runDay(closed, atr, ctx, rules, null, first, last);
     const rows = signals.map(s => {
       const k = s.signal_candle, d = s.side === "CE" ? 1 : -1, entryBar = bars[k + 1] || null, a = atr[k];
@@ -461,7 +488,7 @@
       if (k + 12 <= lastK) r.at12 = round2(d * (bars[k + 12].close - r.entry));
       if (dayEnd) r.atClose = round2(d * (bars[lastK].close - r.entry));
       if (manage) {  // the paper result with the page's own exits, this signal on its own (one trade at a time is not applied)
-        const t = { side: s.side, L: s.level, signalCandle: k, c1: closed[k], entry: r.entry, entryTime: r.entryTime, stage: 1, stop: s.level, best: 0, exit: null, exitTime: null, points: null, how: "open" };
+        const t = { side: s.side, L: s.level, signalCandle: k, c1: closed[k], entry: r.entry, entryTime: r.entryTime, stage: s.stop0 != null ? 2 : 1, stop: s.stop0 != null ? s.stop0 : s.level, trailAtr: s.trail != null ? s.trail : null, best: 0, exit: null, exitTime: null, points: null, how: "open" };
         for (let j = k + 1; j <= lastK; j++) if (manage(t, bars[j], j, atr[j], lastK, dayEnd)) break;
         Object.assign(r, { exit: t.exit, exitTime: t.exitTime, how: t.exit != null ? t.how : "open", paper: t.exit != null ? t.points : round2(d * (bars[lastK].close - r.entry)) });
       }

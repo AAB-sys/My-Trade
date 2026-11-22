@@ -653,7 +653,7 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   // the swap: the page's list has the strict rule in the old one's place; the reference's list is untouched
   const at = M.ORDER.indexOf("engulfing");
   assert(M.ORDER.length === 14 && at >= 0 && !M.ORDER.includes("engulfing_strict"), "S6: MorePat.ORDER is still the reference's 14");
-  assert(M.PAGE_ORDER.length === 14 && M.PAGE_ORDER[at] === "engulfing_strict" && !M.PAGE_ORDER.includes("engulfing"), "S6: the page's list: Engulfing (strict) in the old one's place");
+  assert(M.PAGE_ORDER.length === 15 && M.PAGE_ORDER[at] === "engulfing_strict" && !M.PAGE_ORDER.includes("engulfing") && M.PAGE_ORDER[14] === "trend_break", "S6: the page's list: Engulfing (strict) in the old one's place, the 14 and then NEWHIGH-TREND (22 November)");
   assert(!N.MORE.calls.includes("engulfing") && !N.MORE.calls.includes("engulfing_strict") && N.MORE.optIn.includes("engulfing_strict"), "S6: the old Engulfing gives no call; the strict one only when ticked");
   assert(JSON.stringify(N.moreCalls(new Set())) === JSON.stringify(N.MORE.calls) && N.moreCalls(new Set(["engulfing_strict"])).includes("engulfing_strict") && N.moreCalls(null).length === N.MORE.calls.length,
          "S6: moreCalls: the strict rule joins the list only when its tick is on");
@@ -778,4 +778,50 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(ej && ej.side === "CE" && ej.signalCandle === 8 && ej.entry === 119 && ej.L === 104, "J6: ticked: Buy CE at the next open 119, the stop at the doji's low 104: " + JSON.stringify(ej && { k: ej.signalCandle, entry: ej.entry, L: ej.L }));
   for (const ix of ["NIFTY BANK", "SENSEX"]) assert(!runD(ix, new Set(["doji_strict"])).some(t => t.more && /doji/.test(t.rule)), `J6: ${ix}: no Doji call, ticked or not`);
   console.log("New Rule Chart: Doji Reversal (strict): the doji at least 1.0 ATR tall, both sides; it replaces the Doji rule on NIFTY 50, only while ticked (J1 to J6)");
+}
+
+// ---- NEWHIGH-TREND / NEWLOW-TREND (22 November, the owner: "built it for the PE as well like NEWLOW-Trend", "built it for nifty bank and sensex as
+// well and add the indicator in the settings for all 3 indices"): NOT in the reference. A close above the highest high of the 12 candles before it
+// (Buy CE; below the lowest low: Buy PE on the chart turned upside down), the 20 average above the 50, signal candle 10:15 to 14:00; a call with its own
+// exit, the stop 5 x ATR behind the signal close, trailing 5 x ATR behind the best close. Opt-in, on all three indices
+{
+  const M = globalThis.MorePat, t0 = Date.parse("2026-11-20T09:15:00+05:30") / 1000, mk = (rows, start) => rows.map(([o, h, l, c], i) => ({ time: start + i * 300, open: o, high: h, low: l, close: c }));
+  const rise = Array.from({ length: 60 }, (_, i) => { const m = 100 + i * 0.5; return [m, m + 2, m - 2, m + 0.4]; });                  // the days before: a steady rise (the 20 average above the 50)
+  const fallP = Array.from({ length: 60 }, (_, i) => { const m = 175 - i * 0.75; return [m, m + 2, m - 2, m - 0.4]; });  // the days before: a steady fall into today's level
+  const base = Array.from({ length: 13 }, (_, i) => [131, 133 + (i % 2), 129, 131 + (i % 3) * 0.2]);                                    // 13 quiet candles, highs up to 134
+  const up = base.concat([[132, 141, 131, 140], [140, 143, 138, 142], [142, 144, 140, 143], [143, 144, 138, 139], [139, 141, 137, 140]]);  // candle 13 closes at 140, above 134
+  const mirror = (rows) => rows.map(([o, h, l, c]) => [300 - o, 300 - l, 300 - h, 300 - c]);
+  const atrOf = (day, prev) => M.atrBefore(prev.concat(day)).slice(prev.length);
+  const detectAt = (day, prev, k) => { const all = prev.concat(day), a = M.atrBefore(all).slice(prev.length); return M.detect("trend_break", day, k, a[k], null, { prev_close: prev[prev.length - 1].close, prev_bars: prev }); };
+  const P = mk(rise, t0 - 86400 * 2), PD = mk(fallP, t0 - 86400 * 2), D = mk(up, t0), DM = mk(mirror(up), t0), PM = mk(mirror(rise), t0 - 86400 * 2);
+  const r = M.RULES.trend_break;
+  assert(r && r.names[0] === "NEWHIGH-TREND" && r.names[1] === "NEWLOW-TREND" && r.cfg.window === 12 && r.cfg.until === 57 && r.cfg.stop_atr === 5 && r.cfg.trail_atr === 5, "T1: the rule and its settings (12 candles, signal to 14:00, stop 5 ATR, trail 5 ATR)");
+  const s = detectAt(D, P, 13);
+  assert(s.length === 1 && s[0].side === "CE" && s[0].rule === "NEWHIGH-TREND" && s[0].level === 134 && Math.abs(s[0].stop0 - (140 - 5 * atrOf(D, P)[13])) < 1e-9 && s[0].trail === 5, "T2: a close of 140 over the 12 candles' high 134 with the averages agreeing: Buy CE, level 134, the stop 5 ATR behind 140: " + JSON.stringify(s));
+  assert(detectAt(mk(up.map((x, i) => i === 13 ? [132, 141, 131, 134] : x), t0), P, 13).length === 0, "T3: a close equal to the 12 candles' high is not above it: no signal");
+  assert(detectAt(D, PD, 13).length === 0, "T4: the 20 average below the 50 (a falling market before): no Buy CE");
+  const m = detectAt(DM, PM, 13);
+  assert(m.length === 1 && m[0].side === "PE" && m[0].rule === "NEWLOW-TREND" && m[0].level === 300 - 134 && Math.abs(m[0].stop0 - (300 - 140 + 5 * atrOf(DM, PM)[13])) < 1e-9 && m[0].trail === 5, "T5: the mirror: Buy PE, NEWLOW-TREND, the stop 5 ATR above the signal close: " + JSON.stringify(m));
+  assert(detectAt(D, P, 12).length === 0 && detectAt(D, P, 11).length === 0, "T6: fewer than 12 candles of the day before it: no signal");
+  const late = (k) => { const rows = Array.from({ length: k }, (_, i) => [131, 133, 129, 131]).concat([[132, 141, 131, 140]]); return detectAt(mk(rows, t0), P, k).length; };
+  assert(late(57) === 1 && late(58) === 0, "T6: the signal candle may be as late as candle 57 (14:00), not candle 58");
+  assert(M.ORDER.length === 14 && !M.ORDER.includes("trend_break") && M.PAGE_ORDER[14] === "trend_break" && M.ALL_ORDER.includes("trend_break"), "T7: MorePat.ORDER is the reference's 14; the page's list has the new rule after them");
+  const ixs = ["NIFTY 50", "NIFTY BANK", "SENSEX"];
+  assert(N.MORE.optIn.includes("trend_break") && !N.MORE.calls.includes("trend_break") && ixs.every(ix => N.ruleOn("trend_break", ix)), "T7: opt-in, and it runs on all three indices");
+  assert(ixs.every(ix => !N.moreCalls(new Set(), ix).includes("trend_break") && N.moreCalls(new Set(["trend_break"]), ix).includes("trend_break")), "T7: moreCalls: it joins the list on every index only while its tick is on");
+  assert(JSON.stringify(N.moreCalls(new Set(["trend_break"]), "NIFTY BANK")) === '["trend_break"]' && JSON.stringify(N.moreCalls(new Set(["trend_break"]), "SENSEX")) === '["trend_break"]', "T7: ticked on NIFTY BANK and SENSEX it is the only one of the 14 that runs there (VWAP (strict) joins on SENSEX only when it is ticked too)");
+  const runIx = (ix, ticked, bars = D, prev = P) => N.runDay({ bars, index: ix, prevBars: prev, atrSeed: M.atrBefore(prev).slice(-1)[0], closedCount: bars.length, dayEnd: true, rules: [], more: ["trend_break"].filter(k => N.moreCalls(ticked, ix).includes(k)) });  // this rule alone: the other 13 patterns have their own checks
+  for (const ix of ixs) assert(runIx(ix, new Set()).trades.length === 0, `T8: ${ix}: unticked: no NEWHIGH-TREND call`);
+  for (const ix of ixs) {
+    const tr = runIx(ix, new Set(["trend_break"])).trades, t = tr.find(x => x.rule === "trend_break");
+    assert(t && t.side === "CE" && t.kind === "NEWHIGH-TREND" && t.signalCandle === 13 && t.entry === D[14].open && t.L === 134 && t.trailAtr === 5 && t.stopAt != null && t.stage === 2 && t.stopAt < t.entry - 10, `T8: ${ix}: ticked: Buy CE at the next open ${D[14].open}, level 134, its own stop ${t && t.stopAt} (5 ATR) and trail: ` + JSON.stringify(t && { k: t.signalCandle, entry: t.entry, L: t.L, stopAt: t.stopAt, stage: t.stage }));
+    assert(t.exit != null && t.how === "day end" && t.points === Math.round((D[D.length - 1].close - t.entry) * 100) / 100, `T8: ${ix}: the call rides the pullback (a dip that Rule 1's half-ATR trail would have sold) and ends with the day: ` + JSON.stringify({ how: t.how, points: t.points }));
+  }
+  const pe = runIx("NIFTY BANK", new Set(["trend_break"]), DM, PM).trades.find(x => x.rule === "trend_break");
+  assert(pe && pe.side === "PE" && pe.kind === "NEWLOW-TREND" && pe.stopAt > pe.entry + 10 && pe.trailAtr === 5, "T8: the Buy PE side on NIFTY BANK: NEWLOW-TREND, the stop above the entry, 5 ATR");
+  // the trail follows the best close 5 ATR behind and never goes back: a long rise, then a drop through the trail
+  const run2 = base.concat([[132, 141, 131, 140]]).concat(Array.from({ length: 10 }, (_, i) => [140 + i * 3, 144 + i * 3, 139 + i * 3, 143 + i * 3])).concat([[170, 171, 146, 150], [150, 151, 142, 144], [144, 145, 143, 144.5]]);
+  const t2 = runIx("SENSEX", new Set(["trend_break"]), mk(run2, t0), P).trades.find(x => x.rule === "trend_break");
+  assert(t2 && t2.how === "trail" && t2.stop > t2.stopAt && t2.exit < t2.stop && t2.points > 0, "T8: after a long rise the stop has trailed up and the call is sold at the first close below it, in profit: " + JSON.stringify(t2 && { how: t2.how, stop: t2.stop, stopAt: t2.stopAt, exit: t2.exit, points: t2.points }));
+  console.log("New Rule Chart: NEWHIGH-TREND / NEWLOW-TREND: a close past the last 12 candles' high (low) with the averages agreeing, its own 5 ATR stop and trail, opt-in on all three indices (T1 to T8)");
 }
