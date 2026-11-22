@@ -32,7 +32,7 @@ CONFIGS = [{}, {"ema_filter": "off"}, {"ema_basis": "bar"}, {"fill_level": "mid"
 
 def js_bars(bars): return [{"d": b["d"].isoformat(), "t": b["t"].hour * 60 + b["t"].minute, "o": b["o"], "h": b["h"], "l": b["l"], "c": b["c"]} for b in bars]
 RUN = """const F=require(process.argv[1]);const j=JSON.parse(require('fs').readFileSync(process.argv[2]));
-const out=j.jobs.map(x=>{const r=F.scan(x.bars,x.cfg,x.daily);return r.signals.map(s=>[s.i,s.action,s.entry,s.zone_lo,s.zone_hi,s.zone_i,s.d,s.close_min]);});
+const out=j.jobs.map(x=>{const r=x.zones?(()=>{const c=Object.assign({},F.DEFAULTS,x.cfg);return F.scanZones(x.bars,x.zones.map(z=>({i:z.i,side:z.side,lo:z.lo,hi:z.hi,mid:z.mid,id:z.i})),c,c.ema_filter==="on"?F.trendDirection(x.bars,c,null):null,F.atr(x.bars,c.atr_len));})():F.scan(x.bars,x.cfg,x.daily);return r.signals.map(s=>[s.i,s.action,s.entry,s.zone_lo,s.zone_hi,s.zone_i,s.d,s.close_min]);});
 console.log(JSON.stringify(out));"""
 def run_js(jobs):
     with tempfile.TemporaryDirectory() as td:
@@ -66,5 +66,10 @@ for name, bars in sets.items():
         # the last 5 days start with a different ATR seed: compare the signals of the last 4 days (the seed has worn off long before)
         cut = last5[1].isoformat(); same = lambda xs: [[x[1], x[2], x[3], x[4], x[6], x[7]] for x in xs if x[6] >= cut]  # not the candle's number (it counts from the first candle given)
         check(f"{name} last5 {c}", same(want), same(g))
+    # the page's way of using it: the fill rule on a GIVEN list of gaps (not the owner's own detection): other gap sizes, some gaps left out
+    zs = [z for z in ref.detect_fvgs(bars, {"min_gap_atr": 0.5, "displacement": False}) if z["i"] % 3 != 0]
+    for c in ({}, {"fill_level": "mid"}, {"confirm": "candle"}, {"ema_filter": "off"}, {"fill_level": "edge", "ema_filter": "off"}):
+        sg, _ = ref.scan(bars, [dict(z) for z in zs], c); want = [[s["i"], s["action"], s["entry"], s["zone_lo"], s["zone_hi"], s["zone_i"], s["date"].isoformat(), s["time"].hour * 60 + s["time"].minute] for s in sg]
+        total += len(want); check(f"{name} given gaps {c}", want, run_js([{"bars": jb, "cfg": c, "zones": [{k: z[k] for k in ("i", "side", "lo", "hi", "mid")} for z in zs]}])[0])
 print(f"{ok} comparisons equal, {bad} different; {total} signals compared")
 sys.exit(1 if bad else 0)

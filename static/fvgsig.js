@@ -6,6 +6,8 @@
 // Part 1 is the owner's module (tools/fvg_signals.py) in JavaScript, rule for rule: atr, ema, trend_direction, detect_fvgs, scan.
 // lab/check_fvgsig.py runs the owner's Python on two years of candles of three indices and this file on the same candles, with
 // 14 different settings, and requires the same signals (bar, call, entry, zone) every time.
+// (23 November, later: on the page the gaps are NOT the owner's own detection but the gaps of the FVG levels list, so a signal's gap is always a
+// numbered gap of that list with the same two levels: scanZones() is the fill rule on a given list of gaps; see Part 2.)
 // Part 2 (attach) puts those signals on AAA_V1's chart and in a box of their own in the panel at the right. It is a SEPARATE
 // box and a separate layer: the FVG boxes, the FVG levels list, the volume profile tools and every other line stay as they were.
 // The chart's arrows and the panel's rows are made from the same list (one number each), so they cannot differ.
@@ -90,17 +92,19 @@
     return out;
   }
   const closeMin = (bar, iv) => bar.t + iv;
-  // Walk the candles once. Returns {signals, zones}.
-  function scan(bars, cfg, daily) {
+  // The fill rule, for a GIVEN list of gaps (zones: {i: index of the gap's third candle, side, lo, hi, mid, id?}): walk the candles once.
+  // scan() below feeds it the owner's own gaps (detectFvgs); the page feeds it the gaps of the FVG levels list (23 November, the owner: "make
+  // signals use only the FVG levels list gaps"). atrs: the owner's rule skips candles with no ATR yet; the page passes none (the gaps carry their own).
+  function scanZones(bars, zones0, cfg, trend, atrs) {
     cfg = Object.assign({}, DEFAULTS, cfg || {});
-    const iv = cfg.interval, atrs = atr(bars, cfg.atr_len), zones = detectFvgs(bars, cfg, atrs).map(z => Object.assign({}, z, { touch_i: null, mid_i: null, fill_i: null, broken_i: null, _hit: null, _done: false }));
-    const trend = cfg.ema_filter === "on" ? trendDirection(bars, cfg, daily) : null, tFrom = mins(cfg.entry_from), tTo = mins(cfg.entry_to);
+    const iv = cfg.interval, zones = zones0.map(z => Object.assign({}, z, { touch_i: null, mid_i: null, fill_i: null, broken_i: null, _hit: null, _done: false }));
+    const tFrom = mins(cfg.entry_from), tTo = mins(cfg.entry_to);
     const dayNo = new Map([...new Set(bars.map(b => b.d))].sort().map((d, k) => [d, k])), byStart = new Map(), signals = [];
     let live = [];
     for (const z of zones) { if (!byStart.has(z.i)) byStart.set(z.i, []); byStart.get(z.i).push(z); }
     for (let i = 0; i < bars.length; i++) {
       const b = bars[i];
-      if (atrs[i] !== null) {
+      if (atrs == null || atrs[i] !== null) {
         const inWindow = tFrom <= closeMin(b, iv) && closeMin(b, iv) <= tTo, keep = [];
         for (const z of live) {
           if (i - z.i > cfg.max_age_bars || dayNo.get(b.d) - dayNo.get(bars[z.i].d) > cfg.carry_days) continue;
@@ -118,7 +122,7 @@
             else { ready = i === z._hit; expired = true; }
             if (ready || expired) z._done = true;
             if (ready && inWindow && (trend === null || trend[i] === s))
-              signals.push({ action: s === 1 ? "BUY CE" : "BUY PE", side: s, i, d: b.d, t: b.t, close_min: closeMin(b, iv), entry: b.c, fill_level: level, zone_lo: z.lo, zone_hi: z.hi, zone_i: z.i });
+              signals.push({ action: s === 1 ? "BUY CE" : "BUY PE", side: s, i, d: b.d, t: b.t, close_min: closeMin(b, iv), entry: b.c, fill_level: level, zone_lo: z.lo, zone_hi: z.hi, zone_i: z.i, zone_id: z.id });
           }
           keep.push(z);
         }
@@ -127,53 +131,42 @@
       if (byStart.has(i)) live.push(...byStart.get(i));
     }
     for (const z of zones) { delete z._hit; delete z._done; }
-    return { signals, zones, trend };
+    return { signals, zones };
   }
-  const calc = { DEFAULTS, mins, hmOf, fmt, atr, ema, trendDirection, detectFvgs, scan };
+  // The owner's whole module: its gaps, its trend filter, then the fill rule.
+  function scan(bars, cfg, daily) {
+    cfg = Object.assign({}, DEFAULTS, cfg || {});
+    const atrs = atr(bars, cfg.atr_len), trend = cfg.ema_filter === "on" ? trendDirection(bars, cfg, daily) : null;
+    const r = scanZones(bars, detectFvgs(bars, cfg, atrs), cfg, trend, atrs);
+    return { signals: r.signals, zones: r.zones, trend };
+  }
+  const calc = { DEFAULTS, mins, hmOf, fmt, atr, ema, trendDirection, detectFvgs, scanZones, scan };
 
   // ---------------------------------------------------------------- Part 2: on AAA_V1's chart
   // attach(A): A is the page's side of it: chart, series, IST, tools, infoRow (elements), name(), interval(), bars() (the candles on
-  // the chart), all() (every candle loaded, the chart's size), fine() (the 1-minute candles), get(url) (fetch with the page's sign-in),
-  // num, css, now(). It gives back refresh(), redraw() and, for the browser checks, marks(), out().
-  // Candles used: the page's 5-minute candles (or 5-minute candles made from the 1-minute ones when the chart shows 1 or 15 minutes, only
-  // whole ones), the FINISHED ones only (a later candle has come, or a minute has passed since the last one's end), over every day loaded
-  // (the ATR and the gaps need the earlier days too). Shown: the signals on the days the chart shows, arrows on the chart and rows in the box.
+  // the chart), fvg() (the FVG layer, static/fvg.js), get(url) (fetch with the page's sign-in), num, css, now(). It gives back refresh(),
+  // redraw() and, for the browser checks, marks(), out().
+  // THE GAPS ARE THE FVG LEVELS LIST'S (23 November, the owner: "make signals use only the FVG levels list gaps but FVG levels should match the
+  // chart levels"): every gap formed today, as the FVG layer lists it (its numbers, its levels, its settings from the FVG gear), on the FVG
+  // layer's own finished candles (the same candles, the same count). Nothing here finds a gap of its own, so a signal's gap is always a numbered
+  // gap of the list, with the very same two levels. The fill rule is the owner's (scanZones). Today only, as the FVG list is.
   function attach(A) {
-    const KEY = "aaaFvgSig", GRACE = 60, st = { on: true, cfg: {}, out: null, daily: {} };
+    const KEY = "aaaFvgSig", st = { on: true, cfg: {}, out: null, daily: {} }, MINS = { "1m": 1, "5m": 5, "15m": 15 };
     try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) { st.on = s.on !== false; st.cfg = clean(s.cfg || {}); } } catch (e) {}
     const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ on: st.on, cfg: st.cfg })); } catch (e) {} };
     function clean(c) {  // only what differs from the defaults is kept, and only values the rules can take
       const o = {}, n = (k, lo, hi, whole) => { let v = Number(c[k]); if (c[k] === "" || c[k] == null || !isFinite(v)) return; v = Math.min(hi, Math.max(lo, whole ? Math.round(v) : v)); if (v !== DEFAULTS[k]) o[k] = v; };
-      n("min_gap_atr", 0, 100); n("atr_len", 1, 500, true); n("max_age_bars", 1, 2000, true); n("carry_days", 0, 5, true); n("confirm_wait", 1, 20, true); n("ema_fast", 1, 200, true); n("ema_slow", 2, 400, true);
+      n("max_age_bars", 1, 2000, true); n("confirm_wait", 1, 20, true); n("ema_fast", 1, 200, true); n("ema_slow", 2, 400, true);
       if (["mid", "edge"].includes(c.fill_level)) o.fill_level = c.fill_level;
       if (c.confirm === "candle") o.confirm = "candle";
       if (c.ema_filter === "off") o.ema_filter = "off";
-      if (c.ema_basis === "bar") o.ema_basis = "bar";
-      if (c.displacement === false) o.displacement = false;
       for (const k of ["entry_from", "entry_to"]) if (/^([01]\d|2[0-3]):[0-5]\d$/.test(c[k] || "") && c[k] !== DEFAULTS[k]) o[k] = c[k];
       return o;
     }
     const cfg = () => Object.assign({}, DEFAULTS, st.cfg);
-    const dayOf = (t) => Math.floor((t + A.IST) / 86400), dateOf = (t) => new Date(dayOf(t) * 86400000).toISOString().slice(0, 10), minOf = (t) => Math.floor((((t + A.IST) % 86400) + 86400) % 86400 / 60);
+    const dayOf = (t) => Math.floor((t + A.IST) / 86400), dateOf = (t) => new Date(dayOf(t) * 86400000).toISOString().slice(0, 10);
     const esc = (s) => String(s).replace(/[&<>"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
-    const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], dayWords = (d) => Number(d.slice(8)) + " " + MON[Number(d.slice(5, 7)) - 1];
 
-    // the finished 5-minute candles of every day loaded
-    function source() {
-      const now = A.now(), iv = A.interval(), all = A.all() || [], fine = A.fine() || (iv === "1m" ? all : []);  // on a 1-minute chart the chart's own candles are the 1-minute ones
-      const fin = (list, m) => { const d = list.slice(); if (d.length && now < d[d.length - 1].time + m * 60 + GRACE) d.pop(); return d; };
-      const mk = (b, t) => ({ d: dateOf(b.time), t: t == null ? minOf(b.time) : t, o: b.open, h: b.high, l: b.low, c: b.close, time: b.time });
-      if (iv === "5m") return { bars: fin(all, 5).map(b => mk(b)) };
-      if (!fine.length) return { why: "no 1-minute candles to build 5-minute candles from" };
-      const out = []; let cur = null;
-      for (const b of fin(fine, 1)) {
-        const day = dayOf(b.time), start = minOf(b.time) - ((minOf(b.time) - 555) % 5 + 5) % 5, key = day + ":" + start;
-        if (!cur || cur.key !== key) { if (cur && cur.n >= 5) out.push(cur.bar); cur = { key, n: 1, bar: { d: dateOf(b.time), t: start, o: b.open, h: b.high, l: b.low, c: b.close, time: b.time - (minOf(b.time) - start) * 60 } }; }
-        else { cur.bar.h = Math.max(cur.bar.h, b.high); cur.bar.l = Math.min(cur.bar.l, b.low); cur.bar.c = b.close; cur.n++; }
-      }
-      if (cur && cur.n >= 5) out.push(cur.bar);
-      return { bars: out };
-    }
     // the daily closes (for the 9/21 EMA of daily closes), once a name, from the server's day candles
     function needDaily() {
       const name = A.name(), d = st.daily[name];
@@ -183,17 +176,26 @@
         .then(j => { st.daily[name] = { at: Date.now(), list: (j.candles || []).map(c => ({ d: dateOf(c.time), c: c.close })).sort((a, b) => a.d < b.d ? -1 : 1) }; refresh(); })
         .catch(e => { st.daily[name] = { at: Date.now(), list: null, problem: String(e.message || e) }; });
     }
+    const why = (w) => { st.out = { why: w, list: [] }; row(); redraw(); };
     function refresh() {
       if (!st.on) { st.out = null; row(); redraw(); return; }
-      const c = cfg(), needs = c.ema_filter === "on" && c.ema_basis === "day";
+      const fv = A.fvg && A.fvg(), fo = fv && fv.out && fv.out(), c = cfg(), needs = c.ema_filter === "on";
+      if (!fo) return why("the signals use the gaps of the FVG levels list: tick FVG");
+      if (fo.why) return why("the FVG levels list has no candles to read: " + fo.why);
       if (needs) needDaily();
-      const s = source(), name = A.name(), dl = st.daily[name] && st.daily[name].list;
-      if (!s.bars) { st.out = { why: s.why, list: [] }; row(); redraw(); return; }
-      if (needs && !dl) { st.out = { why: st.daily[name] && st.daily[name].problem ? "the daily candles for the trend could not be loaded (" + st.daily[name].problem + ")" : "reading the daily candles for the trend…", list: [] }; row(); redraw(); return; }
-      const { signals, zones, trend } = scan(s.bars, c, needs ? dl : null), shown = A.bars(), first = shown.length ? shown[0].time : 0;
-      const list = signals.filter(g => s.bars[g.i].time >= first).map((g, k) => Object.assign({}, g, { n: k + 1, time: s.bars[g.i].time, zone_time: s.bars[g.zone_i].time, bar: s.bars[g.i], zone_bar: s.bars[g.zone_i] }));
-      const last = s.bars.length ? s.bars[s.bars.length - 1] : null, today = last ? last.d : null;
-      st.out = { list, read: s.bars.length, last: last ? hmOf(last.t) : null, today, trend: trend ? trend[s.bars.length - 1] : null, days: [...new Set(list.map(g => g.d))], trendOn: c.ema_filter === "on", basis: c.ema_basis, fill: c.fill_level };
+      const name = A.name(), dl = st.daily[name] && st.daily[name].list;
+      if (needs && !dl) return why(st.daily[name] && st.daily[name].problem ? "the daily candles for the trend could not be loaded (" + st.daily[name].problem + ")" : "reading the daily candles for the trend…");
+      const s = fv.source(); if (!s.cs) return why(s.why || "no candles");
+      const cs = s.cs.slice(0, fo.read);  // exactly the candles the FVG list was made from
+      if (cs.length !== fo.read || (cs.length && cs[cs.length - 1].hm !== fo.last)) return why("reading the candles again…");
+      const day = new Date(s.day * 86400000).toISOString().slice(0, 10);
+      const bars = cs.map(x => ({ d: day, t: mins(x.hm), o: x.o, h: x.h, l: x.l, c: x.c, time: s.start + mins(x.hm) * 60 }));
+      const zones = fo.list.map(g => ({ id: g.id, no: fo.no.get(g.id), i: bars.findIndex(b => b.t === mins(g.made_hm) - fo.tf), side: g.kind === "bullish" ? 1 : -1, lo: g.bottom, hi: g.top, mid: (g.bottom + g.top) / 2 })).filter(z => z.i >= 0);
+      const trend = needs ? trendDirection(bars, c, dl) : null;
+      const { signals } = scanZones(bars, zones, Object.assign({}, c, { interval: fo.tf, carry_days: 0 }), trend, null), ivm = MINS[A.interval()] || fo.tf;
+      const no = new Map(zones.map(z => [z.i, z.no]));
+      const list = signals.map((g, k) => Object.assign({}, g, { n: k + 1, time: bars[g.i].time, anchor: bars[g.i].time + Math.max(0, fo.tf - ivm) * 60, zone_time: bars[g.zone_i].time, bar: bars[g.i], zone_bar: bars[g.zone_i], gap_no: g.zone_id != null ? zones.find(z => z.id === g.zone_id).no : no.get(g.zone_i) }));
+      st.out = { list, read: bars.length, last: bars.length ? hmOf(bars[bars.length - 1].t) : null, today: day, tf: fo.tf, trend: trend ? trend[bars.length - 1] : null, trendOn: needs, fill: c.fill_level, gaps: zones.length };
       row(); redraw();
     }
 
@@ -208,7 +210,7 @@
       const o = st.out; if (!st.on || !o || !o.list.length) return [];
       const ts = A.chart.timeScale(), Y = (p) => A.series.priceToCoordinate(p), bars = A.bars();
       return o.list.map(g => {
-        const i = idxAt(g.time); if (i < 0) return null; const x = ts.logicalToCoordinate(i), zi = idxAt(g.zone_time), zx = zi < 0 ? ts.logicalToCoordinate(0) : ts.logicalToCoordinate(zi);
+        const i = idxAt(g.anchor); if (i < 0) return null; const x = ts.logicalToCoordinate(i), zi = idxAt(g.zone_time), zx = zi < 0 ? ts.logicalToCoordinate(0) : ts.logicalToCoordinate(zi);
         const cand = bars[i], y = Y(g.side === 1 ? cand.low : cand.high), top = Y(g.zone_hi), bottom = Y(g.zone_lo), ey = Y(g.entry);
         if (x == null || y == null) return null;
         return { g, n: g.n, x, y, zx, top, bottom, ey, bar: i };
@@ -273,7 +275,7 @@
       #fs-dlg footer button.ok { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
       @media (max-width: 480px) { #fs-dlg select { min-width: 130px; } #fs-dlg .row { gap: 6px; } }`;
     document.head.appendChild(style);
-    const label = document.createElement("label"); label.innerHTML = `<input type="checkbox" id="show-fvgsig"> FVG signals`; label.title = "BUY CE / BUY PE when a fair value gap is filled and holds (5-minute candles)";
+    const label = document.createElement("label"); label.innerHTML = `<input type="checkbox" id="show-fvgsig"> FVG signals`; label.title = "BUY CE / BUY PE when a gap of the FVG levels list is filled and holds";
     const gear = document.createElement("button"); gear.type = "button"; gear.id = "fs-gear"; gear.title = "FVG signals settings"; gear.setAttribute("aria-label", "FVG signals settings");
     gear.innerHTML = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6"/></svg>';
     A.tools.appendChild(label); A.tools.appendChild(gear);
@@ -291,11 +293,11 @@
       else {
         const trend = !o.trendOn ? "off" : o.trend === 1 ? "up (BUY CE only)" : o.trend === -1 ? "down (BUY PE only)" : "not known";
         const ce = o.list.filter(g => g.side === 1).length, pe = o.list.length - ce;
-        const rows = o.list.slice().reverse().map(g => `<div class="lr ${g.side === 1 ? "up" : "down"}"><span class="no">${g.n}</span><span class="cl">${g.d !== o.today || o.days.length > 1 ? dayWords(g.d) + " " : ""}${hmOf(g.t)}</span><span class="act">${g.action}</span><span class="en">${A.num(g.entry)}</span>`
-          + `<span class="sub">${g.side === 1 ? "bullish" : "bearish"} gap ${A.num(g.zone_lo)} – ${A.num(g.zone_hi)}, formed ${hmOf(g.zone_bar.t)}; ${FILLED[o.fill]}; entry at the close, ${hmOf(g.close_min)}</span></div>`).join("");
-        html = `<div class="r">${cell("FVG signals on 5-minute candles", o.last ? "last candle " + o.last : "no finished candle yet")}${cell("Trend today", trend)}${cell("On the chart", `${ce} CE, ${pe} PE`)}${cell("Today", o.list.filter(g => g.d === o.today).length)}</div>`
+        const rows = o.list.slice().reverse().map(g => `<div class="lr ${g.side === 1 ? "up" : "down"}"><span class="no">${g.n}</span><span class="cl">${hmOf(g.t)}</span><span class="act">${g.action}</span><span class="en">${A.num(g.entry)}</span>`
+          + `<span class="sub">FVG ${g.gap_no} (${g.side === 1 ? "bullish" : "bearish"}) ${A.num(g.zone_lo)} – ${A.num(g.zone_hi)}, formed ${hmOf(g.zone_bar.t)}; ${FILLED[o.fill]}; entry at the close, ${hmOf(g.close_min)}</span></div>`).join("");
+        html = `<div class="r">${cell("FVG signals on " + o.tf + "-minute candles", o.last ? "last candle " + o.last : "no finished candle yet")}${cell("Trend today", trend)}${cell("Signals today", `${ce} CE, ${pe} PE`)}</div>`
           + `<details class="fl"><summary>FVG fill signals <span class="k">(${o.list.length})</span></summary>${o.list.length ? `<div class="lh"><span class="no">No.</span><span class="cl">Candle</span><span class="act">Call</span><span class="en">Entry</span></div><div class="lbody">${rows}</div>` : `<div class="none">No fill signal yet.</div>`}`
-          + `<div class="note">The entry is the close of the candle that filled the gap. A signal for study, not an order.</div></details>`;
+          + `<div class="note">The gaps are those of the FVG levels list, with its numbers and levels. The entry is the close of the candle that filled the gap. A signal for study, not an order.</div></details>`;
       }
       if (html === shownRow) return;
       const d = rowEl.querySelector("details"); if (d) open = d.open;
@@ -311,16 +313,14 @@
       const numRow = (k, name, step, hint) => `<div class="row"><span class="n">${name}</span><input type="number" data-k="${k}" min="0" step="${step}" inputmode="decimal" value="${c[k]}"></div>${hint ? `<p class="hint">${hint}</p>` : ""}`;
       const sel = (k, name, opts) => `<div class="row"><span class="n">${name}</span><select data-k="${k}">${opts.map(([v, n]) => `<option value="${v}"${String(c[k]) === v ? " selected" : ""}>${n}</option>`).join("")}</select></div>`;
       shade.innerHTML = `<div id="fs-dlg" role="dialog" aria-modal="true" aria-label="FVG signals settings"><header><h2>FVG fill signals</h2><button type="button" class="x" data-do="cancel" aria-label="Close"><svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15"/></svg></button></header><div class="body">
-        <p class="hint">A gap on the 5-minute chart is filled and holds: BUY CE (bullish gap) or BUY PE (bearish gap), entry at the close of the filling candle.</p>
+        <p class="hint">The gaps are those of the FVG levels list (settings: the FVG gear). A gap is filled and holds: BUY CE (bullish gap) or BUY PE (bearish gap), entry at the close of the filling candle.</p>
         ${sel("fill_level", "A gap counts as filled when", [["full", "price trades through to its far edge"], ["mid", "price reaches its midpoint"], ["edge", "price first touches its near edge"]])}
         ${sel("confirm", "Signal on", [["none", "the candle that fills the gap"], ["candle", "a following candle that closes the reversal way"]])}
         ${numRow("confirm_wait", "Candles to wait for it", 1)}
         ${sel("ema_filter", "Trend filter (9 EMA / 21 EMA)", [["on", "on"], ["off", "off"]])}
-        ${sel("ema_basis", "EMAs of", [["day", "daily closes of finished days"], ["bar", "the 5-minute candles"]])}
         ${numRow("ema_fast", "Fast EMA", 1)}${numRow("ema_slow", "Slow EMA", 1)}
-        ${numRow("min_gap_atr", "Smallest gap, × ATR", 0.05)}${numRow("atr_len", "ATR length (candles)", 1)}
-        ${sel("displacement", "Candle 2 must close beyond candle 1", [["true", "yes"], ["false", "no"]])}
-        ${numRow("max_age_bars", "A gap is dropped after (candles)", 1)}${numRow("carry_days", "Days a gap carries on", 1, "0: a gap lives only in the day it formed.")}
+        ${numRow("max_age_bars", "A gap is dropped after (candles)", 1)}
+        <p class="hint">The trend filter uses the EMAs of the finished daily closes.</p>
         <div class="row"><span class="n">Signals from (candle close)</span><input type="time" data-k="entry_from" value="${c.entry_from}"></div>
         <div class="row"><span class="n">Signals until (candle close)</span><input type="time" data-k="entry_to" value="${c.entry_to}"></div>
         </div><footer><button type="button" data-do="defaults">Defaults</button><span class="grow"></span><button type="button" data-do="cancel">Cancel</button><button type="button" class="ok" data-do="ok">Ok</button></footer></div>`;
@@ -332,13 +332,18 @@
         const b = e.target.closest("button[data-do]"); if (!b) return;
         if (b.dataset.do === "cancel") return close();
         if (b.dataset.do === "defaults") { for (const k of Object.keys(DEFAULTS)) { const el = q(k); if (el) el.value = String(DEFAULTS[k]); } return; }
-        const got = {}; for (const k of Object.keys(DEFAULTS)) { const el = q(k); if (el) got[k] = k === "displacement" ? el.value === "true" : el.value; }
+        const got = {}; for (const k of Object.keys(DEFAULTS)) { const el = q(k); if (el) got[k] = el.value; }
         st.cfg = clean(got); save(); close(); refresh();
       });
     }
 
+    // the FVG layer words change when its gaps, its candles or its settings change (and when it is ticked on or off): read again then
+    { const fr = document.getElementById("fvg-row"), fb = document.getElementById("show-fvg"); let queued = false;
+      const again = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; refresh(); }, 0); };
+      if (fr && window.MutationObserver) new MutationObserver(again).observe(fr, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["hidden"] });
+      if (fb) fb.addEventListener("change", again); }
     refresh();
-    const api = { refresh, redraw, marks, out: () => st.out, state: () => st, source };
+    const api = { refresh, redraw, marks, out: () => st.out, state: () => st };
     attach.last = api;
     return api;
   }

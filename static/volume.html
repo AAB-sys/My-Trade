@@ -795,7 +795,7 @@
   });
   if (EMBED && window.FvgSig && FvgSig.attach) fvgSigTool = FvgSig.attach({
     chart, series: candles, IST, tools: $("tools"), infoRow: $("inforow"), name: () => state.name, interval: () => state.interval,
-    bars: () => shown().flat(), all: () => state.bars, fine: () => state.fine !== state.bars ? state.fine : null, get: (url) => fetch(url, withTab()), num, css, now: () => Date.now() / 1000,
+    bars: () => shown().flat(), fvg: () => fvgTool, get: (url) => fetch(url, withTab()), num, css, now: () => Date.now() / 1000,
   });
   if (EMBED) { const volumeBox = $("show-volume").closest("label"); volumeBox.style.display = ""; $("tools").appendChild(volumeBox); }  // AAA_V1: the Volume tick box stands last in the top row, after the FVG gear
   function rebuild() {
