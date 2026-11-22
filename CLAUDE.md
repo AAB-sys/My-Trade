@@ -219,8 +219,10 @@ their own logic. Read this before touching the code.
   Buy PE on the mirror, the signal candle 10:15 to 14:00. It is the one rule with its own exit: the stop starts 5 ATR behind the signal
   close and trails 5 ATR behind the best close (`stop0`, `trail` in the signal; `stopAt`, `trailAtr` on the trade, which starts on
   stage 2), so it can stay with a trend; every other call keeps Rule 1 and the half-ATR trail. Opt-in (`MORE.optIn`), on all three
-  indices (`MORE.alsoOn`); only its calls are drawn, not the signals a call already open held back. Because it holds a call open for
-  hours, ticked it holds up the other rules' calls (one trade at a time). NEW_RULES.md has the numbers.
+  indices (`MORE.alsoOn`); only its calls are drawn, not the signals a call already open held back. It runs in a lane of its own
+  (`NewRule.runDay`, `LANE`: the day is replayed twice, the other rules as before and this rule alone), because a call open for hours
+  held back every other rule's call (the owner, 22 November evening: it removed the Rising Wedge call): ticking it only adds calls, two
+  calls can be open at once, and `lab/newrule-check.js` T9 proves no other call changes. NEW_RULES.md has the numbers.
   Settings > Strategies (22 November, the
   owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first

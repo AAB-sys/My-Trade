@@ -2627,7 +2627,7 @@
     const how = { reclaim: "reclaim", retouch: "retouch", trail: "trailing stop", "day end": "end of day" };
     const rows = log.rows.slice().reverse().map(r => {
       const tr = document.createElement("tr");
-      const taken = moreTaken(r, run && run.trades), trades = run && run.trades || [], skipped = run && run.skipped || [], bar = run && run.bars && run.bars[r.k];
+      const taken = moreTaken(r, run && run.trades), skipped = run && run.skipped || [], bar = run && run.bars && run.bars[r.k], inLane = (x) => NewRule.LANE.includes(x), trades = (run && run.trades || []).filter(t => inLane(t.rule) === inLane(r.key));  // NEWHIGH-TREND has a lane of its own: only its own calls hold its signals back, and it holds back no other rule's (22 November)
       const busy = !taken && bar && trades.some(t => t.signalCandle < r.k && (t.exitTime == null || t.exitTime > bar.time || (t.exitTime === bar.time && t.how === "day end")));
       const why = !taken && bar && skipped.find(x => x.time === bar.time && !x.rule && (x.side == null || x.side === r.side)), other = !taken && trades.find(t => t.signalCandle === r.k);  // the engine's own skip notes (a scanner's notes carry its rule)
       const unticked = !taken && NewRule.MORE.optIn && NewRule.MORE.optIn.includes(r.key) && !(state.morePat || new Set()).has(r.key);  // Engulfing (strict) unticked: no call (20 November)

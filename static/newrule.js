@@ -681,7 +681,7 @@
     : MORE.indices.includes(index) || (Array.isArray(more) && more.some(key => (MORE.alsoOn[key] || []).includes(index))));  // no index (the lab): only when asked
   const moreSignal = (s, key, bars, k) => ({ rule: key, more: true, kind: s.rule, side: s.side, L: s.level, target: s.target, note: s.note || "", picPoints: s.points, picLines: s.lines, ...(s.stop0 != null ? { stopAt: round2(s.stop0), trailAtr: s.trail } : {}),  // the picture's points and lines (a trade's "points" is its result)
                                              lineName: s.lines.length ? s.lines[0][4] : key === "vwap" || key === "vwap_strict" ? "VWAP" : "level", signalCandle: k, signalTime: bars[k].time });
-  function runDay({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
+  function runDayOne({ bars, cfg = DT, index = null, prevBars = null, atrSeed = null, atrFixed = null, expiryDay = false, dayEnd = true, closedCount = null, dbShadow = null, more = null, volumes = null, sides = ["PE"], rules = RULE_LIST }) {
     if (!cfg.db) cfg = { ...cfg, db: dbOn(index) ? DB.table : DB.other };  // the double bottom's settings for this index (index: the page's index name)
     const atrs = atrFixed != null ? bars.map(() => atrFixed) : atrSeries(bars);
     if (atrSeed != null && atrFixed == null) {  // carry the previous day's ATR in: Wilder steps from the seed
@@ -727,5 +727,18 @@
     }
     return { trades, skipped, dbLog: dbShadow === false || !rules.includes("double bottom") || !dbOn(index) ? null : dbLogOf(bars, atrs, lastK, dayEnd, cfg, trades, skipped, dbShadow || { table: cfg.db, shadow: DB.shadow }) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, DAYBREAK, dayBreakStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  // NEWHIGH-TREND / NEWLOW-TREND runs in a lane of its own (22 November evening, the owner, ticking it on Friday's chart: "when i click on the
+  // settings and tick on NEWHIGH/NEWLOW indicator the existing signal goes away ... it is removing the rising wedge signal which is very
+  // important"): its call is open for hours, and with one trade at a time it held back every other rule's call. Now the day is replayed twice,
+  // the other rules exactly as they ran before (the same calls whether it is ticked or not) and this rule alone, with its own trade at a time
+  // and its own losses in a row; the calls are put together by time. Two calls can therefore be open at once, one of each lane
+  const LANE = ["trend_break"];
+  function runDay(args) {
+    const more = args.more, lane = Array.isArray(more) ? more.filter(key => LANE.includes(key)) : [];
+    if (!lane.length) return runDayOne(args);
+    const main = runDayOne({ ...args, more: more.filter(key => !LANE.includes(key)) }), own = runDayOne({ ...args, rules: [], more: lane, dbShadow: false });
+    own.trades.forEach(t => { t.lane = "trend"; });
+    return { ...main, trades: main.trades.concat(own.trades).sort((a, b) => a.signalTime - b.signalTime || (a.lane ? 1 : -1)), skipped: main.skipped.concat(own.skipped) };
+  }
+  root.NewRule = { CFG, DT, DB, MORE, LANE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, DAYBREAK, dayBreakStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
