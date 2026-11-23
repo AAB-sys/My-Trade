@@ -363,6 +363,7 @@
   "use strict";
   const IST = 19800;  // the chart library draws times as UTC: every time is moved by the IST offset on its way in
   const BARS_A_DAY = { "1m": 375, "5m": 75, "15m": 25 };
+  const SESSION_OPEN = 9 * 3600 + 15 * 60, SESSION_SECONDS = 375 * 60;  // 09:15 IST, 375 minutes (AAA_V1's time axis)
   const params = new URLSearchParams(location.search);
   // AAA_V1 (19 November, the owner: "make a replica of it [the Trade Plan page], dont keep any rules on the new chart, and make a
   // chart format same as volume profile page chart. Name it AAA_V1"): the index page shows this page inside its AAA_V1 capsule
@@ -459,6 +460,26 @@
     localization: { priceFormatter: (p) => num(p), timeFormatter: (t) => { const d = new Date(t * 1000); return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }) + "  " + d.toISOString().slice(11, 16); } },
   });
   const candles = chart.addSeries(LC.CandlestickSeries, { priceLineVisible: true, lastValueVisible: true });
+  // AAA_V1's time axis for the whole session (23 November, the owner, with the axis marked at 09:20: "why time is not appearing ? time frame should be
+  // there"; "show time on AAA_V1 only"): the chart writes a time only where it has a candle, so early in the day the axis stood bare after the
+  // first candles. While the last day on the chart is today, a series of its own with nothing but the times of the rest of the session
+  // (09:15 to 15:30, a point a candle) lends the axis those times: 10:00, 11:00 and so on stand in place before the candles arrive. It has no
+  // values, so it draws nothing and never touches the price scale, the candles, the profiles or the gaps; it ends at the session's last
+  // candle, so the numbers of the candles already there do not change. Not on the Volume Profile page itself (EMBED only).
+  let sessionAxis = null;
+  function drawSessionAxis(bars) {
+    if (!EMBED) return;
+    const pts = [], last = bars.length ? bars[bars.length - 1] : null;
+    if (last && BARS_A_DAY[state.interval]) {
+      const step = SESSION_SECONDS / BARS_A_DAY[state.interval], day = Math.floor((last.time + IST) / 86400);
+      if (day === Math.floor((Date.now() / 1000 + IST) / 86400)) {  // today only
+        const end = day * 86400 - IST + SESSION_OPEN + SESSION_SECONDS;
+        for (let t = last.time + step; t < end; t += step) pts.push({ time: t + IST });
+      }
+    }
+    if (!sessionAxis) { if (!pts.length) return; sessionAxis = chart.addSeries(LC.LineSeries, { color: "transparent", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null }); }
+    sessionAxis.setData(pts);
+  }
   const volume = chart.addSeries(LC.HistogramSeries, { priceScaleId: "", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
   volume.priceScale().applyOptions({ scaleMargins: { top: 0.84, bottom: 0 } });
   // a narrow screen: the words top left take more lines, so the candles start lower
@@ -902,6 +923,7 @@
   function setAll(fit) {
     const bars = shown().flat();
     candles.setData(bars.map(b => ({ time: b.time + IST, open: b.open, high: b.high, low: b.low, close: b.close })));
+    drawSessionAxis(bars);  // AAA_V1: the rest of today's session on the time axis
     rebuild(); setVolume(); setRsi(); setImpulse(); setVwap(); redraw(); drawPanel();
     // A new index, time frame or number of days: the chart shows that choice whole, its own times and its own prices. The
     // price scale is told to follow the candles again every time: after the up and down buttons, and also after the owner
