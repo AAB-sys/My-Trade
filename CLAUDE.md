@@ -557,6 +557,13 @@ branch from `main`.
   `trendshot/fs2.js` (42 pages, 548 FVG-list gaps, 74 signals: the fill rule re-derived from the raw candles, every signal's gap found in the FVG list with
   the same levels, arrows = rows, FVG gear change, FVG ticked off and on). The owner's own two-year test in the document found the signal no better than
   random zones (49-57% right way): it is a marker, not proof.
+  AAA_V1's time axis for the whole session (23 November, the owner, with the axis marked at 09:20: "why time is not appearing ? time frame should be there",
+  then "show time on AAA_V1 only"): the chart library writes a time only where a candle is, so early in the day the axis stood bare. In `static/volume.html`
+  `drawSessionAxis()` (EMBED only, called from `setAll`) gives the chart a series of its own with no values and only the times of the rest of today's
+  session (09:15 to 15:30, one point a candle, only while the last day on the chart is today), so 10:00, 11:00 ... stand in place before the candles
+  arrive. It draws nothing, has no price effect (`autoscaleInfoProvider` null) and starts after the last candle, so the candles' numbers, the FVG
+  boxes, the signals' arrows and the profiles are unchanged (checked at 4 times of day and 3 candle sizes: identical to before); the Volume Profile page
+  itself is pixel-identical. The crosshair over the empty part finds no candle and the legend keeps showing the last one.
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
