@@ -557,6 +557,16 @@ branch from `main`.
   `trendshot/fs2.js` (42 pages, 548 FVG-list gaps, 74 signals: the fill rule re-derived from the raw candles, every signal's gap found in the FVG list with
   the same levels, arrows = rows, FVG gear change, FVG ticked off and on). The owner's own two-year test in the document found the signal no better than
   random zones (49-57% right way): it is a marker, not proof.
+- Fast jumps between pages (23 November, the owner: "whenever i am changing pages, jumping from one page to other (any page) it lags"): a jump used to cost
+  the page, then a question to the server for EVERY script of the page (`Cache-Control: no-cache`: seven to eight round trips, each waiting on a busy server),
+  and only then its data. `main.py` now serves the four pages (`versioned_page`) with their `/static/...` files named `?v=<ASSET_VERSION>` (a hash of the
+  static folder's contents made when the server starts, so every deploy has a new one); `NoCacheStatic` keeps a file asked with EXACTLY that version for good
+  (`immutable`), and still answers an unversioned one with `no-cache`; the page itself stays `no-cache` with an ETag and answers `304` with no body when
+  unchanged. A deploy changes the version, so a page can never run a new page with an old script (the 7 October fault, #91). Measured on the real server
+  code with 120 ms on every request: each script is fetched once, on the first visit, and a repeat jump asks for none (a repeat visit to the index page
+  322 ms -> 204 ms; on the real site each round trip that is saved costs a second or more when the server is busy). `lab/check_page_cache.py` (51 checks).
+  NOT changed, on purpose: the Volume Profile page asks for its data only after its first `/alive` (the server's login handover and page ids depend on
+  that order, and it cannot be tested without the real login); any change of it needs the real login to be tried.
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each

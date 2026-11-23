@@ -8,6 +8,7 @@ import hashlib
 import hmac
 import logging
 import os
+import re
 import secrets
 import time
 from pathlib import Path
@@ -1355,9 +1356,44 @@ def feed_state() -> dict:
             "option_list": dhan.list_report()}  # what Dhan's instrument list gave (9 October, SENSEX): option ids per underlying, SENSEX's expiries and rows
 
 
+# Fast jumps between pages (23 November, the owner: "whenever i am changing pages, jumping from one page to other (any page) it lags"): a jump used to
+# cost the page itself, then a question to the server for EVERY script it uses (no-cache: "is my copy current?", seven to eight round trips, each waiting on a
+# busy server), and only then the page's own data. Now each page's files carry the version of the code ("/static/x.js?v=abc123", a hash of the static folder
+# made when the server starts, so every deploy has a new one) and a file asked with a version is kept by the browser for good ("immutable"): a jump asks the
+# server for the page (a 304 with nothing in it when it is unchanged) and its data, nothing else. A deploy changes the version, so a page never runs the new
+# page with an old script (the 7 October fault, #91). The page itself stays no-cache.
+def _asset_version() -> str:
+    digest = hashlib.sha1()
+    for path in sorted(STATIC.rglob("*")):
+        if path.is_file():
+            digest.update(str(path.relative_to(STATIC)).encode())
+            digest.update(path.read_bytes())
+    return digest.hexdigest()[:10]
+
+
+ASSET_VERSION = _asset_version()
+ASSET_REF = re.compile(r"""((?:src|href)=["'])(/static/[^"'?#]+\.(?:js|css|svg|png|ico))(["'])""")
+page_cache: dict = {}  # file name -> (file's size and time, the page with versioned file names, its ETag)
+
+
+def versioned_page(request: Request, name: str) -> Response:
+    """A page of static/ with its files named with the code's version; answered 304 when the browser's copy is the current one."""
+    path = STATIC / name
+    stat = path.stat()
+    key = (stat.st_size, stat.st_mtime_ns)
+    hit = page_cache.get(name)
+    if not hit or hit[0] != key:
+        body = ASSET_REF.sub(lambda m: f"{m.group(1)}{m.group(2)}?v={ASSET_VERSION}{m.group(3)}", path.read_text(encoding="utf-8")).encode("utf-8")
+        hit = page_cache[name] = (key, body, '"' + hashlib.sha1(body).hexdigest()[:20] + '"')
+    headers = {**NO_CACHE, "ETag": hit[2]}
+    if request.headers.get("if-none-match") == hit[2]:
+        return Response(status_code=304, headers=headers)
+    return Response(hit[1], media_type="text/html; charset=utf-8", headers=headers)
+
+
 @app.get("/login")
-def login_page():
-    return FileResponse(STATIC / "login.html", headers=NO_CACHE)
+def login_page(request: Request):
+    return versioned_page(request, "login.html")
 
 
 @app.post("/login")
@@ -1412,20 +1448,20 @@ def alive(request: Request):
 
 
 @app.get("/")
-def dashboard():
-    return FileResponse(STATIC / "index.html", headers=NO_CACHE)
+def dashboard(request: Request):
+    return versioned_page(request, "index.html")
 
 
 @app.get("/index/{name}")
-def index_page(name: str):
+def index_page(request: Request, name: str):
     known_index(name)
-    return FileResponse(STATIC / "detail.html", headers=NO_CACHE)
+    return versioned_page(request, "detail.html")
 
 
 @app.get("/volume-profile")
-def volume_profile_page():
+def volume_profile_page(request: Request):
     """The Volume Profile page (the owner, 12 November): a page of its own, its chart and its profile in static/volume.html."""
-    return FileResponse(STATIC / "volume.html", headers=NO_CACHE)
+    return versioned_page(request, "volume.html")
 
 
 VOLUME_MINUTES = {"1m": 1, "5m": 5, "15m": 15}  # the candle sizes of the Volume Profile page
@@ -1726,9 +1762,10 @@ class NoCacheStatic(StaticFiles):
     pages: the browser asks every time whether its copy is still the current one (a cheap 304 when it is), so a page that
     reloads after a merge never runs the new page with an old copy of the script. On 7 October a tab did exactly that
     after #91 ("Rules.readOf is not a function") because the script had been cached for a while."""
-    def file_response(self, *args, **kwargs):
-        response = super().file_response(*args, **kwargs)
-        response.headers["Cache-Control"] = "no-cache"
+    def file_response(self, full_path, stat_result, scope, *args, **kwargs):
+        response = super().file_response(full_path, stat_result, scope, *args, **kwargs)
+        versioned = f"v={ASSET_VERSION}".encode() in scope.get("query_string", b"")  # the pages name their files with the code's version (versioned_page): that exact version never changes
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable" if versioned else "no-cache"
         return response
 
 
