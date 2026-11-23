@@ -536,6 +536,27 @@ branch from `main`.
   The table under the AAA_V1 chart (the Trade Plan's box with no rule, "no calls") was taken off on 22 November (the owner: "remove the red
   marked table, dont need this on this page"), and on a wide window the chart's frame is taller by the height the table had (`static/detail.html`,
   `#aaa-chart iframe`: 88vh + 170 px, at most 1100 px; a phone keeps 88vh).
+  FVG fill signals (23 November, the owner, with `AAA_V1 FVG fill signals.py` and `.md`: "it should not touch any existing logic and it should not
+  remove any old signals, it should trigger new signals keeping old ones ... keep the chart and panel values same"; then: "make signals use only
+  the FVG levels list gaps but FVG levels should match the chart levels"): `static/fvgsig.js` (loaded by `static/volume.html`, attached only with
+  `embed=aaa`), a layer and a box of its own; `static/fvg.js` and every older line are untouched. THE GAPS ARE THE FVG LEVELS LIST'S: the page finds no
+  gap of its own; it takes every gap formed today as the FVG layer lists it (`Fvg.attach.last.out()`: its numbers, levels and settings from the FVG
+  gear) on the FVG layer's own finished candles (`source()`, cut to `out.read`, so the very same candles), and runs the owner's fill rule on them
+  (`scanZones`). So a signal's gap is always a numbered gap of the "FVG levels" list with the same two levels (candle 1 and candle 3 of the chart) and the
+  same formed time; the signal row says "FVG n (bullish) levels, formed hh:mm". Signals are for today only, as the FVG list is, on the FVG
+  candles' size (the chart's, or 1/3/5/15 from the FVG gear). The rule: the gap filled to its far edge; if that candle does not close beyond the far
+  edge: BUY CE (bullish gap) or BUY PE (bearish), entry = that candle's close; only 09:30-14:30 (candle close); a gap lives at most 60 candles; BUY CE
+  only while the 9 EMA is above the 21 EMA, BUY PE only below (EMAs of the finished DAILY closes, fixed at the open: read from
+  `/indices/<name>/detail?range=3mo&interval=1d`, once a name; without them no signal, and the box says so). The signals follow the FVG layer (a
+  MutationObserver on `#fvg-row`, the FVG tick box, every rebuild): a change in the FVG gear changes the gaps and so the signals. With FVG unticked
+  the signal box says "tick FVG". One list makes the chart's arrows (number, call, entry; the gap's zone faint from its third candle to the filling
+  candle) and the panel's rows (newest first), so they cannot differ. Own tick box "FVG signals" (ON by default) with a gear (fill level, confirmation,
+  trend filter, EMA lengths, age, window), remembered as `aaaFvgSig`. `lab/fvg_signals_ref.py` is the owner's file kept as it came and `scan()` in
+  `fvgsig.js` is its whole module in JavaScript: `lab/check_fvgsig.py` proves equal signals on two years of NIFTY and three months of BANKNIFTY and
+  SENSEX with 14 settings, and (new) that `scanZones` on ANY given list of gaps gives what the owner's Python gives on the same list. Browser check:
+  `trendshot/fs2.js` (42 pages, 548 FVG-list gaps, 74 signals: the fill rule re-derived from the raw candles, every signal's gap found in the FVG list with
+  the same levels, arrows = rows, FVG gear change, FVG ticked off and on). The owner's own two-year test in the document found the signal no better than
+  random zones (49-57% right way): it is a marker, not proof.
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
