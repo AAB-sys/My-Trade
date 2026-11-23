@@ -542,5 +542,28 @@
    "at": "2026-11-23T09:36:45+05:30",
    "share": 0.15
   }
+ },
+ {
+  "key": "NIFTY BANK|5m|1795407000|PE|today",
+  "index": "NIFTY BANK",
+  "side": "PE",
+  "expiry": "2026-11-23",
+  "strike": 63600.0,
+  "index_at_entry": 63501.25,
+  "premium_paid": 477.45,
+  "paid_at": "2026-11-23T09:46:10+05:30",
+  "premium_now": 394.4,
+  "now_at": "2026-11-23T09:46:33+05:30",
+  "sell_below": 310.34,
+  "sold": null,
+  "ended": null,
+  "security_id": 62596,
+  "premium_low": 392.85,
+  "premium_low_at": "2026-11-23T09:46:33+05:30",
+  "stop15": {
+   "premium": 392.85,
+   "at": "2026-11-23T09:46:33+05:30",
+   "share": 0.15
+  }
  }
 ]
