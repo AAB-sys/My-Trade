@@ -150,6 +150,66 @@
    "allrules": "not rebuilt today; by hand: VP Shape calls SENSEX +870.87 today -> 13 days, 16 calls, +3768, 10 up 3 down",
    "fvg": "the owner asked how often a gap is revisited: 500 days, 7,987 gaps, 74% filled the same day; 20-40 points 59%; big gap on a trend day with the day 31%; still open after 60 min -> 45% (fvg/fvg3b.txt)",
    "prs_open": "#279 back on the page fast: waiting for the owner's merge; branch claude/totp-window ready, no PR yet; offered (no answer yet): the alerts list showing every POC move"
+  },
+  {
+   "date": "2026-11-23",
+   "note": "A trend-DOWN day (NIFTY 50 -563 open to close). Evening tools used: wf/evening.py, wf/evening.js, vpday/day.js, grow.js, chart.js (all present). The hourly VP watch blocks were not written (ULTROAN wrongly thought the tools were missing). Still to rebuild: wf/build_rules.js, wf/research.js, wf/shadow5f.js, wf/morepat_day.js, wf/plan_cross.js, vpday/shapemove.js, vpday/sig.py, vpday/twoyears.js. Builders, shadows, the 14 more patterns and allrules.json were NOT run today.",
+   "paper": {
+    "NIFTY 50": {
+     "calls": 14,
+     "won": 6,
+     "pts": 380.6,
+     "rs": 14749,
+     "ce_pts": -107.6,
+     "pe_pts": 488.2
+    },
+    "NIFTY BANK": {
+     "calls": 6,
+     "won": 3,
+     "pts": 419.6,
+     "rs": 6120,
+     "ce_pts": -253.9,
+     "pe_pts": 673.5
+    },
+    "SENSEX": {
+     "calls": 13,
+     "won": 5,
+     "pts": 246.34,
+     "rs": 5027,
+     "ce_pts": -332.26,
+     "pe_pts": 578.6
+    }
+   },
+   "plan": {
+    "calls": 0,
+    "won": 0,
+    "points": 0,
+    "after_8": 0,
+    "rupees": 0,
+    "list": [],
+    "left_out": {
+     "calls": 14,
+     "after_8": 268.6
+    }
+   },
+   "calls_with_signals": {
+    "NIFTY 50": {
+     "calls": 2,
+     "won": 0,
+     "pts": -48.7
+    },
+    "NIFTY BANK": {
+     "calls": 4,
+     "won": 1,
+     "pts": -278.2
+    },
+    "SENSEX": {
+     "calls": 2,
+     "won": 0,
+     "pts": -59.91
+    }
+   },
+   "vp_page": "day.js replay: PE calls only, 6 of 8 won (Break + Shape), points: NIFTY 50 +167/-46/+229, NIFTY BANK +562/-170/+680, SENSEX +573/+825"
   }
  ]
 }

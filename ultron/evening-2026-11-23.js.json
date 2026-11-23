@@ -1,0 +1,39 @@
+{
+ "signals": {
+  "NIFTY 50": {
+   "calls": 2,
+   "won": 0,
+   "pts": -48.7,
+   "list": [
+    "12:30 falling wedge CE retouch -7.75",
+    "13:55 falling wedge CE reclaim -40.95"
+   ]
+  },
+  "NIFTY BANK": {
+   "calls": 4,
+   "won": 1,
+   "pts": -278.2,
+   "list": [
+    "11:00 double bottom PE reclaim -153.1",
+    "12:25 falling wedge CE retouch 51.15",
+    "13:10 double bottom PE trail -18.25",
+    "13:55 falling wedge CE reclaim -158"
+   ]
+  },
+  "SENSEX": {
+   "calls": 2,
+   "won": 0,
+   "pts": -59.91,
+   "list": [
+    "10:55 double bottom PE trail -22.06",
+    "12:30 falling wedge CE retouch -37.85"
+   ]
+  }
+ },
+ "db": {
+  "table": 0,
+  "shadow": 1,
+  "shadowOnly": 1,
+  "shadowOnlyPoints": -1.25
+ }
+}
