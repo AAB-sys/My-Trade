@@ -1,0 +1,314 @@
+{
+ "date": "2026-11-23",
+ "previousDay": "2026-11-20",
+ "indices": {
+  "NIFTY 50": {
+   "day": {
+    "open": 25929.15,
+    "high": 25992.6,
+    "low": 25343.85,
+    "close": 25366.4
+   },
+   "final": {
+    "shape": "Double",
+    "poc": 25600.65,
+    "vah": 25668.23,
+    "val": 25370.88
+   },
+   "prev": {
+    "vah": 25808.8,
+    "poc": 25741.19,
+    "val": 25538.37
+   },
+   "openVsPrev": "above yesterday's value",
+   "closeVsToday": "below VAL",
+   "minutesVsPrevValue": {
+    "above": 9,
+    "inside": 145,
+    "below": 221
+   },
+   "noon": {
+    "shape": "B",
+    "where": "below VAL",
+    "close": 25513.85,
+    "vah": 25691.04,
+    "poc": 25600.57,
+    "val": 25550.31
+   },
+   "periods": [
+    {
+     "shape": "B",
+     "from": "09:40",
+     "to": "14:00",
+     "candles": 53,
+     "where": {
+      "POC-VAH": 4,
+      "VAL-POC": 28,
+      "below VAL": 21
+     },
+     "poc0": 25682.49,
+     "poc1": 25605.54
+    },
+    {
+     "shape": "D",
+     "from": "14:05",
+     "to": "14:15",
+     "candles": 3,
+     "where": {
+      "below VAL": 2,
+      "VAL-POC": 1
+     },
+     "poc0": 25610.65,
+     "poc1": 25610.65
+    },
+    {
+     "shape": "Double",
+     "from": "14:20",
+     "to": "15:25",
+     "candles": 14,
+     "where": {
+      "VAL-POC": 6,
+      "below VAL": 8
+     },
+     "poc0": 25610.65,
+     "poc1": 25600.65
+    }
+   ],
+   "edges": {
+    "wick": 8,
+    "wickBack": 3,
+    "close": 8,
+    "closeOn": 4
+   },
+   "breakCalls": [
+    {
+     "side": "PE",
+     "setup": null,
+     "signal": "12:10",
+     "entryAt": "12:15",
+     "entry": 25533.6,
+     "stop": 25599.92,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 25366.4,
+     "points": 167.2
+    }
+   ],
+   "shapeCalls": [
+    {
+     "side": "PE",
+     "setup": "B",
+     "signal": "11:05",
+     "entryAt": "11:10",
+     "entry": 25572.85,
+     "stop": 25618.77,
+     "how": "stop",
+     "exitAt": "11:15",
+     "exit": 25618.77,
+     "points": -45.92
+    },
+    {
+     "side": "PE",
+     "setup": "B",
+     "signal": "11:15",
+     "entryAt": "11:20",
+     "entry": 25595.85,
+     "stop": 25678.67,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 25366.4,
+     "points": 229.45
+    }
+   ]
+  },
+  "NIFTY BANK": {
+   "day": {
+    "open": 65012.05,
+    "high": 65193.4,
+    "low": 62546.2,
+    "close": 62609.2
+   },
+   "final": {
+    "shape": "B",
+    "poc": 63373.45,
+    "vah": 63869.8,
+    "val": 62656.5
+   },
+   "prev": {
+    "vah": 64680.8,
+    "poc": 64377.14,
+    "val": 63292.63
+   },
+   "openVsPrev": "above yesterday's value",
+   "closeVsToday": "below VAL",
+   "minutesVsPrevValue": {
+    "above": 2,
+    "inside": 146,
+    "below": 227
+   },
+   "noon": {
+    "shape": "B",
+    "where": "VAL-POC",
+    "close": 63226.3,
+    "vah": 63927.65,
+    "poc": 63379.16,
+    "val": 63168.2
+   },
+   "periods": [
+    {
+     "shape": "B",
+     "from": "09:40",
+     "to": "15:25",
+     "candles": 70,
+     "where": {
+      "VAL-POC": 44,
+      "POC-VAH": 8,
+      "below VAL": 18
+     },
+     "poc0": 63687.15,
+     "poc1": 63373.45
+    }
+   ],
+   "edges": {
+    "wick": 3,
+    "wickBack": 0,
+    "close": 7,
+    "closeOn": 3
+   },
+   "breakCalls": [
+    {
+     "side": "PE",
+     "setup": null,
+     "signal": "13:00",
+     "entryAt": "13:05",
+     "entry": 63171.2,
+     "stop": 63387.51,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 62609.2,
+     "points": 562
+    }
+   ],
+   "shapeCalls": [
+    {
+     "side": "PE",
+     "setup": "B",
+     "signal": "10:50",
+     "entryAt": "10:55",
+     "entry": 63341.95,
+     "stop": 63511.88,
+     "how": "stop",
+     "exitAt": "11:10",
+     "exit": 63511.88,
+     "points": -169.93
+    },
+    {
+     "side": "PE",
+     "setup": "B",
+     "signal": "11:40",
+     "entryAt": "11:45",
+     "entry": 63289.5,
+     "stop": 63417.56,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 62609.2,
+     "points": 680.3
+    }
+   ]
+  },
+  "SENSEX": {
+   "day": {
+    "open": 84421.97,
+    "high": 84662.96,
+    "low": 82395.88,
+    "close": 82435.99
+   },
+   "final": {
+    "shape": "D",
+    "poc": 83293.27,
+    "vah": 83718.34,
+    "val": 82679.27
+   },
+   "prev": {
+    "vah": 84037.96,
+    "poc": 83731.46,
+    "val": 83016.28
+   },
+   "openVsPrev": "above yesterday's value",
+   "closeVsToday": "below VAL",
+   "minutesVsPrevValue": {
+    "above": 9,
+    "inside": 153,
+    "below": 213
+   },
+   "noon": {
+    "shape": "B",
+    "where": "below VAL",
+    "close": 82964.6,
+    "vah": 83737.94,
+    "poc": 83275.43,
+    "val": 83097.54
+   },
+   "periods": [
+    {
+     "shape": "B",
+     "from": "09:40",
+     "to": "14:00",
+     "candles": 53,
+     "where": {
+      "POC-VAH": 8,
+      "VAL-POC": 19,
+      "below VAL": 26
+     },
+     "poc0": 83603.57,
+     "poc1": 83307
+    },
+    {
+     "shape": "D",
+     "from": "14:05",
+     "to": "15:25",
+     "candles": 17,
+     "where": {
+      "below VAL": 17
+     },
+     "poc0": 83326.37,
+     "poc1": 83293.27
+    }
+   ],
+   "edges": {
+    "wick": 1,
+    "wickBack": 0,
+    "close": 6,
+    "closeOn": 3
+   },
+   "breakCalls": [
+    {
+     "side": "PE",
+     "setup": null,
+     "signal": "12:10",
+     "entryAt": "12:15",
+     "entry": 83016.92,
+     "stop": 83335.74,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 82443.96,
+     "points": 572.96
+    }
+   ],
+   "shapeCalls": [
+    {
+     "side": "PE",
+     "setup": "B",
+     "signal": "11:15",
+     "entryAt": "11:20",
+     "entry": 83269.28,
+     "stop": 83521.87,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 82443.96,
+     "points": 825.32
+    }
+   ]
+  }
+ }
+}
