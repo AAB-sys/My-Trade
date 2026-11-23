@@ -588,3 +588,41 @@ wrong reason and took the Rising Wedge call off Friday's chart.) Friday 20 Novem
 indices, held to the close: NIFTY 50 +246 points, NIFTY BANK +1,268, SENSEX +720 (before costs).
 
 `lab/newrule-check.js` T1 to T8 hold the rule's cases, the three indices and the exit; T9 holds that ticking it never changes another rule's call.
+
+## Every pattern ticked fires (23 November): all three indices
+
+The owner, 23 November: "it is just not about these two patterns but every pattern which is ticked in the setting should be fired on live
+feed chart"; "this should not delete the held or kept rules or strategies".
+
+Until now a ticked pattern showed on the chart only when its signal became one of the page's calls. The page takes one call at a time, so
+a signal that came while another call was open, or on a candle where another rule called the other way, or after the losses in a row,
+gave no call; on NIFTY BANK and SENSEX it left no mark at all. And 12 of the 14 more patterns in the Settings list do not run on NIFTY BANK
+(13 with VWAP) and on SENSEX, so ticking them there did nothing.
+
+Now (`NewRule.parallelCalls`, called by `signalsNow` in `static/detail.html`):
+
+- The page's run is untouched: every call it gave before, it gives now, the same entry, level, exit and points, ticked or not.
+- Each pattern ticked in Settings on the index page also runs ON ITS OWN, as a strategy does: its own one call at a time, the entry window
+  09:30 to 14:45, the same exits (Rule 1, then the half-ATR trail). Every call of it that the page's run does not have is added to the
+  calls table and drawn on the chart, marked "Parallel call" under the rule's name.
+- On NIFTY BANK and SENSEX the 14 more patterns ticked there run too, each on its own, as parallel calls.
+- Unticked, a pattern adds nothing. NEWHIGH-TREND has its own lane already and the strategies run apart: nothing is added for them.
+- Each index page keeps its own ticks, so a pattern can fire on one index and stay off on another (VWAP Reclaim and Loss (strict) stays
+  out of NIFTY BANK's page run, as the owner chose on 22 November; ticked on NIFTY BANK, it now fires there as parallel calls).
+
+**What it adds** (the saved days, 29 September to 23 November, every pattern ticked, the page's own exits, index points, no costs):
+
+| | Days | The page's calls | Parallel calls added: held back | Not run on the index before | Halves (held + not run) |
+| --- | --- | --- | --- | --- | --- |
+| NIFTY 50 | 37 | 143, +1,789 | 99, +825 | none | +414 / +411 |
+| NIFTY BANK | 37 | 102, +3,373 | 22, -319 | 125, +253 | -177 / +110 |
+| SENSEX | 20 | 56, +3,881 | 18, +386 | 55, +439 | -209 / +1,034 |
+
+On NIFTY 50 the held-back signals did well (Double Bottom +492, Falling Wedge +268, Head and Shoulders +209; Engulfing (strict) -250). On
+NIFTY BANK they lost (Descending Triangle -191, Falling Wedge -101), and of the patterns new there Head and Shoulders gave +678 and VWAP
+(strict) -333, Hammer and Shooting Star -226. SENSEX rests on 20 days. The ticks are the owner's: these numbers say which patterns pay
+on which index; nothing is ticked or unticked for the owner.
+
+`lab/newrule-check.js` P1 and P2 (the 16 saved days of `lab/keep_days.json`, all three indices, every pattern ticked): the page's own
+calls are exactly as before, each parallel call is its pattern's own call and twins no call of the page, nothing ticked adds nothing;
+walked live candle by candle, every parallel call shows at the candle after its signal candle and none vanishes, changes or moves its exit.

@@ -231,6 +231,13 @@ their own logic. Read this before touching the code.
   shares the page's one call at a time, and never changes the page's rules' logic. `lab/newrule-check.js` K1 and K2 (16 real saved days
   of all three indices, `lab/keep_days.json`) and T9 must pass: with any lane rule or strategy ticked, every call of the page's rules
   stays exactly as it was.
+  EVERY PATTERN TICKED FIRES (23 November, the owner: "every pattern which is ticked in the setting should be fired on live feed chart";
+  "this should not delete the held or kept rules or strategies"): `NewRule.parallelCalls(opts, pageTrades, { rules, more })`, called by
+  `signalsNow` with the patterns ticked on that index page (`ruleTicks()`): the page's run is untouched; each ticked pattern also runs on its
+  own (its own one call at a time, the window, the same exits) and its calls the page's run does not have (held back by another call open, by
+  another rule's signal the other way on the same candle, by the losses in a row, or a pattern of the 14 the page does not run on that index:
+  run with `index: null`) are added to the table and the chart, `parallel: true`, "Parallel call" under the rule's name. Unticked adds
+  nothing; NEWHIGH-TREND (its lane) and the strategies (run apart) add nothing here. `lab/newrule-check.js` P1, P2 must pass.
   Settings > Strategies (22 November, the
   owner: "give it as a name as startegies same llike indicators ... keep it untick by default"): strategies of Claude's own, each off
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first

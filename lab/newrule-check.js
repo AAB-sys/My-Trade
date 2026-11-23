@@ -962,3 +962,52 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(withTrend >= 10 && withOthers >= 10, `T9: the made-up days do call both lanes (trend ${withTrend}, others ${withOthers} of ${days})`);
   console.log(`New Rule Chart: NEWHIGH-TREND has a lane of its own: ticking it leaves every other call as it was, on ${days} made-up days (${withTrend} with its calls, ${withOthers} with other rules' calls, ${bothOpen} with calls of both open at once) (T9)`);
 }
+
+// ---- P: every pattern ticked fires (23 November, the owner: "every pattern which is ticked in the setting should be fired on live feed
+// chart"; "this should not delete the held or kept rules or strategies"). On the 16 saved days of all three indices (lab/keep_days.json),
+// with every pattern of the Settings list ticked: P1 the page's own run is exactly what it was (parallelCalls only adds), every parallel call
+// is a call of its pattern run on its own that the page's run does not have, and nothing ticked adds nothing; P2 walked candle by candle as the
+// page sees it live, every parallel call shows at the candle after its signal candle and none vanishes, changes or moves its exit
+{
+  const fs = require("fs"), K = JSON.parse(fs.readFileSync(path.join(__dirname, "keep_days.json"))).days, MP = globalThis.MorePat;
+  const bars = (rows) => rows.map(([time, open, high, low, close]) => ({ time, open, high, low, close }));
+  const sig = (t) => [t.rule, t.side, t.signalTime, t.entry, t.L, t.exit, t.exitTime, t.points, t.how].join("|"), key = (t) => [t.rule, t.side, t.signalTime].join("|");
+  const optIn = new Set(["engulfing_strict", "vwap_strict", "doji_strict", "double top (strict)", "trend_break"]);
+  let days = 0, pageCalls = 0, added = 0, liveSteps = 0, notRun = 0;
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    const T = { rules: N.rulesFor(ix, new Set(Object.keys(N.RULE_OPT_IN))), more: (MP.PAGE_ORDER || MP.ORDER).slice() };
+    K.forEach((d, i) => {
+      if (i < 4) return;
+      const day = bars(d.indices[ix]), before = K.slice(i - 4, i).flatMap(x => bars(x.indices[ix])), seed = N.atrSeries(before).slice(-1)[0];
+      const opts = { bars: day, index: ix, prevBars: before, atrSeed: seed, closedCount: day.length, dayEnd: true };
+      const pageRun = (o) => N.runDay({ ...o, more: N.moreCalls(optIn, ix), rules: N.rulesFor(ix, optIn) }).trades;
+      const page = pageRun(opts), before1 = page.map(sig).join("\n"), par = N.parallelCalls(opts, page, T);
+      assert(page.map(sig).join("\n") === before1 && JSON.stringify(pageRun(opts).map(sig)) === JSON.stringify(page.map(sig)), `P1: ${ix} ${d.date}: the page's own calls changed`);
+      const have = new Set(page.map(key));
+      for (const t of par) {
+        assert(t.parallel === true && !have.has(key(t)), `P1: ${ix} ${d.date}: a parallel call twins a call of the page: ${key(t)}`);
+        const alone = t.more ? N.runDay({ ...opts, index: null, rules: [], more: [t.rule], dbShadow: false }).trades : N.runDay({ ...opts, rules: [t.rule], more: false, dbShadow: false }).trades;
+        assert(alone.some(u => sig(u) === sig(t)), `P1: ${ix} ${d.date}: a parallel call is not its pattern's own call: ${sig(t)}`);
+        if (t.more && !N.ruleOn(t.rule, ix)) notRun++;
+      }
+      assert(N.parallelCalls(opts, page, { rules: [], more: [] }).length === 0, `P1: ${ix} ${d.date}: nothing ticked must add nothing`);
+      assert(!par.some(t => t.rule === "trend_break" || N.STRATEGIES[t.rule]), `P1: ${ix} ${d.date}: NEWHIGH-TREND and the strategies have their own runs`);
+      // P2: live, candle by candle (the candle forming now lends only its open to an entry, as the page runs it)
+      const seen = new Map();
+      for (let k = 1; k < day.length; k++) {
+        const o = { ...opts, bars: day.slice(0, k + 1), closedCount: k, dayEnd: false }, live = N.parallelCalls(o, pageRun(o), T), now = new Set(live.map(key));
+        for (const t of live) { const v = seen.get(key(t));
+          if (!v) seen.set(key(t), { at: k, t: { ...t } });
+          else { assert([v.t.entry, v.t.L, v.t.side].join() === [t.entry, t.L, t.side].join(), `P2: ${ix} ${d.date}: a parallel call changed while live: ${key(t)}`);
+            if (v.t.exit != null) assert(v.t.exit === t.exit && v.t.exitTime === t.exitTime, `P2: ${ix} ${d.date}: a parallel call's exit moved: ${key(t)}`); else if (t.exit != null) v.t = { ...t }; } }
+        for (const [kk, v] of seen) assert(now.has(kk), `P2: ${ix} ${d.date}: a parallel call vanished: ${kk} (shown at candle ${v.at}, gone at ${k})`);
+        liveSteps++;
+      }
+      for (const t of par) { const v = seen.get(key(t)); assert(v && v.at === t.signalCandle + 1, `P2: ${ix} ${d.date}: a parallel call did not show at the candle after its signal: ${key(t)}`);
+        if (v.t.exit != null) assert(v.t.exit === t.exit && v.t.exitTime === t.exitTime, `P2: ${ix} ${d.date}: a parallel call's exit differs from the day's table: ${key(t)}`); }
+      days++; pageCalls += page.length; added += par.length;
+    });
+  }
+  assert(added > 0 && notRun > 0, `P: the saved days gave nothing to check (added ${added}, of patterns the page does not run there ${notRun})`);
+  console.log(`New Rule Chart: every pattern ticked fires: on ${days} saved index-days, every one of the page's ${pageCalls} calls stays as it was and ${added} parallel calls are added (${notRun} of patterns the page does not run on that index), each its pattern's own call; walked live candle by candle (${liveSteps} steps) none showed late, vanished or changed (P1, P2)`);
+}
