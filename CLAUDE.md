@@ -564,6 +564,12 @@ branch from `main`.
   arrive. It draws nothing, has no price effect (`autoscaleInfoProvider` null) and starts after the last candle, so the candles' numbers, the FVG
   boxes, the signals' arrows and the profiles are unchanged (checked at 4 times of day and 3 candle sizes: identical to before); the Volume Profile page
   itself is pixel-identical. The crosshair over the empty part finds no candle and the legend keeps showing the last one.
+  The AAA_V1 chart is kept when another tab is chosen (23 November, the owner: "every page is lagging when switch from another page to other page"):
+  `showAaa()` in `static/detail.html` no longer throws the frame away on leaving AAA_V1 (every return built the whole page again: the page, its scripts and
+  four data requests, each waiting on the server) but tells it with `postMessage({aaaShown})`; in `static/volume.html` (EMBED only) the chart then PARKS
+  (the same `parked` flag as `pagehide`: live connection closed, the four polls skip) and, when shown again, does what a page coming back does (beat, then
+  everything fetched at once, a fresh connection). Measured with 350 ms on every request: back to AAA_V1 in 90 ms instead of 1.5 s, no request while
+  away, the same nine data requests on return, FVG and signal boxes and the chart's width as before. The other tabs were already local (under 90 ms).
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each

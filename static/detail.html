@@ -2237,7 +2237,12 @@
       const f = document.createElement("iframe"); f.title = "AAA_V1 chart: " + name; f.src = "/volume-profile?index=" + encodeURIComponent(name) + "&embed=aaa" + (TAB ? "#t=" + encodeURIComponent(TAB) : "");
       frameBox.appendChild(f);
     }
-    if (!on && frameBox.firstChild) frameBox.textContent = "";
+    // The chart is KEPT when another tab is chosen (23 November, the owner: "every page is lagging when switch from another page to other page"):
+    // it used to be thrown away here, and every return to AAA_V1 built the whole page again (the page, its scripts and four data requests, each
+    // waiting on the server: seconds). Now it only rests: the frame tells the chart to close its live connection and stop asking while another
+    // tab is open, and to ask again at once when it is shown. The first visit builds it as before.
+    const f = frameBox.firstChild;
+    if (f && f.contentWindow) { try { f.contentWindow.postMessage({ aaaShown: on }, location.origin); } catch (e) {} }
   }
   function showPanel(which) {
     try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
