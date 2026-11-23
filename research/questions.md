@@ -94,3 +94,9 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 
 ## D1 (open, 20 Nov): a Double Zone made by a step up (the POC jumps to the upper zone, as today on NIFTY 50 and SENSEX after 13:05): does the upper zone hold as the floor to the close? Count on the volume days.
 ## P2 (open, 20 Nov): the P-shape Shape call won 5 of 5 on the two trend days (19 and 20 Nov). Is a P call after 11:00 with the price above yesterday's VAH better than P calls in general? Volume days only; few cases, grow it.
+
+## G1 answered 23 Nov (ULTROAN's own question after today's gap-up that failed at once: NIFTY opened 25,929 over yesterday's close 25,800, closed back under it by 09:25 and fell 563 points). Price only, 500 days of NIFTY 50 (all5m.csv)
+- A gap up of at least 0.15% that is CLOSED within the first 30 minutes (price back under yesterday's close): 49 days (48 before today). The day then closed UNDER its open 80% of the time (41% when the gap was not closed early), under yesterday's close 59% (12% when not closed early), and on average 100 points under the open (without today; the unclosed gaps drifted 27 points up).
+- The same for a gap DOWN that is closed early (price back over yesterday's close): 29 days, closed over the open 59%, +12 points on average: weak, a coin.
+- So the fact is real on the up side and rests on 49 days (about one a fortnight). As a trade it did NOT hold: lab idea 14 (go against the gap at the candle that closes back through yesterday's close) had only 2 of 72 variants good in year 1 and none good in year 2. The cross candle comes after the easy part of the move.
+- Today is one of the 49 (the biggest: -563). Keep the question open and re-answer as days are added.

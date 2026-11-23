@@ -121,6 +121,12 @@ FAM.fvg = { grid: { rel: [0.5, 1], wait: [0, 2, 4], stop: ["far", "mid"], trail:
       if (up && (hi - lo) >= o.rel * c.atr[k]) { let H = -Infinity, L = Infinity; for (let i = 0; i <= k; i++) { H = Math.max(H, b[i].high); L = Math.min(L, b[i].low); } if (!o.ext || (up > 0 ? Math.max(b[k].high, b[k - 1].high) >= H : Math.min(b[k].low, b[k - 1].low) <= L)) G.push({ up, lo, hi, k, dead: false }); } }
     if (b[k].hm > "14:00") return null; for (const g of G) { if (g.dead) continue; const mid = (g.lo + g.hi) / 2; if (k > g.k && (g.up > 0 ? b[k].low <= mid : b[k].high >= mid)) { g.dead = true; continue; }
       if (k === g.k + o.wait) { g.dead = true; return { side: g.up > 0 ? "CE" : "PE", stop: o.stop === "far" ? (g.up > 0 ? g.lo : g.hi) : mid }; } } return null; }; } };
+// idea 14 (23 Nov, ULTROAN's question G1: a gap that fails in the first 30 minutes): the day opens with a gap (at least minGap of the 10-day average daily range)
+// and a candle then CLOSES back through yesterday's close before `until`: go against the gap (PE after an up gap, CE after a down gap) at that candle's close;
+// stop at the day's extreme so far, or beyond yesterday's close by buf ATR; once a day.
+FAM.gapfail = { grid: { minGap: [0.1, 0.2, 0.3], until: ["09:45", "10:15", "11:15"], stop: ["hi", "pdc"], buf: [0.5, 1], rr: [0, 1.5, 2.5], trail: [0, 4] }, mk: (b, c, o) => { if (!c.pdc || !c.adr) return null; const gap = b[0].open - c.pdc; if (Math.abs(gap) < o.minGap * c.adr) return null; const up = gap > 0; let done = false;
+  return (k) => { if (done || b[k].hm > o.until) return null; if (!(up ? b[k].close < c.pdc : b[k].close > c.pdc)) return null; done = true; let ext = up ? -Infinity : Infinity; for (let i = 0; i <= k; i++) ext = up ? Math.max(ext, b[i].high) : Math.min(ext, b[i].low);
+    return { side: up ? "PE" : "CE", stop: o.stop === "hi" ? ext : c.pdc + (up ? 1 : -1) * o.buf * c.atr[k] }; }; } };
 const grid = (g) => Object.entries(g).reduce((acc, [k, vs]) => acc.flatMap(a => vs.map(v => ({ ...a, [k]: v }))), [{}]);
 // the two research years are fixed (16 Nov: a split by the middle moved with every new day and changed year 1); days after 9 Nov 2026 are forward days only
 const Y1 = dates.slice(11).filter(d => d <= "2025-11-10"), Y2 = dates.filter(d => d > "2025-11-10" && d <= "2026-11-09");
@@ -139,6 +145,9 @@ const show = (r) => console.log(`${r.fam.padEnd(6)} ${JSON.stringify(r.o).padEnd
 console.log("\nTop of year 1 per family (picked by year 1's points per call) and what year 2 did:");
 for (const fam of Object.keys(FAM)) good1.filter(r => r.fam === fam).sort((a, b) => b.y1.net / b.y1.n - a.y1.net / a.y1.n).slice(0, 3).forEach(show);
 fs.writeFileSync(__dirname + "/lab.json", JSON.stringify({ tried, good1: good1.length, held: held.length, rows: good1 }));
+{ const rows = res.filter(r => r.fam === "gapfail"); for (const r of rows) if (!r.y2) r.y2 = score(Y2, r.fam, r.o); const g1 = rows.filter(r => r.y1.net > 0 && r.y1.up >= r.y1.dn * 0.8 && r.y1.net - r.y1.best > 0), h = g1.filter(r => r.y2.net > 0 && r.y2.net - r.y2.best > 0);
+  console.log(`\nIDEA OF THE DAY gapfail: variants tried ${Object.keys(FAM.gapfail.grid).reduce((q, k) => q * FAM.gapfail.grid[k].length, 1)}, with 40+ calls in year 1: ${rows.length}, good in year 1: ${g1.length}, also good in year 2: ${h.length}`);
+  rows.sort((x, y) => y.y1.net / y.y1.n - x.y1.net / x.y1.n).slice(0, 5).forEach(show); console.log("(the worst of them, by year 1:)"); rows.slice(-2).forEach(show); }
 // THE WATCH LIST (ultron/watchlist.json): each strategy fixed as found, scored only on the days after its found-on date
 { const W = __dirname + "/../ultron/watchlist.json"; if (fs.existsSync(W)) { const w = JSON.parse(fs.readFileSync(W)); console.log("\nWATCH LIST, new days only:");
   for (const x of w.list) { const ds = dates.filter(d => d > x.found), a = score(ds, x.fam, x.o); x.forward = { days: ds.length, to: ds[ds.length - 1] || null, ...a };

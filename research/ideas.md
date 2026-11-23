@@ -297,3 +297,9 @@ Lesson (fifth time): a true fact about where the price does NOT go back to is no
   DIR-1215 5 days, no call yet; NEWHIGH-STAY 1 day, no call (today opened inside yesterday's value).
 - Note: the work folder was lost on the night of 19 Nov. lab.js was restored from GitHub (18 Nov) and idea 12 put back; the lab gives the same
   numbers as on 19 Nov. watchlist.json was rebuilt with the original settings and found-on dates. Friday's check on NIFTY BANK and SENSEX was not run this week.
+
+## Idea 14 (23 Nov, from question G1): GAP FAILS (gapfail)
+- In words: the day opens with a gap (at least 0.1, 0.2 or 0.3 of the 10-day average daily range); a 5-minute candle then closes back through yesterday's close before 09:45, 10:15 or 11:15: go against the gap (PE after an up gap, CE after a down gap) at that candle's close; stop at the day's extreme so far, or 0.5 / 1 ATR beyond yesterday's close; target 0, 1.5 or 2.5 times the risk; trail 0 or 4 ATR; once a day. 216 variants.
+- Result: 72 had 40+ calls in year 1; 2 were good in year 1 (net positive without the best day); 0 of those held in year 2. Best: minGap 0.1, until 10:15, stop at the extreme, target 2.5: Y1 60 calls net +384; Y2 50 calls net -444 (CE -873, PE +429). The PE side alone is positive in both years but small and with few calls; not on the watch list.
+- Verdict: the fact (G1) is true, the entry after the cross is late. NOT on the watch list. Variants tried so far: 1,046 (830 before): the bar rises.
+- Watch list, new days to 23 Nov: QUIET-BREAK 6 days, 3 calls, -47 (2 up 1 down); NEWHIGH-TREND 6 days, 6 calls, +534 (3 up 3 down; +196 today, a down day: the PE side); DIR-1215 6 days, no call; NEWHIGH-STAY 2 days, no call.
