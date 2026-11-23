@@ -1194,7 +1194,7 @@
   }
   $("show-oi").addEventListener("change", () => { try { localStorage.setItem("volumeProfileOI", $("show-oi").checked ? "1" : "0"); } catch (e) {} loadOi(); });
   $("index").addEventListener("change", () => { state.oi = null; state.oiWhy = ""; setTimeout(() => { drawOi(); loadOi(); }, 0); });
-  setInterval(() => { if (!document.hidden) loadOi(); }, 15000);  // every 15 s, as the index page's OI chart (the owner, 17 November: "yes make it 15 seconds")
+  setInterval(() => { if (!document.hidden && !parked) loadOi(); }, 15000);  // every 15 s, as the index page's OI chart (the owner, 17 November: "yes make it 15 seconds")
   setTimeout(loadOi, 1500);
 
   // ---------------------------------------------------------------- the Shape signal (static/vpshape.js)
@@ -1577,11 +1577,11 @@
   function reconnect() { const old = liveWs; liveWs = null; if (old && old.readyState <= WebSocket.OPEN) old.close(); keepAlive(); }
   beat().then(() => { load(); loadSignal(); keepAlive(); });
   setInterval(beat, 15000);
-  setInterval(() => { if (!document.hidden) load(); }, 20000);  // the closed candles and the futures' volume, every 20 s
+  setInterval(() => { if (!document.hidden && !parked) load(); }, 20000);  // the closed candles and the futures' volume, every 20 s
   // the signal follows the live feed (the owner, 13 November: "it should run on live feed"): asked every 5 seconds, so a
   // candle that has just finished gives its signal within seconds, and a stop or a target touched by the live price shows at once
-  setInterval(() => { if (!document.hidden) loadSignal(); }, 5000);
-  setInterval(() => { if (!document.hidden) loadPanel(); }, 5000);  // the engine moves once a minute; asked often so a closed minute shows within seconds
+  setInterval(() => { if (!document.hidden && !parked) loadSignal(); }, 5000);
+  setInterval(() => { if (!document.hidden && !parked) loadPanel(); }, 5000);  // the engine moves once a minute; asked often so a closed minute shows within seconds
   drawPanel(); loadPanel();
   // Back on the page (18 November, the owner, on the phone: "if i switch from another to this screen on mobile, chart freezes for
   // 10 seconds and it starts running again. It should not happen"). On a phone the live connection dies without saying so while
@@ -1623,6 +1623,15 @@
   window.addEventListener("online", () => { kickWait = KICK_FIRST; reconnectNow(); });
   window.addEventListener("pagehide", () => { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); });
   window.addEventListener("pageshow", (event) => { if (!event.persisted) return; parked = false; beat().then(() => { load(); keepAlive(); }); });
+  // AAA_V1's chart rests while another tab of the index page is open (23 November, the owner: "every page is lagging when switch from another page to
+  // other page"): the index page keeps this chart instead of building it again on every return, and says so here. Resting: the live connection is
+  // closed and nothing is asked of the server (the polls below skip while parked); shown again: the same as coming back to a page, a fresh
+  // connection and everything fetched at once. Nothing changes on the Volume Profile page itself (it never gets this message).
+  window.addEventListener("message", (e) => {
+    if (!EMBED || e.origin !== location.origin || !e.data || typeof e.data.aaaShown !== "boolean") return;
+    if (!e.data.aaaShown) { if (!parked) { parked = true; if (liveWs && liveWs.readyState <= WebSocket.OPEN) liveWs.close(); } }
+    else if (parked) { parked = false; kickWait = KICK_FIRST; beat().then(() => { load(); loadSignal(); loadPanel(); loadOi(); keepAlive(); }); }
+  });
   // The page stays where it is: whatever tries to scroll it is put back at once; the wheel with Ctrl held, a pinch on a
   // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
   const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };

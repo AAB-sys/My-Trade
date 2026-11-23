@@ -557,6 +557,12 @@ branch from `main`.
   `trendshot/fs2.js` (42 pages, 548 FVG-list gaps, 74 signals: the fill rule re-derived from the raw candles, every signal's gap found in the FVG list with
   the same levels, arrows = rows, FVG gear change, FVG ticked off and on). The owner's own two-year test in the document found the signal no better than
   random zones (49-57% right way): it is a marker, not proof.
+  The AAA_V1 chart is kept when another tab is chosen (23 November, the owner: "every page is lagging when switch from another page to other page"):
+  `showAaa()` in `static/detail.html` no longer throws the frame away on leaving AAA_V1 (every return built the whole page again: the page, its scripts and
+  four data requests, each waiting on the server) but tells it with `postMessage({aaaShown})`; in `static/volume.html` (EMBED only) the chart then PARKS
+  (the same `parked` flag as `pagehide`: live connection closed, the four polls skip) and, when shown again, does what a page coming back does (beat, then
+  everything fetched at once, a fresh connection). Measured with 350 ms on every request: back to AAA_V1 in 90 ms instead of 1.5 s, no request while
+  away, the same nine data requests on return, FVG and signal boxes and the chart's width as before. The other tabs were already local (under 90 ms).
 - The server's own Dhan token (19 November, the owner: "what about TOTP option on Dhan ?", "yes, build it"): with `DHAN_PIN` and
   `DHAN_TOTP_SECRET` set in the host's settings (never in the repo or a chat), `dhan.py` makes a 24-hour token itself
   (`renew_token`: POST `auth.dhan.co/app/generateAccessToken` with the client id, the PIN and the 6-digit code, `totp_code`): each
