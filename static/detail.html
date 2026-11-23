@@ -171,6 +171,7 @@
   #signals thead th { position: sticky; top: 0; background: var(--surface); z-index: 2; box-shadow: inset 0 -1px 0 var(--border); }  /* fixed in its scroll box, as the OI chart's header */
   #signals th, #signals td { padding-left: 10px; }
   #signals td.when small, #signals td.target small { display: block; color: var(--muted); font-weight: 400; }
+  #signals td small.parallel { display: block; color: var(--watch); font-weight: 600; }  /* a ticked pattern's own call beside the page's (23 November) */
   #signals td.up { color: var(--up); } #signals td.down { color: var(--down); }
   #signals td.cand.carry { color: var(--up); font-weight: 600; } #signals td.cand.exit { color: var(--down); font-weight: 600; }
   #signals tr.ended td { color: var(--ink-2); }
@@ -2370,7 +2371,17 @@
     // the strategies ticked under Settings > Strategies run ON THEIR OWN (22 November): their calls go to "Call logs from strategy", never into the table above
     const strategies = NewRule.strategiesFor ? NewRule.strategiesFor(name, state.strategies || new Set()) : [];
     const stratTrades = NewRule.runStrategies({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes }, strategies);  // each strategy on its own: ticking one never takes a call from another
-    return { ...NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) }), bars, before, closed, dayEnd, volumes, strategies, stratTrades };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
+    const run = NewRule.runDay({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes, ...(more ? { more } : {}), ...(rules ? { rules } : {}) });
+    // every pattern ticked fires (23 November, the owner: "every pattern which is ticked in the setting should be fired on live feed chart"):
+    // the page's run above is untouched; each pattern ticked also runs on its own, and its calls the page's run does not have (held back by
+    // another call open, or a pattern the page does not run on this index) are added beside them, marked parallel (NewRule.parallelCalls)
+    if (NewRule.parallelCalls) {
+      const tk = ruleTicks(), page = NewRule.rulesFor(name, new Set(Object.keys(NewRule.RULE_OPT_IN))), shown = typeof MorePat !== "undefined" ? (MorePat.PAGE_ORDER || MorePat.ORDER) : [];
+      const extra = NewRule.parallelCalls({ bars, index: name, prevBars: before, atrSeed: seed, closedCount: closed, dayEnd, volumes }, run.trades,
+        { rules: page.filter(rule => tk[rule]), more: shown.filter(key => tk[key]) });  // only the patterns the Settings list offers, ticked on this index page
+      if (extra.length) run.trades = run.trades.concat(extra).sort((a, b) => a.signalTime - b.signalTime || (a.parallel ? 1 : 0) - (b.parallel ? 1 : 0));
+    }
+    return { ...run, bars, before, closed, dayEnd, volumes, strategies, stratTrades };  // index: the double bottom's version 2 and its shadow log on NIFTY 50 only (27 October)  // the previous sessions' candles also feed the symmetrical triangles' trend window  // before, closed, dayEnd: handed on to the 14 more patterns' shadow log (30 October)
   }
   let wedgeLines = [], wedgeLinesKey = "";  // the two sloped lines of each wedge call (falling / rising wedge), line series of their own
   function setWedgeLines(segs) {
@@ -2473,6 +2484,8 @@
     setVwapLine([]);
   }
   // the lines for the chart (returned to drawLevels) and the table's rows
+  // each rule's and strategy's tick in Settings on this index page, by the engine's name (the 14 more patterns by their key, 30 October)
+  function ruleTicks() { return { "day break": (state.strategies || new Set()).has("day break"), "midday box": (state.strategies || new Set()).has("midday box"), "double top": state.signalsDT, "double top (strict)": state.signalsDTS, "double bottom": state.signalsDB, "triple top": state.signalsTT, "triple bottom": state.signalsTB, "falling wedge": state.signalsFW, "rising wedge": state.signalsRW, "bullish rectangle": state.signalsBR, "bullish symmetrical triangle": state.signalsBST, "bearish symmetrical triangle": state.signalsBET, "ascending triangle": state.signalsASC, "descending triangle": state.signalsDES , ...Object.fromEntries((typeof MorePat !== "undefined" ? (MorePat.PAGE_ORDER || MorePat.ORDER) : []).map(key => [key, (state.morePat || new Set()).has(key)])) }; }
   function drawSignals() {
     const run = signalsNow();
     if (!run) { clearSignals(); return []; }
@@ -2483,7 +2496,7 @@
     // the one as of the candle before the signal candle, from the previous sessions loaded and today's candles, as the engine reads it.
     const guideAtrs = NewRule.atrSeries((run.before || []).concat(run.bars)), guideBase = (run.before || []).length;
     const guideOf = (t) => { if (t.target != null || t.entry == null || t.trailAtr != null) return null; const a = guideAtrs[guideBase + t.signalCandle - 1]; return a ? NewRule.round2(t.entry + (t.side === "CE" ? 1 : -1) * a) : null; };  // a call with its own wide trailing stop (NEWHIGH-TREND, t.trailAtr) has no 1 ATR guide: its stop sells it
-    const ticked = { "day break": (state.strategies || new Set()).has("day break"), "midday box": (state.strategies || new Set()).has("midday box"), "double top": state.signalsDT, "double top (strict)": state.signalsDTS, "double bottom": state.signalsDB, "triple top": state.signalsTT, "triple bottom": state.signalsTB, "falling wedge": state.signalsFW, "rising wedge": state.signalsRW, "bullish rectangle": state.signalsBR, "bullish symmetrical triangle": state.signalsBST, "bearish symmetrical triangle": state.signalsBET, "ascending triangle": state.signalsASC, "descending triangle": state.signalsDES , ...Object.fromEntries((typeof MorePat !== "undefined" ? (MorePat.PAGE_ORDER || MorePat.ORDER) : []).map(key => [key, (state.morePat || new Set()).has(key)])) };  // the 14 more patterns' ticks (30 October)
+    const ticked = ruleTicks();
     run.trades.concat(run.stratTrades || []).filter(t => ticked[t.rule]).forEach(t => {  // a rule's marks and lines only while its tick is on; the table carries every rule's calls
       const up = t.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), bottoms = t.rule === "double bottom" || t.rule === "triple bottom", wedge = t.upperLine != null;
       const lineName = t.more ? (t.lineName === "VWAP" ? "VWAP at call" : t.lineName) : t.rule === "day break" ? (t.side === "CE" ? "day high" : "day low") : t.rule === "midday box" ? (t.side === "CE" ? "box top" : "box bottom") : t.rule === "bullish rectangle" ? (t.side === "CE" ? "resistance" : "support") : t.rule === "ascending triangle" ? "resistance" : t.rule === "descending triangle" ? "support" : wedge ? "break level" : bottoms ? (t.side === "CE" ? "neckline" : "support") : t.rule === "triple top" ? (t.side === "PE" ? "neckline" : "resistance") : "neckline";
@@ -2547,7 +2560,7 @@
         : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
       tr.innerHTML = `<td class="when">${callTime(t.signalTime)}<small>in at ${callTime(t.entryTime)}</small></td>`
         + `<td class="call">Buy ${t.side}</td>`
-        + `<td>Rule:- ${t.more ? t.kind : { "day break": "Day Break", "double top": "Double Top", "double top (strict)": "Double Top (strict)", "double bottom": "Double Bottom", "triple top": "Triple Top", "triple bottom": "Triple Bottom", "falling wedge": "Falling Wedge", "rising wedge": "Rising Wedge", "bullish rectangle": "Bullish Rectangle", "bullish symmetrical triangle": "Bullish Symmetrical Triangle", "bearish symmetrical triangle": "Bearish Symmetrical Triangle", "ascending triangle": "Ascending Triangle", "descending triangle": "Descending Triangle" }[t.rule] || t.rule}</td>`  // the rule's name (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
+        + `<td>Rule:- ${t.more ? t.kind : { "day break": "Day Break", "double top": "Double Top", "double top (strict)": "Double Top (strict)", "double bottom": "Double Bottom", "triple top": "Triple Top", "triple bottom": "Triple Bottom", "falling wedge": "Falling Wedge", "rising wedge": "Rising Wedge", "bullish rectangle": "Bullish Rectangle", "bullish symmetrical triangle": "Bullish Symmetrical Triangle", "bearish symmetrical triangle": "Bearish Symmetrical Triangle", "ascending triangle": "Ascending Triangle", "descending triangle": "Descending Triangle" }[t.rule] || t.rule}${t.parallel ? `<small class="parallel" title="This pattern is ticked in Settings: its signal fired as a call of its own, beside the page's other calls">Parallel call</small>` : ""}</td>`  // the rule's name; a ticked pattern's own call beside the page's (23 November) (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
         + `<td>${fmt.format(t.entry)}</td>`
         + `<td class="target">${t.target == null ? (guide != null ? `guide ${fmt.format(guide)}` : "—") : fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
         + `<td class="opt">—</td><td class="opt ${pts > 0 ? "up" : pts < 0 ? "down" : ""}">${pts > 0 ? "+" : ""}${fmt.format(pts)} pts</td>`
@@ -2624,7 +2637,7 @@
     const s = log.summary, pts = (v) => `${v > 0 ? "+" : ""}${fmt.format(v)}`, tone = (v) => v > 0 ? "up" : v < 0 ? "down" : "", ruleName = (key) => MorePat.RULES[key].names.join(" / ");
     const counts = Object.keys(s.byRule).map(key => `${ruleName(key)} ${s.byRule[key]}`).join(" · ");
     const takenCount = log.rows.filter(r => moreTaken(r, run && run.trades)).length;
-    sum.textContent = `Every signal of the 14 rules on today's closed candles. A signal becomes a call in the table above like any other rule's (one trade at a time, 09:30 to 14:45, the same exits); the rest say why not. Today: ${s.signals} signal${s.signals === 1 ? "" : "s"}, ${takenCount} taken as calls, ${s.ok} inside the window`
+    sum.textContent = `Every signal of the 14 rules on today's closed candles. A signal becomes a call in the table above like any other rule's (one trade at a time, 09:30 to 14:45, the same exits); a ticked rule's signal held back that way fires as a parallel call; the rest say why not. Today: ${s.signals} signal${s.signals === 1 ? "" : "s"}, ${takenCount} taken as calls, ${s.ok} inside the window`
       + (counts ? ` · ${counts}` : "") + (s.often.length ? ` · spoke more than 5 times: ${s.often.map(ruleName).join(", ")}` : "") + (s.ok ? ` · paper, each on its own: ${pts(s.okPoints)} pts` : "");
     const how = { reclaim: "reclaim", retouch: "retouch", trail: "trailing stop", "day end": "end of day" };
     const rows = log.rows.slice().reverse().map(r => {
@@ -2633,7 +2646,7 @@
       const busy = !taken && bar && trades.some(t => t.signalCandle < r.k && (t.exitTime == null || t.exitTime > bar.time || (t.exitTime === bar.time && t.how === "day end")));
       const why = !taken && bar && skipped.find(x => x.time === bar.time && !x.rule && (x.side == null || x.side === r.side)), other = !taken && trades.find(t => t.signalCandle === r.k);  // the engine's own skip notes (a scanner's notes carry its rule)
       const unticked = !taken && NewRule.MORE.optIn && NewRule.MORE.optIn.includes(r.key) && !(state.morePat || new Set()).has(r.key);  // Engulfing (strict) unticked: no call (20 November)
-      const order = taken ? `taken: ${taken.exit != null ? `${taken.points > 0 ? "+" : ""}${fmt.format(taken.points)} pts` : "open"}` : r.status !== "ok" ? MORE_STATUS[r.status] : unticked ? "no call: unticked in Settings" : busy ? "a trade already open" : why ? why.why : other ? `the ${other.more ? other.kind : other.rule} call on the same candle` : r.entry == null ? "no next candle yet" : "not taken";
+      const order = taken ? `taken${taken.parallel ? " as a parallel call" : ""}: ${taken.exit != null ? `${taken.points > 0 ? "+" : ""}${fmt.format(taken.points)} pts` : "open"}` : r.status !== "ok" ? MORE_STATUS[r.status] : unticked ? "no call: unticked in Settings" : busy ? "a trade already open" : why ? why.why : other ? `the ${other.more ? other.kind : other.rule} call on the same candle` : r.entry == null ? "no next candle yet" : "not taken";
       tr.innerHTML = `<td>${callTime(r.signalTime)}</td><td class="rule">${r.rule}<small>${r.key}</small></td><td>Buy ${r.side}</td><td class="${taken ? "ok" : ""}">${order}</td>`
         + `<td>${fmt.format(r.level)}${r.target != null ? `<small>target ${fmt.format(r.target)}</small>` : ""}</td><td>${fmt.format(r.close)}<small>ATR ${fmt.format(r.atr)}</small></td>`
         + `<td>${r.entry == null ? "no next candle yet" : `${fmt.format(r.entry)}<small>at ${callTime(r.entryTime)}</small>`}</td>`

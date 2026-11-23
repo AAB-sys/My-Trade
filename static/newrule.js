@@ -767,5 +767,23 @@
     own.trades.forEach(t => { t.lane = "trend"; });
     return { ...main, trades: main.trades.concat(own.trades).sort((a, b) => a.signalTime - b.signalTime || (a.lane ? 1 : -1)), skipped: main.skipped.concat(own.skipped) };
   }
-  root.NewRule = { CFG, DT, DB, MORE, LANE, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  // EVERY PATTERN TICKED FIRES (23 November, the owner: "every pattern which is ticked in the setting should be fired on live feed chart";
+  // "this should not delete the held or kept rules or strategies"). The page's run above stays exactly as it is: every call in it is
+  // unchanged. Each pattern ticked in Settings on the index page also runs ON ITS OWN, as a strategy does (its own one call at a time, the
+  // entry window, the same exits), and every call of it that the page's run does not have is added beside the page's calls, `parallel: true`:
+  // a signal the page held back (another call open, another rule's signal the other way on the same candle, the losses in a row), or a
+  // pattern of the 14 that the page does not run on this index (on NIFTY BANK and SENSEX). Unticked: nothing is added. NEWHIGH-TREND has a
+  // lane of its own already (LANE) and the strategies run apart (runStrategies): nothing to add for them.
+  // opts: runDay's options without rules and more; page: the trades of the page's run; ticked: { rules: [names], more: [keys] }
+  const callKey = (t) => `${t.rule}|${t.side}|${t.signalTime}`;
+  function parallelCalls(opts, page, ticked) {
+    const have = new Set((page || []).map(callKey)), out = [];
+    for (const rule of (ticked && ticked.rules) || [])
+      if (!STRATEGIES[rule] && (rule === "double top" || RULES[rule] || SCANNERS[rule])) out.push(...runDayOne({ ...opts, rules: [rule], more: false, dbShadow: false }).trades);
+    for (const key of (ticked && ticked.more) || [])  // index null: the pattern runs on this index too (moreOn, ruleOn), alone in its run
+      if (!LANE.includes(key) && root.MorePat && root.MorePat.RULES[key]) out.push(...runDayOne({ ...opts, index: null, rules: [], more: [key], dbShadow: false }).trades);
+    return out.filter(t => !have.has(callKey(t))).map(t => Object.assign(t, { parallel: true }))
+      .sort((a, b) => a.signalTime - b.signalTime || (a.rule < b.rule ? -1 : 1));
+  }
+  root.NewRule = { CFG, DT, DB, MORE, LANE, parallelCalls, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
