@@ -257,6 +257,22 @@
       const list = boxes(), shut = closedBoxes(); if (!list.length && !shut.length) return;
       const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, w = scope.mediaSize.width;
       ctx.save(); const taken = [];  // the labels' places: a label that would lie on a newer gap's label is left out
+      const takenShut = [];  // their own places: their labels stand at the filling end, away from the open gaps' labels at the right edge
+      for (const b of shut) {  // the filled gaps, drawn FIRST so every open gap, label and line lies over them: a faint box with a dashed edge from the first candle to the filling candle, and its label at the filling end
+        const colour = A.css(b.z.kind === "bullish" ? "--up" : "--down"), x = Math.round(b.x0 * hr), wd = Math.max(1, Math.round((b.x1 - b.x0) * hr)), yy = Math.round(b.top * vr), hh = Math.max(1, Math.round((b.bottom - b.top) * vr));
+        if (!words) {
+          ctx.fillStyle = colour; ctx.globalAlpha = 0.07; ctx.fillRect(x, yy, wd, hh);
+          ctx.globalAlpha = 0.45; ctx.strokeStyle = colour; ctx.lineWidth = Math.max(1, Math.round(vr)); ctx.setLineDash([3 * hr, 3 * hr]); ctx.strokeRect(x + 0.5, yy + 0.5, wd, hh); ctx.setLineDash([]);
+        } else if (st.labels) {
+          ctx.globalAlpha = 1; ctx.font = `600 ${Math.round(10 * vr)}px ${FONT()}`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+          let text = `${b.n} · FVG ${A.num(b.z.bottom)} – ${A.num(b.z.top)} · ${b.status}`, tw = ctx.measureText(text).width; const th = Math.round(13 * vr), cy = Math.round((b.top + b.bottom) / 2 * vr), cap = Math.round((w - 175) * hr);  // never into the open gaps' labels at the right edge
+          if (Math.min(cap, Math.round(b.x1 * hr) + tw + Math.round(10 * hr)) - tw < Math.round(4 * hr)) { text = `${b.n} · ${b.status}`; tw = ctx.measureText(text).width; }  // a narrow chart (a phone): no room for the levels, the number and the status stay
+          const rx = Math.max(Math.min(cap, Math.round(b.x1 * hr) + tw + Math.round(10 * hr)), tw + Math.round(6 * hr));
+          if (takenShut.some(y => Math.abs(y - cy) < th)) continue; takenShut.push(cy);
+          ctx.save(); ctx.globalAlpha = 0.8; ctx.fillStyle = A.css("--surface"); ctx.fillRect(rx - tw - Math.round(3 * hr), cy - th / 2, tw + Math.round(6 * hr), th); ctx.restore();
+          ctx.globalAlpha = 0.85; ctx.fillStyle = colour; ctx.fillText(text, rx, cy);
+        }
+      }
       for (const b of list) {
         const colour = A.css(b.z.kind === "bullish" ? "--up" : "--down"), x = Math.round(b.x0 * hr), y = Math.round(b.top * vr), seg = (r) => [Math.round(r[0] * vr), Math.max(1, Math.round((r[1] - r[0]) * vr))];
         if (!words) {
@@ -270,22 +286,6 @@
           if (taken.some(y => Math.abs(y - cy) < th)) continue; taken.push(cy);
           ctx.save(); ctx.globalAlpha = 0.8; ctx.fillStyle = A.css("--surface"); ctx.fillRect(rx - tw - Math.round(3 * hr), cy - th / 2, tw + Math.round(6 * hr), th); ctx.restore();
           ctx.fillStyle = colour; ctx.fillText(text, rx, cy);
-        }
-      }
-      const takenShut = [];  // their own places: their labels stand at the filling end, away from the open gaps' labels at the right edge
-      for (const b of shut) {  // the filled gaps: a faint box with a dashed edge from the first candle to the filling candle, and its label at the filling end
-        const colour = A.css(b.z.kind === "bullish" ? "--up" : "--down"), x = Math.round(b.x0 * hr), wd = Math.max(1, Math.round((b.x1 - b.x0) * hr)), yy = Math.round(b.top * vr), hh = Math.max(1, Math.round((b.bottom - b.top) * vr));
-        if (!words) {
-          ctx.fillStyle = colour; ctx.globalAlpha = 0.07; ctx.fillRect(x, yy, wd, hh);
-          ctx.globalAlpha = 0.45; ctx.strokeStyle = colour; ctx.lineWidth = Math.max(1, Math.round(vr)); ctx.setLineDash([3 * hr, 3 * hr]); ctx.strokeRect(x + 0.5, yy + 0.5, wd, hh); ctx.setLineDash([]);
-        } else if (st.labels) {
-          ctx.globalAlpha = 1; ctx.font = `600 ${Math.round(10 * vr)}px ${FONT()}`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
-          let text = `${b.n} · FVG ${A.num(b.z.bottom)} – ${A.num(b.z.top)} · ${b.status}`, tw = ctx.measureText(text).width; const th = Math.round(13 * vr), cy = Math.round((b.top + b.bottom) / 2 * vr), cap = Math.round((w - 175) * hr);  // never into the open gaps' labels at the right edge
-          if (Math.min(cap, Math.round(b.x1 * hr) + tw + Math.round(10 * hr)) - tw < Math.round(4 * hr)) { text = `${b.n} · ${b.status}`; tw = ctx.measureText(text).width; }  // a narrow chart (a phone): no room for the levels, the number and the status stay
-          const rx = Math.max(Math.min(cap, Math.round(b.x1 * hr) + tw + Math.round(10 * hr)), tw + Math.round(6 * hr));
-          if (takenShut.some(y => Math.abs(y - cy) < th)) continue; takenShut.push(cy);
-          ctx.save(); ctx.globalAlpha = 0.8; ctx.fillStyle = A.css("--surface"); ctx.fillRect(rx - tw - Math.round(3 * hr), cy - th / 2, tw + Math.round(6 * hr), th); ctx.restore();
-          ctx.globalAlpha = 0.85; ctx.fillStyle = colour; ctx.fillText(text, rx, cy);
         }
       }
       ctx.restore();
