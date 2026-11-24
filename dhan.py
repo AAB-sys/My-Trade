@@ -391,8 +391,10 @@ def token_report() -> dict:
     check = token_check()
     why = renew_due(check)
     if why:
+        before = _own["last_try"]
         made = renew_token(why)
-        started = time.time()  # this report tried the token itself (made or not): the stamp starts after that try
+        if _own["last_try"] != before:  # this report asked Dhan itself (made or not): the stamp starts after that try; a try made earlier, meanwhile, stays newer than the stamp
+            started = time.time()
         if made:
             check = token_check()
     if totp_on() or _own["tries"]:
