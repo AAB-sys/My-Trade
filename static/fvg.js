@@ -218,7 +218,7 @@
       // Every time shown is the chart's own label of the candle (its start), not the minute the candle ended: the gap's third candle. The numbers 1, 2, 3
       // run oldest first over every gap formed today (filled ones too), and are written on the chart's labels of the gaps still open
       const all = t.made_today.map(g => t.describe(g)).sort((a, b) => a.id - b.id), no = new Map(all.map((g, i) => [g.id, i + 1])), open = gaps.slice().sort((a, b) => a.id - b.id);
-      st.out = { tf: s.tf, day: s.day, start: s.start, gaps, open, list: all, no, events, made: t.made_today.length, below, above, price, read: s.cs.length, last: last ? last.hm : null, atr: t.atr() };
+      st.out = { tf: s.tf, day: s.day, gaps, open, list: all, no, events, made: t.made_today.length, below, above, price, read: s.cs.length, last: last ? last.hm : null, atr: t.atr() };
       row(); redraw();
     }
 
@@ -239,47 +239,10 @@
         const unfilled = done ? (bull ? [cut, bottom] : [top, cut]) : [top, bottom], filled = done ? (bull ? [top, cut] : [cut, bottom]) : null;
         return { z, n: o.no.get(z.id), x0, top, bottom, unfilled, filled, half: Y(z.half) }; }).filter(Boolean);
     }
-    // The gaps that are filled (or failed) and so no longer open (24 November, the owner, with the list showing gaps 3 and 4 "Filled 100%" and none of them on the
-    // chart): each is drawn from its first candle to the candle that filled it, very faint, with its number and its status, so every row of the list has its place
-    // on the chart. The open gaps' boxes (boxes()) are as they were.
-    function closedBoxes() {
-      const o = st.out; if (!st.on || !o || !o.list || !o.list.length || o.start == null) return [];
-      const Y = (p) => A.series.priceToCoordinate(p), openIds = new Set(o.gaps.map(g => g.id));
-      return o.list.filter(z => !openIds.has(z.id) && (z.filled_hm || z.inverted_hm)).map(z => {
-        const top = Y(z.top), bottom = Y(z.bottom); if (top == null || bottom == null) return null;
-        const end = z.filled_hm || z.inverted_hm;  // the end of the candle that did it: the chart's label of that candle is its start
-        let x0 = xAt(z.from_time == null ? o.start + mins(z.from_hm) * 60 : z.from_time); if (x0 == null || x0 < 0) x0 = 0;
-        const x1 = xAt(o.start + (mins(end) - o.tf) * 60); if (x1 == null) return null;
-        return { z, n: o.no.get(z.id), x0, x1: Math.max(x1, x0), top, bottom, status: fillStatus(z.filled_pct) };
-      }).filter(Boolean);
-    }
     function paint(scope, words) {
-      const list = boxes(), shut = closedBoxes(); if (!list.length && !shut.length) return;
+      const list = boxes(); if (!list.length) return;
       const ctx = scope.context, hr = scope.horizontalPixelRatio, vr = scope.verticalPixelRatio, w = scope.mediaSize.width;
       ctx.save(); const taken = [];  // the labels' places: a label that would lie on a newer gap's label is left out
-      const takenShut = [];  // their own places: their labels stand at the filling end, away from the open gaps' labels at the right edge
-      for (const b of shut) {  // the filled gaps, drawn FIRST so every open gap, label and line lies over them: a faint box with a dashed edge from the first candle to the filling candle, and its label at the filling end
-        const colour = A.css(b.z.kind === "bullish" ? "--up" : "--down"), x = Math.round(b.x0 * hr), wd = Math.max(1, Math.round((b.x1 - b.x0) * hr)), yy = Math.round(b.top * vr), hh = Math.max(1, Math.round((b.bottom - b.top) * vr));
-        if (!words) {
-          // the zone as clear as an open gap's (24 November, the owner: "why it is not showing like [the open gaps]"), up to the candle that filled it, with its dashed 50% line;
-          // from there to the right edge only the two edges stay, faint, so the levels can still be followed
-          ctx.fillStyle = colour; ctx.globalAlpha = 0.16; ctx.fillRect(x, yy, wd, hh);
-          ctx.strokeStyle = colour; ctx.lineWidth = Math.max(1, Math.round(vr)); ctx.setLineDash([4 * hr, 4 * hr]);
-          ctx.globalAlpha = 0.6; ctx.strokeRect(x + 0.5, yy + 0.5, wd, hh);
-          const my = Math.round((b.top + b.bottom) / 2 * vr) + 0.5; ctx.beginPath(); ctx.moveTo(x, my); ctx.lineTo(x + wd, my); ctx.stroke();
-          ctx.globalAlpha = 0.25; ctx.beginPath(); ctx.moveTo(x + wd, yy + 0.5); ctx.lineTo(w * hr, yy + 0.5); ctx.moveTo(x + wd, yy + hh + 0.5); ctx.lineTo(w * hr, yy + hh + 0.5); ctx.stroke();
-          ctx.setLineDash([]);
-        } else if (st.labels) {
-          ctx.globalAlpha = 1; ctx.font = `600 ${Math.round(10 * vr)}px ${FONT()}`; ctx.textAlign = "right"; ctx.textBaseline = "middle";
-          let text = `${b.n} · FVG ${A.num(b.z.bottom)} – ${A.num(b.z.top)} · ${b.status}`, tw = ctx.measureText(text).width; const th = Math.round(13 * vr), cy0 = Math.round((b.top + b.bottom) / 2 * vr), cap = Math.round((w - 175) * hr);  // never into the open gaps' labels at the right edge
-          if ((Math.round(b.x1 * hr) + tw + Math.round(10 * hr) <= cap ? Math.round(b.x1 * hr) + tw + Math.round(10 * hr) : Math.round(b.x0 * hr) - Math.round(6 * hr)) - tw < Math.round(4 * hr)) { text = `${b.n} · ${b.status}`; tw = ctx.measureText(text).width; }  // a narrow chart (a phone): no room for the levels, the number and the status stay
-          const right = Math.round(b.x1 * hr) + tw + Math.round(10 * hr), rx = Math.max(right <= cap ? right : Math.round(b.x0 * hr) - Math.round(6 * hr), tw + Math.round(6 * hr));  // after the box when there is room, else before its first candle: the label never lies on the box
-          let cy = cy0; for (const step of [0, 1, -1, 2, -2, 3, -3]) { const y = cy0 + step * th; if (!takenShut.some(t => Math.abs(t - y) < th)) { cy = y; break; } }  // a label that would lie on another filled gap's label moves up or down a line, it is never left out
-          takenShut.push(cy);
-          ctx.save(); ctx.globalAlpha = 0.8; ctx.fillStyle = A.css("--surface"); ctx.fillRect(rx - tw - Math.round(3 * hr), cy - th / 2, tw + Math.round(6 * hr), th); ctx.restore();
-          ctx.globalAlpha = 0.85; ctx.fillStyle = colour; ctx.fillText(text, rx, cy);
-        }
-      }
       for (const b of list) {
         const colour = A.css(b.z.kind === "bullish" ? "--up" : "--down"), x = Math.round(b.x0 * hr), y = Math.round(b.top * vr), seg = (r) => [Math.round(r[0] * vr), Math.max(1, Math.round((r[1] - r[0]) * vr))];
         if (!words) {
