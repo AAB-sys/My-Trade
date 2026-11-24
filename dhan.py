@@ -387,13 +387,17 @@ def token_check() -> dict:
 def token_report() -> dict:
     """token_check(), then the morning's renewal when it is due (renew_due), then what /health shows: the check of the token
     in use, with "own" (own_report) beside it when the server may make its own token."""
+    started = time.time()  # the stamp is the START of the report: a token made meanwhile (by another thread) leaves the report stale
     check = token_check()
     why = renew_due(check)
-    if why and renew_token(why):
-        check = token_check()
+    if why:
+        made = renew_token(why)
+        started = time.time()  # this report tried the token itself (made or not): the stamp starts after that try
+        if made:
+            check = token_check()
     if totp_on() or _own["tries"]:
         check["own"] = own_report()
-    _own["reported"] = time.time()
+    _own["reported"] = started
     return check
 
 
