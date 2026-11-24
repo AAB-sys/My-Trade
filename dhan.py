@@ -28,6 +28,7 @@ import struct
 import threading
 import time
 from datetime import date, datetime, timedelta, timezone
+from datetime import time as time_of_day
 from pathlib import Path
 
 import httpx
@@ -503,8 +504,13 @@ def cached(key: tuple, ttl: float, make):
             making.set()
 
 
+def _clock() -> datetime:
+    """The clock in India (a function of its own so a test can set it)."""
+    return datetime.now(IST)
+
+
 def today_ist() -> date:
-    return datetime.now(IST).date()
+    return _clock().date()
 
 
 # ---------------------------------------------------------------- index candles and quotes
@@ -842,10 +848,30 @@ def fetch_detail(name: str, range_key: str, interval_key: str, intervals: dict, 
         keep = set(sessions[-ranges[range_key]["days"]:])
         candles = [b for b in all_candles if bar_date(b) in keep]
     previous_days = [d for d in days if bar_date(d) < today]
-    previous = previous_days[-1] if previous_days else None
+    latest = previous_days[-1] if previous_days else None  # the last session before today
     todays = [b for b in all_candles if bar_date(b) == today]
-    q = {"last_price": last_price} if last_price else quote(name)
-    last = float(q.get("last_price") or (todays[-1]["close"] if todays else (previous["close"] if previous else 0)))
+    # A day nothing trades (24 November, the owner, with the dashboard and an index page on their phone: "Waiting for the first prices from Dhan",
+    # "Couldn't load (HTTP 503)", "No candles to show yet": "I should be able to see yesterday's data on every page"): on a holiday Dhan answers the
+    # price request with an EMPTY answer ({'data': {'IDX_I': {}}}). That was taken as a failure, so the candles the server already had were thrown
+    # away (the 503) and the dashboard had no price. Now an empty answer on a day with no candles is no price, not an error: the last session's close
+    # stands in (the page says "Market closed, last price from 23 Nov"). A token, subscription or network fault is still raised, and so is an empty
+    # answer while today's candles exist (the market is trading: that is a real fault).
+    if last_price:
+        q = {"last_price": last_price}
+    else:
+        try:
+            q = quote(name)
+        except DhanError as exc:
+            if exc.kind != "other" or todays:
+                raise
+            q = {}
+    # A day with no trading at all (a weekend, or a weekday with nothing by 09:30: a holiday): the last session stands in for "today", so its change is
+    # against the session before it (23 Nov against 20 Nov), not against itself (a change of 0.00 the day after the market was open)
+    idle = not todays and (today.weekday() >= 5 or _clock().time() >= time_of_day(9, 30))
+    if idle and len(previous_days) >= 2:
+        previous_days = previous_days[:-1]
+    previous = previous_days[-1] if previous_days else None
+    last = float(q.get("last_price") or (todays[-1]["close"] if todays else (latest["close"] if latest else 0)))
     previous_close = previous["close"] if previous else last
     # The change is always against the previous session's close: the same close the card shows, and the same
     # sum the page does on every tick. (Until 7 October, before the first candle of the day it was taken against
