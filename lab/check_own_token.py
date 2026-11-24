@@ -180,7 +180,9 @@ state["late_code"] = 0; fresh()
 
 # 7c. what /health shows is never older than the last try
 fresh(); state["good"] = set(); r = dhan.token_report()
-check("after a report nothing is stale", not dhan.report_stale())
+# the report is stamped with its START (24 Nov): a token made while the check was running makes it stale, and /health then takes the next report at once; the next report is never stale
+r = dhan.token_report() if dhan.report_stale() else r
+check("after a report (and the one that follows a token made meanwhile) nothing is stale", not dhan.report_stale())
 state["good"] = set(); dhan._own["token"] = ""; dhan._own["last_try"] = 0.0; dhan.profile()
 check("a token made after the report: the report is stale, so /health takes a new one", dhan.report_stale() and (dhan.token_report()["own"]["in_use"]) and not dhan.report_stale())
 
