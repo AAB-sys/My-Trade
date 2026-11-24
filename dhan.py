@@ -98,7 +98,7 @@ TOTP_WAIT_SECONDS = float(os.environ.get("DHAN_TOTP_WAIT_SECONDS", "60"))
 _retry = {"timer": None}
 RENEW_MAX_FAILS = int(os.environ.get("DHAN_RENEW_MAX_FAILS", "3"))
 TOTP_EDGE_SECONDS = float(os.environ.get("DHAN_TOTP_EDGE_SECONDS", "6"))  # no code is made this close to its change
-_own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "tries": 0, "wait": None, "limited": 0}
+_own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "made_ts": 0.0, "tries": 0, "wait": None, "limited": 0}
 _own_lock = threading.Lock()
 
 
@@ -196,7 +196,7 @@ def renew_token(why: str, by_hand: bool = False) -> bool:
             if isinstance(body, dict):
                 token = str(body.get("accessToken") or body.get("access_token") or inner.get("accessToken") or inner.get("access_token") or "").strip()
             if response.status_code == 200 and token:
-                _own.update(token=token, made_at=datetime.now(IST).isoformat(timespec="seconds"), problem=None, fails=0, wait=None, limited=0)
+                _own.update(token=token, made_ts=time.time(), made_at=datetime.now(IST).isoformat(timespec="seconds"), problem=None, fails=0, wait=None, limited=0)
                 log.warning("Dhan own token: a new token was made (%s)", why)
                 return True
             if "totp" not in json.dumps(body).lower():
@@ -407,7 +407,7 @@ def report_stale() -> bool:
     """True when the server tried to make its own token after the last token_report: what /health holds is then out of date
     (19 November: a token made at 08:44 was still shown as "refused" until the half-hourly check at 09:04, and the owner was
     asked to paste one for nothing). /health then takes a new report at once."""
-    return _own["last_try"] > _own.get("reported", 0.0)
+    return max(_own["last_try"], _own.get("made_ts", 0.0)) > _own.get("reported", 0.0)  # a try STARTS before its token is made (the code wait: up to 35 s): the moment the token was made counts too (24 Nov 14:47)
 
 
 def expiries(name: str) -> list[str]:

@@ -30,4 +30,13 @@ def run_inside():
     dhan.token_report()
     return dhan.report_stale()
 check("token made inside the check, the report's own try refused by the wait: stale", run_inside() is True)
+# 24 Nov, third case (14:47): the try started BEFORE the report began (last_try old), and its token was made after the report ended
+def run_made_later():
+    dhan._own["last_try"] = time.time() - 1; dhan._own["made_ts"] = 0.0; dhan._own["reported"] = 0.0
+    dhan.token_check, dhan.renew_due, dhan.renew_token = (lambda: {"ok": False, "valid_till": None, "checked_at": "x", "problem": "refused"}), (lambda c: None), (lambda why, by_hand=False: False)
+    dhan.token_report()
+    before = dhan.report_stale()
+    dhan._own["made_ts"] = time.time()  # the token is made now
+    return before, dhan.report_stale()
+check("a try begun before the report, its token made after the report: stale only then", run_made_later() == (False, True))
 raise SystemExit(1 if fails else 0)
