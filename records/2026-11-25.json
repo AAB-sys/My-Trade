@@ -1,0 +1,21 @@
+[
+ {
+  "key": "NIFTY BANK|5m|1795578300|CE|prev",
+  "index": "NIFTY BANK",
+  "side": "CE",
+  "expiry": "2026-12-29",
+  "strike": 63800.0,
+  "index_at_entry": 63849.25,
+  "premium_paid": 1557.15,
+  "paid_at": "2026-11-25T09:20:21+05:30",
+  "premium_now": 1563.45,
+  "now_at": "2026-11-25T09:20:31+05:30",
+  "sell_below": 1012.15,
+  "sold": null,
+  "ended": null,
+  "security_id": 59951,
+  "premium_low": 1540.5,
+  "premium_low_at": "2026-11-25T09:20:24+05:30",
+  "stop15": null
+ }
+]
