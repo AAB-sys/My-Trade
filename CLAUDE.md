@@ -573,6 +573,7 @@ branch from `main`.
   arrive. It draws nothing, has no price effect (`autoscaleInfoProvider` null) and starts after the last candle, so the candles' numbers, the FVG
   boxes, the signals' arrows and the profiles are unchanged (checked at 4 times of day and 3 candle sizes: identical to before); the Volume Profile page
   itself is pixel-identical. The crosshair over the empty part finds no candle and the legend keeps showing the last one.
+  AAA_V1's view fits the candles (25 November, the owner: "check the chart fitting and UI of chart. It is not at all ok"): `fitDays()` kept 36% of the width empty on the right for the day's volume profile, which AAA_V1 does not draw (candles only), so on a laptop the candles stopped at about 72% of the chart. For `EMBED` it now ends the view just after the last candle of the session: `state.axisBars` (set by `drawSessionAxis`, the candles still to come while the session runs) + 3. The Volume Profile page keeps its room on the right.
   The AAA_V1 chart is kept when another tab is chosen (23 November, the owner: "every page is lagging when switch from another page to other page"):
   `showAaa()` in `static/detail.html` no longer throws the frame away on leaving AAA_V1 (every return built the whole page again: the page, its scripts and
   four data requests, each waiting on the server) but tells it with `postMessage({aaaShown})`; in `static/volume.html` (EMBED only) the chart then PARKS
