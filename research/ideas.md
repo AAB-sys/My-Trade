@@ -303,6 +303,3 @@ Lesson (fifth time): a true fact about where the price does NOT go back to is no
 - Result: 72 had 40+ calls in year 1; 2 were good in year 1 (net positive without the best day); 0 of those held in year 2. Best: minGap 0.1, until 10:15, stop at the extreme, target 2.5: Y1 60 calls net +384; Y2 50 calls net -444 (CE -873, PE +429). The PE side alone is positive in both years but small and with few calls; not on the watch list.
 - Verdict: the fact (G1) is true, the entry after the cross is late. NOT on the watch list. Variants tried so far: 1,046 (830 before): the bar rises.
 - Watch list, new days to 23 Nov: QUIET-BREAK 6 days, 3 calls, -47 (2 up 1 down); NEWHIGH-TREND 6 days, 6 calls, +534 (3 up 3 down; +196 today, a down day: the PE side); DIR-1215 6 days, no call; NEWHIGH-STAY 2 days, no call.
-
-## 25 Nov 2026: FVG fill signals (the owner's question after a losing BUY CE)
-Idea family tried: filters on the page's FVG fill signal (time, gap age, gap size, wick depth, candle colour, close position, place in the day, opening gap, side; singles and pairs = 301 variants), plus the trend filter on/off. Result: 0 of 301 positive in both years (about 0.4 expected by luck). Page's rule: year 1 +217, year 2 -507 (plain trade, stop 1 ATR / target 1.5 ATR). Details: research/fvg-fill/RESULT-2026-11-25.md. Not put on the watch list.

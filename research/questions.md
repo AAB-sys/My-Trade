@@ -100,3 +100,8 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 - The same for a gap DOWN that is closed early (price back over yesterday's close): 29 days, closed over the open 59%, +12 points on average: weak, a coin.
 - So the fact is real on the up side and rests on 49 days (about one a fortnight). As a trade it did NOT hold: lab idea 14 (go against the gap at the candle that closes back through yesterday's close) had only 2 of 72 variants good in year 1 and none good in year 2. The cross candle comes after the easy part of the move.
 - Today is one of the 49 (the biggest: -563). Keep the question open and re-answer as days are added.
+
+## 2026-11-25
+- Q: Do the FVG fill signals (the page's own rule) work on NIFTY 50, and does any filter fix them? ANSWERED: 481 days, page rule year 1 +217, year 2 -507 points (plain trade, stop 1 ATR, target 1.5 ATR); 301 filters (single and pairs): 0 positive in both years (about 0.4 by luck). No edge. research/fvg-fill/RESULT-2026-11-25.md.
+- Q (open): after a close beyond the VAH/VAL on a day the price spends 90%+ of its minutes above yesterday's value area (today: 359 of 375), how often does the next wick through the edge come back? (re-answer as days are added)
+- Q (open): does the 12:00 shape Double predict the afternoon? (today Double at noon, afternoon went down then back up to close between POC and VAH)
