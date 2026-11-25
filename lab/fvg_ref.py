@@ -96,6 +96,7 @@ class FvgTracker:
         self.cfg = dict(FVG_DEFAULTS)
         self.cfg.update({k: v for k, v in (cfg or {}).items() if k.startswith("fvg_")})
         self.interval = interval
+        self.seed_tr = []             # the day before's true ranges (seed)
         self.reset(None)
 
     def reset(self, date):
@@ -115,9 +116,19 @@ class FvgTracker:
         self.done = len(candles)
         return self.open_gaps(), events
 
+    def seed(self, candles):
+        """25 November (the owner: "seed the ATR from yesterday"): the true ranges of the day before's candles stand in front of today's
+        until today has fvg_atr_len candles of its own (static/fvg.js seed())."""
+        self.seed_tr = []
+        for k, c in enumerate(candles):
+            prev_c = candles[k - 1]["c"] if k > 0 else None
+            self.seed_tr.append(max(c["h"] - c["l"], abs(c["h"] - prev_c) if prev_c is not None else 0.0,
+                                    abs(c["l"] - prev_c) if prev_c is not None else 0.0))
+
     def atr(self):
         n = self.cfg["fvg_atr_len"]
-        x = self.tr[-n:] if n > 0 else []
+        allv = self.tr if len(self.tr) >= n else self.seed_tr + self.tr
+        x = allv[-n:] if n > 0 else []
         s = 0.0
         for v in x:                                                 # added left to right, as static/fvg.js adds
             s += v
