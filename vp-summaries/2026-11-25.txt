@@ -1,0 +1,30 @@
+
+== NIFTY 50: open 25658.35 (inside yesterday's value) low 25619 high 25951.65 close 25819.25 (POC-VAH)
+   today VAL/POC/VAH 25646.72 / 25736.81 / 25826.91 shape D; yesterday 25370.88 / 25600.65 / 25668.23; minutes vs yesterday's value {"above":359,"inside":16,"below":0}
+   noon: {"shape":"Double","where":"POC-VAH","close":25905.7,"vah":25910.07,"poc":25736.81,"val":25702.16}
+   09:40-11:20 D       21 candles POC 25733.25->25733.64 {"POC-VAH":7,"VAL-POC":1,"above VAH":13}
+   11:25-14:00 Double  32 candles POC 25733.64->25736.81 {"above VAH":5,"POC-VAH":14,"VAL-POC":10,"below VAL":3}
+   14:05-15:25 D       17 candles POC 25736.81->25736.81 {"POC-VAH":16,"VAL-POC":1}
+   edges: wicks 8 (came back 7), closes beyond 3 (went on 3)
+   BREAK PE 13:05 in 13:10 25666.35 stop 13:30 -69.08
+   SHAPE PE Double-down 12:30 in 12:35 25811.3 time 15:15 20.05
+
+== NIFTY BANK: open 63408.6 (inside yesterday's value) low 63247.9 high 64133.8 close 63703.25 (VAL-POC)
+   today VAL/POC/VAH 63543.2 / 63783.13 / 64023.06 shape D; yesterday 62656.5 / 63373.45 / 63869.8; minutes vs yesterday's value {"above":106,"inside":269,"below":0}
+   noon: {"shape":"P","where":"above VAH","close":64051.95,"vah":64029.73,"poc":63873.63,"val":63648.15}
+   09:40-12:30 P       35 candles POC 63882.38->63873.63 {"below VAL":4,"VAL-POC":9,"POC-VAH":13,"above VAH":9}
+   12:35-15:25 D       35 candles POC 63873.63->63783.13 {"VAL-POC":15,"below VAL":20}
+   edges: wicks 6 (came back 2), closes beyond 8 (went on 6)
+   BREAK PE 12:35 in 12:40 63667.6 time 15:15 16.05
+   SHAPE CE P 10:40 in 10:45 63791.7 stop 12:40 -150.27
+   SHAPE CE D-low 14:05 in 14:10 63543.6 time 15:15 107.95
+
+== SENSEX: open 83465.87 (inside yesterday's value) low 83380.75 high 84498.21 close 83938.28 (VAL-POC)
+   today VAL/POC/VAH 83473.87 / 83962.76 / 84172.28 shape Double; yesterday 82679.27 / 83293.27 / 83718.34; minutes vs yesterday's value {"above":323,"inside":52,"below":0}
+   noon: {"shape":"Double","where":"VAL-POC","close":84348.17,"vah":84498.21,"poc":84381.81,"val":83799.8}
+   09:40-10:30 P       11 candles POC 83804.72->83836.14 {"VAL-POC":4,"POC-VAH":4,"above VAH":3}
+   10:35-11:20 D       10 candles POC 83896.46->83857.49 {"above VAH":10}
+   11:25-15:25 Double  49 candles POC 83857.49->83962.76 {"above VAH":1,"VAL-POC":26,"POC-VAH":4,"below VAL":18}
+   edges: wicks 8 (came back 6), closes beyond 6 (went on 3)
+   BREAK PE 12:50 in 12:55 83812.82 time 15:15 -169.26
+   SHAPE PE Double-down 12:30 in 12:35 84012.32 time 15:15 30.24

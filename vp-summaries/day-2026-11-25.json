@@ -1,0 +1,331 @@
+{
+ "date": "2026-11-25",
+ "previousDay": "2026-11-23",
+ "indices": {
+  "NIFTY 50": {
+   "day": {
+    "open": 25658.35,
+    "high": 25951.65,
+    "low": 25619,
+    "close": 25819.25
+   },
+   "final": {
+    "shape": "D",
+    "poc": 25736.81,
+    "vah": 25826.91,
+    "val": 25646.72
+   },
+   "prev": {
+    "vah": 25668.23,
+    "poc": 25600.65,
+    "val": 25370.88
+   },
+   "openVsPrev": "inside yesterday's value",
+   "closeVsToday": "POC-VAH",
+   "minutesVsPrevValue": {
+    "above": 359,
+    "inside": 16,
+    "below": 0
+   },
+   "noon": {
+    "shape": "Double",
+    "where": "POC-VAH",
+    "close": 25905.7,
+    "vah": 25910.07,
+    "poc": 25736.81,
+    "val": 25702.16
+   },
+   "periods": [
+    {
+     "shape": "D",
+     "from": "09:40",
+     "to": "11:20",
+     "candles": 21,
+     "where": {
+      "POC-VAH": 7,
+      "VAL-POC": 1,
+      "above VAH": 13
+     },
+     "poc0": 25733.25,
+     "poc1": 25733.64
+    },
+    {
+     "shape": "Double",
+     "from": "11:25",
+     "to": "14:00",
+     "candles": 32,
+     "where": {
+      "above VAH": 5,
+      "POC-VAH": 14,
+      "VAL-POC": 10,
+      "below VAL": 3
+     },
+     "poc0": 25733.64,
+     "poc1": 25736.81
+    },
+    {
+     "shape": "D",
+     "from": "14:05",
+     "to": "15:25",
+     "candles": 17,
+     "where": {
+      "POC-VAH": 16,
+      "VAL-POC": 1
+     },
+     "poc0": 25736.81,
+     "poc1": 25736.81
+    }
+   ],
+   "edges": {
+    "wick": 8,
+    "wickBack": 7,
+    "close": 3,
+    "closeOn": 3
+   },
+   "breakCalls": [
+    {
+     "side": "PE",
+     "setup": null,
+     "signal": "13:05",
+     "entryAt": "13:10",
+     "entry": 25666.35,
+     "stop": 25735.43,
+     "how": "stop",
+     "exitAt": "13:30",
+     "exit": 25735.43,
+     "points": -69.08
+    }
+   ],
+   "shapeCalls": [
+    {
+     "side": "PE",
+     "setup": "Double-down",
+     "signal": "12:30",
+     "entryAt": "12:35",
+     "entry": 25811.3,
+     "stop": 25923.93,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 25791.25,
+     "points": 20.05
+    }
+   ]
+  },
+  "NIFTY BANK": {
+   "day": {
+    "open": 63408.6,
+    "high": 64133.8,
+    "low": 63247.9,
+    "close": 63703.25
+   },
+   "final": {
+    "shape": "D",
+    "poc": 63783.13,
+    "vah": 64023.06,
+    "val": 63543.2
+   },
+   "prev": {
+    "vah": 63869.8,
+    "poc": 63373.45,
+    "val": 62656.5
+   },
+   "openVsPrev": "inside yesterday's value",
+   "closeVsToday": "VAL-POC",
+   "minutesVsPrevValue": {
+    "above": 106,
+    "inside": 269,
+    "below": 0
+   },
+   "noon": {
+    "shape": "P",
+    "where": "above VAH",
+    "close": 64051.95,
+    "vah": 64029.73,
+    "poc": 63873.63,
+    "val": 63648.15
+   },
+   "periods": [
+    {
+     "shape": "P",
+     "from": "09:40",
+     "to": "12:30",
+     "candles": 35,
+     "where": {
+      "below VAL": 4,
+      "VAL-POC": 9,
+      "POC-VAH": 13,
+      "above VAH": 9
+     },
+     "poc0": 63882.38,
+     "poc1": 63873.63
+    },
+    {
+     "shape": "D",
+     "from": "12:35",
+     "to": "15:25",
+     "candles": 35,
+     "where": {
+      "VAL-POC": 15,
+      "below VAL": 20
+     },
+     "poc0": 63873.63,
+     "poc1": 63783.13
+    }
+   ],
+   "edges": {
+    "wick": 6,
+    "wickBack": 2,
+    "close": 8,
+    "closeOn": 6
+   },
+   "breakCalls": [
+    {
+     "side": "PE",
+     "setup": null,
+     "signal": "12:35",
+     "entryAt": "12:40",
+     "entry": 63667.6,
+     "stop": 63870.16,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 63651.55,
+     "points": 16.05
+    }
+   ],
+   "shapeCalls": [
+    {
+     "side": "CE",
+     "setup": "P",
+     "signal": "10:40",
+     "entryAt": "10:45",
+     "entry": 63791.7,
+     "stop": 63641.43,
+     "how": "stop",
+     "exitAt": "12:40",
+     "exit": 63641.43,
+     "points": -150.27
+    },
+    {
+     "side": "CE",
+     "setup": "D-low",
+     "signal": "14:05",
+     "entryAt": "14:10",
+     "entry": 63543.6,
+     "stop": 63247.9,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 63651.55,
+     "points": 107.95
+    }
+   ]
+  },
+  "SENSEX": {
+   "day": {
+    "open": 83465.87,
+    "high": 84498.21,
+    "low": 83380.75,
+    "close": 83938.28
+   },
+   "final": {
+    "shape": "Double",
+    "poc": 83962.76,
+    "vah": 84172.28,
+    "val": 83473.87
+   },
+   "prev": {
+    "vah": 83718.34,
+    "poc": 83293.27,
+    "val": 82679.27
+   },
+   "openVsPrev": "inside yesterday's value",
+   "closeVsToday": "VAL-POC",
+   "minutesVsPrevValue": {
+    "above": 323,
+    "inside": 52,
+    "below": 0
+   },
+   "noon": {
+    "shape": "Double",
+    "where": "VAL-POC",
+    "close": 84348.17,
+    "vah": 84498.21,
+    "poc": 84381.81,
+    "val": 83799.8
+   },
+   "periods": [
+    {
+     "shape": "P",
+     "from": "09:40",
+     "to": "10:30",
+     "candles": 11,
+     "where": {
+      "VAL-POC": 4,
+      "POC-VAH": 4,
+      "above VAH": 3
+     },
+     "poc0": 83804.72,
+     "poc1": 83836.14
+    },
+    {
+     "shape": "D",
+     "from": "10:35",
+     "to": "11:20",
+     "candles": 10,
+     "where": {
+      "above VAH": 10
+     },
+     "poc0": 83896.46,
+     "poc1": 83857.49
+    },
+    {
+     "shape": "Double",
+     "from": "11:25",
+     "to": "15:25",
+     "candles": 49,
+     "where": {
+      "above VAH": 1,
+      "VAL-POC": 26,
+      "POC-VAH": 4,
+      "below VAL": 18
+     },
+     "poc0": 83857.49,
+     "poc1": 83962.76
+    }
+   ],
+   "edges": {
+    "wick": 8,
+    "wickBack": 6,
+    "close": 6,
+    "closeOn": 3
+   },
+   "breakCalls": [
+    {
+     "side": "PE",
+     "setup": null,
+     "signal": "12:50",
+     "entryAt": "12:55",
+     "entry": 83812.82,
+     "stop": 84367.84,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 83982.08,
+     "points": -169.26
+    }
+   ],
+   "shapeCalls": [
+    {
+     "side": "PE",
+     "setup": "Double-down",
+     "signal": "12:30",
+     "entryAt": "12:35",
+     "entry": 84012.32,
+     "stop": 84367.84,
+     "how": "time",
+     "exitAt": "15:15",
+     "exit": 83982.08,
+     "points": 30.24
+    }
+   ]
+  }
+ }
+}

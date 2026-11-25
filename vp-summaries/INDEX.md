@@ -6,3 +6,4 @@
 - 2026-11-19: trend-up day, open inside yesterday's value, dip to 25,105 at 09:30, close at the high 25,514 above the VAH; P shape most of the day; study 22 days. `2026-11-19.md`, `study-2026-11-19-22-days.md`, `FINDINGS.md`
 - 2026-11-20: second trend-up day, stronger; open inside yesterday's value, above its VAH by 09:40; value area climbed in two steps; close under today's VAH; study 22 days (rolling). `2026-11-20.md`, `study-2026-11-20-22-days.md`, `FINDINGS.md`
 - 2026-11-23: trend-DOWN day, open above yesterday's value, below it by 09:40-11:00, closes below VAL at the lows (NIFTY 50 -563); shape B most of the day; closes beyond an edge went on 84%; all the page's calls were PE, 6 of 8 won; study 23 days (rolling). `2026-11-23.md`, `study-2026-11-23-23-days.md`, `FINDINGS.md`
+- 2026-11-25: NIFTY 50 up day, above yesterday's value area 359 of 375 minutes; POC flat at 25,735; D, Double Zone, D; closed 25,819 between POC and VAH. Study N = 24.
