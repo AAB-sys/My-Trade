@@ -602,12 +602,19 @@ console.log("rules unit checks passed");
   assert([0, 1, 2, 3, 4].every(i => same(at(i), lv)), "the 13 lines stand still until a candle closes above +100% (the 3rd only went above it)");
   assert(same(at(5), R.rangeLevels(22640, 22990, true)) && same(at(6), at(5)), "after the close above +100%: 0% at today's low 22,640, +100% at today's high 22,990");
   assert(same(at(7), R.rangeLevels(22640, 23010, true)) && same(at(99), at(7)), "a close above that +100% (a new high): drawn again to 23,010");
-  assert(same(at(5).map(l => R.levelName(l.ratio, l.signed)), ["0.0%", "+23.6%", "+38.2%", "+50.0%", "+61.8%", "+78.6%", "+100.0%"]) && at(5)[1].price === 22722.6,
-    "redrawn up: 7 lines, +23.6% 23.6% of the way up from the low: " + at(5).map(l => l.price));
+  const nm = (ls) => ls.map(l => R.levelName(l.ratio, l.signed));
+  assert(same(nm(at(5).filter(l => !l.extra)), ["0.0%", "+23.6%", "+38.2%", "+50.0%", "+61.8%", "+78.6%", "+100.0%"]) && at(5).find(l => l.ratio === 0.236).price === 22722.6,
+    "redrawn up: the range's 7 lines, +23.6% 23.6% of the way up from the low: " + at(5).map(l => l.price));
+  // 25 November (the owner: "calculate the levels below 0% as well. Not only above. And vice versa"): after a redraw up the same shares again below today's low
+  assert(at(5).length === 13 && same(nm(at(5).filter(l => l.extra)), ["-100.0%", "-78.6%", "-61.8%", "-50.0%", "-38.2%", "-23.6%"]) && same(at(5).filter(l => l.extra).map(l => l.price), [22290, 22364.9, 22423.7, 22465, 22506.3, 22557.4])
+    && at(5).filter(l => l.extra).every(l => l.signed === true && l.price < 22640), "redrawn up: -23.6% to -100% below today's low 22,640, the range's own step 350: " + at(5).map(l => l.price));
+  assert(R.edgesOf(at(5)).bottom.price === 22640 && R.edgesOf(at(5)).top.price === 22990 && R.edgesOf(lv).bottom.price === lv[0].price && R.edgesOf(lv).top.price === lv[lv.length - 1].price, "the lines that count for a redraw: today's low and high (not the extra ones); the first 13 lines: -100% and +100%");
   const down = [bar(0, 22600, 22610, 22560, 22570), bar(1, 22570, 22575, 22400, 22420), bar(2, 22420, 22425, 22270, 22275), bar(3, 22275, 22300, 22260, 22290)];
   const dn = R.closeLevelsAt(down, 22622.7);
   assert(same(dn(2), lv) && same(dn(3), R.rangeLevels(22270, 22610, false)), "a close below -100%: 0% at today's high 22,610, -100% at today's low 22,270");
-  assert(same(dn(3).map(l => R.levelName(l.ratio, l.signed)), ["-100.0%", "-78.6%", "-61.8%", "-50.0%", "-38.2%", "-23.6%", "0.0%"]) && dn(3)[5].price === 22529.76, "redrawn down: " + dn(3).map(l => l.price));
+  assert(same(nm(dn(3).filter(l => !l.extra)), ["-100.0%", "-78.6%", "-61.8%", "-50.0%", "-38.2%", "-23.6%", "0.0%"]) && dn(3).find(l => l.ratio === -0.236).price === 22529.76, "redrawn down: " + dn(3).map(l => l.price));
+  assert(dn(3).length === 13 && same(nm(dn(3).filter(l => l.extra)), ["+23.6%", "+38.2%", "+50.0%", "+61.8%", "+78.6%", "+100.0%"]) && same(dn(3).filter(l => l.extra).map(l => l.price), [22690.24, 22739.88, 22780, 22820.12, 22877.24, 22950]), "redrawn down: +23.6% to +100% above today's high 22,610, the range's own step 340: " + dn(3).map(l => l.price));
+  assert(R.edgesOf(dn(3)).top.price === 22610 && R.edgesOf(dn(3)).bottom.price === 22270, "after a redraw down the lines that count are today's high (0%) and low (-100%)");
   // after the redraw up, a close below its 0% (today's low): drawn again downward, 0% at today's high, -100% at today's low (the
   // owner: "redraw downward with today's high as 0%"); and after that a close above today's high: upward again
   const turn = [...up.slice(0, 6), bar(6, 22970, 22975, 22600, 22610), bar(7, 22610, 22615, 22580, 22590), bar(8, 22590, 23000, 22585, 22995), bar(9, 22995, 22998, 22985, 22990)];
