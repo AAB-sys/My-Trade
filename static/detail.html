@@ -2626,7 +2626,8 @@
   const moreTaken = (r, trades) => (trades || []).find(t => t.more && t.rule === r.key && t.signalCandle === r.k) || null;  // the call this signal became, if it did
   function morePictures(log, bars, trades) {  // the signals of the rules ticked that did not become calls (the calls are drawn above, as every rule's are)
     const ticked = state.morePat || new Set();
-    return log.rows.filter(r => ticked.has(r.key) && !moreTaken(r, trades) && r.key !== "trend_break").map(r => {  // NEWHIGH-TREND speaks on every candle of a trend: only its calls are drawn (above), not the signals a call already open held back (22 November)
+    const sameBreak = (r) => (trades || []).some(t => t.side === r.side && t.signalTime === r.signalTime && Math.abs((t.L != null ? t.L : t.level) - r.level) < 0.005);  // the same break of the same level a call already stands on (25 November): one arrow, not two
+    return log.rows.filter(r => ticked.has(r.key) && !moreTaken(r, trades) && !sameBreak(r) && r.key !== "trend_break").map(r => {  // NEWHIGH-TREND speaks on every candle of a trend: only its calls are drawn (above), not the signals a call already open held back (22 November)
       const up = r.side === "CE", colour = cssVar(up ? "--candle-up" : "--candle-down"), marks = [], segs = [];
       marks.push({ time: r.signalTime + IST_OFFSET, position: up ? "belowBar" : "aboveBar", color: colour, shape: up ? "arrowUp" : "arrowDown", text: r.rule });
       (r.points || []).forEach(([i, price, label]) => { const b = bars[i]; if (!b || i === r.k) return;  // the signal candle carries the arrow

@@ -782,8 +782,15 @@
       if (!STRATEGIES[rule] && (rule === "double top" || RULES[rule] || SCANNERS[rule])) out.push(...runDayOne({ ...opts, rules: [rule], more: false, dbShadow: false }).trades);
     for (const key of (ticked && ticked.more) || [])  // index null: the pattern runs on this index too (moreOn, ruleOn), alone in its run
       if (!LANE.includes(key) && root.MorePat && root.MorePat.RULES[key]) out.push(...runDayOne({ ...opts, index: null, rules: [], more: [key], dbShadow: false }).trades);
-    return out.filter(t => !have.has(callKey(t))).map(t => Object.assign(t, { parallel: true }))
-      .sort((a, b) => a.signalTime - b.signalTime || (a.rule < b.rule ? -1 : 1));
+    // One break, one call (25 November, the owner, with two "Buy PE" arrows on the 11:50 candle of NIFTY 50: "why it is giving 2 signals"): the rising wedge's
+    // call and the Falling Channel pattern both fired Buy PE on the 11:50 candle at the same level, 25,943.35 (the wedge's lower line is the channel's), with the
+    // same entry. A pattern ticked adds a call beside the page's only when it is not the same break of the same level, side and candle that a call already
+    // stands on (the page's, or an earlier parallel one): it is the same call said by another rule's name. Different levels or sides on one candle are still two
+    const sameBreak = (a, b) => a.side === b.side && a.signalTime === b.signalTime && Math.abs((a.L != null ? a.L : a.level) - (b.L != null ? b.L : b.level)) < 0.005;
+    const kept = [];
+    return out.filter(t => !have.has(callKey(t))).sort((a, b) => a.signalTime - b.signalTime || (a.rule < b.rule ? -1 : 1))
+      .filter(t => { if ((page || []).some(p => sameBreak(p, t)) || kept.some(k => sameBreak(k, t))) return false; kept.push(t); return true; })
+      .map(t => Object.assign(t, { parallel: true }));
   }
   root.NewRule = { CFG, DT, DB, MORE, LANE, parallelCalls, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
