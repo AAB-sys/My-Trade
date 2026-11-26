@@ -310,3 +310,7 @@ Lesson (fifth time): a true fact about where the price does NOT go back to is no
 - Verdict: no edge. NOT on the watch list. Variants tried so far: 1,118 (1,046 before): the bar rises.
 - Watch list, new days to 26 Nov: QUIET-BREAK 8 days, 3 calls, -47 (2 up 1 down); NEWHIGH-TREND 8 days, 9 calls, +220 (3 up 5 down); DIR-1215 8 days, 1 call, -89; NEWHIGH-STAY 4 days, no call.
 - Waiting for the owner's yes: MSS-3 (8 versions declared in Delta reports/MSS strategy 3 for AAA V1.md); not run.
+
+## Idea 16 (26 Nov, the owner's yes): MSS-3, the market structure shift alone plus one filter each (8 versions)
+- Result on year 1: all 8 negative (50 to 208 trades each, 27% to 37% won, -7.6 to -18.5 points a trade after cost; base -5.4 before cost). Year 2 not opened. research/mss/RESULT-MSS3-2026-11-26.md.
+- Verdict: no edge. With MSS-1 and MSS-2: 24 MSS versions, none good. Variants tried so far: 1,126.
