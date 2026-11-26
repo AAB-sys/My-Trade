@@ -319,44 +319,10 @@
       <div id="legend" aria-live="off"></div>
       <div id="chart"></div>
     </div>
-    <aside id="panel" hidden aria-label="Volume profile explanation panel"></aside>
   </div>
   <!-- every call the page states stands BELOW the chart (15 November, the owner, with the signal lines marked: "move all the calls
        below the chart ... whatever the call page fires, move it all below the chart"): the document's Signal, the Shape signal,
        the Impulse calls. The block scrolls inside itself when it is long, so the chart keeps its room -->
-  <div id="calls-wrap" hidden>
-    <!-- two capsules (15 November, the owner: "make a separate table with header as Impulse call table as a sperate capsule tab and
-         add all the impulse calls in that table"): the calls' lines as before, or the table of the Impulse calls -->
-    <div id="calls-tabs" role="tablist" aria-label="Calls">
-      <button type="button" class="cap on" id="tab-lines" role="tab" aria-selected="true">Calls</button>
-      <button type="button" class="cap" id="tab-imptable" role="tab" aria-selected="false">Impulse call table</button>
-      <!-- the block's own controls (15 November, the owner, with the page not fitting: "think more about the better UI and do the
-           changes with proper chart fit"): the rules' words shown or not, the block larger or small, the block hidden so the
-           chart takes its room -->
-      <span class="grow"></span>
-      <button type="button" class="ic" id="calls-rules" aria-pressed="false" aria-label="Show the rules in words" title="Show the rules in words"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6.2v.1"/></svg></button>
-      <button type="button" class="ic" id="calls-size" aria-pressed="false" aria-label="Make the calls larger" title="Make the calls larger"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 12l5-5 5 5"/><path d="M5 16h10"/></svg></button>
-      <button type="button" class="ic" id="calls-hide" aria-pressed="false" aria-label="Hide the calls" title="Hide the calls"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
-    </div>
-    <div id="calls">
-      <div id="sig" aria-live="polite"></div>
-      <div id="shape" aria-live="polite" hidden></div>
-      <div id="impulse" aria-live="polite" hidden></div>
-    </div>
-    <!-- the Impulse call table: every Impulse call of the days loaded, the newest first; the header row stays in place; a column
-         is moved left or right by holding its header and dragging it; the order is remembered -->
-    <div id="imptable" hidden>
-      <table aria-label="Impulse call table"><thead><tr></tr></thead><tbody></tbody></table>
-      <p id="imptable-empty" hidden></p>
-    </div>
-    <!-- the scroll buttons (15 November, the owner: "add the scroll down button for the web and mobile both", then "it should move
-         one by one to downside and one by one to the upside when press above round button"): there only while the calls do not
-         fit; the upper one moves the block one row of text up, the lower one one row down -->
-    <div id="calls-scroll" hidden>
-      <button type="button" id="calls-up" aria-label="One row up" title="One row up"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 12l5-5 5 5"/></svg></button>
-      <button type="button" id="calls-down" aria-label="One row down" title="One row down"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
-    </div>
-  </div>
   <p id="note"></p>
 
 <script>
@@ -406,7 +372,15 @@
     { const row = document.createElement("div"); row.id = "navrow"; document.getElementById("main").after(row); row.appendChild(document.getElementById("nav")); }
     { const side = document.createElement("div"); side.id = "side"; const info = document.getElementById("inforow"); info.before(side); side.appendChild(info); }  // the figures and (from static/fvg.js) the FVG words: a column of their own on a wide window
   }
-  const $ = (id) => document.getElementById(id);
+  // 27 November, the owner: "Remove all the tables from all the pages. Remove the signals as well, not from the chart but from the UI ... i dont
+  // want anything hidden. Logic should not be touched": the calls block that stood under the chart (the Signal, Shape and Impulse lines, the
+  // Impulse call table) and the explanation panel are NOT ON THE PAGE any more: not in its markup, not in its document, so nothing is hidden.
+  // The code that wrote them is the same code that works the calls out and draws their lines and marks on the chart, so it is left exactly
+  // as it was and writes into OFF, a holder that is never put on the page. To take that writing out too means rewriting the Signal, Shape
+  // and Impulse drawing code: a pull request of its own.
+  const OFF = document.createElement("div");
+  OFF.innerHTML = `<div id="calls-wrap" hidden> <div id="calls-tabs" role="tablist" aria-label="Calls"> <button type="button" class="cap on" id="tab-lines" role="tab" aria-selected="true">Calls</button> <button type="button" class="cap" id="tab-imptable" role="tab" aria-selected="false">Impulse call table</button> <span class="grow"></span> <button type="button" class="ic" id="calls-rules" aria-pressed="false" aria-label="Show the rules in words" title="Show the rules in words"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7.5"/><path d="M10 9v5M10 6.2v.1"/></svg></button> <button type="button" class="ic" id="calls-size" aria-pressed="false" aria-label="Make the calls larger" title="Make the calls larger"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 12l5-5 5 5"/><path d="M5 16h10"/></svg></button> <button type="button" class="ic" id="calls-hide" aria-pressed="false" aria-label="Hide the calls" title="Hide the calls"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button> </div> <div id="calls"> <div id="sig" aria-live="polite"></div> <div id="shape" aria-live="polite" hidden></div> <div id="impulse" aria-live="polite" hidden></div> </div> <div id="imptable" hidden> <table aria-label="Impulse call table"><thead><tr></tr></thead><tbody></tbody></table> <p id="imptable-empty" hidden></p> </div> <div id="calls-scroll" hidden> <button type="button" id="calls-up" aria-label="One row up" title="One row up"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 12l5-5 5 5"/></svg></button> <button type="button" id="calls-down" aria-label="One row down" title="One row down"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button> </div> </div> <aside id="panel" hidden aria-label="Volume profile explanation panel"></aside>`;
+  const $ = (id) => document.getElementById(id) || OFF.querySelector("#" + id);
   // No calls on the page (16 November, the owner: "remove all the call tables, i dont want that, and also remove all the signals
   // from the chart, except the shape names"): the calls block under the chart is hidden, and no call's arrow, stop or target is
   // drawn. The calls are still worked out (the code is kept, so they can come back by setting this to true); the levels, the
