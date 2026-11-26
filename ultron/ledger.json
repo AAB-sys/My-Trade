@@ -210,6 +210,132 @@
     }
    },
    "vp_page": "day.js replay: PE calls only, 6 of 8 won (Break + Shape), points: NIFTY 50 +167/-46/+229, NIFTY BANK +562/-170/+680, SENSEX +573/+825"
+  },
+  {
+   "date": "2026-11-24",
+   "note": "NSE holiday (Guru Nanak Jayanti): no session, nothing to score"
+  },
+  {
+   "date": "2026-11-25",
+   "paper_calls_close_levels": {
+    "NIFTY 50": {
+     "calls": 108,
+     "won": 31,
+     "points": -538.7
+    },
+    "SENSEX": {
+     "calls": 19,
+     "won": 6,
+     "points": 177.3
+    },
+    "NIFTY BANK": {
+     "calls": 21,
+     "won": 11,
+     "points": 1628.8
+    }
+   },
+   "calls_with_signals": {
+    "NIFTY 50": "4 calls, 3 won, +132.5 (double bottom CE +104.55, rising wedge PE +26.1, Rounding Top PE +28.7, Rising Channel breakdown PE -26.85)",
+    "NIFTY BANK": "1 call, +558.15 (rising wedge PE)",
+    "SENSEX": "3 calls, 2 won, +360.25"
+   },
+   "notes": "Tools not rebuilt: wf/build_rules.js, plan_cross.js, shadow5f.js, morepat_day.js (rule building, Trade Plan score, shadows, 14 patterns not run today). Same break shown twice on NIFTY 50 11:50 (rising wedge + Falling Channel): PR #313. Levels beyond the range: PR #311. FVG study: no filter works (research/fvg-fill).",
+   "paper_calls_close_levels_note": "raw csv rows with levels=close, not de-duplicated and not scored after 8 a call: indicative only"
+  },
+  {
+   "date": "2026-11-26",
+   "paper": {
+    "NIFTY 50": {
+     "calls": 13,
+     "won": 5,
+     "pts": 4.65,
+     "rs": -114,
+     "ce_pts": 52.55,
+     "pe_pts": -47.9
+    },
+    "NIFTY BANK": {
+     "calls": 18,
+     "won": 7,
+     "pts": -334.55,
+     "rs": -6105,
+     "ce_pts": -55.75,
+     "pe_pts": -278.8
+    },
+    "SENSEX": {
+     "calls": 17,
+     "won": 6,
+     "pts": -408.93,
+     "rs": -5402,
+     "ce_pts": 247.87,
+     "pe_pts": -656.8
+    }
+   },
+   "plan": {
+    "calls": 0,
+    "won": 0,
+    "points": 0,
+    "after_8": 0,
+    "rupees": 0,
+    "list": [],
+    "left_out": {
+     "calls": 13,
+     "after_8": -99.35
+    }
+   },
+   "lock_rows": 10,
+   "lc_take": {
+    "calls": 10,
+    "pts": 6.45
+   },
+   "signals": {
+    "signals": {
+     "NIFTY 50": {
+      "calls": 2,
+      "won": 0,
+      "pts": -45.5,
+      "list": [
+       "12:05 bullish symmetrical triangle CE trail -7.65",
+       "13:10 double top PE reclaim -37.85"
+      ]
+     },
+     "NIFTY BANK": {
+      "calls": 2,
+      "won": 1,
+      "pts": 19.25,
+      "list": [
+       "11:05 rising wedge PE trail 69.55",
+       "12:50 bullish symmetrical triangle CE trail -50.3"
+      ]
+     },
+     "SENSEX": {
+      "calls": 1,
+      "won": 0,
+      "pts": -115.38,
+      "list": [
+       "13:50 double bottom PE trail -115.38"
+      ]
+     }
+    },
+    "db": {
+     "table": 1,
+     "shadow": 1,
+     "shadowOnly": 0,
+     "shadowOnlyPoints": 0
+    }
+   },
+   "vp_nifty50": {
+    "break": [
+     [
+      "13:30",
+      "PE",
+      -70.69
+     ]
+    ],
+    "shape": [],
+    "impulse": "not scored (no tool)"
+   },
+   "builder": "not run (build_rules.js lost on 19 Nov, not rebuilt by the owner's word)",
+   "notes": "Server restarted 09:06 (merge of #313): token refused 09:08-09:28, stream back 09:49. Trade Plan: 0 TAKE calls today. MSS-3 design written, waits for the owner's yes to test. PRs #314, #315 open."
   }
  ]
 }
