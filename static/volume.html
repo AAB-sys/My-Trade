@@ -254,6 +254,11 @@
     #legend .sym { font-size: 13px; }
     #status { display: none; }
   }
+  /* 27 November, the owner: "Remove all the tables from all the pages. Remove the signals as well, not from the chart but from the UI. Make the
+     chart all fit on the screen ... Logic should not be touched": the calls block under the chart (the Signal, Shape and Impulse lines and the
+     Impulse call table), the FVG list, the FVG signals list, and the explanation panel are NOT SHOWN. They are still built and filled by the
+     page's code as before, and the chart still draws every line, box and mark; the chart takes the room they used. */
+  #calls-wrap, #fvg-row, #fs-row, #panel { display: none !important; }
 </style>
 </head>
 <body>
