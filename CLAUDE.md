@@ -243,7 +243,11 @@ their own logic. Read this before touching the code.
   until ticked (`NewRule.STRATEGIES`, `strategiesFor`; ticks `st_<name>`); the first, Day Break (`dayBreakStep`: from 11:15 the first
   close past the day's high or low by 0.25 ATR); the second, Midday Box (22 November, "yes, build it for all 3 indices"; `MIDDAY`,
   `middayBox`, `middayBoxStep`: the box of the 11:30 to 12:55 candles, from 13:00 to 14:40 the first close past it by 0.1 ATR, the stop at
-  the edge broken; ticked, the chart draws "box top" and "box bottom" dashed). Each ticked strategy runs ON ITS OWN, one run per strategy (`NewRule.runStrategies`; the owner:
+  the edge broken; ticked, the chart draws "box top" and "box bottom" dashed). The third, Opening Drive (26 November, the owner: "build a strategy for the first hour
+  moves for all 3 indices"; `OPENING`, `openingDriveStep`, tick `st_openingdrive`): from the 09:25 to the 10:10 candle, on a day already 2 ATR
+  from its open, the last pullback candle within 3 broken by a close 0.25 ATR past it in the day's direction; the one strategy with its own
+  exit (`stopAt`, `trailAtr` on the signal, as NEWHIGH-TREND): the stop starts 2 ATR beyond the pullback level and trails 3 ATR behind the best
+  close; the chart marks the pullback candle; no 1 ATR guide. `lab/newrule-check.js` O1 to O7. Each ticked strategy runs ON ITS OWN, one run per strategy (`NewRule.runStrategies`; the owner:
   "it should not remove or delete any old fired call or signals ... New rule or strategy should fire additional signals along with the old
   signals"), so ticking one never takes a call from another or from the page's rules, and its calls go to the table "Call logs from strategy" under the calls table (the owner: "create new table give the name to the
   table as Call logs from startegy ... scroll up and down ... keep the heade row as fixed row"; `#stratlog`, `strategyLogRows`,

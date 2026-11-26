@@ -1011,3 +1011,36 @@ console.log("New Rule Chart: the double top rule and Rule 1 match the document's
   assert(added > 0 && notRun > 0, `P: the saved days gave nothing to check (added ${added}, of patterns the page does not run there ${notRun})`);
   console.log(`New Rule Chart: every pattern ticked fires: on ${days} saved index-days, every one of the page's ${pageCalls} calls stays as it was and ${added} parallel calls are added (${notRun} of patterns the page does not run on that index), each its pattern's own call; walked live candle by candle (${liveSteps} steps) none showed late, vanished or changed (P1, P2)`);
 }
+
+// ---- Strategies > Opening Drive (26 November, the owner: "build a strategy for the first hour moves for all 3 indices"): from the 09:25 to
+// the 10:10 candle, on a day already 2 ATR from its open, the last pullback candle within 3 (Buy CE: a close below the candle before's low;
+// Buy PE: above its high), then a close past that candle's high (low) by 0.25 ATR; its own exit: the stop starts 2 ATR beyond that level and
+// trails 3 ATR behind the best close; once per side per day; off until ticked, run on its own
+{
+  const t0o = Date.parse("2026-11-20T09:15:00+05:30") / 1000, mk = (rows) => rows.map((r, i) => ({ time: t0o + i * 300, open: r[0], high: r[1], low: r[2], close: r[3] }));
+  const flat = (n, p, w = 2) => Array.from({ length: n }, () => [p, p + w, p - w, p]);
+  // 09:15 to 09:25 rise from 100 to 120 (2 ATR at ATR 10), 09:30 a dip candle closing below 09:25's low, 09:35 a close above the dip's high + 2.5
+  const shape = [[100, 106, 99, 105], [105, 112, 104, 111], [111, 121, 110, 120], [120, 120.5, 108, 109], [109, 124, 108.5, 123.5], [123.5, 128, 123, 127]];
+  const run = (rows, rules = ["opening drive"]) => N.runDay({ bars: mk(rows), atrFixed: 10, rules, more: false }).trades;
+  const O = N.OPENING;
+  assert(O.from === "09:25" && O.until === "10:10" && O.moveAtr === 2 && O.look === 3 && O.bufferAtr === 0.25 && O.stopAtr === 2 && O.trailAtr === 3, "O1: the settings: 09:25 to 10:10, 2 ATR from the open, the last 3 candles, 0.25 ATR, its own stop 2 ATR and trail 3 ATR");
+  const t1 = run(shape.concat(flat(60, 127)));
+  assert(t1.length === 1 && t1[0].rule === "opening drive" && t1[0].side === "CE" && t1[0].signalCandle === 4 && t1[0].L === 120.5 && t1[0].stopAt === 100.5 && t1[0].trailAtr === 3 && t1[0].entry === 123.5 && t1[0].pullTime === t0o + 3 * 300,
+         "O1: the 09:35 close above the 09:30 dip candle's high gives Buy CE at the next open, its own stop 2 ATR below that high: " + JSON.stringify(t1.map(t => [t.side, t.signalCandle, t.L, t.stopAt, t.entry])));
+  const mirror = (rows) => rows.map(([o, h, l, c]) => [200 - o, 200 - l, 200 - h, 200 - c]), t2 = run(mirror(shape.concat(flat(60, 127))));
+  assert(t2.length === 1 && t2[0].side === "PE" && t2[0].L === 79.5 && t2[0].stopAt === 99.5 && t2[0].entry === 76.5 && t2[0].kind === "the bounce failed: the opening fall goes on", "O2: the Buy PE side mirrors it: " + JSON.stringify(t2.map(t => [t.side, t.L, t.stopAt, t.entry])));
+  assert(run(flat(12, 100).concat(shape, flat(50, 127))).length === 0, "O3: the same shape after 10:10 gives no call (the first hour only)");
+  assert(N.runDay({ bars: mk(shape.concat(flat(60, 127))), atrFixed: 15, rules: ["opening drive"], more: false }).trades.length === 0, "O4: at ATR 15 the first hour never stands 2 ATR (30) from its open (its high 129 is 29 above 100): no call");
+  const twice = shape.concat([[127, 127.5, 118, 119], [119, 132, 118.5, 131]], flat(55, 131));
+  assert(run(twice).filter(t => t.side === "CE").length === 1, "O5: once per side per day");
+  // its own exit: a close back below the level does not sell it (no Rule 1); the 3 ATR trail does
+  const t6 = run(shape.concat([[127, 127, 115, 116], [116, 140, 115, 139], [139, 139, 105, 106]], flat(50, 106)));
+  assert(t6.length === 1 && t6[0].how === "trail" && t6[0].exit === 106 && t6[0].exitTime === t0o + 8 * 300, "O6: its own exit: held through a close back below the level (116 < 120.5), sold at the first close below the 3 ATR trail (109): " + JSON.stringify(t6.map(t => [t.how, t.exit])));
+  for (const ix of ["NIFTY 50", "NIFTY BANK", "SENSEX"]) {
+    assert(JSON.stringify(N.rulesFor(ix, new Set(["opening drive"]))) === JSON.stringify(N.rulesFor(ix, new Set())), `O7: ${ix}: the page's rules are the same with Opening Drive ticked`);
+    assert(JSON.stringify(N.strategiesFor(ix, new Set(["opening drive"]))) === JSON.stringify(["opening drive"]) && !N.strategiesFor(ix, new Set()).length, `O7: ${ix}: the strategy list holds Opening Drive only while ticked`);
+    const own = N.runStrategies({ bars: mk(shape.concat(flat(60, 127))), atrFixed: 10, index: ix }, N.strategiesFor(ix, new Set(["opening drive", "day break", "midday box"])));
+    assert(own.filter(t => t.rule === "opening drive").length === 1 && own.find(t => t.rule === "opening drive").entry === 123.5, `O7: ${ix}: run on its own beside the other strategies, Opening Drive gives its call`);
+  }
+  console.log("New Rule Chart: Strategies > Opening Drive: 09:25 to 10:10, a day 2 ATR from its open, the first pullback candle broken by 0.25 ATR in the day's direction, its own stop 2 ATR and trail 3 ATR, once per side per day, off until ticked, on its own (O1 to O7)");
+}
