@@ -626,3 +626,43 @@ on which index; nothing is ticked or unticked for the owner.
 `lab/newrule-check.js` P1 and P2 (the 16 saved days of `lab/keep_days.json`, all three indices, every pattern ticked): the page's own
 calls are exactly as before, each parallel call is its pattern's own call and twins no call of the page, nothing ticked adds nothing;
 walked live candle by candle, every parallel call shows at the candle after its signal candle and none vanishes, changes or moves its exit.
+
+## Strategies: Opening Drive (26 November): all three indices
+
+The owner, 26 November: "build a strategy for the first hour moves for all 3 indices".
+
+**What it is.** From the 09:25 to the 10:10 candle (entries 09:30 to 10:15), on a day that already stands at least 2 ATR above its open
+(Buy CE) or below it (Buy PE): the last pullback candle within the 3 candles before (for Buy CE a candle that closed below the low of the
+candle before it; for Buy PE one that closed above its high), then a close past that pullback candle's high (Buy CE) or low (Buy PE) by
+0.25 ATR. The call is bought at the next candle's open. The level is the pullback candle's high (low); the chart marks the pullback candle.
+Once per side per day. Under Settings > Strategies, unticked; run on its own like Day Break and Midday Box, its calls in "Call logs from
+strategy". `NewRule.OPENING`, `openingDriveStep`.
+
+**Its own exit.** Like NEWHIGH-TREND, not Rule 1 and the half-ATR trail: the stop starts 2 ATR beyond the pullback level and trails 3 ATR
+behind the best close, never back; out at the first close past it, or at the day's end. The half-ATR trail is too tight in the first hour,
+when the ATR still carries the day before's quieter candles: with it, no setting of this rule held.
+
+**Why the first hour.** On the 39 saved days 107 of the 188 clean moves (1.5 ATR before 0.5 ATR against) started between 09:15 and 10:10
+and the page caught 14 of them at their start (afternoon: 21 of 47). Part of that is the measure: at the open the ATR still carries the day
+before's quieter candles, so about a quarter of all first-hour candles start such a move, either way. What does lean one way, on NIFTY 50's two
+years: after a strong opening move the first pullback that fails is followed by more of the move.
+
+**Numbers** (run on its own through the page's engine, index points, no costs; NIFTY 50 the owner's two years and the saved days, NIFTY BANK
+and SENSEX the minute files since late August and the saved days):
+
+| | Days | Calls | Won | Points | First half | Second half | Buy CE | Buy PE |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| NIFTY 50 | 504 | 163 | 64 | +1,205 | +496 | +709 | +1,035 | +170 |
+| NIFTY BANK | 62 | 12 | 8 | +1,056 | +720 | +336 | +1,749 | -692 |
+| SENSEX | 59 | 20 | 7 | +2,275 | +116 | +2,159 | +920 | +1,355 |
+
+The saved days alone (39): NIFTY 50 12 calls +646, NIFTY BANK 8 calls +675, SENSEX 11 calls +1,183. NIFTY 50 by month: 14 of 24 months
+positive. The settings around it hold too: 49 of 162 neighbouring settings (move 1.5 to 2.5 ATR, 2 to 4 candles, buffer 0.1 or 0.25, stop
+1.5 to 2.5 ATR, trail 2.5 to 4 ATR) are positive in both halves on all three indices. Against the same exit entered at every first-hour candle,
+both sides (the placebo): NIFTY 50 +0.27 ATR a call against +0.10, NIFTY BANK +1.17 against +0.20, SENSEX +1.21 against +0.31; the wide exit
+helps any first-hour entry a little, the rule more. Thin: NIFTY BANK and SENSEX rest on 12 and 20 calls; the Buy CE side carries it (the Buy
+PE side lost on NIFTY BANK, 4 calls). Recent calls: 17 November Buy CE at 09:40 on all three (+80, +251, +393), 19 November NIFTY 50 and
+NIFTY BANK Buy CE at 09:35 (+325, +883), 20 November NIFTY 50 and SENSEX Buy CE at 09:40 (+310, +990), 26 November NIFTY BANK Buy PE at 09:40 (-407).
+
+`lab/newrule-check.js` O1 to O7 (the settings, the Buy CE case and its mirror, the first hour only, the 2 ATR move, once per side, its own exit,
+on its own beside the other strategies) and K2 (each strategy the same alone or with the others, on the 16 saved days).

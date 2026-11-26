@@ -554,8 +554,33 @@
     st.used.add(side);                                                     // once per side per day, taken or not
     return { side, rule: "midday box", kind: side === "CE" ? "box top broken" : "box bottom broken", L: side === "CE" ? box.high : box.low, boxHigh: box.high, boxLow: box.low, target: null, signalCandle: k, signalTime: b.time };
   }
+  // Opening Drive (26 November, the owner: "build a strategy for the first hour moves for all 3 indices"): the opening move goes on when its
+  // first pullback fails. From the 09:25 to the 10:10 candle, on a day already moveAtr ATR above its open (Buy CE) or below it (Buy PE), the
+  // last pullback candle within `look` candles (Buy CE: a close below the candle before's low; Buy PE: a close above its high), then a close
+  // past that pullback candle's high (low) by bufferAtr: Buy CE (Buy PE) at the next candle's open. The level L is that pullback candle's high
+  // (low). Its own exit, as NEWHIGH-TREND has (the half-ATR trail is too tight in the first hour, when the ATR still carries the day before's
+  // quieter candles): the stop starts stopAtr ATR beyond L and trails trailAtr ATR behind the best close, never back. Once per side per day.
+  // Run on its own through this engine (rules: ["opening drive"]) on NIFTY 50's 504 days, NIFTY BANK's 62 and SENSEX's 59: NEW_RULES.md
+  const OPENING = { from: "09:25", until: "10:10", moveAtr: 2, look: 3, bufferAtr: 0.25, stopAtr: 2, trailAtr: 3 };
+  function openingDriveStep(st, bars, k, atr, cfg = DT, skipped = null) {
+    const w = { ...OPENING, ...(cfg.opening || {}) }, t = istHM(bars[k].time);
+    if (atr == null || k < 2 || t < w.from || t > w.until) return null;
+    const open = bars[0].open; let lo = Infinity, hi = -Infinity;
+    for (let j = 0; j <= k; j++) { lo = Math.min(lo, bars[j].low); hi = Math.max(hi, bars[j].high); }
+    const b = bars[k], buf = w.bufferAtr * atr; let side = null, level = null, pull = null;
+    if (open - lo >= w.moveAtr * atr)                                      // the day has fallen: the last bounce candle, then a close below its low
+      for (let j = k - 1; j >= Math.max(1, k - w.look); j--) { const c = bars[j]; if (c.close > bars[j - 1].high) { if (b.close < c.low - buf) { side = "PE"; level = c.low; pull = j; } break; } }
+    if (!side && hi - open >= w.moveAtr * atr)                             // the day has risen: the last dip candle, then a close above its high
+      for (let j = k - 1; j >= Math.max(1, k - w.look); j--) { const c = bars[j]; if (c.close < bars[j - 1].low) { if (b.close > c.high + buf) { side = "CE"; level = c.high; pull = j; } break; } }
+    if (!side || st.used.has(side)) return null;
+    st.used.add(side);                                                     // once per side per day, taken or not
+    const L = round2(level), d = side === "CE" ? 1 : -1;
+    return { side, rule: "opening drive", kind: side === "CE" ? "the dip failed: the opening rise goes on" : "the bounce failed: the opening fall goes on", L, pullTime: bars[pull].time,
+             target: null, signalCandle: k, signalTime: b.time, stopAt: round2(L - d * w.stopAtr * atr), trailAtr: w.trailAtr };
+  }
   const SCANNERS = { "day break": (st, bars, k, atr, cfg, skipped) => dayBreakStep(st, bars, k, atr, cfg, skipped),
                      "midday box": (st, bars, k, atr, cfg, skipped) => middayBoxStep(st, bars, k, atr, cfg, skipped),
+                     "opening drive": (st, bars, k, atr, cfg, skipped) => openingDriveStep(st, bars, k, atr, cfg, skipped),
                      "falling wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "falling", atr, cfg, skipped),
                      "rising wedge": (st, bars, k, atr, cfg, skipped) => wedgeStep(st, bars, k, "rising", atr, cfg, skipped),
                      "bullish rectangle": (st, bars, k, atr, cfg, skipped) => lockedStep(st, bars, k, rectangleAt, { ...RECT, ...(cfg.rect || {}) }, atr, cfg, skipped),
@@ -673,7 +698,7 @@
   // keeps its own ticks). They run ON THEIR OWN, apart from the page's rules (the owner: "any new call fired by strategy if that strategy is
   // ticked then create new table give the name to the table as Call logs from startegy"): runDay with rules: strategiesFor(...) and
   // more: false, its own one call at a time; the page's table and its calls are the same whether a strategy is ticked or not
-  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] }, "midday box": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };
+  const STRATEGIES = { "day break": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] }, "midday box": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] }, "opening drive": { indices: ["NIFTY 50", "NIFTY BANK", "SENSEX"] } };  // Opening Drive: 26 November
   const strategiesFor = (index, ticked) => Object.keys(STRATEGIES).filter(key => ticked && ticked.has(key) && STRATEGIES[key].indices.includes(index));
   // each ticked strategy runs ON ITS OWN, one run per strategy (22 November, the owner: "it should not remove or delete any old fired call
   // or signals from the chart whatever it may b. New rule or strategy should fire additional signals along with the old signals"): a
@@ -792,5 +817,5 @@
       .filter(t => { if ((page || []).some(p => sameBreak(p, t)) || kept.some(k => sameBreak(k, t))) return false; kept.push(t); return true; })
       .map(t => Object.assign(t, { parallel: true }));
   }
-  root.NewRule = { CFG, DT, DB, MORE, LANE, parallelCalls, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
+  root.NewRule = { CFG, DT, DB, MORE, LANE, parallelCalls, moreOn, moreCalls, ruleOn, DT_STRICT, RULE_LIST, RULE_OPT_IN, rulesFor, STRATEGIES, strategiesFor, runStrategies, DAYBREAK, dayBreakStep, MIDDAY, middayBox, middayBoxStep, OPENING, openingDriveStep, DB_V1, DB_V2, DB_V3, DB_OLD, dbOn, dbPatterns, manageStep, dbLogOf, RULES, atrSeries, atrStep, findSwings, round2, bufferOf, detectEntry, detectDoubleBottom, detectTripleTop, detectTripleBottom, WEDGE, WEDGES, wedgeAt, wedgeStep, RECT, rectangleAt, TRI, symmetricalAt, flatAt, triangleStep, bullishTriangleAt, bearishTriangleAt, ascendingAt, descendingAt, lockedStep, SCANNERS, runDay, istHM };
 })(typeof globalThis !== "undefined" ? globalThis : this);
