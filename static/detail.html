@@ -381,6 +381,75 @@
   @media (max-width: 600px) { #chart { height: 300px; } h1 { font-size: 22px; } #last { font-size: 19px; } }
 
   footer { margin-top: 24px; font-size: 12px; color: var(--muted); }
+
+  /* ---------------------------------------------------------------- THE NEW LOOK, "Option 2: chart first, like a trading app"
+     (26 November, the owner chose it from three pictures: "Option 2"). LOOKS ONLY: colours, sizes and the order of the page's
+     blocks on a phone; plus two read-only boxes (#ui-signal: the open paper call; #ui-score: the table's calls, won, points).
+     No rule, no call, no number of the page is changed by anything in this block or by uiDay(). The page is dark in every
+     theme, as the picture was. */
+  :root:root {
+    color-scheme: dark;
+    --page: #07090d; --surface: #10141b; --border: rgba(255, 255, 255, 0.10); --grid: #161b25;
+    --ink: #eef1f6; --ink-2: #b3bbc9; --muted: #7b8496;
+    --up: #b8f34a; --down: #ff5d6c; --watch: #ffc24b; --candle-up: #b8f34a; --candle-down: #ff5d6c;
+    --line: #7aa2ff; --vwap: #c59bff; --now-line: #b8f34a; --now-box: #b8f34a; --now-text: #0a0d05;
+    --itm: rgba(255, 255, 255, 0.05); --card: #10141b; --lime-ink: #0a0d05;
+  }
+  #last, #delta, #ui-score b, #ui-signal .pts { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .pill.on { background: var(--up); color: var(--lime-ink); border-color: var(--up); }
+  #live-note { color: var(--watch); }
+  .chart-wrap { background: var(--page); }
+  #ui-signal { display: flex; align-items: center; gap: 12px; margin: 10px 0 0; padding: 12px 16px; border-radius: 18px; background: var(--up); color: var(--lime-ink); box-shadow: 0 10px 30px rgba(184, 243, 74, 0.22); }
+  #ui-signal[hidden], #ui-score[hidden] { display: none; }
+  #ui-signal.pe { background: var(--down); color: #fff; box-shadow: 0 10px 30px rgba(255, 93, 108, 0.22); }
+  #ui-signal.none { background: var(--surface); color: var(--ink-2); box-shadow: none; border: 1px solid var(--border); }
+  #ui-signal .k { font-size: 11px; font-weight: 800; letter-spacing: 0.12em; opacity: 0.7; text-transform: uppercase; }
+  #ui-signal .b { font-size: 18px; font-weight: 800; line-height: 1.2; }
+  #ui-signal .s { font-size: 12px; opacity: 0.8; }
+  #ui-signal .r { margin-left: auto; text-align: right; white-space: nowrap; }
+  #ui-signal .pts { font-size: 22px; font-weight: 800; }
+  #ui-score { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 12px; }
+  #ui-score div { background: var(--page); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+  #ui-score span { display: block; font-size: 10px; letter-spacing: 0.1em; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+  #ui-score b { font-size: 17px; } #ui-score b.up { color: var(--up); } #ui-score b.down { color: var(--down); }
+  main.aaa > #ui-tools, main.aaa > #ui-signal { display: none !important; }
+  @media (max-width: 899px) {
+    main { padding: 0 0 32px; display: flex; flex-direction: column; }
+    main > * { order: 5; }
+    main > .top { order: 1; padding: 10px 14px 0; gap: 4px 8px; align-items: center; }
+    main > .hero { order: 2; padding: 6px 14px 2px; margin: 0; gap: 0 12px; align-items: baseline; }
+    main > #ui-tools { order: 3; } main > .chart-wrap { order: 4; } main > #ui-signal { order: 5; } main > #rule-signal { order: 5; margin: 10px 14px 0; }
+    main > #redraw-note { order: 6; margin: 10px 14px 0; } main > #aaa-chart { order: 7; margin: 0; border-radius: 0; border-left: 0; border-right: 0; }
+    main > #panel-tabs { order: 8; } main > #ui-score { order: 9; } main > #panels { order: 10; } main > .summary { order: 11; margin: 14px 14px 0; }
+    main > #footer, main > footer { order: 12; padding: 14px 14px 0; margin: 0; }
+    #dashboard, #pick-btn, #logout, #vp-link { background: rgba(255, 255, 255, 0.07); border-color: transparent; border-radius: 12px; padding: 7px 12px; font-size: 13px; }
+    #status { font-size: 11px; color: var(--muted); }
+    .hero h1 { flex-basis: 100%; font-size: 12px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; }
+    .hero #last { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+    .hero #delta { font-size: 13px; font-weight: 700; }
+    .hero #vp-link { margin-left: auto; }
+    .hero #asof { font-size: 11px; }
+    #ui-tools { display: flex; align-items: center; gap: 6px; padding: 8px 14px; overflow-x: auto; scrollbar-width: none; }
+    #ui-tools::-webkit-scrollbar { display: none; }
+    #ui-tools .controls { margin: 0; flex: 0 0 auto; flex-wrap: nowrap; gap: 6px; }
+    #ui-tools .lbl { display: none; }
+    #ui-tools .pick, #ui-tools .seg { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 700; color: var(--ink); }
+    #ui-tools .pick { padding: 7px 10px; }
+    main > .chart-wrap { margin: 0; border: 0; border-radius: 0; padding: 0 0 4px; }
+    main .chart-wrap #chart { height: max(340px, calc(100dvh - 352px)); }
+    .legend-row { padding: 0 14px; }
+    #nav button { min-width: 30px; padding: 3px 6px; font-size: 12px; }
+    main > #ui-signal { margin: 10px 14px 0; }
+    main > #panel-tabs { margin: 16px 0 0; padding: 22px 14px 10px; background: var(--surface); border-top: 1px solid var(--border); border-radius: 26px 26px 0 0; position: relative; flex-wrap: nowrap; overflow-x: auto; gap: 4px; scrollbar-width: none; }
+    main > #panel-tabs::-webkit-scrollbar { display: none; }
+    main > #panel-tabs::before { content: ""; position: absolute; top: 8px; left: 50%; width: 42px; height: 5px; margin-left: -21px; border-radius: 3px; background: rgba(255, 255, 255, 0.2); }
+    #panel-tabs .pill { flex: 0 0 auto; border-color: transparent; background: transparent; color: var(--muted); border-radius: 10px; padding: 9px 12px; font-size: 13px; white-space: nowrap; }
+    #panel-tabs .pill.on { background: rgba(255, 255, 255, 0.10); color: var(--ink); border-color: transparent; }
+    main > #ui-score { margin: 0; padding: 2px 14px 12px; background: var(--surface); }
+    main > #panels { background: var(--surface); padding: 0 14px 20px; min-height: 30vh; }
+    #paper-box { margin-top: 0; }
+    #paper thead th { background: var(--surface); }
+  }
 </style>
 </head>
 <body>
@@ -482,6 +551,8 @@
       <div id="popup"></div>
     </div>
   </div>
+  <!-- The new look's two read-only boxes (26 November, uiDay): the open paper call, and the table's calls, won and points -->
+  <div id="ui-signal" role="status" hidden></div>
   <p id="redraw-note" hidden></p>
   <!-- AAA_V1's chart: the Volume Profile page's own chart of this index (static/volume.html?embed=aaa), with no rule box on it;
        loaded when the capsule is opened, taken away when it is closed -->
@@ -502,6 +573,7 @@
          and the Volume Profile page's chart in place of this page's own while it is open; then "move it to after OI chart capsule" -->
     <button class="pill" id="tab-aaa" type="button">AAA_V1</button>
   </div>
+  <div id="ui-score" hidden></div>
   <div id="panels" data-panel="calls">
   <section id="paper-box" aria-label="Paper calls" hidden>
     <!-- 16 October, the owner's asks ("remove all the red marked boxed things", then "remove this"): the Off, On the
@@ -625,6 +697,9 @@
 <script>
   const IST_OFFSET = 19800;  // the chart labels times as UTC; shifting by 5h30 makes the labels read as IST
   const name = decodeURIComponent(location.pathname.split("/").pop());
+  // The new look (26 November): the Chart, Time frame, Levels and Session rows sit in one box (#ui-tools), so a phone can show them as one
+  // row of small buttons over the chart. The rows themselves, their ids and their listeners are untouched.
+  (() => { const rows = [...document.querySelectorAll("main > .controls.levels")]; if (!rows.length) return; const box = document.createElement("div"); box.id = "ui-tools"; rows[0].before(box); rows.forEach(r => box.appendChild(r)); })();
   // the Volume Profile capsule opens the page of this index (the page reads ?index=), in a new tab as the main menu's does, and
   // hands it this tab's name the same way (#t=), so the price feed is shared
   (() => { const a = document.getElementById("vp-link"), set = () => { let t = ""; try { t = TAB; } catch (e) {} a.href = "/volume-profile?index=" + encodeURIComponent(name) + (t ? "#t=" + encodeURIComponent(t) : ""); }; set(); a.addEventListener("pointerdown", set); a.addEventListener("focus", set); a.addEventListener("click", set); })();
@@ -1111,7 +1186,7 @@
 
   function drawPaper(levels) {
     const box = document.getElementById("paper-box");
-    if (!levels.length) { box.hidden = true; lastPaper = { trades: [], levels: [] }; drawRuleSignal([]); return; }
+    if (!levels.length) { box.hidden = true; lastPaper = { trades: [], levels: [] }; drawRuleSignal([]); uiDay([]); return; }
     box.hidden = false;
     const table = document.getElementById("paper"), note = document.getElementById("paper-note");
     // the score line and the no-call notes (idea 13, ideas 8 and 5) stood here until 16 October: the owner took them off
@@ -1120,6 +1195,7 @@
     markSold(trades);
     lastPaper = { trades, levels };
     drawRuleSignal(trades);
+    uiDay(trades);  // the new look's two boxes: read only
     note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
     table.hidden = !trades.length;
     table.classList.toggle("no-lc", !lcHere());  // the Loss Cutter's two columns only where it runs (NIFTY 50)
@@ -1227,6 +1303,28 @@
   // open, then the last one with its points, "Waiting" before 12:00, else "no signal yet". It reads the plan's mark, nothing more
   const READY_RULE = Rules.PLAN.label, READY_FROM = Rules.PLAN.from;
   const esc = (v) => String(v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  // The new look's two boxes (26 November, "Option 2"). READ ONLY: they show what the calls table already holds and decide nothing.
+  // #ui-signal: the newest open call of the Paper calls table (side, strike, fired when, entry, points now from the last candle's close);
+  // #ui-score: the table's calls that fired, how many of the ended ones won, and the ended ones' points. The Trade Plan view counts the
+  // plan's calls alone and keeps its own signal box; the other capsules show neither.
+  function uiDay(trades) {
+    const sig = document.getElementById("ui-signal"), score = document.getElementById("ui-score"), panel = document.getElementById("panels").dataset.panel;
+    const table = panel === "calls" || panel === "plan", plan = panel === "plan" && planHere();
+    const mine = (trades || []).filter(t => t.how !== "cancelled" && t.entry != null && (!plan || t.plan === "TAKE"));
+    score.hidden = !table || !mine.length; sig.hidden = panel !== "calls" || !mine.length;
+    if (!score.hidden) {
+      const ended = mine.filter(t => t.exit != null && t.points != null), won = ended.filter(t => t.points > 0).length, sum = ended.reduce((a, t) => a + t.points, 0);
+      score.innerHTML = `<div><span>Calls</span><b>${mine.length}</b></div><div><span>Won</span><b>${won}</b></div><div><span>Points</span><b class="${sum > 0 ? "up" : sum < 0 ? "down" : ""}">${sum > 0 ? "+" : sum < 0 ? "−" : ""}${fmt.format(Math.abs(sum))}</b></div>`;
+    }
+    if (sig.hidden) return;
+    const open = mine.filter(t => t.exit == null).sort((a, b) => b.entryTime - a.entryTime)[0];
+    sig.className = open ? (open.side === "PE" ? "pe" : "ce") : "none";
+    if (!open) { sig.innerHTML = `<div><div class="k">Signal now</div><div class="b">No open call</div></div>`; return; }
+    const r = optionRecords[callKey(open)], k = strikeOf(open, r), last = bars.length ? bars[bars.length - 1].close : null;
+    const p = last == null ? null : Rules.round2(open.side === "CE" ? last - open.entry : open.entry - last);
+    sig.innerHTML = `<div><div class="k">Signal now${open.paper ? " · paper, no order" : ""}</div><div class="b">Buy ${k != null ? esc(String(k)) + " " : ""}${open.side}</div><div class="s">Fired ${esc(firedWhen(open))} at ${fmt.format(open.entry)}</div></div>`
+      + (p == null ? "" : `<div class="r"><div class="k">Points</div><div class="pts">${p > 0 ? "+" : p < 0 ? "−" : ""}${fmt.format(Math.abs(p))}</div></div>`);
+  }
   function drawRuleSignal(trades) {
     const box = document.getElementById("rule-signal"), session = currentSession();
     box.hidden = !planShown() || !planHere() || longCandles() || !session || session === "all" || !isToday(session);
@@ -2248,6 +2346,7 @@
   function showPanel(which) {
     try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
     document.getElementById("panels").dataset.panel = which;
+    uiDay(lastPaper && lastPaper.trades);
     document.getElementById("tab-calls").classList.toggle("on", which === "calls");
     document.getElementById("tab-plan").classList.toggle("on", which === "plan");
     document.getElementById("tab-aaa").classList.toggle("on", which === "aaa");
