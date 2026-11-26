@@ -237,6 +237,20 @@
     body.embed #side #fs-row .lbody { max-height: 58vh; }
   }
   body.embed #info .r { display: flex; gap: 0 14px; align-items: center; min-height: 22px; }
+  /* AAA_V1 on a phone (26 November, the owner, with the page on a phone: "Scrolling problem on mobile app, i can't even see all details on the page"): the chart's
+     page was a fixed screen that takes every touch (body: fixed, touch-action none), so inside the index page a finger on it could not scroll the page, and the
+     figures stood in one row cut at the right. On a narrow screen the embedded page now FLOWS: it is as tall as what it holds (the frame is given that height by
+     the index page), every figure wraps into view, the lists show whole, and a finger moving up or down scrolls the index page; sideways it still moves the chart */
+  @media (max-width: 899px) {
+    html.embed, html.embed body { height: auto; overflow: visible; overscroll-behavior: auto; }
+    html.embed body { position: static; display: block; touch-action: pan-y; }
+    html.embed #main { height: var(--aaa-chart-h, 460px); }
+    html.embed #chart, html.embed #wrap, html.embed #tools, html.embed #info, html.embed #draw { touch-action: pan-x pan-y; overscroll-behavior: auto; }
+    html.embed #chart { touch-action: pan-y; }
+    html.embed #wrap.drawing #chart { touch-action: none; }  /* a drawing tool chosen: the finger draws */
+    html.embed #info .r { flex-wrap: wrap; white-space: normal; }
+    html.embed #fvg-row .lbody, html.embed #fs-row .lbody { max-height: none; overflow: visible; }
+  }
   :root { --prev-day: #d97706; --prev-mid: #2563eb; }  /* the previous day's mid line (24 November): blue */  /* amber: the previous day's readings in AAA_V1 */
   body.embed #info .prev .k, body.embed #info .prev .v { color: var(--prev-day); font-weight: 600; }
   body.embed #info .prev.mid .k, body.embed #info .prev.mid .v { color: var(--prev-mid); }  /* the mid figure in blue, as its line */
@@ -389,6 +403,8 @@
   if (params.get("index")) state.name = params.get("index").toUpperCase();
   if (EMBED) {
     document.body.classList.add("embed");
+    document.documentElement.classList.add("embed");
+    document.documentElement.style.setProperty("--aaa-chart-h", Math.round(Math.max(360, Math.min(screen.height || 800, 900) * 0.58)) + "px");  // the chart's height on a phone, where the page flows (see the styles)
     // 19 November, the owner, with AAA_V1 live: "remove every logic from this chart, just keep it as clean as possible, i want only
     // candles and above that i want previous day close high low": every tick box goes and stays off (the rules' four, and Volume,
     // RSI, VWAP, OI walls); no volume rows, no VAH, POC, VAL (drawProfiles, drawTodayNames); the candles, and three lines:
@@ -722,7 +738,14 @@
     }
     return null;
   }
-  const holdChart = (still) => chart.applyOptions({ handleScroll: !still, handleScale: !still });
+  const FLOW = EMBED && matchMedia("(max-width: 899px)").matches;  // AAA_V1 on a phone: the page flows and a finger moving up or down scrolls the index page
+  const scrollOn = () => FLOW ? { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false } : true;
+  const holdChart = (still) => chart.applyOptions({ handleScroll: still ? false : scrollOn(), handleScale: !still });
+  if (FLOW) {
+    chart.applyOptions({ handleScroll: scrollOn() });
+    const tell = () => { try { parent.postMessage({ aaaHeight: Math.ceil(document.documentElement.scrollHeight) }, location.origin); } catch (e) {} };  // the frame is made as tall as the page
+    new ResizeObserver(tell).observe(document.body); addEventListener("load", tell); setTimeout(tell, 500);
+  }
   $("chart").addEventListener("pointerdown", (e) => {
     if (!e.isPrimary) return;
     downAt = { x: e.clientX, y: e.clientY, t: Date.now() };
@@ -1664,9 +1687,9 @@
   // touch pad and a two-finger pinch on a phone zoom the chart only (the chart does that itself), never the page
   const pinPage = () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); for (const el of [document.documentElement, document.body, $("main"), $("wrap")]) { if (el.scrollTop) el.scrollTop = 0; if (el.scrollLeft) el.scrollLeft = 0; } };
   window.addEventListener("scroll", pinPage, true);
-  window.addEventListener("wheel", (e) => { if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #calls-wrap")) e.preventDefault(); }, { passive: false });
+  window.addEventListener("wheel", (e) => { if (FLOW) return; if (e.ctrlKey || !e.target.closest("#chart, #tools, #info, #draw, #calls-wrap")) e.preventDefault(); }, { passive: false });
   for (const kind of ["gesturestart", "gesturechange", "gestureend"]) document.addEventListener(kind, (e) => e.preventDefault());
-  document.addEventListener("touchmove", (e) => { if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
+  document.addEventListener("touchmove", (e) => { if (FLOW) return; if (e.touches.length > 1 && !e.target.closest("#chart")) e.preventDefault(); }, { passive: false });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", paint);
   paint();
 })();

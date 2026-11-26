@@ -2245,6 +2245,9 @@
     const f = frameBox.firstChild;
     if (f && f.contentWindow) { try { f.contentWindow.postMessage({ aaaShown: on }, location.origin); } catch (e) {} }
   }
+  // AAA_V1 on a phone (26 November): the chart's page flows and says how tall it is; the frame takes that height, so nothing in it is cut and the index page scrolls over it
+  window.addEventListener("message", (e) => { if (e.origin !== location.origin || !e.data || typeof e.data.aaaHeight !== "number") return;
+    const f = document.querySelector("#aaa-chart iframe"); if (f && e.source === f.contentWindow && e.data.aaaHeight > 200) f.style.height = Math.min(e.data.aaaHeight, 6000) + "px"; });
   function showPanel(which) {
     try { sessionStorage.setItem("panel", which); } catch (e) {}  // kept across this tab's reloads (17 October, the owner: an open OI chart came back on Paper calls after a deploy)
     document.getElementById("panels").dataset.panel = which;
