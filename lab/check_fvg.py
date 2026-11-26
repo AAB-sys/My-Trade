@@ -41,12 +41,14 @@ def cases():
                "fvg_middle_close_beyond": rng.random() < 0.25, "fvg_middle_direction": rng.random() < 0.25}
         cs = day(rng, n, interval, rng.choice([103.4, 25800.6, 64635.2, 83919.71]), rng.choice([0.05, 0.05, 0.01]), rng.choice([0.1, 0.3, 0.6]), rng.choice([0, 0, 0.03]))
         cuts = sorted(set([len(cs)] + [rng.randint(0, len(cs)) for _ in range(rng.choice([0, 2, 6]))])) if rng.random() < 0.5 else list(range(1, len(cs) + 1))
-        out.append({"cfg": cfg, "interval": interval, "candles": cs, "cuts": cuts, "price": cs[-1]["c"] if cs else 0})
+        seed = day(rng, {1: 375, 5: 75, 15: 25}[interval], interval, rng.choice([103.4, 25800.6, 64635.2, 83919.71]), rng.choice([0.05, 0.05, 0.01]), rng.choice([0.1, 0.3, 0.6]), 0) if rng.random() < 0.6 else None  # the day before (the ATR's seed, 25 November)
+        out.append({"cfg": cfg, "interval": interval, "candles": cs, "cuts": cuts, "price": cs[-1]["c"] if cs else 0, "seed": seed})
     return out
 
 
 def run_python(c):
     t = R.FvgTracker(c["cfg"], c["interval"]); events = []; gaps = []
+    if c.get("seed"): t.seed(c["seed"])
     for n in c["cuts"]:
         gaps, ev = t.update(c["candles"][:n], "d"); events += ev
     below, above = t.nearest(c["price"])
@@ -55,7 +57,7 @@ def run_python(c):
 
 NODE = r"""
 const F = require(process.argv[2]), fs = require("fs"), cs = JSON.parse(fs.readFileSync(process.argv[3])), extra = JSON.parse(fs.readFileSync(process.argv[4]));
-const out = cs.map(c => { const t = new F.Tracker(c.cfg, c.interval); let events = [], gaps = [];
+const out = cs.map(c => { const t = new F.Tracker(c.cfg, c.interval); if (c.seed) t.seed(c.seed); let events = [], gaps = [];
   for (const n of c.cuts) { const [g, ev] = t.update(c.candles.slice(0, n), "d"); gaps = g; events = events.concat(ev); }
   const [below, above] = t.nearest(c.price); return { gaps, events, made: t.made_today.map(g => Object.assign({}, g)), nearest: [below && below.id, above && above.id] }; });
 const res = { out, resample: extra.resample.map(([c, m, s]) => F.resample(c, m, "09:15", s)), fmt: extra.fmt.map(x => [F.fmt(x), F.pts(x)]), defaults: F.DEFAULTS };
@@ -89,7 +91,7 @@ def main():
     for i, (c, j) in enumerate(zip(cs, got["out"])):
         p = json.loads(json.dumps(run_python(c)))
         check(f"day {i}: JS = Python", same(p, j), {k: (p[k], j[k]) for k in p if not same(p[k], j[k])})
-        whole = R.FvgTracker(c["cfg"], c["interval"]); g2, e2 = whole.update(c["candles"], "d")
+        whole = R.FvgTracker(c["cfg"], c["interval"]); (whole.seed(c["seed"]) if c.get("seed") else None); g2, e2 = whole.update(c["candles"], "d")
         check(f"day {i}: fed in pieces = fed at once", same(json.loads(json.dumps(g2)), p["gaps"]) and same(json.loads(json.dumps(e2)), p["events"]))
         made += len(p["made"])
         for g in p["made"]:
@@ -99,6 +101,19 @@ def main():
         cap_ = c["cfg"]["fvg_max_per_side"]
         check(f"day {i}: at most {cap_} open gaps a side", cap_ == 0 or all(sum(1 for g in p["gaps"] if g["kind"] == k) <= cap_ for k in ("bullish", "bearish")))
         check(f"day {i}: open gaps newest first, unfilled part inside the zone", all(a["id"] > b["id"] for a, b in zip(p["gaps"], p["gaps"][1:])) and all(g["bottom"] <= g["unfilled_low"] <= g["unfilled_high"] <= g["top"] and 0 <= g["filled_pct"] <= 100 for g in p["gaps"]))
+    # 25 November (the owner: "seed the ATR from yesterday"): the 09:30 gap of 23.1 points on NIFTY 50 was held back by an ATR of 67.8 made of the day's four
+    # candles (the opening's 137 points the first): 0.5 x 67.8 = 33.9. With the day before's last candles in front of them it forms; once today has 14 candles of its own
+    # the seed is not read at all (the ATR is today's alone, as it was)
+    today = [C("09:15", 25658.35, 25756, 25619, 25724.75), C("09:20", 25728.4, 25743.5, 25718.7, 25731.3), C("09:25", 25733.6, 25775.5, 25695.55, 25774.1), C("09:30", 25772.6, 25795.9, 25766.6, 25779.3)]
+    yest = [C(R._hm(9 * 60 + 15 + 5 * i), 25400 + i, 25410 + i, 25390 + i, 25400 + i) for i in range(75)]
+    a, b = R.FvgTracker({}, 5), R.FvgTracker({}, 5); b.seed(yest); a.update(today, "d"); b.update(today, "d")
+    check("25 Nov 09:30 on NIFTY 50 without the seed: no gap (ATR 67.76, 0.5 x = 33.9 > 23.1)", len(a.made_today) == 0 and abs(a.atr() - 67.76) < 0.01, (len(a.made_today), a.atr()))
+    check("25 Nov 09:30 with the day before's candles in front: the bullish gap 25,743.50 - 25,766.60 forms", len(b.made_today) == 1 and b.made_today[0]["kind"] == "bullish" and abs(b.made_today[0]["bottom"] - 25743.5) < 1e-9 and abs(b.made_today[0]["top"] - 25766.6) < 1e-9, [(g["kind"], g["bottom"], g["top"]) for g in b.made_today])
+    long_day = day(random.Random(7), 40, 5, 25800.6, 0.05, 0.3, 0)
+    c1, c2 = R.FvgTracker({}, 5), R.FvgTracker({}, 5); c2.seed(yest); g1, e1 = c1.update(long_day, "d"); g2, e2 = c2.update(long_day, "d")
+    check("from the 14th candle of the day the ATR is today's alone: the same ATR with or without the seed", abs(c1.atr() - c2.atr()) < 1e-12, (c1.atr(), c2.atr()))
+    s0, s1 = R.FvgTracker({}, 5), R.FvgTracker({}, 5); s1.seed([]); s0.update(today, "d"); s1.update(today, "d")
+    check("an empty seed (no day before on the chart) changes nothing", s0.atr() == s1.atr() and len(s0.made_today) == len(s1.made_today))
     print(f"{len(cs)} made-up days read by both files; {made} gaps made in them")
     check("resample: %d cases" % len(res_cases), same(json.loads(json.dumps([R.resample(c, m, "09:15", s) for c, m, s in res_cases])), got["resample"]))
     check("the printed prices and points", same([[R._fmt(x), R._pts(x)] for x in nums], got["fmt"]), (got["fmt"], [[R._fmt(x), R._pts(x)] for x in nums]))

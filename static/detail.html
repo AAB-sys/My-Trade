@@ -756,9 +756,9 @@
     let count = 0, last = 0;
     for (let i = 1; i <= n; i++) if (at(i) !== at(i - 1)) { count++; last = i; }  // the same lines are the same array: a new one is a redraw
     if (!last) { el.hidden = true; el.textContent = ""; return; }
-    const before = at(last - 1), after = at(last), bar = bars[last - 1], up = bar.close > before[before.length - 1].price;
-    const line = up ? before[before.length - 1] : before[0], day = periodWord();
-    const zero = up ? after[0].price : after[after.length - 1].price, end = up ? after[after.length - 1].price : after[0].price;
+    const eb = Rules.edgesOf(at(last - 1)), ea = Rules.edgesOf(at(last)), bar = bars[last - 1], up = bar.close > eb.top.price;  // the lines that count: not the extra ones beyond (25 November)
+    const line = up ? eb.top : eb.bottom, day = periodWord();
+    const zero = up ? ea.bottom.price : ea.top.price, end = up ? ea.top.price : ea.bottom.price;
     el.className = up ? "up" : "down";
     el.innerHTML = `<b>Fibonacci levels redrawn ${up ? "upward" : "downward"} at ${callTime(bar.time + SECONDS[state.interval])}</b>${count > 1 ? ` (${count} times so far)` : ""}. `
       + `Reason: the ${callTime(bar.time)} candle closed at ${fmt.format(bar.close)}, ${up ? "above the highest" : "below the lowest"} line, ${Rules.levelName(line.ratio, true)} (${fmt.format(line.price)}). `
