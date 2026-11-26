@@ -105,3 +105,11 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
 - Q: Do the FVG fill signals (the page's own rule) work on NIFTY 50, and does any filter fix them? ANSWERED: 481 days, page rule year 1 +217, year 2 -507 points (plain trade, stop 1 ATR, target 1.5 ATR); 301 filters (single and pairs): 0 positive in both years (about 0.4 by luck). No edge. research/fvg-fill/RESULT-2026-11-25.md.
 - Q (open): after a close beyond the VAH/VAL on a day the price spends 90%+ of its minutes above yesterday's value area (today: 359 of 375), how often does the next wick through the edge come back? (re-answer as days are added)
 - Q (open): does the 12:00 shape Double predict the afternoon? (today Double at noon, afternoon went down then back up to close between POC and VAH)
+
+## 2026-11-26
+- Y1 ANSWERED (ULTROAN's own question: today NIFTY 50 opened above yesterday's POC, fell to it in the first 30 minutes and turned there, the low of the day to the point. Does yesterday's POC turn the price in the morning?). Price only, 503 days of NIFTY 50, the profile by time; the first touch of yesterday's POC before 11:15, then which comes first in the next hour: 30 points back or 30 points through.
+  - Day opened ABOVE yesterday's POC and came down to it: 47 days. Turned back up 38%, went through 57%. So today's turn was the less common case.
+  - Day opened BELOW yesterday's POC and came up to it: 42 days. Turned back down 62%, went through 33%.
+  - So from below, yesterday's POC is more often a lid in the morning; from above it is not a floor. Rests on 89 days; early. As a trade it failed (idea 15).
+- Q (open): after a D shape at noon the afternoon fell in all three indices today; the volume-day number (up 64%, 22 days) disagrees with two years (down 53%). Re-answer as days are added.
+- Q (open): the 13:30 close below the VAL failed on NIFTY 50 and SENSEX but held on NIFTY BANK, which was already inside yesterday's value. Does a VAL break hold better when the day is inside yesterday's value area?

@@ -303,3 +303,10 @@ Lesson (fifth time): a true fact about where the price does NOT go back to is no
 - Result: 72 had 40+ calls in year 1; 2 were good in year 1 (net positive without the best day); 0 of those held in year 2. Best: minGap 0.1, until 10:15, stop at the extreme, target 2.5: Y1 60 calls net +384; Y2 50 calls net -444 (CE -873, PE +429). The PE side alone is positive in both years but small and with few calls; not on the watch list.
 - Verdict: the fact (G1) is true, the entry after the cross is late. NOT on the watch list. Variants tried so far: 1,046 (830 before): the bar rises.
 - Watch list, new days to 23 Nov: QUIET-BREAK 6 days, 3 calls, -47 (2 up 1 down); NEWHIGH-TREND 6 days, 6 calls, +534 (3 up 3 down; +196 today, a down day: the PE side); DIR-1215 6 days, no call; NEWHIGH-STAY 2 days, no call.
+
+## Idea 15 (26 Nov, from question Y1): YESTERDAY'S POC TURNS THE PRICE (ypoc)
+- In words: a 5-minute candle touches yesterday's POC (profile by time) and closes back on the side it came from, in its colour, the candle before on that side: CE from above, PE from below; optional: only when the day opened on that side; until 10:15, 12:00 or 14:30; stop 0.5 or 1.5 ATR beyond the candle; target 0, 1.5 or 3 times the risk; 1 or 2 calls a day. 72 variants.
+- Result: 48 had 40+ calls in year 1; 2 were good in year 1; 0 held in year 2. Best of year 1: until 14:30, stop 0.5, no target, same-side open, 1 a day: Y1 52 calls net +475; Y2 56 calls net -422 (CE -200, PE -221).
+- Verdict: no edge. NOT on the watch list. Variants tried so far: 1,118 (1,046 before): the bar rises.
+- Watch list, new days to 26 Nov: QUIET-BREAK 8 days, 3 calls, -47 (2 up 1 down); NEWHIGH-TREND 8 days, 9 calls, +220 (3 up 5 down); DIR-1215 8 days, 1 call, -89; NEWHIGH-STAY 4 days, no call.
+- Waiting for the owner's yes: MSS-3 (8 versions declared in Delta reports/MSS strategy 3 for AAA V1.md); not run.
