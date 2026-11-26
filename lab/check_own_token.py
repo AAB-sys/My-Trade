@@ -62,7 +62,7 @@ def check(what, cond):
     print(("ok    " if cond else "WRONG ") + what)
 def fresh():
     (dhan._retry["timer"].cancel() if dhan._retry["timer"] is not None else None); dhan._retry["timer"] = None
-    dhan._own.update(token="", made_at=None, problem=None, fails=0, fail_day=None, last_try=0.0, tries=0, wait=None, limited=0)
+    dhan._own.update(token="", made_at=None, problem=None, fails=0, fail_day=None, last_try=0.0, tries=0, wait=None, limited=0, quick=0)
 
 # 1. the code of the moment: RFC 6238's own test values (SHA-1, the key "12345678901234567890"), six digits
 RFC = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
@@ -113,6 +113,33 @@ dhan._own["fail_day"] = "2026-01-01"; dhan._own["last_try"] = time.time() - 3600
 check("the next day it may try again (the count is a day's)", state["asked"] == n + 1 and dhan.own_report()["failed_tries"] == 1)
 state["refuse_pin"] = False; state["good"] = set()
 check("a try asked for by hand goes through and clears the count", dhan.renew_token("by hand", by_hand=True) and dhan.own_report()["failed_tries"] == 0 and not dhan.own_report()["stopped"])
+
+# 6b. a token Dhan gave and then refuses (26 November: made 09:08:36, refused by 09:11, the next try only at 09:18 and 09:28): two minutes, not ten
+fresh(); state["good"] = set(); dhan.profile(); first = dhan._own["token"]; n = state["asked"]
+check("a token is made and in use", first != "" and dhan._own["quick"] == 0 and dhan._own["wait"] is None)
+state["good"].discard(first); dhan._own["last_try"] = time.time() - 180  # Dhan drops it three minutes after it was made
+check("refused 3 minutes after it was made: a new token is made at once (before: not for 10 minutes)", dhan.profile().get("dhanClientId") == CLIENT and state["asked"] == n + 1 and dhan._own["token"] not in ("", first) and dhan._own["quick"] == 1)
+check("after the new token the wait is back to its usual value and no timer waits", dhan._own["wait"] is None and dhan._retry["timer"] is None)
+second = dhan._own["token"]; state["good"].discard(second); dhan._own["last_try"] = time.time() - 40; n = state["asked"]
+check("refused 40 seconds after it was made: Dhan is NOT asked at once (its two minutes), the request fails as a refused token", refused() and state["asked"] == n)
+tm = dhan._retry["timer"]; check("a timer waits for the rest of the two minutes (about 86 s), once", tm is not None and tm.is_alive() and 80 <= tm.interval <= 90 and tm.daemon)
+check("another refused request meanwhile sets no second timer and asks nothing", refused() and dhan._retry["timer"] is tm and state["asked"] == n and dhan._own["quick"] == 2)
+tm.cancel(); dhan._retry["timer"] = None; dhan._own["last_try"] = time.time() - 130; tm.function()
+check("when the timer fires a token is made, with no poll needed", dhan._own["token"] not in ("", first, second) and state["asked"] == n + 1 and dhan.own_report()["failed_tries"] == 0)
+third = dhan._own["token"]; state["good"].discard(third); dhan._own["last_try"] = time.time() - 200; dhan.profile(); fourth = dhan._own["token"]
+check(f"the third quick try of the day is still quick ({dhan.QUICK_MAX} a day)", fourth not in ("", third) and dhan._own["quick"] == 3)
+state["good"].discard(fourth); dhan._own["last_try"] = time.time() - 200; n = state["asked"]
+check("the fourth such refusal in a day waits the 10 minutes, as before, and sets no timer", refused() and state["asked"] == n and dhan._retry["timer"] is None and dhan._own["quick"] == 3)
+dhan._own["last_try"] = time.time() - 601
+check("and after the 10 minutes it asks again", dhan.profile().get("dhanClientId") == CLIENT and state["asked"] == n + 1)
+dhan._own["fail_day"] = "2026-01-01"; last = dhan._own["token"]; state["good"].discard(last); dhan._own["last_try"] = time.time() - 200; dhan.profile()
+check("the next day the quick tries start again", dhan._own["quick"] == 1 and dhan._own["token"] not in ("", last))
+fresh(); state["good"] = set(); dhan.profile(); tok = dhan._own["token"]; state["good"].discard(tok); state["refuse_pin"] = True; dhan._own["last_try"] = time.time() - 200; n = state["asked"]
+check("a wrong PIN after such a refusal is a failed try and the wait is 10 minutes again (no quick asking with a PIN Dhan refuses)", refused() and state["asked"] == n + 1 and dhan.own_report()["failed_tries"] == 1 and dhan._own["wait"] is None and dhan._retry["timer"] is None)
+dhan._own["last_try"] = time.time() - 300; check("300 seconds after that wrong PIN: not asked", refused() and state["asked"] == n + 1)
+state["refuse_pin"] = False
+fresh(); state["good"] = {PASTED}; n = state["asked"]
+check("a pasted token that works: nothing here runs", dhan.profile().get("dhanClientId") == CLIENT and state["asked"] == n and dhan._own["quick"] == 0)
 
 # 7. the network down is not a refusal
 fresh(); saved = dhan.AUTH_BASE; dhan.AUTH_BASE = "http://127.0.0.1:9"
