@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ULTROAN shadow signals · My-Trade</title>
+<link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+<script src="/static/vendor/lightweight-charts.js"></script>
+<script src="/static/shadow.js"></script>
+<!-- ULTROAN shadow signals (26 November, the owner: "Yes, build the shadow page"). The strategies on ULTROAN's watch list, run
+     live on NIFTY 50's 5-minute candles, so the owner sees each signal while the strategy is still under test. A page of its
+     own: it reads the index's candles and nothing else; Paper calls, the Trade Plan, Calls with Signals and the Volume Profile
+     page do not read it and it does not read them. It sends nothing to the server and takes no option. The rules live in
+     static/shadow.js and are the lab's, fixed as found. -->
+<style>
+  :root { color-scheme: light; --page: #f6f7f9; --surface: #ffffff; --border: #e0e3eb; --grid: #f0f3fa; --ink: #131722; --ink-2: #434651; --muted: #787b86; --up: #089981; --down: #f23645; --accent: #2962ff; --warn-bg: #fff7e0; --warn-ink: #7a5200; --warn-line: #f0c44c; }
+  @media (prefers-color-scheme: dark) { :root { color-scheme: dark; --page: #0f1218; --surface: #131722; --border: #2a2e39; --grid: #1e222d; --ink: #d1d4dc; --ink-2: #b2b5be; --muted: #787b86; --accent: #5b9cf6; --warn-bg: #2b2412; --warn-ink: #f3d27a; --warn-line: #6b5518; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); color: var(--ink); font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width: 1060px; margin: 0 auto; padding: 14px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-bottom: 10px; }
+  header a { color: var(--ink); text-decoration: none; border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 4px 14px; font-weight: 600; font-size: 14px; }
+  h1 { font-size: 20px; margin: 0; }
+  #status { color: var(--muted); font-size: 13px; margin-left: auto; }
+  .warn { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-line); border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; }
+  .warn b { display: block; font-size: 16px; }
+  .box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  .box h2 { font-size: 16px; margin: 0 0 6px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .chip { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 10px; border: 1px solid var(--border); color: var(--ink-2); }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chip.off { color: var(--muted); }
+  .muted { color: var(--muted); font-size: 13px; }
+  .rule { color: var(--ink-2); margin: 0 0 4px; }
+  #now-list { font-size: 17px; font-weight: 600; }
+  #now-list div { margin: 2px 0; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.pick { cursor: pointer; } tr.pick.sel td { background: var(--grid); }
+  #chart { height: 380px; }
+  @media (max-width: 600px) { #chart { height: 300px; } #status { margin-left: 0; width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a id="back" href="/">← Dashboard</a>
+    <h1>ULTROAN shadow signals</h1>
+    <span id="status">Loading…</span>
+  </header>
+  <div class="warn"><b>UNDER TEST. These are not calls to trade.</b>
+    ULTROAN found these strategies on two years of old NIFTY 50 candles. Old data can lie, so each one is now watched on new days. This page only shows what each would do. NIFTY 50 only. Points are index points.</div>
+
+  <div class="box"><h2>Shadow signal now</h2><div id="now-list" class="muted">Loading…</div></div>
+
+  <div class="box"><h2><span id="chart-title">NIFTY 50, 5-minute candles</span></h2><div id="chart"></div>
+    <div class="muted">An arrow is a shadow entry (the strategy's name beside it); a dot is its exit. Tap a day in the table below to see that day.</div></div>
+
+  <div id="cards"></div>
+
+  <div class="box"><h2>The days this page can see</h2>
+    <div class="scroll"><table id="days"></table></div>
+    <div class="muted" id="days-note"></div></div>
+</main>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id), NAME = "NIFTY 50", LC = LightweightCharts;
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const num = (x) => x.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pts = (x) => `<span class="${x > 0 ? "up" : x < 0 ? "down" : ""}">${x > 0 ? "+" : ""}${x.toFixed(1)}</span>`;
+  const nice = (d) => new Date(d + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", weekday: "short", timeZone: "UTC" });
+
+  // the login's tab note, handed over by the dashboard's link, as the other pages do
+  let TAB = ""; try { TAB = sessionStorage.getItem("tab") || ""; } catch (e) {}
+  const handed = new URLSearchParams(location.hash.slice(1)).get("t");
+  if (handed) { TAB = handed; try { sessionStorage.setItem("tab", TAB); } catch (e) {} history.replaceState(null, "", location.pathname + location.search); }
+  $("back").href = "/#t=" + encodeURIComponent(TAB);
+  let PAGE = ""; const withTab = () => ({ headers: { "X-Tab": TAB, "X-Page": PAGE } });
+  let loadedCommit = null;
+  function newDeploy(commit) { if (!commit) return false; if (loadedCommit === null) { loadedCommit = commit; return false; } if (commit === loadedCommit) return false;
+    let last = 0; try { last = parseInt(sessionStorage.getItem("reloaded-at") || "0", 10); } catch (e) {} if (Date.now() - last < 60000) return false;
+    try { sessionStorage.setItem("reloaded-at", String(Date.now())); } catch (e) {} location.reload(); return true; }
+  async function beat() { try { const r = await fetch("/alive", { method: "POST", ...withTab() }); if (r.status === 401) { location.href = "/login"; return; }
+    if (r.ok) { const data = await r.json(); if (newDeploy(data.commit)) return; if (data.page) PAGE = data.page; } } catch (e) {} }
+
+  const chart = LC.createChart($("chart"), { autoSize: true, layout: { background: { color: css("--surface") }, textColor: css("--ink-2"), attributionLogo: false },
+    grid: { vertLines: { color: css("--grid") }, horzLines: { color: css("--grid") } }, rightPriceScale: { borderColor: css("--border") },
+    timeScale: { borderColor: css("--border"), timeVisible: true, secondsVisible: false }, handleScale: { axisPressedMouseMove: false }, crosshair: { mode: 0 } });
+  const series = chart.addSeries(LC.CandlestickSeries, { upColor: css("--up"), downColor: css("--down"), borderVisible: false, wickUpColor: css("--up"), wickDownColor: css("--down") });
+  const marks = LC.createSeriesMarkers(series, []);
+  const COLORS = { "NEWHIGH-TREND": "#2962ff", "QUIET-BREAK": "#7e57c2", "DIR-1215": "#e67e22", "NEWHIGH-STAY": "#0891b2" };
+
+  let result = null, picked = null, drawnKey = "";
+  function drawChart(day) {
+    const key = day.date + ":" + day.candles.length + ":" + day.candles[day.candles.length - 1].close + ":" + JSON.stringify(Object.values(day.calls).map((c) => c.length));
+    $("chart-title").textContent = `NIFTY 50, 5-minute candles, ${nice(day.date)}`;
+    series.setData(day.candles.map((x) => ({ time: x.time + 19800, open: x.open, high: x.high, low: x.low, close: x.close })));
+    const m = []; for (const [id, calls] of Object.entries(day.calls)) for (const c of calls) {
+      m.push({ time: c.entryTime + 19800, position: c.dir > 0 ? "belowBar" : "aboveBar", shape: c.dir > 0 ? "arrowUp" : "arrowDown", color: COLORS[id], text: `${id} ${c.side}` });
+      if (c.exitTime) m.push({ time: c.exitTime + 19800, position: c.dir > 0 ? "aboveBar" : "belowBar", shape: "circle", color: COLORS[id], text: `${c.points > 0 ? "+" : ""}${c.points.toFixed(0)}` }); }
+    marks.setMarkers(m.sort((a, b) => a.time - b.time));
+    if (key.split(":")[0] !== drawnKey.split(":")[0]) chart.timeScale().fitContent(); drawnKey = key;
+  }
+  const callLine = (c) => c.how === "open"
+    ? `Buy ${c.side} at ${c.entryHm}, in ${num(c.entry)}, stop now ${num(c.stop)}: open, ${pts(c.now)} now`
+    : `Buy ${c.side} at ${c.entryHm}, in ${num(c.entry)}, out ${c.exitHm} (${c.how === "stop" ? "stop" : "time"}) ${num(c.exit)}: ${pts(c.points)}`;
+  function why(st, day) { const last = day.candles[day.candles.length - 1].hm, over = day.closed >= 75;
+    if (st.id === "QUIET-BREAK" && !day.quietDay) return ["off", "Not today: yesterday was not a quiet day"];
+    if (st.id === "DIR-1215") return last < "12:15" && !over ? ["", "Looks at 12:15"] : ["off", "No signal at 12:15"];
+    if (over || last > (st.id === "QUIET-BREAK" ? "13:30" : "14:00")) return ["off", "No signal today"]; return ["", "Watching"]; }
+  function render() {
+    const days = result.days; if (!days.length) { $("now-list").textContent = "Not enough candles yet."; return; }
+    const today = days[days.length - 1], show = days.find((d) => d.date === picked) || today, live = today.closed < 75;
+    const open = []; for (const calls of Object.values(today.calls)) for (const c of calls) if (c.how === "open") open.push(c);
+    $("now-list").className = open.length ? "" : "muted";
+    $("now-list").innerHTML = open.length ? open.map((c) => `<div>${esc(c.id)}: ${callLine(c)}</div>`).join("") : (live ? "No shadow signal is open now." : `No shadow signal is open. Last session: ${nice(today.date)}.`);
+    $("cards").innerHTML = result.list.map((st) => { const calls = today.calls[st.id], [cls, text] = calls.length ? [calls.some((c) => c.how === "open") ? "on" : "", `${calls.length} signal${calls.length > 1 ? "s" : ""} ${live ? "today" : "on " + nice(today.date)}`] : why(st, today);
+      return `<div class="box"><h2><span style="color:${COLORS[st.id]}">●</span> ${esc(st.id)} <span class="chip ${cls}">${esc(text)}</span></h2><p class="rule">${esc(st.words)}</p>` +
+        (calls.length ? `<div>${calls.map((c) => `<div>${callLine(c)}</div>`).join("")}</div>` : "") + `<div class="muted">${esc(st.old)} On watch since ${nice(st.found)}.</div></div>`; }).join("");
+    const cost = Shadow.COST, tot = {}, cnt = {}; let head = "<tr><th>Day</th>" + result.list.map((s) => `<th>${esc(s.id)}</th>`).join("") + "</tr>", rows = "";
+    for (const d of [...days].reverse()) { rows += `<tr class="pick${d.date === show.date ? " sel" : ""}" data-d="${d.date}"><td>${nice(d.date)}</td>` + result.list.map((s) => { const done = d.calls[s.id].filter((c) => c.points != null);
+      if (!d.calls[s.id].length) return "<td class='muted'>–</td>"; const p = done.reduce((a, c) => a + c.points - cost, 0), early = d.date <= s.found;
+      if (early) return `<td class="muted">${done.length ? (p > 0 ? "+" : "") + p.toFixed(1) : ""}* (${d.calls[s.id].length})</td>`;
+      tot[s.id] = (tot[s.id] || 0) + p; cnt[s.id] = (cnt[s.id] || 0) + done.length;
+      return `<td>${done.length ? pts(p) : ""}${d.calls[s.id].length > done.length ? " open" : ""} <span class="muted">(${d.calls[s.id].length})</span></td>`; }).join("") + "</tr>"; }
+    rows += "<tr><th>Total</th>" + result.list.map((s) => `<th>${cnt[s.id] ? pts(tot[s.id]) + ` <span class="muted">(${cnt[s.id]})</span>` : "–"}</th>`).join("") + "</tr>";
+    $("days").innerHTML = head + rows;
+    $("days-note").textContent = `Points after ${cost} points cost a call; the number of signals in brackets. A grey number with * is from a day before the strategy went on watch: it is not counted in the total. The page sees only the last ${days.length} sessions. A strategy is called READY by ULTROAN only after 10 new days with a signal, a positive total, and more days up than down.`;
+    drawChart(show);
+  }
+  $("days").addEventListener("click", (e) => { const tr = e.target.closest("tr.pick"); if (!tr || !result) return; picked = tr.dataset.d; render(); });
+
+  let busy = false;
+  async function load() { if (busy || document.hidden) return; busy = true;
+    try { const r = await fetch(`/indices/${encodeURIComponent(NAME)}/detail?range=2w&interval=5m`, withTab());
+      if (r.status === 401) { location.href = "/login"; return; }
+      if (!r.ok) { let why = `HTTP ${r.status}`; try { why = (await r.json()).detail || why; } catch (e) {} $("status").textContent = "Could not load the candles: " + why; return; }
+      const data = await r.json(), now = data.now ? Date.parse(data.now.replace(" ", "T") + (/[+Z]/.test(data.now.slice(10)) ? "" : "+05:30")) / 1000 : Date.now() / 1000;
+      result = Shadow.run(data.candles || [], data.days || [], now); render();
+      $("status").textContent = "Updated " + new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) + " IST";
+    } catch (e) { $("status").textContent = "Could not load the candles (no connection?). Trying again."; } finally { busy = false; } }
+  beat().then(load); setInterval(beat, 15000); setInterval(load, 20000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) beat().then(load); });
+})();
+</script>
+</body>
+</html>

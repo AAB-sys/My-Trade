@@ -169,7 +169,7 @@ logins: dict[str, dict] = {}  # token -> {"tab", "pages": {page id: {"socket", "
 revoked: set[str] = set()  # tokens logged out on this server: never revived from the cookie
 ws_pages: dict[WebSocket, tuple[str, str]] = {}  # socket -> (token, page id)
 PAGE_PATHS = ("/", "/index/", "/docs", "/openapi.json")  # fetched by the browser itself, without the note
-PAGE_EXACT = ("/volume-profile",)  # no other page paths: the Study page went on 15 October (the owner: "remove this study tab and everything under it")
+PAGE_EXACT = ("/volume-profile", "/ultroan")  # no other page paths: the Study page went on 15 October (the owner: "remove this study tab and everything under it")
 
 
 # ---------------------------------------------------------------- login
@@ -1462,6 +1462,13 @@ def index_page(request: Request, name: str):
 def volume_profile_page(request: Request):
     """The Volume Profile page (the owner, 12 November): a page of its own, its chart and its profile in static/volume.html."""
     return versioned_page(request, "volume.html")
+
+
+@app.get("/ultroan")
+def ultroan_page(request: Request):
+    """ULTROAN's shadow signals (the owner, 26 November: "Yes, build the shadow page"): the lab's watch-list strategies shown live,
+    under test; a page of its own in static/shadow.html, its rules in static/shadow.js. It reads the index's candles and decides nothing."""
+    return versioned_page(request, "shadow.html")
 
 
 VOLUME_MINUTES = {"1m": 1, "5m": 5, "15m": 15}  # the candle sizes of the Volume Profile page
