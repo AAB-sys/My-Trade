@@ -96,9 +96,15 @@ RATE_MAX = 10
 # after TOTP_WAIT_SECONDS (60) for the code. A wrong PIN still waits 10 minutes (asked over and over it could lock the account); the 3 failed tries a day stay
 TOTP_WAIT_SECONDS = float(os.environ.get("DHAN_TOTP_WAIT_SECONDS", "60"))
 _retry = {"timer": None}
+# 26 November, a merge at 09:06: the server made its own token at 09:08:36, Dhan refused that token by 09:11, and the server then waited the full
+# 10 minutes (RENEW_WAIT_SECONDS, meant for a wrong PIN) before asking again, twice: no prices from 09:08 to 09:28. A token Dhan GAVE and then refuses
+# is not a wrong PIN or code: nothing was refused at the login. So after such a refusal the server asks again as soon as Dhan's own two minutes since
+# the last try have passed (RATE_WAIT_SECONDS), on a timer of its own, at most QUICK_MAX times a day; after that the wait is 10 minutes, as before.
+# Nothing else changes: the morning's renewal, a wrong PIN's 10 minutes, the 3 failed tries a day and the rate limit's count stand as they were.
+QUICK_MAX = int(os.environ.get("DHAN_QUICK_MAX", "3"))
 RENEW_MAX_FAILS = int(os.environ.get("DHAN_RENEW_MAX_FAILS", "3"))
 TOTP_EDGE_SECONDS = float(os.environ.get("DHAN_TOTP_EDGE_SECONDS", "6"))  # no code is made this close to its change
-_own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "made_ts": 0.0, "tries": 0, "wait": None, "limited": 0}
+_own = {"token": "", "made_at": None, "problem": None, "fails": 0, "fail_day": None, "last_try": 0.0, "made_ts": 0.0, "tries": 0, "wait": None, "limited": 0, "quick": 0}
 _own_lock = threading.Lock()
 
 
@@ -158,7 +164,7 @@ def renew_token(why: str, by_hand: bool = False) -> bool:
         now = time.time()
         today = datetime.now(IST).date().isoformat()
         if _own["fail_day"] != today:  # a new day: the count of failed tries starts again (at most RENEW_MAX_FAILS a day)
-            _own["fail_day"], _own["fails"], _own["limited"] = today, 0, 0
+            _own["fail_day"], _own["fails"], _own["limited"], _own["quick"] = today, 0, 0, 0
         wait = _own["wait"] if _own["wait"] is not None else RENEW_WAIT_SECONDS  # 130 s after Dhan's "once every 2 minutes", else 10 minutes
         if not by_hand and (_own["fails"] >= RENEW_MAX_FAILS or _own["limited"] >= RATE_MAX or (_own["last_try"] and now - _own["last_try"] < wait)):
             return False
@@ -285,6 +291,22 @@ def _got_through() -> None:
         _hold["seconds"] = 0.0
 
 
+def _own_refused() -> None:
+    """Dhan refused a token it gave the server itself: the next try waits Dhan's two minutes since the last one, not ten (at most QUICK_MAX
+    times a day), and a timer asks at that moment so no page has to wait for the next poll (26 November, see QUICK_MAX)."""
+    with _own_lock:
+        today = datetime.now(IST).date().isoformat()
+        if _own["fail_day"] != today:
+            _own["fail_day"], _own["fails"], _own["limited"], _own["quick"] = today, 0, 0, 0
+        if _own["quick"] >= QUICK_MAX or _own["fails"] >= RENEW_MAX_FAILS or _own["limited"] >= RATE_MAX:
+            return
+        _own["quick"] += 1
+        _own["wait"] = RATE_WAIT_SECONDS
+        left = RATE_WAIT_SECONDS - (time.time() - _own["last_try"])
+    if left > 0:
+        _retry_in(left, "the server's own token was refused, Dhan's two minutes have passed")
+
+
 def call(method: str, path: str, payload: dict | None = None) -> dict:
     """One request to Dhan; raises DhanError with a plain reason when it refuses. When the token is refused (or none is
     set) and the server may make its own (DHAN_PIN and DHAN_TOTP_SECRET), it makes one and asks once more."""
@@ -295,6 +317,7 @@ def call(method: str, path: str, payload: dict | None = None) -> dict:
             raise
         if _own["token"] and exc.kind == "token":
             _own["token"] = ""  # the server's own token was refused: back to the pasted one, then a new one
+            _own_refused()
             try:
                 return _call(method, path, payload)
             except DhanError as again:
