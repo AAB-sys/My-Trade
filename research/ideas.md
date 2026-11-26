@@ -314,3 +314,5 @@ Lesson (fifth time): a true fact about where the price does NOT go back to is no
 ## Idea 16 (26 Nov, the owner's yes): MSS-3, the market structure shift alone plus one filter each (8 versions)
 - Result on year 1: all 8 negative (50 to 208 trades each, 27% to 37% won, -7.6 to -18.5 points a trade after cost; base -5.4 before cost). Year 2 not opened. research/mss/RESULT-MSS3-2026-11-26.md.
 - Verdict: no edge. With MSS-1 and MSS-2: 24 MSS versions, none good. Variants tried so far: 1,126.
+- OWNER'S RULE (26 Nov): never remove from the watch list; BAD is a mark, not a removal; failed ideas are re-run on the first trading day of each month.
+- MSS-3 with swings from today's candles only (the owner asked about this choice, 26 Nov): year 1 still all 8 negative (A 128 trades -1654; B 45 -387; C 53 -680; D 94 -1159; E 68 -1166; F 86 -833; G 185 -1746; H 83 -895). The choice did not change the verdict. Variants tried so far: 1,134.

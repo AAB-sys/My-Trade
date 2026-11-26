@@ -22,7 +22,8 @@ const SH = A.map((_, i) => isSH(i)), SL = A.map((_, i) => isSL(i));
 function levelsOf(x) { const c = dayCtx[x.d], L = []; for (const k of ["pdh", "pdl", "pdm", "pdc", "poc", "vah", "val"]) if (c[k] != null) L.push(c[k]); if (x.hm >= "09:30") L.push(c.orh, c.orl); return L; }
 function run(V, ds) { const set = new Set(ds), T = []; let highs = [], lows = [], usedH = -1, usedL = -1, open = null, pend = null;
   for (let i = 0; i < A.length; i++) { const x = A[i];
-    if (i - N >= 0) { if (SH[i - N]) highs.push(i - N); if (SL[i - N]) lows.push(i - N); }   // known at the close of candle i
+    if (process.env.TODAY && x.k === 0) { highs = []; lows = []; }
+    if (i - N >= 0 && (!process.env.TODAY || A[i - N].d === x.d)) { if (SH[i - N]) highs.push(i - N); if (SL[i - N]) lows.push(i - N); }   // known at the close of candle i
     // manage the open trade (from the candle after entry; limit entries are managed from the entry candle's close onward)
     if (open && i > open.i) { let done = null; if (x.hm >= "15:15" || x.d !== open.d) done = x.d !== open.d ? A[i - 1].close : x.open;
       else if (open.dir > 0 ? x.low <= open.stop : x.high >= open.stop) done = open.dir > 0 ? Math.min(open.stop, x.open) : Math.max(open.stop, x.open);
