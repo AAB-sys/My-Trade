@@ -282,7 +282,7 @@
     const box = label.querySelector("input"); box.checked = st.on; gear.hidden = !st.on;
     box.addEventListener("change", () => { st.on = box.checked; gear.hidden = !st.on; save(); refresh(); });
     gear.addEventListener("click", () => dialog());
-    const rowEl = document.createElement("div"); rowEl.id = "fs-row"; rowEl.hidden = true; (A.infoRow.parentNode || document.body).appendChild(rowEl);
+    const rowEl = document.createElement("div"); rowEl.id = "fs-row"; rowEl.hidden = true;  // 27 November, the owner: the FVG signals list is not on the page any more; the signals are still worked out and marked on the chart
     let open = null, shownRow = "";
 
     function row() {

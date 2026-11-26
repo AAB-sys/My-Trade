@@ -320,7 +320,7 @@
     const box = label.querySelector("input"); box.checked = st.on; gear.hidden = !st.on;
     box.addEventListener("change", () => { st.on = box.checked; gear.hidden = !st.on; save(); refresh(); });
     gear.addEventListener("click", () => dialog());
-    const rowEl = document.createElement("div"); rowEl.id = "fvg-row"; rowEl.hidden = true; A.infoRow.after(rowEl);
+    const rowEl = document.createElement("div"); rowEl.id = "fvg-row"; rowEl.hidden = true;  // 27 November, the owner: the FVG list is not on the page any more (it was put after the readings row); the gaps are still worked out and drawn on the chart
     let open = null, shownRow = "";
 
     function row() {

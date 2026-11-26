@@ -399,8 +399,8 @@
   #last, #delta { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
   .pill.on { background: var(--up); color: var(--lime-ink); border-color: var(--up); }
   #live-note { color: var(--watch); }
-  /* not shown (27 November): the tables, the logs, the OI chart (a table) with its capsule, and the signal boxes */
-  #rule-signal, #paper-box, .signals-scroll, #stratlog-box, #dblog-box, #more-box, #chain-box, #tab-chain { display: none !important; }
+  /* 27 November: the tables, the logs, the OI chart with its capsule and the signal boxes are REMOVED from the page (not hidden): see drawPaper */
+  #feed-note { margin: 6px 0 0; } #feed-note[hidden] { display: none; }
   /* the chart fits the screen: the page's first screen is the name and price, the chart's buttons, the chart, the capsules; the chart takes
      all the height left (--ui-chart-h, measured by the few lines at the end of the page). The redraw note, the Previous session, Today and
      52 weeks boxes and the data line follow below it */
@@ -468,11 +468,12 @@
     <span id="asof"></span>
     <span id="live-note" hidden></span>
   </div>
+  <!-- the Dhan line: shown only when something needs the owner's attention (it stood in the paper calls box until 27 November) -->
+  <div id="feed-note" hidden></div>
 
   <!-- The Trade Plan's signal box (15 November, the owner: "need some other space for these signal message other than this existing
        table ... which can be recognized easily", then "apply the same once on the Trade plan page including the message pop up at the
        top"; then "have you moved it to Trade plan page at the same placce"): NIFTY 50, today, while the Trade Plan capsule is open -->
-  <div id="rule-signal" role="status" aria-live="polite" hidden></div>
 
   <section class="summary" id="summary" aria-label="Summary"></section>
 
@@ -557,27 +558,12 @@
     <!-- 30 October, the owner: "i need a new capsule in between the marked two capsules": Trade Plan, the same table showing the plan's calls alone -->
     <button class="pill" id="tab-plan" type="button">Trade Plan</button>
     <button class="pill" id="tab-signals" type="button">Calls with Signals</button>
-    <button class="pill" id="tab-chain" type="button">Open OI chart</button>
     <!-- 19 November, the owner: "there is a page called trade plan ... make a replica of it, dont keep any rules on the new chart, and
          make a chart format same as volume profile page chart. Name it AAA_V1": the Trade Plan's place and table with no rule on it,
          and the Volume Profile page's chart in place of this page's own while it is open; then "move it to after OI chart capsule" -->
     <button class="pill" id="tab-aaa" type="button">AAA_V1</button>
   </div>
   <div id="panels" data-panel="calls">
-  <section id="paper-box" aria-label="Paper calls" hidden>
-    <!-- 16 October, the owner's asks ("remove all the red marked boxed things", then "remove this"): the Off, On the
-         line, Crossed and Both choices and the Download CSV button are gone; Both is the signal setting, without a button -->
-    <div id="paper-note"></div>
-    <div id="feed-note" hidden></div>
-    <!-- The Trade Plan (29 October): NIFTY 50, from 15 November the rule "green + after 12:00" (before: the first 3 calls fired between 12:00 and 15:00). Its own pill (30 October) shows the plan's calls alone -->
-    <div id="plan-box" hidden><b>Trade Plan</b> · NIFTY 50 · rule "green + after 12:00": calls fired after 12:00 with a clear green signal candle<div id="plan-key">On the chart: <b>S</b> signal candle · <b>B</b> buy · <b>X</b> exit · the number is the call's number</div><div id="plan-line"></div></div>
-    <div class="scroll">
-      <table id="paper">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th><th>Gate</th><th>Gate reason</th><th>Loss Cutter</th><th>Loss Cutter reason</th><th>Profit Lock</th><th>Trade Plan</th><th>Plan reason</th><th>Builder</th><th>Builder rules</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
 
   <!-- AAA_V1's table box (19 November) was taken off on 22 November (the owner: "remove the red marked table, dont need this on this page"): the chart alone -->
   <!-- Calls with Signals (21 October): the same table as Paper calls, empty until the new set of rules is built -->
@@ -590,58 +576,6 @@
       <button type="button" class="pill" id="signals-settings" aria-haspopup="dialog" title="Indicators: active or inactive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
       <p id="vwap-meter" hidden></p>
     </div>
-    <div class="chain-scroll signals-scroll">
-      <table id="signals">
-        <thead><tr><th>Time</th><th>Call (CE/PE)</th><th>Signal</th><th>Call Entry</th><th>Call Target</th><th class="opt">Premium Paid -> Now</th><th class="opt">Total Profit/Loss</th><th>Candle status</th><th>Reason</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-    <!-- Call logs from strategy (22 November, the owner: "any new call fired by strategy if that strategy is ticked then create new table give
-         the name to the table as Call logs from startegy. Add options to scroll up and down on the table . keep the heade row as fixed row for
-         the new table"): the calls of the strategies ticked under Settings > Strategies, of the days on the page, the newest first; the
-         strategies run on their own, so the table above is the same with or without them -->
-    <div id="stratlog-box" hidden>
-      <h3>Call logs from strategy</h3>
-      <p id="stratlog-sum"></p>
-      <div class="stratlog-wrap">
-        <div class="chain-scroll stratlog-scroll" id="stratlog-scroll">
-          <table id="stratlog">
-            <thead><tr><th>Time</th><th>Strategy</th><th>Call (CE/PE)</th><th>Call Entry</th><th>Call Exit</th><th>Total Profit/Loss</th><th>Stop at</th><th>Call Target</th><th>Candle status</th><th>Reason</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="stratlog-nav">
-          <button type="button" id="stratlog-up" aria-label="One row up" title="One row up"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 12l5-5 5 5"/></svg></button>
-          <button type="button" id="stratlog-down" aria-label="One row down" title="One row down"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 8l5 5 5-5"/></svg></button>
-        </div>
-      </div>
-    </div>
-    <!-- the Double Bottom's shadow log (27 October, the owner's "Double Bottom V3 Implementation Brief", section 6, and "V2 table, V3
-         shadow"): every signal of version 2 (the table's) and of version 3 (shadow, no call), each followed on paper to its exit -->
-    <div id="dblog-box" hidden>
-      <h3>Double Bottom shadow log</h3>
-      <p id="dblog-sum"></p>
-      <div class="chain-scroll dblog-scroll">
-        <table id="dblog">
-          <thead><tr><th>Time</th><th>Version</th><th>Tag</th><th>Call</th><th>Level</th><th>Bottoms</th><th>Checks</th><th>Reach</th><th>V2 lacked</th><th>Order</th><th>Paper result</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <!-- The 14 more patterns (the owner's "More Chart Patterns and Rules" document, 29 October; built 30 October: "build it carefully too on
-         the page calls with signals"; then "make their behaviour same like the earlier 11 signals"): NIFTY 50 only. The 14 rules fire calls
-         into the table above like the other rules (newrule.js runDay); every signal of theirs on today's closed candles is logged here too,
-         taken or why not, and followed after the fact (section 20 of the document) -->
-    <div id="more-box" hidden>
-      <h3>14 more patterns · signal log</h3>
-      <p id="more-sum"></p>
-      <div class="chain-scroll dblog-scroll">
-        <table id="morelog">
-          <thead><tr><th>Time</th><th>Rule</th><th>Call</th><th>Order</th><th>Level L</th><th>Close · ATR</th><th>Entry (next open)</th><th>Next hour: best · worst</th><th>At 12 candles · at close</th><th>Paper (Rule 1 + trail)</th><th>Note</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
     <div id="signals-layout" class="layout" hidden role="dialog" aria-modal="true" aria-labelledby="indicators-title">
       <div class="layout-box">
         <h3 id="indicators-title">Indicators</h3>
@@ -652,32 +586,6 @@
     </div>
   </section>
 
-  <!-- The OI chart (17 October): Dhan's option chain of this index, the rows and columns as Dhan lays them out -->
-  <section id="chain-box" aria-label="OI chart" hidden>
-    <div id="chain-head">
-      <div><span class="big" id="chain-name"></span><span class="delta" id="chain-price"></span></div>
-      <label class="stat"><span>Expiry</span><select class="pick" id="chain-expiry" aria-label="Expiry"></select></label>
-      <div class="stat"><span>ATM IV</span><b id="chain-atm-iv">—</b></div>
-      <div class="stat"><span>IV Change %</span><b id="chain-iv-chg">—</b></div>
-      <div class="stat"><span>PCR</span><b id="chain-pcr">—</b></div>
-      <div class="stat"><span>Market Lot</span><b id="chain-lot">—</b></div>
-      <div class="stat"><span>Days for Expiry</span><b id="chain-days">—</b></div>
-    </div>
-    <div id="chain-bar">
-      <button type="button" class="pill" id="chain-settings" aria-haspopup="dialog" title="Choose the columns of the OI chart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings</button>
-      <span id="chain-updated" title="When Dhan's chain was read; it moves every 5 seconds while the chart is open"></span>
-    </div>
-    <div id="chain-note" hidden></div>
-    <div class="chain-scroll"><table id="chain"><thead><tr></tr></thead><tbody></tbody></table></div>
-    <div id="chain-layout" class="layout" hidden role="dialog" aria-modal="true" aria-labelledby="layout-title">
-      <div class="layout-box">
-        <h3 id="layout-title">Change layout</h3>
-        <p class="hint">Tick the columns to show. An unticked column leaves the table and comes back when ticked again. Remembered on this browser.</p>
-        <div id="layout-list"></div>
-        <div class="layout-foot"><button type="button" class="pill" id="layout-close">Close</button></div>
-      </div>
-    </div>
-  </section>
   </div>
 
   <footer id="footer"></footer>
@@ -1173,42 +1081,18 @@
     return given;
   }
 
+  // The paper calls (27 November, the owner: "Remove all the tables from all the pages. Remove the signals as well, not from the chart but from
+  // the UI ... i dont want anything hidden"): the table, its notes and the Trade Plan's signal box are gone from the page. What is NOT gone, and
+  // runs exactly as before: the rule works out the day's calls (paperTrades), a call sold at its Sell mark ends there (markSold), the Trade
+  // Plan's S, B, X marks go on the chart (applyPlanView), each call's option is registered with the server (syncOptions) and the day's calls
+  // are sent to the server for the day's record (recordCalls).
   function drawPaper(levels) {
-    const box = document.getElementById("paper-box");
-    if (!levels.length) { box.hidden = true; lastPaper = { trades: [], levels: [] }; drawRuleSignal([]); return; }
-    box.hidden = false;
-    const table = document.getElementById("paper"), note = document.getElementById("paper-note");
-    // the score line and the no-call notes (idea 13, ideas 8 and 5) stood here until 16 October: the owner took them off
-    // the page with the Download CSV button ("remove all the red marked boxed things"); the rule gives the same calls
-    const { trades, cancelled } = paperTrades(levels);
+    if (!levels.length) { lastPaper = { trades: [], levels: [] }; return; }
+    const { trades } = paperTrades(levels);
     markSold(trades);
     lastPaper = { trades, levels };
-    drawRuleSignal(trades);
-    note.textContent = "";  // the rule itself is written in LOGIC.md; the owner wants the box without it
-    table.hidden = !trades.length;
-    table.classList.toggle("no-lc", !lcHere());  // the Loss Cutter's two columns only where it runs (NIFTY 50)
-    table.classList.toggle("no-pl", !plHere() || longCandles());  // and the Profit Lock's
-    // 15 November, the owner: "whatever the changes you have done on paper calls page, revoke those changes and apply the same once on
-    // the Trade plan page": the Trade Plan's two columns show in the Trade Plan view alone (applyPlanView), the rule builder's two are
-    // off the page (its marks still go to the day's record for the evening builder)
-    table.classList.add("no-builder");
     applyPlanView(trades);
-    const withOptions = !!(state.dhan && state.dhan.configured) && DHAN_INDICES.includes(name);  // the indices whose option prices the server reads
-    table.classList.toggle("no-options", !withOptions);
-    if (!withOptions && STRIKE_STEP[name] && state.dhan && state.dhan.configured)  // SENSEX, 8 October: say why there is no premium column
-      note.textContent = `${name}: the strike follows your one-strike-in-the-money rule on its ${STRIKE_STEP[name]}-point step. Its option prices are not connected yet, so there is no premium column on this page.`;
     drawFeedNote();
-    // in time order, the newest call at the top, open or finished alike (the owner's ask, 7 October: an open call
-    // listed above a later one read as if it had been given later); a finished row is greyed, its target cell says how it ended
-    const rows = trades.concat(cancelled || []).sort((a, b) => b.signalTime - a.signalTime);  // the signals cancelled before firing keep a row with the gate's verdict (version 2)
-    table.querySelector("tbody").replaceChildren(...rows.map(t => {
-      const tr = document.createElement("tr");
-      if (t.how === "cancelled") { tr.className = "gated off-plan"; tr.innerHTML = cancelledCells(t); return tr; }
-      tr.dataset.key = callKey(t);  // so a live premium finds its row
-      tr.className = (t.exit != null ? "ended" : "") + (t.paper ? " paper" : "") + (t.plan !== "TAKE" ? " off-plan" : "");  // off-plan: hidden in the Trade Plan only view (a call not fired yet has no verdict, so it is hidden too)
-      tr.innerHTML = rowCells(t, optionRecords[callKey(t)]);
-      return tr;
-    }));
     syncOptions(trades);
     recordCalls(trades);
   }
@@ -1291,36 +1175,9 @@
   // open, then the last one with its points, "Waiting" before 12:00, else "no signal yet". It reads the plan's mark, nothing more
   const READY_RULE = Rules.PLAN.label, READY_FROM = Rules.PLAN.from;
   const esc = (v) => String(v).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-  function drawRuleSignal(trades) {
-    const box = document.getElementById("rule-signal"), session = currentSession();
-    box.hidden = !planShown() || !planHere() || longCandles() || !session || session === "all" || !isToday(session);
-    if (box.hidden) return;
-    const mine = trades.filter(t => t.plan === "TAKE").sort((a, b) => a.entryTime - b.entryTime);
-    const open = mine.filter(t => t.exit == null), last = mine[mine.length - 1];
-    const what = (t) => { const r = optionRecords[callKey(t)], k = strikeOf(t, r); return `Buy ${k != null ? k + " " : ""}${t.side}${r ? " " + expiryLabel(r.expiry) : ""}`; };
-    const where = (t) => `Fired ${firedWhen(t)} at ${fmt.format(t.entry)}`;
-    const head = `<div class="tag">Trade Plan signal · rule "${esc(READY_RULE)}" · ${esc(name)}</div>`;
-    box.classList.toggle("on", open.length > 0);
-    if (open.length) {
-      box.innerHTML = head + open.slice().reverse().map(t => `<div class="big"><span class="dot" aria-hidden="true"></span>SIGNAL NOW: ${esc(what(t))}</div><div class="more">${esc(where(t))} · target ${fmt.format(t.target)} · the call is open</div>`).join("");
-    } else if (last) {
-      const p = last.points, tone = p > 0 ? "up" : p < 0 ? "down" : "";
-      box.innerHTML = head + `<div class="big">No open signal now</div><div class="more">Last signal: ${esc(what(last))} · ${esc(where(last))} · ended ${esc(callTime(last.exitTime))}${p != null ? ` · <span class="pts ${tone}">${p > 0 ? "+" : p < 0 ? "−" : ""}${fmt.format(Math.abs(p))} points</span>` : ""} · ${mine.length} signal${mine.length === 1 ? "" : "s"} today</div>`;
-    } else {
-      const early = new Date((serverNow() + 19800) * 1000).toISOString().slice(11, 16) < READY_FROM;
-      box.innerHTML = head + `<div class="big">${early ? "Waiting" : "No signal yet today"}</div><div class="more">${early ? `This rule gives signals only after ${READY_FROM}.` : "A signal shows here in green the moment the rule keeps a call."}</div>`;
-    }
-  }
   const planCells = (t) => !t.plan ? `<td class="gate"></td><td class="why"></td>` : `<td class="gate ${t.plan === "SKIP" ? "skip" : "take"}">${t.plan}</td><td class="why">${t.planWhy || ""}</td>`;
   const planShown = () => document.getElementById("panels").dataset.panel === "plan";  // the Trade Plan pill is the one open
-  function applyPlanView(trades) {  // Trade Plan open: the plan's calls alone (none yet: no table, the line says where the day stands); Paper calls: every call
-    const table = document.getElementById("paper"), plan = planShown();
-    table.classList.toggle("plan-only", plan && planHere());
-    table.classList.toggle("no-plan", !(plan && planHere()));  // the plan's columns: in the Trade Plan view only (15 November)
-    drawPlanMarks(trades);
-    table.hidden = !trades.length || (plan && (!planHere() || !trades.some(t => t.plan === "TAKE")));
-    drawPlanLine(trades);
-  }
+  function applyPlanView(trades) { drawPlanMarks(trades); }  // the Trade Plan open: its calls marked on the chart (the table it also filtered is gone, 27 November)
   // The Trade Plan's calls on the chart (15 November, the owner, with the picture of the rule on two days: "add these signals to the
   // Trade plan page, same as you did in the attacched screenshot"): while the Trade Plan capsule is open, each call the plan takes is
   // marked on its candles: S the signal candle, B the buy (the candle it fired on), X the exit, with the call's number (the table's
@@ -1343,18 +1200,6 @@
     }
     if (!planMarkers || planMarkers.series !== series) { if (!marks.length) return; planMarkers = { series, set: LightweightCharts.createSeriesMarkers(series, []) }; }
     planMarkers.set.setMarkers(marks.sort((a, b) => a.time - b.time));
-  }
-  function drawPlanLine(trades) {
-    const box = document.getElementById("plan-box"), line = document.getElementById("plan-line");
-    box.hidden = !planShown() || longCandles();
-    if (box.hidden) return;
-    if (!planHere()) { line.textContent = `The Trade Plan runs on NIFTY 50 only. Nothing here for ${name}.`; return; }
-    const session = currentSession(), s = Rules.planSummary(trades, Rules.PLAN, session && isToday(session) ? serverNow() : null);
-    const take = trades.filter(t => t.plan === "TAKE"), lot = lotOf();
-    const recs = take.map(t => optionRecords[callKey(t)]), priced = take.length && recs.every(r => r && r.premium_paid != null && (r.premium_now != null || (r.sold && r.sold.premium != null)));
-    const rupees = priced ? Math.round(recs.reduce((sum, r) => sum + ((r.sold && r.sold.premium != null ? r.sold.premium : r.premium_now) - r.premium_paid) * (lot || 1), 0)) : null;
-    const tone = (x) => x > 0 ? "up" : x < 0 ? "down" : "";
-    line.innerHTML = `${s.text}${take.length ? ` Plan calls so far: <span class="pts ${tone(s.points)}">${s.points > 0 ? "+" : ""}${fmt.format(s.points)} points</span>${rupees != null ? ` · <span class="pts ${tone(rupees)}">₹ ${rupees > 0 ? "+" : rupees < 0 ? "−" : ""}${fmt.format(Math.abs(rupees))}</span> at 1 lot${lot ? ` of ${lot}` : ""}` : ""}${s.open ? ` · ${s.open} still open` : ""}` : ""}`;
   }
   const lcLive = (check) => Rules.LC.mode === "LIVE" && Rules.LC.liveChecks.includes(check);
   function lcCells(t, r) {
@@ -1562,7 +1407,7 @@
   // "Total Profit/Loss" (the owner, 19 October: "profit/loss should in rupees based on the premium values"): the premium's move
   // from paid to now (to the sale once the call has ended) for one market lot, the lot from the server's records answer (the OI
   // chart's lot when that came first); per unit while the lot is not known yet. It moves with every premium tick (applyPremium)
-  const lotOf = () => state.lot || (typeof chain !== "undefined" && chain.data && chain.data.lot) || null;
+  const lotOf = () => state.lot || null;
   function plCell(t, r) {
     if (!r || r.premium_paid == null || r.premium_now == null) return `<td class="opt pl">—</td>`;
     const lot = lotOf(), diff = r.premium_now - r.premium_paid, rupees = Math.round((lot ? diff * lot : diff) * 100) / 100;
@@ -1621,14 +1466,7 @@
   function applyPremium(p) {
     const r = optionRecords[p.key];
     if (!r) return;  // the record arrives with the next refresh; the premium comes again with the next tick
-    Object.assign(r, p);
-    const tr = document.querySelector(`#paper tr[data-key="${CSS.escape(p.key)}"]`);
-    const t = lastPaper.trades.find(x => callKey(x) === p.key);
-    if (!tr || !t) return;
-    const fresh = document.createElement("tr");
-    fresh.innerHTML = premiumCell(t, r) + plCell(t, r);
-    tr.querySelector("td.prem").replaceWith(fresh.children[0]);
-    tr.querySelector("td.pl").replaceWith(fresh.children[0]);  // the profit or loss in rupees moves with the premium
+    Object.assign(r, p);  // the record keeps the live premium (the day's record reads it); the table's cell it also moved is gone (27 November)
   }
 
   // The (E) mark (19 November, the owner: "for the expiry of any index, please mark as (E) in front of every index"): an index whose
@@ -2205,95 +2043,7 @@
     load();
   });
 
-  // ---- The OI chart (17 October, the owner: "Click Open OI chart button it will open OI chart table. OI chart table should be
-  // same as OI chart which open on dhan with the same row and column format ... scroll up/down scroll left/right ... Header
-  // should be freezed always and columns can be dragged and moved left to right"). The server's /options/{name}/chain gives
-  // Dhan's chain of the nearest expiry (or the one chosen), every strike, read again every 5 s while the chart is open (15 s until 21 October) and
-  // the page in view. Data on the page only: nothing here touches the lines, the calls or the rule
-  // Theta and Vega on both sides since 17 October (the owner: "where is theta in the OI chart table?"), outermost, as Dhan places its greeks
-  const CHAIN_COLS = [["ce.vega", "Vega"], ["ce.theta", "Theta"], ["ce.gamma", "Gamma"], ["ce.delta", "Delta"], ["ce.oi", "OI"], ["ce.oichg", "OI Change %"], ["ce.vol", "Volume"], ["ce.volchg", "Vol Change%"],
-                      ["ce.iv", "IV"], ["ce.ltpchg", "LTP Change"], ["ce.ltp", "LTP"], ["strike", "Strike Price"], ["pe.ltp", "LTP"], ["pe.ltpchg", "LTP Change"],
-                      ["pe.iv", "IV"], ["pe.volchg", "Vol Change%"], ["pe.vol", "Volume"], ["pe.oichg", "OI Change %"], ["pe.oi", "OI"], ["pe.delta", "Delta"], ["pe.gamma", "Gamma"], ["pe.theta", "Theta"], ["pe.vega", "Vega"]];
-  const CHAIN_LABEL = Object.fromEntries(CHAIN_COLS);
-  let chainOrder = CHAIN_COLS.map(c => c[0]);  // the columns left to right; dragged into any order, remembered per browser
-  try { const saved = JSON.parse(localStorage.getItem("chainCols") || "null");  // an order saved before a column was added keeps its places: the new column goes where it is by default
-    if (Array.isArray(saved) && saved.length && saved.every(k => CHAIN_LABEL[k])) { const order = saved.filter((k, i) => saved.indexOf(k) === i); CHAIN_COLS.forEach(([k], i) => { if (!order.includes(k)) order.splice(i, 0, k); }); chainOrder = order; } } catch (e) {}
-  let chainHidden = new Set();  // the columns unticked under Settings > Change layout (17 October, the owner), remembered per browser; the strike column stays
-  try { const saved = JSON.parse(localStorage.getItem("chainHidden") || "null"); if (Array.isArray(saved)) chainHidden = new Set(saved.filter(k => CHAIN_LABEL[k] && k !== "strike")); } catch (e) {}
-  const shownCols = () => chainOrder.filter(k => !chainHidden.has(k));  // the columns on the table, left to right
-  const chain = { data: null, expiry: null, loading: false };
-  try { chain.expiry = sessionStorage.getItem("chainExpiry") || null; } catch (e) {}  // the expiry chosen before this tab's last reload (the page reloads itself after a deploy)
-  const short = (n) => n == null ? "—" : Math.abs(n) >= 1e7 ? (n / 1e7).toFixed(2) + " Cr" : Math.abs(n) >= 1e5 ? (n / 1e5).toFixed(2) + " L" : Math.abs(n) >= 1e3 ? (n / 1e3).toFixed(2) + " K" : String(Math.round(n));  // Dhan's lakh and crore
-  const pctOf2 = (now, before) => now == null || !before ? null : (now - before) / before * 100;
-  const sgn = (v, d = 2) => (v > 0 ? "+" : "") + v.toFixed(d);
-  const tone = (v) => v > 0 ? "up" : v < 0 ? "down" : "";
-  const strikeText = (k) => Math.round(k).toLocaleString("en-IN");
-  function chainCell(key, r) {
-    if (key === "strike") return `<td class="strike">${strikeText(r.strike)}</td>`;
-    const [side, f] = key.split("."), leg = r[side];
-    const itm = (side === "ce" && r.strike < chain.data.underlying) || (side === "pe" && r.strike > chain.data.underlying);  // shaded, as on Dhan
-    const td = (html, c = "") => `<td class="${c}${itm ? " itm" : ""}">${html}</td>`;
-    if (f === "gamma") return td(leg.gamma == null ? "—" : leg.gamma.toFixed(5));
-    if (f === "delta") return td(leg.delta == null ? "—" : leg.delta.toFixed(2));
-    if (f === "theta") return td(leg.theta == null ? "—" : leg.theta.toFixed(2));
-    if (f === "vega") return td(leg.vega == null ? "—" : leg.vega.toFixed(2));
-    if (f === "oi") return td(short(leg.oi));
-    if (f === "vol") return td(short(leg.volume));
-    if (f === "iv") return td(leg.iv == null ? "—" : leg.iv.toFixed(2));
-    if (f === "ltp") return td(leg.ltp == null ? "—" : leg.ltp.toFixed(2));
-    if (f === "oichg") { const d = leg.oi != null && leg.prev_oi != null ? leg.oi - leg.prev_oi : null, p = pctOf2(leg.oi, leg.prev_oi);
-      return td(d == null ? "—" : `${(d < 0 ? "-" : "") + short(Math.abs(d))} <small class="${tone(d)}">(${p == null ? "—" : sgn(p) + "%"})</small>`); }
-    if (f === "volchg") { const p = pctOf2(leg.volume, leg.prev_volume); return td(p == null ? "—" : sgn(p) + "%", tone(p)); }
-    if (f === "ltpchg") { const d = leg.ltp != null && leg.prev_close != null ? leg.ltp - leg.prev_close : null, p = pctOf2(leg.ltp, leg.prev_close);
-      return td(d == null ? "—" : `${sgn(d)} <small>(${p == null ? "—" : sgn(p) + "%"})</small>`, tone(d)); }
-    return td("—");
-  }
-  function drawChain() {
-    const d = chain.data, head = document.querySelector("#chain thead tr"), body = document.querySelector("#chain tbody"), cols = shownCols();
-    head.innerHTML = cols.map(k => `<th draggable="true" data-col="${k}"${k === "strike" ? ' class="strike"' : ""} title="Drag to move this column">${k === "strike" ? `<span class="badge">CE</span>${CHAIN_LABEL[k]}<span class="badge">PE</span>` : CHAIN_LABEL[k]}</th>`).join("");
-    document.getElementById("chain-name").textContent = name;
-    if (!d) { body.innerHTML = ""; return; }
-    const F = d.fields, at = (row, f) => row[F.indexOf(f)];
-    const legOf = (row, side) => Object.fromEntries(["oi", "prev_oi", "volume", "prev_volume", "iv", "ltp", "prev_close", "delta", "gamma", "theta", "vega"].map(f => [f, at(row, side + "_" + f)]));
-    const strikeAt = cols.indexOf("strike");
-    let html = "", marked = false;
-    for (const row of d.rows) {
-      const r = { strike: row[0], ce: legOf(row, "ce"), pe: legOf(row, "pe") };
-      if (!marked && d.underlying && r.strike > d.underlying) {  // the index level, between the two strikes around it, as on Dhan
-        html += `<tr class="now">${cols.map((k, i) => i === strikeAt ? `<td class="strike"><span class="price-badge">${fmt.format(d.underlying)}</span></td>` : "<td></td>").join("")}</tr>`; marked = true; }
-      html += `<tr>${cols.map(k => chainCell(k, r)).join("")}</tr>`;
-    }
-    body.innerHTML = html;
-    const s = state.summary, ch = s && s.change != null ? s.change : null, chp = s && s.change_percent != null ? s.change_percent : null;
-    document.getElementById("chain-price").innerHTML = `${fmt.format(d.underlying)}${ch != null ? ` <span class="${tone(ch)}">${sgn(ch)} (${chp != null ? sgn(chp) + "%" : ""})</span>` : ""}`;
-    document.getElementById("chain-atm-iv").textContent = d.atm_iv == null ? "—" : d.atm_iv.toFixed(2);
-    const ivc = document.getElementById("chain-iv-chg"); ivc.textContent = d.iv_change_pct == null ? "—" : sgn(d.iv_change_pct) + " %"; ivc.className = d.iv_change_pct == null ? "" : tone(d.iv_change_pct);
-    ivc.title = d.iv_change_pct == null ? "Against the previous day's close: known from the day after the server first saw a close" : "Against the previous day's close";
-    document.getElementById("chain-pcr").textContent = d.pcr == null ? "—" : d.pcr.toFixed(2);
-    document.getElementById("chain-lot").textContent = d.lot == null ? "—" : String(d.lot);
-    document.getElementById("chain-days").textContent = d.days_to_expiry == null ? "—" : String(d.days_to_expiry);
-    document.getElementById("chain-updated").textContent = d.time ? "Live · updated " + new Date(d.time).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Kolkata" }) : "";  // the time Dhan's chain was read, in the page's own "Live · updated" format (17 October, the owner)
-    const sel = document.getElementById("chain-expiry"), dates = (d.expiries || []).slice().sort().reverse(), want = dates.join(",");  // the latest date first, the nearest last (the owner, 17 October: "in descending manner always")
-    if (sel.dataset.list !== want) { sel.innerHTML = dates.map(x => `<option value="${x}">${new Date(x + "T00:00:00+05:30").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).toUpperCase()}</option>`).join(""); sel.dataset.list = want; }
-    sel.value = d.expiry;
-  }
-  async function loadChain() {
-    if (chain.loading || document.getElementById("panels").dataset.panel !== "chain" || document.hidden) return;
-    chain.loading = true;
-    try {
-      const r = await fetch(`/options/${encodeURIComponent(name)}/chain${chain.expiry ? "?expiry=" + encodeURIComponent(chain.expiry) : ""}`, withTab());
-      if (r.status === 401) { location.href = "/login"; return; }
-      const note = document.getElementById("chain-note");
-      if (!r.ok) { let why = ""; try { why = (await r.json()).detail || ""; } catch (e) {} note.textContent = `The OI chart could not be read just now${why ? ": " + why : ""}.${chain.data ? " The last values read are shown." : ""}`; note.hidden = false; return; }
-      chain.data = await r.json(); chain.expiry = chain.data.expiry; note.hidden = true; drawChain();
-    } catch (err) {
-      // the next refresh tries again
-    } finally { chain.loading = false; }
-  }
   let wasSignals = false;  // which marks the time axis carries now (SignalsAxis)
-  // AAA_V1 (19 November): open -> this page's own chart and its rows make room for the Volume Profile page's chart of this index
-  // (an inner page, static/volume.html?embed=aaa, which shows no rule box); closed -> that chart is taken away (its live
-  // connection with it) and this page's own is back. No rule of any page reads or writes anything here.
   function showAaa(on) {
     const frameBox = document.getElementById("aaa-chart");
     document.querySelector("main").classList.toggle("aaa", on);
@@ -2317,8 +2067,6 @@
     document.getElementById("tab-aaa").classList.toggle("on", which === "aaa");
     showAaa(which === "aaa");
     document.getElementById("tab-signals").classList.toggle("on", which === "signals");
-    document.getElementById("tab-chain").classList.toggle("on", which === "chain");
-    document.getElementById("chain-box").hidden = which !== "chain";
     document.getElementById("signals-box").hidden = which !== "signals";
     if (series && bars.length && (which === "signals") !== wasSignals) {  // the time axis marks: the 20-minute ones under Calls with Signals, the chart's own elsewhere (SignalsAxis)
       chart.timeScale().applyOptions({ tickMarkMaxCharacterLength: which === "signals" ? 5 : 8 });  // room for "10:35" every 20 minutes on a desktop; 8 is the chart's own default
@@ -2328,35 +2076,13 @@
     }
     wasSignals = which === "signals";
     if (series) drawLevels();  // the chart: plain with Calls with Signals open, its lines back with Paper calls or the OI chart
-    if (which === "chain") { drawChain(); loadChain(); }
-    if (lastPaper) drawRuleSignal(lastPaper.trades);  // the signal box shows with the Trade Plan alone (the owner, 15 November)
     if (lastPaper) applyPlanView(lastPaper.trades);  // Paper calls or Trade Plan: the same table, every call or the plan's alone
   }
   document.getElementById("tab-calls").addEventListener("click", () => showPanel("calls"));
   document.getElementById("tab-plan").addEventListener("click", () => showPanel("plan"));
   document.getElementById("tab-aaa").addEventListener("click", () => showPanel("aaa"));
   document.getElementById("tab-signals").addEventListener("click", () => showPanel("signals"));
-  document.getElementById("tab-chain").addEventListener("click", () => showPanel("chain"));
-  document.getElementById("chain-expiry").addEventListener("change", e => { chain.expiry = e.target.value; try { sessionStorage.setItem("chainExpiry", chain.expiry); } catch (err) {} chain.data = null; drawChain(); loadChain(); });
-  try { const was = sessionStorage.getItem("panel"); if (was === "chain" || was === "signals" || was === "plan" || was === "aaa") showPanel(was); } catch (e) {}  // the panel open before the reload: open again
-  setInterval(loadChain, 5000);  // every 5 s (the owner, 21 October: "why OI chart is not getting updated every 5 seconds?"); 15 s until then
-  (() => {  // Settings > Change layout (17 October, the owner: "click on setting button, it will open change layout pop up and it would have
-    // check boxes of all the column headers. If i untick the check box that column will be removed from that OI chart table")
-    const box = document.getElementById("chain-layout"), list = document.getElementById("layout-list"), button = document.getElementById("chain-settings");
-    const SIDE = { ce: "CE", pe: "PE" };
-    const fill = () => { list.innerHTML = chainOrder.map(k => { const fixed = k === "strike", name = fixed ? CHAIN_LABEL[k] : `${SIDE[k.split(".")[0]]} ${CHAIN_LABEL[k]}`;
-      return `<label${fixed ? ' class="fixed"' : ""}><input type="checkbox" data-col="${k}"${chainHidden.has(k) ? "" : " checked"}${fixed ? " disabled" : ""}>${name}${fixed ? " (always shown)" : ""}</label>`; }).join(""); };
-    const open = () => { fill(); box.hidden = false; const first = list.querySelector("input:not([disabled])"); if (first) first.focus(); };
-    const close = () => { box.hidden = true; button.focus(); };
-    button.addEventListener("click", open);
-    document.getElementById("layout-close").addEventListener("click", close);
-    box.addEventListener("click", e => { if (e.target === box) close(); });  // a click on the shade closes it
-    document.addEventListener("keydown", e => { if (e.key === "Escape" && !box.hidden) close(); });
-    list.addEventListener("change", e => { const k = e.target.dataset.col; if (!k || k === "strike") return;
-      if (e.target.checked) chainHidden.delete(k); else chainHidden.add(k);
-      try { localStorage.setItem("chainHidden", JSON.stringify([...chainHidden])); } catch (err) {}
-      drawChain(); });
-  })();
+  try { const was = sessionStorage.getItem("panel"); if (was === "signals" || was === "plan" || was === "aaa") showPanel(was); } catch (e) {}  // the panel open before the reload: open again
   (() => {  // Calls with Signals > Settings (21 October): the indicators, each active or inactive, remembered on this browser
     const box = document.getElementById("signals-layout"), list = document.getElementById("indicators-list"), button = document.getElementById("signals-settings");
     // each index page keeps its own ticks (22 November, the owner: "do not share the tick across the 3 pages"): the key carries the index;
@@ -2487,67 +2213,8 @@
   const STRATEGY_NAMES = { "day break": "Day Break", "midday box": "Midday Box" };
   const logTime = (epoch) => istTime(epoch, false).replace(/\b0(\d:)/, "$1").replace(/\b(am|pm)\b/, m => m.toUpperCase());  // the log carries the day in its own words
   const logDay = (epoch) => new Date((epoch + IST_OFFSET) * 1000).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
-  function strategyLogRows(run) {
-    const strategies = run && run.strategies || [];
-    if (!strategies.length) return [];
-    const cur = currentSession(), out = [];
-    sessions().forEach(key => {
-      if (cur && key > cur) return;  // a day after the one shown (the Previous day or week views): not yet
-      const bars = key === cur ? run.bars : state.candles.filter(b => sessionOf(b) === key), before = key === cur ? run.before : state.candles.filter(b => sessionOf(b) < key);
-      if (!bars.length) return;
-      const trades = key === cur ? run.stratTrades : NewRule.runStrategies({ bars, index: name, prevBars: before, atrSeed: before.length >= 14 ? NewRule.atrSeries(before).slice(-1)[0] : null,
-        closedCount: bars.length, dayEnd: true }, strategies);
-      const atrs = NewRule.atrSeries(before.concat(bars)), base = before.length, last = bars[bars.length - 1];
-      for (const t of trades) { const a = atrs[base + t.signalCandle - 1]; out.push({ t, last, guide: a && t.entry != null ? NewRule.round2(t.entry + (t.side === "CE" ? 1 : -1) * a) : null }); }
-    });
-    return out.sort((x, y) => y.t.signalTime - x.t.signalTime);
-  }
-  function drawStratLog(rows, strategies) {
-    const box = document.getElementById("stratlog-box"), body = document.querySelector("#stratlog tbody"), sum = document.getElementById("stratlog-sum");
-    box.hidden = !strategies || !strategies.length;
-    if (box.hidden) { body.replaceChildren(); sum.textContent = ""; return; }
-    const pts = (t, last) => t.exit != null ? t.points : NewRule.round2(t.side === "CE" ? last.close - t.entry : t.entry - last.close);
-    const done = rows.filter(r => r.t.exit != null), total = NewRule.round2(done.reduce((a, r) => a + r.t.points, 0)), sign = (v) => `${v > 0 ? "+" : ""}${fmt.format(v)}`;
-    sum.textContent = `${strategies.map(k => STRATEGY_NAMES[k] || k).join(", ")} · the calls of the days on this page, the newest first · ${rows.length} call${rows.length === 1 ? "" : "s"}`
-      + (done.length ? `, ${done.filter(r => r.t.points > 0).length} won, ${sign(total)} pts` : "") + " · run on their own: the table above is the same with or without them";
-    const trs = rows.map(({ t, last, guide }) => {
-      const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";
-      const p = pts(t, last), side = t.side === "PE" ? "above" : "below";
-      const level = t.rule === "midday box" ? (t.side === "CE" ? "box top" : "box bottom") : t.side === "CE" ? "day's high" : "day's low";  // the level the strategy broke, its stop
-      const status = t.exit != null ? "Take Exit" : t.stage === 2 ? "Hold" : `Buy ${t.side}`;
-      const reason = t.exit == null ? (t.stage === 2 ? `In profit, hold · sell on a close ${side} the trailing stop ${fmt.format(t.stop)}` : `The ${level}${t.rule === "midday box" ? " (11:30 to 12:55)" : ""}, ${fmt.format(t.L)}, broken by a close · the stop at it`)
-        : t.how === "trail" ? `Sell: a candle closed ${side} the trailing stop ${fmt.format(t.stop)}`
-        : t.how === "reclaim" ? `Reclaim: a candle closed back ${side} ${fmt.format(t.L)}`
-        : t.how === "retouch" ? `Retouch: back to the signal candle's open ${fmt.format(t.c1.open)}` : "End of day";
-      // the entry, the exit and the points side by side (22 November, the owner read the stop beside the entry as the exit: "r u giving the reverse signals?"),
-      // the stop in its own column after them, named for the level it stands on
-      tr.innerHTML = `<td>${logDay(t.signalTime)} · ${logTime(t.signalTime)}<small>signal candle</small></td><td class="strat">${STRATEGY_NAMES[t.rule] || t.rule}</td>`
-        + `<td class="${t.side === "CE" ? "up" : "down"}">Buy ${t.side}</td><td>${fmt.format(t.entry)}<small>in at ${logTime(t.entryTime)}</small></td>`
-        + `<td>${t.exit != null ? `${fmt.format(t.exit)}<small>out at ${logTime(t.exitTime)}</small>` : `—<small>open · now ${fmt.format(last.close)}</small>`}</td>`
-        + `<td class="${p > 0 ? "up" : p < 0 ? "down" : ""}">${sign(p)} pts</td>`
-        + `<td>${fmt.format(t.exit == null ? t.stop : t.L)}<small>${t.exit == null && t.stop !== t.L ? "trailing" : level}</small></td>`
-        + `<td>${guide != null ? `${fmt.format(guide)}<small>guide, 1 ATR</small>` : "—"}</td><td>${status}</td><td class="reason">${reason}</td>`;
-      return tr;
-    });
-    if (!trs.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="10">No call yet from the ticked strategies on the days on this page</td>`; trs.push(tr); }
-    body.replaceChildren(...trs);
-  }
-  (() => {  // its two round buttons (the owner: "Add options to scroll up and down on the table"): one row a press, pale at an end
-    const box = document.getElementById("stratlog-scroll"), up = document.getElementById("stratlog-up"), down = document.getElementById("stratlog-down");
-    const row = () => { const tr = box.querySelector("tbody tr"); return tr ? Math.round(tr.getBoundingClientRect().height) : 32; };
-    const most = () => box.scrollHeight - box.clientHeight;
-    const look = () => { up.disabled = box.scrollTop <= 2; down.disabled = box.scrollTop >= most() - 2; };
-    const go = (dir) => box.scrollTo({ top: Math.max(0, Math.min(most(), box.scrollTop + dir * row())), behavior: "smooth" });
-    up.addEventListener("click", () => go(-1)); down.addEventListener("click", () => go(1));
-    box.addEventListener("scroll", look, { passive: true }); new MutationObserver(look).observe(box, { childList: true, subtree: true });
-    window.addEventListener("resize", look); look();
-  })();
   function clearSignals() {
     drawVwapMeter(null);
-    drawStratLog([], null);
-    document.querySelector("#signals tbody").replaceChildren();
-    drawDbLog(null);
-    drawMoreLog(null);
     if (signalMarkers && signalMarkers.series === series) setSignalMarkers([]);
     setWedgeLines([]);
     setVwapLine([]);
@@ -2606,79 +2273,11 @@
     const vwapOn = ticked.vwap_strict && typeof MorePat !== "undefined" && (NewRule.ruleOn ? NewRule.ruleOn("vwap_strict", name) : NewRule.moreOn(name, null)) && run.bars.length > 0;  // on every index the strict VWAP rule runs on (22 November: NIFTY 50 and SENSEX)
     setVwapLine(vwapOn ? MorePat.vwapSeries(run.bars, run.volumes).map((v, i) => ({ time: run.bars[i].time + IST_OFFSET, value: v })) : [], run.volumes ? "VWAP" : "VWAP avg");
     drawVwapMeter(vwapOn && state.interval === "5m" && !run.dayEnd ? MorePat.vwapGap(run.bars, run.bars.length - 1, guideAtrs.slice(guideBase), run.volumes) : null, run.bars);  // 5-minute candles only (the candles the VWAP rule reads), while the day runs
-    const body = document.querySelector("#signals tbody");
-    const rows = run.trades.slice().sort((a, b) => b.signalTime - a.signalTime).map(t => {
-      const tr = document.createElement("tr"); tr.className = t.exit != null ? "ended" : "";
-      const sideWord = t.side === "PE" ? "above" : "below", now = (run.bars && run.bars.length ? run.bars[run.bars.length - 1].close : t.entry), pts = t.exit != null ? t.points : NewRule.round2(t.side === "CE" ? now - t.entry : t.entry - now);  // an open call: against the price now (the forming candle's close)
-      const status = t.exit != null ? "Take Exit" : t.stage === 2 && (t.trailAtr == null || t.best > 0) ? "Hold" : `Buy ${t.side}`;  // a call with its own wide stop (NEWHIGH-TREND) starts on stage 2: Hold only once it is in profit
-      const tag = t.rule === "double bottom" || t.rule === "triple bottom" ? "B" : "T", points = t.more || t.rule === "day break" ? "" : t.upperLine ? `H1 ${callTime(t.h1Time)} · H2 ${callTime(t.h2Time)} · L1 ${callTime(t.l1Time)} · L2 ${callTime(t.l2Time)}` : `${tag}1 ${callTime(t.t1Time)} · ${tag}2 ${callTime(t.t2Time)}` + (t.t3Time ? ` · ${tag}3 ${callTime(t.t3Time)}` : "");
-      const guide = guideOf(t);
-      const entryMsg = t.more && t.trailAtr != null ? `BUY ${t.side}: ${t.kind} · a close ${t.side === "CE" ? "above" : "below"} the last 12 candles' ${t.side === "CE" ? "high" : "low"} ${fmt.format(t.L)} · its own exit: the stop starts at ${fmt.format(t.stopAt)} (${t.trailAtr} ATR) and follows the best close ${t.trailAtr} ATR behind, never back` : t.more ? `BUY ${t.side}: ${t.kind} · level ${fmt.format(t.L)}${t.target != null ? ` · pattern target ${fmt.format(t.target)}` : guide != null ? ` · no pattern target: 1 ATR guide ${fmt.format(guide)}, the stop sells it` : ""}${t.note ? ` · ${t.note}` : ""}`  // the 14 more patterns (30 October)
-        : t.rule === "day break" ? `BUY ${t.side}: the day's ${t.side === "CE" ? "high" : "low"} so far, ${fmt.format(t.L)}, broken by a close (from 11:15) · the stop at it${guide != null ? ` · no pattern target: 1 ATR guide ${fmt.format(guide)}` : ""}`  // Day Break (22 November)
-        : t.rule === "bullish rectangle" ? (t.side === "CE" ? `BUY CE: bullish rectangle broke out · ${points} · resistance ${fmt.format(t.resistance)} · pattern target ${fmt.format(t.target)}` : `BUY PE: bullish rectangle failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`)  // the rectangle document's messages, section 11
-        : t.rule === "ascending triangle" ? `BUY CE: ascending triangle broke out · ${points} · resistance ${fmt.format(t.resistance)} · pattern target ${fmt.format(t.target)}`  // the four triangle documents' messages (22 October)
-        : t.rule === "descending triangle" ? `BUY PE: descending triangle broke down · ${points} · support ${fmt.format(t.support)} · pattern target ${fmt.format(t.target)}`
-        : t.upperLine ? `BUY ${t.side}: ${t.kind} · ${points} · break level ${fmt.format(t.L)} · pattern target ${fmt.format(t.target)}`  // the wedge documents' message
-        : t.kind === "double bottom failed" || t.kind === "triple bottom failed" ? `BUY PE: ${t.rule} failed · ${points} · support ${fmt.format(t.support)} broken · pattern target ${fmt.format(t.target)}`  // the documents' entry messages
-        : t.kind === "triple top failed" ? `BUY CE: triple top failed · ${points} · resistance ${fmt.format(t.resistance)} broken · pattern target ${fmt.format(t.target)}`
-        : `BUY ${t.side}: ${t.kind} · ${points} · neckline ${fmt.format(t.neckline)} · pattern target ${fmt.format(t.target)}`;
-      const trailName = `the trailing stop ${fmt.format(t.stop)}`;  // the ATR trail (22 October: half an ATR behind the best close)
-      const reason = t.exit == null ? (t.stage === 2 && (t.trailAtr == null || t.best > 0) ? `In profit, continue · sell if a candle closes ${sideWord} ${trailName} · it follows the best close, ${t.trailAtr != null ? t.trailAtr + " ATR" : "half an ATR"} behind, never back` : entryMsg)
-        : t.how === "trail" ? `${callTime(t.exitTime)} candle · Sell: index candle closed ${sideWord} ${trailName}`
-        : t.how === "reclaim" ? `${callTime(t.exitTime)} candle · Reclaim: closed back ${sideWord} ${fmt.format(t.L)}`
-        : t.how === "retouch" ? `${callTime(t.exitTime)} candle · Retouch: came back to the signal candle's open ${fmt.format(t.c1.open)}` : `${callTime(t.exitTime)} candle · End of day`;
-      tr.innerHTML = `<td class="when">${callTime(t.signalTime)}<small>in at ${callTime(t.entryTime)}</small></td>`
-        + `<td class="call">Buy ${t.side}</td>`
-        + `<td>Rule:- ${t.more ? t.kind : { "day break": "Day Break", "double top": "Double Top", "double top (strict)": "Double Top (strict)", "double bottom": "Double Bottom", "triple top": "Triple Top", "triple bottom": "Triple Bottom", "falling wedge": "Falling Wedge", "rising wedge": "Rising Wedge", "bullish rectangle": "Bullish Rectangle", "bullish symmetrical triangle": "Bullish Symmetrical Triangle", "bearish symmetrical triangle": "Bearish Symmetrical Triangle", "ascending triangle": "Ascending Triangle", "descending triangle": "Descending Triangle" }[t.rule] || t.rule}${t.parallel ? `<small class="parallel" title="This pattern is ticked in Settings: its signal fired as a call of its own, beside the page's other calls">Parallel call</small>` : ""}</td>`  // the rule's name; a ticked pattern's own call beside the page's (23 November) (the owner, 21 October: "Rule:- Double Top, Double bottom, Triple top etc, whatever we will build")
-        + `<td>${fmt.format(t.entry)}</td>`
-        + `<td class="target">${t.target == null ? (guide != null ? `guide ${fmt.format(guide)}` : "—") : fmt.format(t.target)}<small>${t.exit != null ? `sold at ${callTime(t.exitTime)} · ${fmt.format(t.exit)}` : `stop ${fmt.format(t.stop)}`}</small></td>`
-        + `<td class="opt">—</td><td class="opt ${pts > 0 ? "up" : pts < 0 ? "down" : ""}">${pts > 0 ? "+" : ""}${fmt.format(pts)} pts</td>`
-        + `<td class="cand ${t.exit != null ? "exit" : "carry"}">${status}</td><td>${reason}</td>`;
-      return tr;
-    });
-    body.replaceChildren(...rows);
-    drawStratLog(strategyLogRows(run), run.strategies);
-    drawDbLog(run.dbLog);
-    drawMoreLog(more, run);
     return lines;
   }
   // The Double Bottom's shadow log (NewRule.runDay's dbLog): one row per signal of either version, the same pattern (side and level)
   // in both tagged "Both" with the other version's time under it; the order the table's version placed or why not; the shadow
   // version's none; every signal followed on paper with the table's own exits. The summary line is the brief's daily summary
-  function drawDbLog(log) {
-    const body = document.querySelector("#dblog tbody"), sum = document.getElementById("dblog-sum");
-    document.getElementById("dblog-box").hidden = !log;  // NIFTY 50 only (the owner, 27 October: "for nifty 50 only")
-    if (!log) { body.replaceChildren(); sum.textContent = ""; return; }
-    const s = log.summary, pts = (v) => `${v > 0 ? "+" : ""}${fmt.format(v)}`, tone = (v) => v > 0 ? "up" : v < 0 ? "down" : "";
-    sum.textContent = `Version ${log.table.slice(1)} gives the calls in the table above; version ${log.shadow.slice(1)} runs in shadow (logged, no call). `
-      + `Today: ${log.table} ${s.table} signal${s.table === 1 ? "" : "s"} · ${log.shadow} ${s.shadow} · ${log.shadow} only ${s.shadowOnly}`
-      + (s.shadowOnly ? ` (paper ${pts(s.shadowOnlyPoints)} pts)` : "");
-    const how = { reclaim: "reclaim", retouch: "retouch", trail: "trailing stop", "day end": "end of day" };
-    const rows = log.rows.slice().sort((a, b) => b.signalTime - a.signalTime || (a.version < b.version ? -1 : 1)).map(r => {  // the newest first, the table's version first
-      const tr = document.createElement("tr"), line = r.side === "CE" ? "neckline" : "support", reach = r.side === "CE" ? "high" : "low";
-      const paper = r.entry == null ? "no entry yet"
-        : `in ${fmt.format(r.entry)} at ${callTime(r.entryTime)} → ${r.exit != null ? `out ${fmt.format(r.exit)} at ${callTime(r.exitTime)} (${how[r.how] || r.how})` : "open"}`;
-      tr.innerHTML = `<td>${callTime(r.signalTime)}${r.otherTime != null && r.otherTime !== r.signalTime ? `<small>${r.version === log.table ? log.shadow : log.table} at ${callTime(r.otherTime)}</small>` : ""}</td>`
-        + `<td>${r.version}</td><td class="tag ${r.tag === "Both" ? "" : "only"}">${r.tag}</td><td>Buy ${r.side}</td>`
-        + `<td>${line} ${fmt.format(r.L)}<small>ATR ${fmt.format(r.atr)}</small></td>`
-        + `<td>B1 ${callTime(r.t1Time)} · ${fmt.format(r.low1)}<small>B2 ${callTime(r.t2Time)} · ${fmt.format(r.low2)} · ${r.gap} candles apart</small></td>`
-        + `<td>bottoms ${fmt.format(r.diff)} apart, limit ${fmt.format(r.limit)}<small>depth ${fmt.format(r.depth)}, minimum ${fmt.format(r.minDepth)}</small></td>`
-        + `<td>${reach} ${fmt.format(r.past)} past (${fmt.format(r.pastAtr)} ATR)<small>close ${pts(r.closeDist)} from the line</small></td>`
-        + `<td>${r.lacked ? { gap: "the gap", swing: "the swing", both: "the gap and the swing", other: "other" }[r.lacked] : "—"}</td>`
-        + `<td>${r.order}${r.version === log.shadow ? `<small>${r.inWindow ? "inside" : "outside"} the 9:30 AM to 2:45 PM window</small>` : ""}</td>`
-        + `<td class="${r.entry == null ? "" : tone(r.points)}">${r.entry == null ? paper : `${pts(r.points)} pts`}${r.entry == null ? "" : `<small>${paper} · best ${pts(r.best)}, worst ${pts(r.worst)}</small>`}</td>`;
-      return tr;
-    });
-    if (!rows.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="11">No double bottom signal yet today from either version</td>`; rows.push(tr); }
-    body.replaceChildren(...rows);
-  }
-  // The 14 more patterns' signal log (MorePat.dayLog; the owner's "More Chart Patterns and Rules" document, section 20), NIFTY 50 only:
-  // one row per signal of the 14 rules on today's closed candles, the newest first: the rule, the side, the status (would be traded /
-  // outside 09:30 to 14:45 / same side, another rule first / both sides, skipped), the level L, the close and the ATR used, the entry
-  // (the next candle's open), the best and worst move in the next hour, the move at 12 candles and at the day's close, the paper result
-  // with the page's own exits (Rule 1 and the trail, each signal on its own) and the note. Shadow: no call is placed, nothing is blocked.
-  // The summary: the signals, how many would be traded, each rule's count (a rule that spoke more than 5 times is flagged), the paper sum
-  const MORE_STATUS = { ok: "would be traded", "outside time": "outside 09:30 to 14:45", "same side": "same side, another rule first", "both sides": "both sides, skipped" };
   const moreLogNow = (run) => run && run.bars && name === "NIFTY 50" && !longCandles() && typeof MorePat !== "undefined"
     ? MorePat.dayLog({ bars: run.bars, prevBars: run.before, closedCount: run.closed, dayEnd: run.dayEnd, manage: (t, bar, j, atr, lastK, dayEnd) => NewRule.manageStep(t, bar, j, atr, lastK, dayEnd, NewRule.DT), rules: MorePat.PAGE_ORDER || null }) : null;  // the page's 14: Engulfing (strict) in the old Engulfing's place (20 November)
   // The pictures of the signals whose rule is ticked in Settings (30 October): the signal candle's arrow with the rule's name, the
@@ -2700,45 +2299,6 @@
       return { marks, segs };
     });
   }
-  function drawMoreLog(log, run) {
-    const box = document.getElementById("more-box"), body = document.querySelector("#morelog tbody"), sum = document.getElementById("more-sum");
-    box.hidden = !log;
-    if (!log) { body.replaceChildren(); sum.textContent = ""; return; }
-    const s = log.summary, pts = (v) => `${v > 0 ? "+" : ""}${fmt.format(v)}`, tone = (v) => v > 0 ? "up" : v < 0 ? "down" : "", ruleName = (key) => MorePat.RULES[key].names.join(" / ");
-    const counts = Object.keys(s.byRule).map(key => `${ruleName(key)} ${s.byRule[key]}`).join(" · ");
-    const takenCount = log.rows.filter(r => moreTaken(r, run && run.trades)).length;
-    sum.textContent = `Every signal of the 14 rules on today's closed candles. A signal becomes a call in the table above like any other rule's (one trade at a time, 09:30 to 14:45, the same exits); a ticked rule's signal held back that way fires as a parallel call; the rest say why not. Today: ${s.signals} signal${s.signals === 1 ? "" : "s"}, ${takenCount} taken as calls, ${s.ok} inside the window`
-      + (counts ? ` · ${counts}` : "") + (s.often.length ? ` · spoke more than 5 times: ${s.often.map(ruleName).join(", ")}` : "") + (s.ok ? ` · paper, each on its own: ${pts(s.okPoints)} pts` : "");
-    const how = { reclaim: "reclaim", retouch: "retouch", trail: "trailing stop", "day end": "end of day" };
-    const rows = log.rows.slice().reverse().map(r => {
-      const tr = document.createElement("tr");
-      const taken = moreTaken(r, run && run.trades), skipped = run && run.skipped || [], bar = run && run.bars && run.bars[r.k], inLane = (x) => NewRule.LANE.includes(x), trades = (run && run.trades || []).filter(t => inLane(t.rule) === inLane(r.key));  // NEWHIGH-TREND has a lane of its own: only its own calls hold its signals back, and it holds back no other rule's (22 November)
-      const busy = !taken && bar && trades.some(t => t.signalCandle < r.k && (t.exitTime == null || t.exitTime > bar.time || (t.exitTime === bar.time && t.how === "day end")));
-      const why = !taken && bar && skipped.find(x => x.time === bar.time && !x.rule && (x.side == null || x.side === r.side)), other = !taken && trades.find(t => t.signalCandle === r.k);  // the engine's own skip notes (a scanner's notes carry its rule)
-      const unticked = !taken && NewRule.MORE.optIn && NewRule.MORE.optIn.includes(r.key) && !(state.morePat || new Set()).has(r.key);  // Engulfing (strict) unticked: no call (20 November)
-      const order = taken ? `taken${taken.parallel ? " as a parallel call" : ""}: ${taken.exit != null ? `${taken.points > 0 ? "+" : ""}${fmt.format(taken.points)} pts` : "open"}` : r.status !== "ok" ? MORE_STATUS[r.status] : unticked ? "no call: unticked in Settings" : busy ? "a trade already open" : why ? why.why : other ? `the ${other.more ? other.kind : other.rule} call on the same candle` : r.entry == null ? "no next candle yet" : "not taken";
-      tr.innerHTML = `<td>${callTime(r.signalTime)}</td><td class="rule">${r.rule}<small>${r.key}</small></td><td>Buy ${r.side}</td><td class="${taken ? "ok" : ""}">${order}</td>`
-        + `<td>${fmt.format(r.level)}${r.target != null ? `<small>target ${fmt.format(r.target)}</small>` : ""}</td><td>${fmt.format(r.close)}<small>ATR ${fmt.format(r.atr)}</small></td>`
-        + `<td>${r.entry == null ? "no next candle yet" : `${fmt.format(r.entry)}<small>at ${callTime(r.entryTime)}</small>`}</td>`
-        + `<td>${r.best == null ? "—" : `<span class="${tone(r.best)}">${pts(r.best)}</span> · <span class="${tone(r.worst)}">${pts(r.worst)}</span><small>${pts(r.bestAtr)} · ${pts(r.worstAtr)} ATR${r.hourCandles < 12 ? ` (${r.hourCandles} candle${r.hourCandles === 1 ? "" : "s"} so far)` : ""}</small>`}</td>`
-        + `<td>${r.at12 == null ? "—" : pts(r.at12)} · ${r.atClose == null ? "—" : pts(r.atClose)}</td>`
-        + `<td class="${r.paper == null ? "" : tone(r.paper)}">${r.paper == null ? "—" : `${pts(r.paper)} pts<small>${r.exit != null ? `out ${fmt.format(r.exit)} at ${callTime(r.exitTime)} (${how[r.how] || r.how})` : "open"}</small>`}</td>`
-        + `<td class="note">${r.note || ""}</td>`;
-      return tr;
-    });
-    if (!rows.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="11">No signal yet today from the 14 rules</td>`; rows.push(tr); }
-    body.replaceChildren(...rows);
-  }
-  (() => {  // a column dragged left or right: dropped on a column, it takes that column's place
-    const head = document.querySelector("#chain thead"); let from = null;
-    const clear = () => head.querySelectorAll("th.over").forEach(x => x.classList.remove("over"));
-    head.addEventListener("dragstart", e => { const th = e.target.closest("th"); if (!th) return; from = th.dataset.col; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", from); });
-    head.addEventListener("dragover", e => { const th = e.target.closest("th"); if (!th || !from) return; e.preventDefault(); e.dataTransfer.dropEffect = "move"; clear(); th.classList.add("over"); });
-    head.addEventListener("drop", e => { const th = e.target.closest("th"); if (!th || !from) return; e.preventDefault(); const to = th.dataset.col;
-      if (to !== from) { const order = chainOrder.filter(k => k !== from); order.splice(order.indexOf(to), 0, from); chainOrder = order; try { localStorage.setItem("chainCols", JSON.stringify(order)); } catch (err) {} drawChain(); }
-      from = null; clear(); });
-    head.addEventListener("dragend", () => { from = null; clear(); });
-  })();
 
   document.getElementById("move").value = state.period;
   document.getElementById("interval").value = state.view;
