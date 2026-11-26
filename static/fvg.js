@@ -26,7 +26,7 @@
     fvg_min_points: 0,              // smallest zone in index points
     fvg_min_pct: 0,                 // smallest zone as % of price
     fvg_min_atr: 0.5,               // smallest zone as a multiple of ATR (at candle 3's close)
-    fvg_atr_len: 14,                // ATR length in candles (today's candles only)
+    fvg_atr_len: 14,                // ATR length in candles (today's candles; until today has that many, the day before's last ones stand in front of them: seed())
     fvg_from: "09:15",              // candle 1 must start at or after this time
     fvg_until: "15:15",             // candle 3 must end at or before this time for a new gap
     fvg_retire_on: "fill",          // "fill": remove when filled; "close": remove only when a candle closes beyond
@@ -63,6 +63,7 @@
       this.cfg = Object.assign({}, DEFAULTS);
       for (const k of Object.keys(cfg || {})) if (k.startsWith("fvg_")) this.cfg[k] = cfg[k];
       this.interval = interval == null ? 1 : interval;
+      this.seedTr = [];  // the true ranges of the day before's candles (see seed): they stand before today's in the ATR until today has enough of its own
       this.reset(null);
     }
     reset(date) {
@@ -82,8 +83,18 @@
       this.done = candles.length;
       return [this.openGaps(), events];
     }
+    // The ATR is read over the last fvg_atr_len true ranges: today's, and until today has that many, the day before's last ones in front of them
+    // (25 November, the owner, with a 23-point gap at 09:30 held back by an ATR of 68 made of four candles, the first one the opening's 137 points:
+    // "seed the ATR from yesterday"). Once today has fvg_atr_len candles of its own the seed is not read at all: the ATR is today's alone, as before
+    seed(candles) {
+      this.seedTr = [];
+      for (let k = 0; k < candles.length; k++) {
+        const c = candles[k], prev = k > 0 ? candles[k - 1].c : null;
+        this.seedTr.push(Math.max(c.h - c.l, prev !== null ? Math.abs(c.h - prev) : 0, prev !== null ? Math.abs(c.l - prev) : 0));
+      }
+    }
     atr() {
-      const n = this.cfg.fvg_atr_len, x = n > 0 ? this.tr.slice(-n) : []; let s = 0;
+      const n = this.cfg.fvg_atr_len, all = this.tr.length >= n ? this.tr : this.seedTr.concat(this.tr), x = n > 0 ? all.slice(-n) : []; let s = 0;
       for (const v of x) s += v;
       return x.length ? s / x.length : 0;
     }
@@ -205,13 +216,22 @@
       else if (fine.some(b => dayOf(b.time) === day)) cs = tf === 1 ? of(fine, 1) : resample(of(fine, 1), tf, "09:15", 1);
       else if (tf > iv && tf % iv === 0) cs = resample(of(bars, iv), tf, "09:15", iv);
       else return { why: `no 1-minute candles to build ${tf}-minute candles from`, tf };
-      return { cs, tf, day, start };
+      // the day before's finished candles in the same time frame, for the ATR's seed (none: the ATR is today's alone, as it was)
+      const pbars = bars.filter(b => dayOf(b.time) < day), pday = pbars.length ? dayOf(pbars[pbars.length - 1].time) : null, pstart = pday == null ? null : pday * 86400 - A.IST;
+      const pof = (list) => list.filter(b => dayOf(b.time) === pday).map(b => ({ hm: hmOf(Math.floor((b.time - pstart) / 60)), o: b.open, h: b.high, l: b.low, c: b.close }));
+      let prev = [];
+      if (pday != null) {
+        if (tf === iv) prev = pof(bars);
+        else if (fine.some(b => dayOf(b.time) === pday)) prev = tf === 1 ? pof(fine) : resample(pof(fine), tf, "09:15", 1);
+        else if (tf > iv && tf % iv === 0) prev = resample(pof(bars), tf, "09:15", iv);
+      }
+      return { cs, tf, day, start, prev };
     }
     function refresh() {
       if (!st.on) { st.out = null; row(); redraw(); return; }
       const s = source();
       if (!s.cs) { st.out = { why: s.why, tf: s.tf, gaps: [], events: [], made: 0 }; row(); redraw(); return; }
-      const t = new Tracker(cfg(), s.tf), [gaps, events] = t.update(s.cs, String(s.day)), last = s.cs.length ? s.cs[s.cs.length - 1] : null;
+      const t = new Tracker(cfg(), s.tf); t.seed(s.prev || []); const [gaps, events] = t.update(s.cs, String(s.day)), last = s.cs.length ? s.cs[s.cs.length - 1] : null;
       const at = (hm) => s.start + mins(hm) * 60;
       for (const g of gaps) g.from_time = at(g.from_hm);
       const bars = A.bars(), price = bars[bars.length - 1].close, [below, above] = t.nearest(price);
