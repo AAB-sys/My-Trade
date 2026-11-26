@@ -56,12 +56,24 @@
     return out.sort((a, b) => a.price - b.price);
   }
   const levelName = (ratio, signed) => (signed && ratio > 0 ? "+" : "") + (ratio * 100).toFixed(1) + "%";  // "+23.6%" above the close, "-23.6%" below it
-  // The 7 lines of today's range, as the previous close's lines are redrawn (below): up, 0% at today's low and +100% at its
-  // high, +23.6% being 23.6% of the way up from the low; down, 0% at today's high and -100% at its low
+  // The lines of today's range, as the previous close's lines are redrawn (below): up, 0% at today's low and +100% at its
+  // high, +23.6% being 23.6% of the way up from the low; down, 0% at today's high and -100% at its low. And, beyond them
+  // (25 November, the owner, with the 9:25 redraw on NIFTY 50: "if this is happening then calculate the levels below 0% as well.
+  // Not only above. And vice versa"): after a redraw up the same Fibonacci shares of the range again BELOW today's low (-23.6% to
+  // -100%, the range's own step), after a redraw down the same shares ABOVE today's high (+23.6% to +100%): 13 lines, as at the
+  // start of the day. The 7 lines of the range stay the lines that count for the redraw and for a call past the edge (edgesOf);
+  // the others carry `extra: true`
   function rangeLevels(low, high, up) {
     const span = high - low;
-    return RATIOS.map(r => up ? { ratio: r, price: round2(low + r * span), signed: true } : { ratio: r ? -r : 0, price: round2(high - r * span), signed: true })
-      .sort((a, b) => a.price - b.price);
+    const core = RATIOS.map(r => up ? { ratio: r, price: round2(low + r * span), signed: true } : { ratio: r ? -r : 0, price: round2(high - r * span), signed: true });
+    const extra = span > 0 ? RATIOS.filter(r => r > 0).map(r => up ? { ratio: -r, price: round2(low - r * span), signed: true, extra: true } : { ratio: r, price: round2(high + r * span), signed: true, extra: true }) : [];
+    return core.concat(extra).sort((a, b) => a.price - b.price);
+  }
+  // The two lines that decide a redraw and a call past the edge: the outermost lines of the set as it was before the extra lines
+  // (the previous close's 13 lines: -100% and +100%; the range's 7: today's low and high)
+  function edgesOf(levels) {
+    const core = levels.some(l => l.extra) ? levels.filter(l => !l.extra) : levels;
+    return { top: core[core.length - 1], bottom: core[0] };
   }
   // The lines candle i of one session is judged on (the owner, 15 October: "add new logic to redraw it only if candle crosses
   // +100% line and make high above +100% then redraw the febonachi 7 lines again considering today's low as 0% line and today's
@@ -77,7 +89,7 @@
     const at = [first];  // at[i]: the lines candle i is judged on
     let low = Infinity, high = -Infinity;
     bars.forEach((b, k) => {
-      const lv = at[k], top = lv[lv.length - 1], bottom = lv[0];
+      const lv = at[k], { top, bottom } = edgesOf(lv);
       low = Math.min(low, b.low); high = Math.max(high, b.high);
       at.push(b.close > top.price ? rangeLevels(low, high, true) : b.close < bottom.price ? rangeLevels(low, high, false) : lv);
     });
@@ -157,7 +169,7 @@
   // Ideas 5 and 8 (13 October: a Crossed call only when its candle closed a quarter of the way to the next line; no Crossed call the
   // other way while one is held) were removed from the rule on 18 October with idea 13 (the owner: "all three remove")
   function pastEdgeAt(bar, levels, used) {
-    const top = levels[levels.length - 1], bottom = levels[0];
+    const { top, bottom } = edgesOf(levels);
     const at = bar.close > top.price ? top : bar.close < bottom.price ? bottom : null;
     if (!at) return null;
     const side = at === top ? "CE" : "PE";
@@ -1123,7 +1135,7 @@
     return { taken: take.length, max: p.maxCalls, open: open.length, points, state, text };
   }
 
-  root.Rules = { BUILDER, atrPath, callFacts, builderStep, RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
+  root.Rules = { BUILDER, atrPath, callFacts, builderStep, RATIOS, IST_OFFSET, SESSION_END, SESSION_START, round2, dayOf, dayOver, endOf, sessionShare, levelsOf, edgesOf, todayLevelsAt, todayLinesAt, moveOf, moveOfDay, CLOSE_STEP, closeLevels, levelName, rangeLevels, closeLevelsAt, signalAt, paperTrades, replayDay, readOf, carryOf,
                  trailStep, atrBefore, TRAIL, NEW_HIGH_LOW, pastEdgeAt,
                  breakOf, dayFacts, candleBreaks, levelBehaviour, IDEAS, ideasOf, GATE, GATE_V1, GATE_HEALTH, parallelAdvice, gateAtr, atrSeedOf, gateVerdict, zoneStep, zoneVerdict, strongCandle, trendContinuation, openingRange, efficiency, gateSummary,
                  LC, LC_V2, LC_STRICT, LC_ZONE_ONLY, entryChecks, breaksOut, violentBefore, wornFailures, lcVerdict, stackStep, lcSummary,

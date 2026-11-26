@@ -57,6 +57,17 @@ turn after a move. Whether that holds is for the owner's own record to show.
   a close above the highest line of lines drawn downward draws them upward. So a
   close beyond the outermost line always draws the 7 lines again on today's range.
   (With 1.5% no saved day turns; lab/check.js has a made-up day that does.)
+  25 November (the owner, with the 9:25 redraw on NIFTY 50: "if this is happening then
+  calculate the levels below 0% as well. Not only above. And vice versa"): when the lines
+  are drawn again on today's range, the same Fibonacci shares of that range are also worked
+  out beyond it: after a redraw up, -23.6% to -100% BELOW today's low (0%), each the share
+  of the range (today's high minus low) below the low; after a redraw down, +23.6% to
+  +100% ABOVE today's high (0%). 13 lines again, as at the start of the day. What decides a
+  redraw and a call past the edge does not change: still a close beyond today's low and
+  high (the range's own 7 lines), not beyond the new outer lines. The new lines are lines
+  like the others (On the line, Crossed, targets, exits). Over 501 days of NIFTY 50
+  (5-minute candles, two years) 65 days had a redraw and 10 days gave another result:
+  12 calls more, none taken away, 2 calls changed; the Trade Plan's TAKE calls 886 -> 887.
   15 October: the 11:40 candle closed at 22,964.40, above +100% (22,962.04); from
   11:45 the lines ran from 22,637.40 (0%) to 22,972.45 (+100%), and each later
   close above the day's high drew them again. 8 October: the 13:15 candle closed

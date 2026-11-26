@@ -79,11 +79,25 @@ def close_levels(close):
 
 
 def range_levels(low: float, high: float, up: bool) -> list:
-    """The 7 lines of today's range as the previous close's lines are redrawn: up, 0% at today's low and +100% at its high;
-    down, 0% at today's high and -100% at its low (see static/rules.js rangeLevels)."""
+    """The lines of today's range as the previous close's lines are redrawn: up, 0% at today's low and +100% at its high; down, 0% at
+    today's high and -100% at its low (see static/rules.js rangeLevels). And beyond them (25 November, the owner: "calculate the levels
+    below 0% as well. Not only above. And vice versa"): after a redraw up the same shares of the range again BELOW today's low (-23.6% to
+    -100%), after a redraw down ABOVE today's high (+23.6% to +100%): 13 lines. The range's own 7 stay the lines that count for the redraw
+    and for a call past the edge (edges_of); the others carry "extra": True."""
     span = high - low
     levels = [{"ratio": r, "price": round2(low + r * span), "signed": True} if up else {"ratio": -r if r else 0, "price": round2(high - r * span), "signed": True} for r in RATIOS]
+    if span > 0:
+        for r in RATIOS:
+            if r > 0:
+                levels.append({"ratio": -r, "price": round2(low - r * span), "signed": True, "extra": True} if up else {"ratio": r, "price": round2(high + r * span), "signed": True, "extra": True})
     return sorted(levels, key=lambda l: l["price"])
+
+
+def edges_of(levels: list):
+    """The two lines that decide a redraw and a call past the edge: the outermost lines of the set as it was before the extra lines
+    (see static/rules.js edgesOf). Returns (top, bottom)."""
+    core = [l for l in levels if not l.get("extra")] if any(l.get("extra") for l in levels) else levels
+    return core[-1], core[0]
 
 
 def close_levels_at(bars: list, close):
@@ -96,7 +110,7 @@ def close_levels_at(bars: list, close):
     at, low, high = [first], math.inf, -math.inf
     for k, b in enumerate(bars):
         lv = at[k]
-        top, bottom = lv[-1], lv[0]
+        top, bottom = edges_of(lv)
         low, high = min(low, b["low"]), max(high, b["high"])
         at.append(range_levels(low, high, True) if b["close"] > top["price"] else range_levels(low, high, False) if b["close"] < bottom["price"] else lv)
     return lambda i: at[max(0, min(i, len(at) - 1))]
@@ -187,7 +201,7 @@ NEW_HIGH_LOW = {"NIFTY 50": True}
 def past_edge_at(bar: dict, levels: list, used: dict):
     """A close above the top line (Buy CE) or below the bottom line (Buy PE), when no line gives a signal: a Crossed call past
     it, with no target until the lines move past its entry (static/rules.js pastEdgeAt)."""
-    top, bottom = levels[-1], levels[0]
+    top, bottom = edges_of(levels)
     at = top if bar["close"] > top["price"] else bottom if bar["close"] < bottom["price"] else None
     if at is None:
         return None
