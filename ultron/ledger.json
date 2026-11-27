@@ -336,6 +336,107 @@
    },
    "builder": "not run (build_rules.js lost on 19 Nov, not rebuilt by the owner's word)",
    "notes": "Server restarted 09:06 (merge of #313): token refused 09:08-09:28, stream back 09:49. Trade Plan: 0 TAKE calls today. MSS-3 design written, waits for the owner's yes to test. PRs #314, #315 open."
+  },
+  {
+   "date": "2026-11-27",
+   "paper": {
+    "NIFTY 50": {
+     "calls": 18,
+     "won": 8,
+     "pts": 19.95,
+     "rs": -2860,
+     "ce_pts": -23.15,
+     "pe_pts": 43.1
+    },
+    "NIFTY BANK": {
+     "calls": 23,
+     "won": 9,
+     "pts": 80.1,
+     "rs": -4383,
+     "ce_pts": -247.2,
+     "pe_pts": 327.3
+    },
+    "SENSEX": {
+     "calls": 21,
+     "won": 4,
+     "pts": -664.12,
+     "rs": -8278,
+     "ce_pts": -766.42,
+     "pe_pts": 102.3
+    }
+   },
+   "plan": {
+    "calls": 1,
+    "won": 1,
+    "points": 12.05,
+    "after_8": 4.05,
+    "rupees": 575,
+    "list": [
+     "27 13 CE 12.05"
+    ],
+    "left_out": {
+     "calls": 17,
+     "after_8": -128.1
+    }
+   },
+   "lock_rows": 16,
+   "lc_take": {
+    "calls": 12,
+    "pts": -47.65
+   },
+   "signals": {
+    "signals": {
+     "NIFTY 50": {
+      "calls": 3,
+      "won": 1,
+      "pts": 14.25,
+      "list": [
+       "10:20 double top PE trail 21.55",
+       "12:05 Shooting Star PE trail -2.75",
+       "13:10 double top PE trail -4.55"
+      ]
+     },
+     "NIFTY BANK": {
+      "calls": 3,
+      "won": 1,
+      "pts": -34.25,
+      "list": [
+       "11:50 falling wedge CE trail -1.65",
+       "12:55 rising wedge PE trail 11.7",
+       "14:40 bearish symmetrical triangle PE trail -44.3"
+      ]
+     },
+     "SENSEX": {
+      "calls": 3,
+      "won": 1,
+      "pts": -130.92,
+      "list": [
+       "10:30 double top PE trail 32.71",
+       "13:25 double bottom PE reclaim -111.79",
+       "14:40 double top PE trail -51.84"
+      ]
+     }
+    },
+    "db": {
+     "table": 2,
+     "shadow": 2,
+     "shadowOnly": 2,
+     "shadowOnlyPoints": 12.3
+    }
+   },
+   "vp_nifty50": {
+    "break": [
+     [
+      "13:10",
+      "PE",
+      -29.28
+     ]
+    ],
+    "shape": [],
+    "impulse": "not scored (no tool)"
+   },
+   "builder": "not run (build_rules.js lost on 19 Nov, not rebuilt by the owner's word)",
+   "notes": "Trend-down day. Live site still b3e764b; PRs #314, #315, #317, #319 open (the owner merges). PR #319: the new look, tables and signal boxes removed, chart fits the screen. PR #316 (shadow page) closed by the owner's word; the watch list is in the daily report."
   }
  ]
 }
