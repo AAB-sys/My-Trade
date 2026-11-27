@@ -134,6 +134,15 @@ FAM.ypoc = { grid: { until: ["10:15", "12:00", "14:30"], stopAtr: [0.5, 1.5], rr
   return (k) => { if (k < 1 || b[k].hm < "09:30" || b[k].hm > o.until) return null; const x = b[k], a = c.atr[k];
     if (x.low <= P && x.close > P && x.close > x.open && b[k - 1].close > P && (!o.side || b[0].open > P)) return { side: "CE", stop: x.low - o.stopAtr * a };
     if (x.high >= P && x.close < P && x.close < x.open && b[k - 1].close < P && (!o.side || b[0].open < P)) return { side: "PE", stop: x.high + o.stopAtr * a }; return null; }; } };
+// idea 17 (27 Nov, ULTROAN's question B2: the 13:10 break below the VAL failed and came back to the POC, the 14:40 one held): THE SECOND BREAK. The day's value
+// area so far (by time). A close beyond an edge (the candle before inside) is a break. Take only the 2nd or later break of the SAME edge that day, and (back 1)
+// only when the price has been back at the POC since the break before it: PE below the VAL, CE above the VAH; stop at the POC or just inside the edge; out 15:15.
+FAM.second = { grid: { from: ["10:15", "12:00"], stop: ["poc", "edge"], rr: [0, 2], trail: [0, 3], back: [0, 1] }, mk: (b, c, o) => { const va = vaAll(b); const st = { up: { n: 0, back: false }, dn: { n: 0, back: false } };
+  return (k) => { if (k < 13) return null; const p = va[k], q = va[k - 1], x = b[k], a = c.atr[k]; let out = null;
+    if (x.low <= p.poc) st.up.back = true; if (x.high >= p.poc) st.dn.back = true;
+    if (x.close > p.vah && !(b[k - 1].close > q.vah)) { st.up.n++; if (st.up.n >= 2 && (!o.back || st.up.back) && x.hm >= o.from && x.hm <= "14:45") out = { side: "CE", stop: o.stop === "poc" ? p.poc : p.vah - 0.5 * a }; st.up.back = false; }
+    if (x.close < p.val && !(b[k - 1].close < q.val)) { st.dn.n++; if (st.dn.n >= 2 && (!o.back || st.dn.back) && x.hm >= o.from && x.hm <= "14:45") out = out || { side: "PE", stop: o.stop === "poc" ? p.poc : p.val + 0.5 * a }; st.dn.back = false; }
+    return out; }; } };
 const grid = (g) => Object.entries(g).reduce((acc, [k, vs]) => acc.flatMap(a => vs.map(v => ({ ...a, [k]: v }))), [{}]);
 // the two research years are fixed (16 Nov: a split by the middle moved with every new day and changed year 1); days after 9 Nov 2026 are forward days only
 const Y1 = dates.slice(11).filter(d => d <= "2025-11-10"), Y2 = dates.filter(d => d > "2025-11-10" && d <= "2026-11-09");
@@ -152,8 +161,8 @@ const show = (r) => console.log(`${r.fam.padEnd(6)} ${JSON.stringify(r.o).padEnd
 console.log("\nTop of year 1 per family (picked by year 1's points per call) and what year 2 did:");
 for (const fam of Object.keys(FAM)) good1.filter(r => r.fam === fam).sort((a, b) => b.y1.net / b.y1.n - a.y1.net / a.y1.n).slice(0, 3).forEach(show);
 fs.writeFileSync(__dirname + "/lab.json", JSON.stringify({ tried, good1: good1.length, held: held.length, rows: good1 }));
-{ const rows = res.filter(r => r.fam === "ypoc"); for (const r of rows) if (!r.y2) r.y2 = score(Y2, r.fam, r.o); const g1 = rows.filter(r => r.y1.net > 0 && r.y1.up >= r.y1.dn * 0.8 && r.y1.net - r.y1.best > 0), h = g1.filter(r => r.y2.net > 0 && r.y2.net - r.y2.best > 0);
-  console.log(`\nIDEA OF THE DAY ypoc: variants tried ${Object.keys(FAM.ypoc.grid).reduce((q, k) => q * FAM.ypoc.grid[k].length, 1)}, with 40+ calls in year 1: ${rows.length}, good in year 1: ${g1.length}, also good in year 2: ${h.length}`);
+{ const rows = res.filter(r => r.fam === "second"); for (const r of rows) if (!r.y2) r.y2 = score(Y2, r.fam, r.o); const g1 = rows.filter(r => r.y1.net > 0 && r.y1.up >= r.y1.dn * 0.8 && r.y1.net - r.y1.best > 0), h = g1.filter(r => r.y2.net > 0 && r.y2.net - r.y2.best > 0);
+  console.log(`\nIDEA OF THE DAY second: variants tried ${Object.keys(FAM.second.grid).reduce((q, k) => q * FAM.second.grid[k].length, 1)}, with 40+ calls in year 1: ${rows.length}, good in year 1: ${g1.length}, also good in year 2: ${h.length}`);
   rows.sort((x, y) => y.y1.net / y.y1.n - x.y1.net / x.y1.n).slice(0, 5).forEach(show); console.log("(the worst of them, by year 1:)"); rows.slice(-2).forEach(show); }
 // THE WATCH LIST (ultron/watchlist.json): each strategy fixed as found, scored only on the days after its found-on date
 { const W = __dirname + "/../ultron/watchlist.json"; if (fs.existsSync(W)) { const w = JSON.parse(fs.readFileSync(W)); console.log("\nWATCH LIST, new days only:");

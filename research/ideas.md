@@ -316,3 +316,11 @@ Lesson (fifth time): a true fact about where the price does NOT go back to is no
 - Verdict: no edge. With MSS-1 and MSS-2: 24 MSS versions, none good. Variants tried so far: 1,126.
 - OWNER'S RULE (26 Nov): never remove from the watch list; BAD is a mark, not a removal; failed ideas are re-run on the first trading day of each month.
 - MSS-3 with swings from today's candles only (the owner asked about this choice, 26 Nov): year 1 still all 8 negative (A 128 trades -1654; B 45 -387; C 53 -680; D 94 -1159; E 68 -1166; F 86 -833; G 185 -1746; H 83 -895). The choice did not change the verdict. Variants tried so far: 1,134.
+
+## Idea 17 (27 Nov, from question B2): THE SECOND BREAK (second)
+- In words: the 2nd or later close beyond the same edge of the day's value area so far (by time), optionally only after the price was back at the POC since the break before; PE below the VAL, CE above the VAH; from 10:15 or 12:00; stop at the POC or just inside the edge; target 0 or 2 times the risk; trail 0 or 3 ATR. 32 variants.
+- Result: all 32 had 40+ calls in year 1; 0 were good in year 1. Best of year 1: from 10:15, stop at the POC, no target, after a POC return: Y1 205 calls net -251; Y2 260 calls net +1,156 (CE -1,136, PE +2,292). Again the PE side carries year 2.
+- Verdict: no edge. NOT on the watch list. Variants tried so far: 1,166.
+- Watch list, new days to 27 Nov: QUIET-BREAK 9 days, 4 calls, +155 (3 up 1 down); NEWHIGH-TREND 9 days, 10 calls, +422 (4 up 5 down); DIR-1215 9 days, 2 calls, +31 (1 up 1 down); NEWHIGH-STAY 5 days, no call. Today (a trend-down day): QUIET-BREAK Buy PE 10:30 +201.5; NEWHIGH-TREND Buy PE 10:30 +201.5 (the same candle and entry as QUIET-BREAK: the opening range's low and the 12-candle low broke together); DIR-1215 Buy PE 12:15 +119.3.
+- Friday: the check on NIFTY BANK and SENSEX was not run: only 12 saved sessions of them, too few for the 10-day average these strategies need.
+- This week: 4 ideas (14 gap fails was last week; 15 yesterday's POC, 16 MSS-3, 17 second break, and the FVG fill study), 4 questions answered (FVG fill, Y1, the MSS-3 swing choice, B2).

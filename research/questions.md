@@ -113,3 +113,12 @@ Not profits, tendencies. To be checked with real volume on the saved days (growi
   - So from below, yesterday's POC is more often a lid in the morning; from above it is not a floor. Rests on 89 days; early. As a trade it failed (idea 15).
 - Q (open): after a D shape at noon the afternoon fell in all three indices today; the volume-day number (up 64%, 22 days) disagrees with two years (down 53%). Re-answer as days are added.
 - Q (open): the 13:30 close below the VAL failed on NIFTY 50 and SENSEX but held on NIFTY BANK, which was already inside yesterday's value. Does a VAL break hold better when the day is inside yesterday's value area?
+
+## 2026-11-27
+- B2 ANSWERED (ULTROAN's own question: today the first break below the VAL at 13:10 failed and the second, at 14:40 after 80 minutes at the POC, held. Is a later break of the same edge better than the first?). Price only, 505 days of NIFTY 50, the day's value area so far by time; a break = a 5-minute close beyond the edge with the candle before inside; in the next 30 minutes, a quarter of the value area further ("went on") or back inside by that much ("came back").
+  - The FIRST break of an edge in the day: 729 cases, went on 74%, came back 21%.
+  - A LATER break after the price had been back at the POC: 571 cases, went on 67%, came back 27%.
+  - A later break with no return to the POC: 757 cases, went on 59%, came back 27%.
+  - So the first break is the best one, not the later ones. Today was the less common case. As a trade the second break failed (idea 17).
+- Q (open): shape B formed after noon in all three indices today and the afternoon went down. B at noon -> down is 71% on 14 volume days. Does B formed between 12:00 and 14:00 say the same? Count on the volume days as they grow.
+- Q (open): the POC stepped down three times before noon today (25,867 -> 25,777 -> 25,687) and the price followed. On days the POC moves the same way twice before noon, does the afternoon continue? (V2; volume days.)

@@ -13,16 +13,16 @@
    "found": "2026-11-13",
    "words": "yesterday's range under 0.8 of the usual; the first 15 minutes' break; stop at the far side; out 15:15",
    "forward": {
-    "days": 8,
-    "to": "2026-11-26",
-    "n": 3,
-    "won": 2,
-    "net": -47,
-    "up": 2,
+    "days": 9,
+    "to": "2026-11-27",
+    "n": 4,
+    "won": 3,
+    "net": 155,
+    "up": 3,
     "dn": 1,
-    "best": 43,
+    "best": 201,
     "ce": -85,
-    "pe": 38
+    "pe": 239
    },
    "ready": false,
    "bad": false
@@ -40,16 +40,16 @@
    "found": "2026-11-13",
    "words": "close above the last 12 candles' high (CE) / below the low (PE) with the averages agreeing; stop follows 5 ATR; max 3 a day",
    "forward": {
-    "days": 8,
-    "to": "2026-11-26",
-    "n": 9,
-    "won": 3,
-    "net": 220,
-    "up": 3,
+    "days": 9,
+    "to": "2026-11-27",
+    "n": 10,
+    "won": 4,
+    "net": 422,
+    "up": 4,
     "dn": 5,
     "best": 222,
     "ce": 200,
-    "pe": 20
+    "pe": 221
    },
    "ready": false,
    "bad": false
@@ -66,16 +66,16 @@
    "found": "2026-11-13",
    "words": "at 12:15, the day has moved 0.3 of the usual range the same way as the opening gap: go with it; stop 0.25 of the range; out 15:15",
    "forward": {
-    "days": 8,
-    "to": "2026-11-26",
-    "n": 1,
-    "won": 0,
-    "net": -89,
-    "up": 0,
+    "days": 9,
+    "to": "2026-11-27",
+    "n": 2,
+    "won": 1,
+    "net": 31,
+    "up": 1,
     "dn": 1,
-    "best": 0,
+    "best": 119,
     "ce": -89,
-    "pe": 0
+    "pe": 119
    },
    "ready": false,
    "bad": false
@@ -95,8 +95,8 @@
    "words": "NEWHIGH-TREND's call, taken only when the day opened outside yesterday's value area, the call goes the gap's way, and yesterday's edge is still untouched",
    "asFound": "Y1 56 calls +562; Y2 73 calls +1217 (halves +1004 / +213; CE +125 PE +1092)",
    "forward": {
-    "days": 4,
-    "to": "2026-11-26",
+    "days": 5,
+    "to": "2026-11-27",
     "n": 0,
     "won": 0,
     "net": 0,
@@ -110,5 +110,5 @@
    "bad": false
   }
  ],
- "updated": "2026-11-26T11:12:59.492Z"
+ "updated": "2026-11-27T11:12:26.558Z"
 }
